@@ -1,8 +1,8 @@
-from routeservice.log import set_log_level, LOGLEVEL
 from routeservice.graph import MultiModalGraph
+from routeservice.graph.render import draw_flow_graph, draw_mobility_service
 
+import matplotlib.pyplot as plt
 
-set_log_level(LOGLEVEL.DEBUG)
 mmgraph = MultiModalGraph()
 
 mmgraph.flow_graph.add_node('0', [0, 0])
@@ -19,8 +19,8 @@ mmgraph.flow_graph.add_link('2_1', '2', '1')
 mmgraph.flow_graph.add_link('2_3', '2', '3')
 mmgraph.flow_graph.add_link('3_2', '3', '2')
 
-mmgraph.flow_graph.add_link('3_1', '3', '1')
-mmgraph.flow_graph.add_link('1_3', '1', '3')
+mmgraph.flow_graph.add_link('3_1', '3', '0')
+mmgraph.flow_graph.add_link('1_3', '0', '3')
 
 bus_service = mmgraph.add_mobility_service('Bus')
 car_service = mmgraph.add_mobility_service('Car')
@@ -74,4 +74,10 @@ mmgraph.connect_mobility_service('Uber', 'Bus', '2', {'time': 2})
 mmgraph.connect_mobility_service('Uber', 'Car', '2', {'time': 2})
 mmgraph.connect_mobility_service('Car', 'Uber', '2', {'time': 2})
 
-print(mmgraph.shortest_path('0', '2', cost='time'))
+
+fig, ax = plt.subplots()
+draw_mobility_service(ax, mmgraph, 'Bus', 'red', linkwidth=4, nodesize=10)
+draw_mobility_service(ax, mmgraph, 'Car', 'green', linkwidth=3, nodesize=8)
+draw_flow_graph(ax, mmgraph.flow_graph, color='black', linkwidth=2, nodesize=6)
+
+plt.show()

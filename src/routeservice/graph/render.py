@@ -38,8 +38,33 @@ def draw_multi_layer_graph(ax, G, linewidth=1, nodesize=5):
     ax.legend(custom_legend, list(G.layers.keys()))
 
 
+
+def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=5):
+    lines = list()
+
+    for u in G.nodes:
+        for v in G.get_node_neighbors(u):
+            lines.append([G.nodes[u].pos, G.nodes[v].pos])
+
+    line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
+    ax.add_collection(line_segment)
+
+    x, y = zip(*[n.pos for n in G.nodes.values()])
+    ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
+
+    ax.margins(0.05, 0.05)
+    ax.axis("equal")
+    plt.tight_layout()
+
+
+def draw_mobility_service(ax, mmgraph, service, color, linkwidth=1, nodesize=5):
+    nodes = [mmgraph.flow_graph.nodes[n.split('_')[-1]] for n in mmgraph._mobility_services[service].nodes if n.split('_')[-1] in mmgraph.flow_graph.nodes]
+    subgraph = mmgraph.flow_graph.extract_subgraph(nodes)
+    draw_flow_graph(ax, subgraph, color, linkwidth, nodesize)
+
+
 if __name__ == '__main__':
-    from routeservice.graph.graph import Node, MultiLayerGraph
+    from routeservice.graph.structure import Node, MultiLayerGraph
 
     G = MultiLayerGraph()
     gbus = G.create_layer("Bus")

@@ -1,1 +1,1 @@
-from .graph import OrientedGraph
+from .structure import MultiModalGraph
