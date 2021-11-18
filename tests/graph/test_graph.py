@@ -2,9 +2,6 @@ import unittest
 
 from routeservice.graph.structure import MultiModalGraph
 
-from numpy.testing import assert_array_equal
-
-
 class TestCreate(unittest.TestCase):
     def setUp(self):
         """Initiates the test.

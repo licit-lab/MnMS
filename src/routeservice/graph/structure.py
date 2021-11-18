@@ -17,19 +17,27 @@ class GeoNode(TopoNode):
 
 
 class TopoLink(object):
-    def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None):
+    def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None, reference_lane_id=None):
         self.id = lid
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
         self.costs = costs if costs is not None else {}
         self.reference_links = reference_links if reference_links is not None else []
+        self.reference_lane_id = None
+
+        if reference_links is not None:
+            if reference_lane_id is None:
+                self.reference_lane_id = 0
+            else:
+                self.reference_lane_id = reference_lane_id
 
 
 class GeoLink(object):
-    def __init__(self, lid, upstream_node, downstream_node):
+    def __init__(self, lid, upstream_node, downstream_node, nb_lane=1):
         self.id = lid
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
+        self.nb_lane = 1
 
 
 class OrientedGraph(ABC):
