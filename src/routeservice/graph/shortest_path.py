@@ -1,15 +1,15 @@
 from collections import deque, defaultdict
 from typing import Callable
 
-from routeservice.graph import OrientedGraph
+from routeservice.graph.graph import TopoGraph
 import numpy as np
 
-def dijkstra(g: OrientedGraph, origin: str, destination: str, cost:str='length') -> deque:
+def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str='length') -> deque:
     vertices = set()
     dist = dict()
     prev = dict()
 
-    for v in g.nodes:
+    for v in G.nodes:
         dist[v] = float('inf')
         prev[v] = None
         vertices.add(v)
@@ -30,16 +30,61 @@ def dijkstra(g: OrientedGraph, origin: str, destination: str, cost:str='length')
 
             return path
 
-        for neighbor in g.get_node_neighbors(u):
+        for neighbor in G.get_node_neighbors(u):
             if neighbor in vertices:
-                alt = dist[u] + g.edges[(u, neighbor)].costs[cost]
+                alt = dist[u] + G.links[(u, neighbor)].costs[cost]
                 if alt < dist[neighbor]:
                     dist[neighbor] = alt
                     prev[neighbor] = u
 
     return None
 
-def astar(G: OrientedGraph, origin: str, destination: str, heuristic: Callable, cost:str='length'):
+def dijkstra_multi_edge(G: TopoGraph, origin: str, destination: str, cost:str='length') -> deque:
+    vertices = set()
+    dist = dict()
+    prev = dict()
+
+    for v in G.nodes:
+        dist[v] = float('inf')
+        prev[v] = None
+        vertices.add(v)
+
+    dist[origin] = 0
+
+    while len(vertices) > 0:
+        d = {v:dist[v] for v in vertices}
+        u = min(d, key=d.get)
+        vertices.remove(u)
+
+        if u == destination:
+            path = deque()
+            if prev[u] is not None or u == origin:
+                path.appendleft(u)
+                u = prev[u]
+                while u is not None:
+                    link = u[1]
+                    u = u[0]
+                    path.appendleft(link)
+                    path.appendleft(u)
+                    u = prev[u]
+            return path
+
+        for neighbor in G.get_node_neighbors(u):
+            if neighbor in vertices:
+                all_costs = []
+                for edg in G.links[(u, neighbor)]:
+                    all_costs.append(dist[u] + edg.costs[cost])
+                min_cost_index = np.argmin(all_costs)
+                alt = all_costs[min_cost_index]
+                if alt < dist[neighbor]:
+                    dist[neighbor] = alt
+                    prev[neighbor] = [u, G.links[(u, neighbor)][min_cost_index].id]
+
+    return None
+
+
+
+def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable, cost:str='length'):
     discovered_nodes = set([origin])
     prev = dict()
 
@@ -65,7 +110,7 @@ def astar(G: OrientedGraph, origin: str, destination: str, heuristic: Callable, 
         discovered_nodes.remove(current)
 
         for neighbor in G.get_node_neighbors(current):
-            tentative_gscore = gscore[current] + g.edges[(current, neighbor)].costs[cost]
+            tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
             if tentative_gscore < gscore[neighbor]:
                 prev[neighbor] = current
                 gscore[neighbor] = tentative_gscore
@@ -75,33 +120,79 @@ def astar(G: OrientedGraph, origin: str, destination: str, heuristic: Callable, 
 
     return None
 
+def astar_multi_edge(G: TopoGraph, origin: str, destination: str, heuristic: Callable, cost:str='length'):
+    discovered_nodes = set([origin])
+    prev = defaultdict(lambda: None)
+
+    gscore = defaultdict(lambda : float('inf'))
+    gscore[origin] = 0
+
+    fscore = defaultdict(lambda : float('inf'))
+    fscore[origin] = heuristic(origin)
+
+    while len(discovered_nodes) > 0:
+        d = {v: fscore[v] for v in discovered_nodes}
+        current = min(d, key=d.get)
+
+        if current == destination:
+            path = deque()
+            path.appendleft(current)
+            if prev[current] is not None or current == origin:
+                current = prev[current]
+                while current[0] in prev.keys():
+                    link = current[1]
+                    current = current[0]
+                    path.appendleft(link)
+                    path.appendleft(current)
+                    current = prev[current]
+            path.appendleft(current[1])
+            path.appendleft(current[0])
+            return path
+
+        discovered_nodes.remove(current)
+
+        for neighbor in G.get_node_neighbors(current):
+            all_costs = []
+            for edg in G.links[(current, neighbor)]:
+                all_costs.append(gscore[current] + edg.costs[cost])
+            min_cost_index = np.argmin(all_costs)
+            tentative_gscore = all_costs[min_cost_index]
+            if tentative_gscore < gscore[neighbor]:
+                prev[neighbor] = [current, G.links[(current, neighbor)][min_cost_index].id]
+                gscore[neighbor] = tentative_gscore
+                fscore[neighbor] = gscore[neighbor] + heuristic(neighbor)
+                if neighbor not in discovered_nodes:
+                    discovered_nodes.add(neighbor)
+
+    return None
+
 if __name__ == '__main__':
-    from routeservice.graph.graph import Node
-    from routeservice.graph.render import draw_graph
+    from routeservice.graph.graph import MultiModalGraph
 
-    import matplotlib.pyplot as plt
-    g = OrientedGraph()
+    mmgraph = MultiModalGraph()
 
-    n1 = Node('1', [0, 0])
-    n2 = Node('2', [1, 0])
-    n3 = Node('3', [1, 1])
-    n4 = Node('4', [0, 1])
-
-    g.add_node(n1)
-    g.add_node(n2)
-    g.add_node(n3)
-    g.add_node(n4)
-
-    g.add_link("1", "2", costs={"time": 1})
-    g.add_link("2", "3", costs={"time": 1})
-    g.add_link("4", "3", costs={"time": 1})
-    g.add_link("1", "4", costs={"time": 1})
-    g.add_link("1", "3", costs={"time": 10})
+    mmgraph.flow_graph.add_node('0', [0, 0])
+    mmgraph.flow_graph.add_node('1', [1, 0])
 
 
-    print(dijkstra(g, '1', '3', cost='time'))
-    print(astar(g, '1', '3', lambda x: np.linalg.norm(g.nodes[x].pos-g.nodes['3'].pos), cost='length'))
+    mmgraph.flow_graph.add_link('0_1', '0', '1')
+    mmgraph.flow_graph.add_link('1_0', '1', '0')
 
-    fig, ax = plt.subplots(figsize=(16, 9))
-    draw_graph(ax, g)
-    plt.show()
+    bus_service = mmgraph.add_mobility_service('Bus')
+    car_service = mmgraph.add_mobility_service('Car')
+
+    bus_service.add_node('0')
+    bus_service.add_node('1')
+
+    bus_service.add_link('BUS_0_1', '0', '1', {'time': 10.4}, reference_links=['0_1'])
+
+    car_service.add_node('0')
+    car_service.add_node('1')
+
+    car_service.add_link('CAR_0_1', '0', '1', {'time': 15.1}, reference_links=['0_1'])
+
+
+    # print(astar(mmgraph.mobility_graph, '0', '2', lambda x: 0, cost='time'))
+    print(dijkstra_multi_edge(mmgraph.mobility_graph, '0', '1', cost='time'))
+    print(astar_multi_edge(mmgraph.mobility_graph, '0', '1', lambda x:0, cost='time'))
+

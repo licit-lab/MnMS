@@ -58,12 +58,12 @@ if __name__ == '__main__':
     gcar.add_node(n4)
     gcar.add_node(n5)
 
-    gcar.add_link("1", "2")
-    gcar.add_link("2", "3")
-    gcar.add_link("4", "3")
-    gcar.add_link("1", "4")
-    gcar.add_link("2", "5")
-    gcar.add_link("3", "5")
+    gcar.add_link("1", "2", )
+    gcar.add_link("2", "3", )
+    gcar.add_link("4", "3", )
+    gcar.add_link("1", "4", )
+    gcar.add_link("2", "5", )
+    gcar.add_link("3", "5", )
 
 
     n6 = Node('6', [0, 0])
@@ -74,8 +74,8 @@ if __name__ == '__main__':
     gbus.add_node(n7)
     gbus.add_node(n8)
 
-    gbus.add_link("6", "7")
-    gbus.add_link("7", "8")
+    gbus.add_link("6", "7", )
+    gbus.add_link("7", "8", )
 
     G.connect_layer(n1, n6)
     G.connect_layer(n5, n8)
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     gbike.add_node(n9)
     gbike.add_node(n10)
 
-    gbike.add_link('9', '10')
+    gbike.add_link('9', '10', )
 
     print(G._connected_layers)
 
