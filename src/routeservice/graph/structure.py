@@ -10,35 +10,44 @@ class TopoNode(object):
     def __init__(self, id):
         self.id = id
 
+    def __repr__(self):
+        return f"TopoNode(id={self.id})"
+
 class GeoNode(TopoNode):
     def __init__(self, id, pos):
         super(GeoNode, self).__init__(id)
         self.pos = np.array(pos)
 
+    def __repr__(self):
+        return f"GeoNode(id={self.id}, pos={self.pos})"
 
 class TopoLink(object):
-    def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None, reference_lane_id=None):
+    def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None, reference_lane_ids=None):
         self.id = lid
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
         self.costs = costs if costs is not None else {}
         self.reference_links = reference_links if reference_links is not None else []
-        self.reference_lane_id = None
+        self.reference_lane_ids = []
 
         if reference_links is not None:
-            if reference_lane_id is None:
-                self.reference_lane_id = 0
+            if reference_lane_ids is None:
+                self.reference_lane_ids = [0]*len(reference_links)
             else:
-                self.reference_lane_id = reference_lane_id
+                self.reference_lane_ids = reference_lane_ids
 
+    def __repr__(self):
+        return f"TopoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
 
 class GeoLink(object):
     def __init__(self, lid, upstream_node, downstream_node, nb_lane=1):
         self.id = lid
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
-        self.nb_lane = 1
+        self.nb_lane = nb_lane
 
+    def __repr__(self):
+        return f"GeoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
 
 class OrientedGraph(ABC):
     """Short summary.
@@ -85,8 +94,8 @@ class TopoGraph(OrientedGraph):
         node = TopoNode(nodeid)
         self.nodes[node.id] = node
 
-    def add_link(self, lid, upstream_node, downstream_node, costs, reference_links=None) -> None:
-        link = TopoLink(lid, upstream_node, downstream_node, costs, reference_links)
+    def add_link(self, lid, upstream_node, downstream_node, costs, reference_links=None, reference_lane_ids=None) -> None:
+        link = TopoLink(lid, upstream_node, downstream_node, costs, reference_links, reference_lane_ids)
         self.links[(upstream_node, downstream_node)]= link
         self._adjacency[upstream_node].add(downstream_node)
 
@@ -105,8 +114,8 @@ class GeoGraph(OrientedGraph):
         node = GeoNode(nodeid, pos)
         self.nodes[node.id] = node
 
-    def add_link(self, lid, upstream_node: str, downstream_node: str) -> None:
-        link = GeoLink(lid, upstream_node, downstream_node)
+    def add_link(self, lid, upstream_node: str, downstream_node: str, nb_lane:int=1) -> None:
+        link = GeoLink(lid, upstream_node, downstream_node, nb_lane=nb_lane)
         self.links[(upstream_node, downstream_node)] = link
         self._adjacency[upstream_node].add(downstream_node)
 
@@ -130,9 +139,9 @@ class MobilityGraph(object):
         self.nodes.append(id)
         self._graph.add_node(self.id+"_"+id)
 
-    def add_link(self, lid, upstream_node: str, downstream_node: str, costs:Dict[str, float], reference_links=None):
+    def add_link(self, lid, upstream_node: str, downstream_node: str, costs:Dict[str, float], reference_links=None, reference_lane_ids=None):
         self.links[(upstream_node, downstream_node)] = lid
-        self._graph.add_link(lid, self.id+"_"+upstream_node, self.id+"_"+downstream_node, costs, reference_links)
+        self._graph.add_link(lid, self.id+"_"+upstream_node, self.id+"_"+downstream_node, costs, reference_links, reference_lane_ids)
 
 
 class MultiModalGraph(object):
@@ -140,6 +149,8 @@ class MultiModalGraph(object):
         self.flow_graph = GeoGraph()
         self.mobility_graph = TopoGraph()
 
+        self._connexion_services = defaultdict(set)
+        self._adjacency_services = defaultdict(set)
         self._mobility_services = dict()
 
     def add_mobility_service(self, id):
@@ -152,6 +163,8 @@ class MultiModalGraph(object):
                                      upstream_service+"_"+nodeid,
                                      downstream_service+"_"+nodeid,
                                      costs)
+        self._connexion_services[(upstream_service, downstream_service)].add(nodeid)
+        self._adjacency_services[upstream_service].add(downstream_service)
 
     def shortest_path(self, origin, dest, cost):
 
@@ -177,6 +190,7 @@ class MultiModalGraph(object):
             self.mobility_graph.add_link(n+'_'+end_node, n, end_node, {cost:0})
 
         # Compute paths
+
         logger.debug(f"Compute path")
         cost, path = dijkstra(self.mobility_graph, start_node, end_node, cost)
 

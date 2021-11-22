@@ -1,6 +1,7 @@
 from routeservice.log import set_log_level, LOGLEVEL
 from routeservice.graph import MultiModalGraph
-
+from routeservice.tools.io import save_graph, load_graph
+from routeservice.graph.algorithms import nearest_mobility_service
 
 set_log_level(LOGLEVEL.DEBUG)
 mmgraph = MultiModalGraph()
@@ -67,11 +68,19 @@ mmgraph.connect_mobility_service('Uber', 'Bus', '1', {'time': 2})
 mmgraph.connect_mobility_service('Uber', 'Car', '1', {'time': 2})
 mmgraph.connect_mobility_service('Car', 'Uber', '1', {'time': 2})
 
-mmgraph.connect_mobility_service('Bus', 'Car', '2', {'time': 2});
+mmgraph.connect_mobility_service('Bus', 'Car', '2', {'time': 2})
 mmgraph.connect_mobility_service('Car', 'Bus', '2', {'time': 2})
 mmgraph.connect_mobility_service('Bus', 'Uber', '2', {'time': 4})
 mmgraph.connect_mobility_service('Uber', 'Bus', '2', {'time': 2})
 mmgraph.connect_mobility_service('Uber', 'Car', '2', {'time': 2})
 mmgraph.connect_mobility_service('Car', 'Uber', '2', {'time': 2})
 
-print(mmgraph.shortest_path('0', '2', cost='time'))
+# print(mmgraph.shortest_path('0', '2', cost='time'))
+#
+# save_graph(mmgraph, 'test_graph.json')
+# new_graph = load_graph('test_graph.json')
+#
+# print(new_graph.mobility_graph.links)
+# print(mmgraph.mobility_graph.links)
+
+print(nearest_mobility_service([2,2], mmgraph, 'Bus'))
