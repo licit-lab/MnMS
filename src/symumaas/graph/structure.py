@@ -3,8 +3,8 @@ from collections import defaultdict
 from abc import ABC, abstractmethod
 import numpy as np
 
-from routeservice.graph.algorithms.shortest_path import dijkstra
-from routeservice.log import logger
+from symumaas.graph.algorithms.shortest_path import dijkstra
+from symumaas.log import logger
 
 class TopoNode(object):
     def __init__(self, id):
@@ -216,7 +216,7 @@ class MultiModalGraph(object):
 
 
 if __name__ == '__main__':
-    from routeservice.log import set_log_level, LOGLEVEL
+    from symumaas.log import set_log_level, LOGLEVEL
     set_log_level(LOGLEVEL.DEBUG)
     mmgraph = MultiModalGraph()
 

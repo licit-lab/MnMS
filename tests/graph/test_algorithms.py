@@ -1,7 +1,7 @@
 import unittest
 
-from routeservice.graph import MultiModalGraph
-from routeservice.graph.algorithms import dijkstra, astar
+from symumaas.graph import MultiModalGraph
+from symumaas.graph.algorithms import dijkstra, astar
 
 class TestAlgorithms(unittest.TestCase):
     def setUp(self):

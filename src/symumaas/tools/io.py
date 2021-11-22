@@ -1,6 +1,6 @@
 import json
 
-from routeservice.graph import MultiModalGraph
+from symumaas.graph import MultiModalGraph
 
 def save_graph(G: MultiModalGraph, filename, indent=4):
 

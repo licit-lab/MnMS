@@ -2,8 +2,8 @@ import unittest
 
 from tempfile import TemporaryDirectory
 
-from routeservice.graph.structure import MultiModalGraph
-from routeservice.tools.io import save_graph, load_graph
+from symumaas.graph.structure import MultiModalGraph
+from symumaas.tools.io import save_graph, load_graph
 
 
 class TestIO(unittest.TestCase):

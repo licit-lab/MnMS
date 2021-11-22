@@ -8,9 +8,9 @@ class LOGLEVEL():
     DEBUG    = 10
     NOTSET   = 0
 
-logger = logging.getLogger('routeservice')
+logger = logging.getLogger('symumaas')
 logger.setLevel(logging.INFO)
-_formatter = logging.Formatter('%(levelname)s(routeservice): %(message)s')
+_formatter = logging.Formatter('%(levelname)s(symumaas): %(message)s')
 _ch = logging.StreamHandler()
 _ch.setLevel(logging.INFO)
 _ch.setFormatter(_formatter)

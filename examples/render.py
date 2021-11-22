@@ -1,5 +1,5 @@
-from routeservice.graph import MultiModalGraph
-from routeservice.graph.render import draw_flow_graph, draw_mobility_service
+from symumaas.graph import MultiModalGraph
+from symumaas.graph.render import draw_flow_graph, draw_mobility_service
 
 import matplotlib.pyplot as plt
 

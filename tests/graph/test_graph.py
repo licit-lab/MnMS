@@ -1,6 +1,6 @@
 import unittest
 
-from routeservice.graph.structure import MultiModalGraph
+from symumaas.graph.structure import MultiModalGraph
 
 class TestCreate(unittest.TestCase):
     def setUp(self):
