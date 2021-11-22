@@ -1,6 +1,6 @@
 import json
 
-from symumaas.graph import MultiModalGraph
+from mnms.graph import MultiModalGraph
 
 def save_graph(G: MultiModalGraph, filename, indent=4):
 

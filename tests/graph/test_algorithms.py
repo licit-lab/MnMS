@@ -1,7 +1,7 @@
 import unittest
 
-from symumaas.graph import MultiModalGraph
-from symumaas.graph.algorithms import dijkstra, astar
+from mnms.graph import MultiModalGraph
+from mnms.graph.algorithms import dijkstra, astar
 
 class TestAlgorithms(unittest.TestCase):
     def setUp(self):

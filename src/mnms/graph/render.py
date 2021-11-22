@@ -64,7 +64,7 @@ def draw_mobility_service(ax, mmgraph, service, color, linkwidth=1, nodesize=5):
 
 
 if __name__ == '__main__':
-    from symumaas.graph.structure import Node, MultiLayerGraph
+    from mnms.graph.structure import Node, MultiLayerGraph
 
     G = MultiLayerGraph()
     gbus = G.create_layer("Bus")

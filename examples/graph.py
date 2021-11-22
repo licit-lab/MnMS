@@ -1,7 +1,7 @@
-from symumaas.log import set_log_level, LOGLEVEL
-from symumaas.graph import MultiModalGraph
-from symumaas.tools.io import save_graph, load_graph
-from symumaas.graph.algorithms import nearest_mobility_service
+from mnms.log import set_log_level, LOGLEVEL
+from mnms.graph import MultiModalGraph
+from mnms.tools.io import save_graph, load_graph
+from mnms.graph.algorithms import nearest_mobility_service
 
 set_log_level(LOGLEVEL.DEBUG)
 mmgraph = MultiModalGraph()

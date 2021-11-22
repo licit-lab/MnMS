@@ -2,8 +2,8 @@ import unittest
 
 from tempfile import TemporaryDirectory
 
-from symumaas.graph.structure import MultiModalGraph
-from symumaas.tools.io import save_graph, load_graph
+from mnms.graph.structure import MultiModalGraph
+from mnms.tools.io import save_graph, load_graph
 
 
 class TestIO(unittest.TestCase):
