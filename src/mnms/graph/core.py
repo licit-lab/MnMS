@@ -152,7 +152,7 @@ class MobilityGraph(object):
 
     def add_node(self, id, ref_node=None):
         self.nodes.add(id)
-        self._graph.add_node(self.id+"_"+id)
+        self._graph.add_node(self.id+"_"+id, ref_node)
 
     def add_link(self, lid, upstream_node: str, downstream_node: str, costs:Dict[str, float], reference_links=None, reference_lane_ids=None):
         self.links[(upstream_node, downstream_node)] = lid

@@ -12,7 +12,7 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
     d['FLOW_GRAPH']['LINKS'] = {}
 
     for nid, node in G.flow_graph.nodes.items():
-        d['FLOW_GRAPH']['NODES'][nid] = node.pos.tolist()
+        d['FLOW_GRAPH']['NODES'][nid] = {'POSITION': node.pos.tolist()}
 
     for link in G.flow_graph.links.values():
         d['FLOW_GRAPH']['LINKS'][link.id] = {'UPSTREAM_NODE': link.upstream_node,
@@ -25,7 +25,7 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
     for service in G._mobility_services.values():
         d['MOBILITY_GRAPH']['SERVICES'][service.id] = {}
         new_service = d['MOBILITY_GRAPH']['SERVICES'][service.id]
-        new_service['NODES'] = list(service.nodes)
+        new_service['NODES'] = {nid: {'REF_NODE': G.mobility_graph.nodes[service.id + "_" + nid].reference_node} for nid in service.nodes}
         new_service['LINKS'] = {}
 
 
@@ -51,23 +51,23 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
 
 
 
-def load_graph(filename:str, add_full_recovery_mobility:str=None):
+def load_graph(filename:str):
     with open(filename, 'r') as f:
         data = json.load(f)
 
     G = MultiModalGraph()
     flow_graph = G.flow_graph
 
-    for id, pos in data['FLOW_GRAPH']['NODES'].items():
-        flow_graph.add_node(id, pos)
+    for id, d in data['FLOW_GRAPH']['NODES'].items():
+        flow_graph.add_node(id, d['POSITION'])
 
     for id, d in data['FLOW_GRAPH']['LINKS'].items():
         flow_graph.add_link(id, d['UPSTREAM_NODE'], d['DOWNSTREAM_NODE'], d['NB_LANE'])
 
     for service in data['MOBILITY_GRAPH']['SERVICES']:
         new_service = G.add_mobility_service(service)
-        for node in data['MOBILITY_GRAPH']['SERVICES'][service]['NODES']:
-            new_service.add_node(node)
+        for nid, node_data in data['MOBILITY_GRAPH']['SERVICES'][service]['NODES'].items():
+            new_service.add_node(nid, node_data['REF_NODE'])
         for id, d in  data['MOBILITY_GRAPH']['SERVICES'][service]['LINKS'].items():
             new_service.add_link(id, d['UPSTREAM_NODE'], d['DOWNSTREAM_NODE'], d['COSTS'], d['REF_LINKS'], d['REF_LANE_IDS'])
 

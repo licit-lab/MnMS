@@ -58,7 +58,7 @@ def convert_symuflow_to_mmgraph(file):
             if arret.attrib['lignes'] == lid:
                 service_stops.append(arret.attrib['troncon'])
 
-        [service.add_node(service_links[s][0]) for s in service_stops]
+        [service.add_node(service_links[s][0], service_links[s][0]) for s in service_stops]
         [service.add_link(s, service_links[s][0],
                           service_links[s][1],
                           costs={'length':np.linalg.norm(flow_graph.nodes[service_links[s][0]].pos-flow_graph.nodes[service_links[s][1]].pos)},
