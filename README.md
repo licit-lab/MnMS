@@ -1,6 +1,6 @@
 # mnms
 
-`mnms` (**M**ultimodal **N**etwork **M**odel**S**) Multimodel simulator for DIT4TraM based on trip-based MFD.
+`mnms` (**M**ultimodal **N**etwork **M**odelling and **S**imulation) is a multimodal simulator for DIT4TraM based on trip-based MFD.
 
 ## Installation
 

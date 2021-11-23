@@ -25,7 +25,7 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
     for service in G._mobility_services.values():
         d['MOBILITY_GRAPH']['SERVICES'][service.id] = {}
         new_service = d['MOBILITY_GRAPH']['SERVICES'][service.id]
-        new_service['NODES'] = service.nodes
+        new_service['NODES'] = list(service.nodes)
         new_service['LINKS'] = {}
 
 
@@ -51,7 +51,7 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
 
 
 
-def load_graph(filename):
+def load_graph(filename:str, add_full_recovery_mobility:str=None):
     with open(filename, 'r') as f:
         data = json.load(f)
 

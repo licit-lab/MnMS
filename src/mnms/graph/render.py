@@ -42,14 +42,21 @@ def draw_multi_layer_graph(ax, G, linewidth=1, nodesize=5):
 def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=5):
     lines = list()
 
-    for u in G.nodes:
-        for v in G.get_node_neighbors(u):
-            lines.append([G.nodes[u].pos, G.nodes[v].pos])
+    # for u in G.nodes:
+    #     for v in G.get_node_neighbors(u):
+    #         lines.append([G.nodes[u].pos, G.nodes[v].pos])
+
+    for unode, dnode in G.links:
+        lines.append([G.nodes[unode].pos, G.nodes[dnode].pos])
+
 
     line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
     ax.add_collection(line_segment)
-
+    # try:
     x, y = zip(*[n.pos for n in G.nodes.values()])
+    # except:
+    #     print(G.nodes)
+        # raise KeyboardInterrupt
     ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
 
     ax.margins(0.05, 0.05)
@@ -58,13 +65,22 @@ def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=5):
 
 
 def draw_mobility_service(ax, mmgraph, service, color, linkwidth=1, nodesize=5):
-    nodes = [mmgraph.flow_graph.nodes[n.split('_')[-1]] for n in mmgraph._mobility_services[service].nodes if n.split('_')[-1] in mmgraph.flow_graph.nodes]
-    subgraph = mmgraph.flow_graph.extract_subgraph(nodes)
-    draw_flow_graph(ax, subgraph, color, linkwidth, nodesize)
+    # nodes = [mmgraph.flow_graph.nodes[n.replace(f'{service}_', '')].id for n in mmgraph._mobility_services[service].nodes if n.replace(f'{service}_', '') in mmgraph.flow_graph.nodes]
+    # subgraph = mmgraph.flow_graph.extract_subgraph(nodes)
+    # draw_flow_graph(ax, subgraph, color, linkwidth, nodesize)
 
+    lines = list()
+    for (unode, dnode) in mmgraph._mobility_services[service].links:
+        link = mmgraph.mobility_graph.links[(service+'_'+unode, service+'_'+dnode)]
+        for lid in link.reference_links:
+            unode, dnode  = mmgraph.flow_graph._map_lid_nodes[lid]
+            lines.append([mmgraph.flow_graph.nodes[unode].pos, mmgraph.flow_graph.nodes[dnode].pos])
+
+    line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
+    ax.add_collection(line_segment)
 
 if __name__ == '__main__':
-    from mnms.graph.structure import Node, MultiLayerGraph
+    from mnms.graph.core import Node, MultiLayerGraph
 
     G = MultiLayerGraph()
     gbus = G.create_layer("Bus")

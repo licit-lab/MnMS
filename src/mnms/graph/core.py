@@ -7,15 +7,16 @@ from mnms.graph.algorithms.shortest_path import dijkstra
 from mnms.log import logger
 
 class TopoNode(object):
-    def __init__(self, id):
+    def __init__(self, id, ref_node=None):
         self.id = id
+        self.reference_node = ref_node
 
     def __repr__(self):
-        return f"TopoNode(id={self.id})"
+        return f"TopoNode(id={self.id}, ref_node={self.reference_node})"
 
-class GeoNode(TopoNode):
+class GeoNode(object):
     def __init__(self, id, pos):
-        super(GeoNode, self).__init__(id)
+        self.id = id
         self.pos = np.array(pos)
 
     def __repr__(self):
@@ -45,6 +46,7 @@ class GeoLink(object):
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
         self.nb_lane = nb_lane
+        self.reservoirs = []
 
     def __repr__(self):
         return f"GeoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
@@ -64,6 +66,7 @@ class OrientedGraph(ABC):
         self.nodes: Dict[str, Union[TopoLink, GeoLink]] = dict()
         self.links: Dict[Tuple[str, str], Union[TopoLink, GeoLink]] = dict()
         self._adjacency: Dict[str, List[str]] = defaultdict(set)
+        self._map_lid_nodes: Dict[str, Tuple[str, str]] = dict()
 
     @abstractmethod
     def add_node(self, *args, **kwargs) -> None:
@@ -90,13 +93,20 @@ class OrientedGraph(ABC):
 
 
 class TopoGraph(OrientedGraph):
-    def add_node(self, nodeid: str) -> None:
-        node = TopoNode(nodeid)
+    def add_node(self, nodeid: str, ref_node:str=None) -> None:
+        assert nodeid not in self.nodes
+
+        node = TopoNode(nodeid, ref_node)
         self.nodes[node.id] = node
 
     def add_link(self, lid, upstream_node, downstream_node, costs, reference_links=None, reference_lane_ids=None) -> None:
+        assert (upstream_node, downstream_node) not in self.links, f"Nodes {upstream_node}, {downstream_node} already in graph"
+
+        assert lid not in self._map_lid_nodes, f"Link id {lid} already exist"
+
         link = TopoLink(lid, upstream_node, downstream_node, costs, reference_links, reference_lane_ids)
         self.links[(upstream_node, downstream_node)]= link
+        self._map_lid_nodes[lid] = (upstream_node, downstream_node)
         self._adjacency[upstream_node].add(downstream_node)
 
     def extract_subgraph(self, nodes:set):
@@ -111,12 +121,17 @@ class TopoGraph(OrientedGraph):
 
 class GeoGraph(OrientedGraph):
     def add_node(self, nodeid: str, pos: List[float]) -> None:
+        assert nodeid not in self.nodes
+
         node = GeoNode(nodeid, pos)
         self.nodes[node.id] = node
 
     def add_link(self, lid, upstream_node: str, downstream_node: str, nb_lane:int=1) -> None:
+        assert (upstream_node, downstream_node) not in self.links
+
         link = GeoLink(lid, upstream_node, downstream_node, nb_lane=nb_lane)
         self.links[(upstream_node, downstream_node)] = link
+        self._map_lid_nodes[lid] = (upstream_node, downstream_node)
         self._adjacency[upstream_node].add(downstream_node)
 
     def extract_subgraph(self, nodes:set):
@@ -131,23 +146,28 @@ class GeoGraph(OrientedGraph):
 class MobilityGraph(object):
     def __init__(self, mid: str, topograph: TopoGraph):
         self._graph = topograph
-        self.nodes = []
+        self.nodes = set()
         self.links = dict()
         self.id = mid
 
-    def add_node(self, id):
-        self.nodes.append(id)
+    def add_node(self, id, ref_node=None):
+        self.nodes.add(id)
         self._graph.add_node(self.id+"_"+id)
 
     def add_link(self, lid, upstream_node: str, downstream_node: str, costs:Dict[str, float], reference_links=None, reference_lane_ids=None):
         self.links[(upstream_node, downstream_node)] = lid
         self._graph.add_link(lid, self.id+"_"+upstream_node, self.id+"_"+downstream_node, costs, reference_links, reference_lane_ids)
 
+    def set_cost(self, cost_name:str, default_value:float):
+        for unode, dnode in self.links.keys():
+            self._graph.links[(self.id+"_"+unode, self.id+"_"+dnode)].costs[cost_name] = default_value
+
 
 class MultiModalGraph(object):
     def __init__(self):
         self.flow_graph = GeoGraph()
         self.mobility_graph = TopoGraph()
+        self.reservoirs = dict()
 
         self._connexion_services = defaultdict(set)
         self._adjacency_services = defaultdict(set)
@@ -158,6 +178,14 @@ class MultiModalGraph(object):
         self._mobility_services[id] = MobilityGraph(id, self.mobility_graph)
         return self._mobility_services[id]
 
+
+    def add_full_recovery_service(self, servid):
+        name_serv = servid
+        new_service = self.add_mobility_service(name_serv)
+        [new_service.add_node(n) for n in self.flow_graph.nodes]
+        [new_service.add_link('_'.join([name_serv, unode, dnode]), unode, dnode, {}, reference_links=[link.id]) for (unode, dnode), link in self.flow_graph.links.items()]
+
+
     def connect_mobility_service(self, upstream_service, downstream_service, nodeid, costs={}):
         self.mobility_graph.add_link("_".join([upstream_service, downstream_service, nodeid]),
                                      upstream_service+"_"+nodeid,
@@ -165,6 +193,12 @@ class MultiModalGraph(object):
                                      costs)
         self._connexion_services[(upstream_service, downstream_service)].add(nodeid)
         self._adjacency_services[upstream_service].add(downstream_service)
+
+
+    # def add_reservoir(self, resid: str, links: List):
+    #     for l in links:
+    #
+    #     self.reservoirs[resid] = links
 
     def shortest_path(self, origin, dest, cost):
 
@@ -241,7 +275,7 @@ if __name__ == '__main__':
     car_service = mmgraph.add_mobility_service('Car')
     uber_service = mmgraph.add_mobility_service('Uber')
 
-    bus_service.add_node('0')
+    bus_service.add_node('0', '0')
     bus_service.add_node('1')
     bus_service.add_node('2')
 

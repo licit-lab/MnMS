@@ -1,1 +1,1 @@
-from .structure import MultiModalGraph
+from .core import MultiModalGraph

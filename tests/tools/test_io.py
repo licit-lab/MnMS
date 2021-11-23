@@ -2,7 +2,7 @@ import unittest
 
 from tempfile import TemporaryDirectory
 
-from mnms.graph.structure import MultiModalGraph
+from mnms.graph.core import MultiModalGraph
 from mnms.tools.io import save_graph, load_graph
 
 
@@ -35,7 +35,7 @@ class TestIO(unittest.TestCase):
 
         serv2.add_node('1')
         serv2.add_node('2')
-        serv2.add_link('SERV1_0_1', '1', '2', {'test': 1})
+        serv2.add_link('SERV2_0_1', '1', '2', {'test': 1})
 
         self.mmgraph.connect_mobility_service('s1', 's2', '1', {'test': 2})
 

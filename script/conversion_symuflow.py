@@ -32,7 +32,6 @@ def convert_symuflow_to_mmgraph(file):
         links[lid] = (up_nid, down_nid)
 
     nodes = {n: np.mean(pos, axis=0) for n, pos in nodes.items()}
-    print(nodes)
 
     G = MultiModalGraph()
     flow_graph = G.flow_graph
@@ -45,37 +44,40 @@ def convert_symuflow_to_mmgraph(file):
     for line in line_elem.iter('LIGNE_TRANSPORT_GUIDEE'):
         lid = line.attrib['id']
         service = G.add_mobility_service(lid)
-        print(lid)
+        service_nodes = set()
+        service_links = dict()
+        service_stops = list()
         for link in line.iter("TRONCON"):
-            print(link.attrib['id'])
             unode, dnode = links[link.attrib['id']]
-            service.add_node(unode)
-            service.add_node(dnode)
-            service.add_link(link.attrib['id'], unode, dnode,
-                             costs={'length':np.linalg.norm(flow_graph.nodes[unode].pos-flow_graph.nodes[dnode].pos)},
-                             reference_links=[link.attrib['id']])
+            service_nodes.add(unode)
+            service_nodes.add(dnode)
+            service_links[link.attrib['id']] = (unode, dnode)
 
-    # for sid, serv in G._mobility_services.items():
-    #     print(sid)
+        arret_elem = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/ARRETS")[0]
+        for arret in arret_elem.iter('ARRET'):
+            if arret.attrib['lignes'] == lid:
+                service_stops.append(arret.attrib['troncon'])
 
-    car_service = G.add_mobility_service("CAR")
-    [car_service.add_node(n) for n in nodes.keys()]
-    [car_service.add_link(lid, unode, dnode, costs={'length':np.linalg.norm(flow_graph.nodes[unode].pos-flow_graph.nodes[dnode].pos)}, reference_links=[lid]) for lid, (unode, dnode) in links.items()]
+        [service.add_node(service_links[s][0]) for s in service_stops]
+        [service.add_link(s, service_links[s][0],
+                          service_links[s][1],
+                          costs={'length':np.linalg.norm(flow_graph.nodes[service_links[s][0]].pos-flow_graph.nodes[service_links[s][1]].pos)},
+                          reference_links=[s]) for s in service_stops]
 
+    for outer_sid, outer_serv in G._mobility_services.items():
+        for inner_sid, inner_serv in G._mobility_services.items():
+            if outer_sid != inner_sid:
+                for n in outer_serv.nodes.intersection(inner_serv.nodes):
+                    G.connect_mobility_service(outer_sid, inner_sid, n, {"length":0})
 
-
-    # fig, ax = plt.subplots()
-    # draw_flow_graph(ax, G.flow_graph)
-    # for sid, serv in G._mobility_services.items():
-    #     print(sid, np.random.rand(3))
-    #     draw_mobility_service(ax, G, sid, np.random.rand(3))
-    # plt.show()
+    fig, ax = plt.subplots()
+    draw_flow_graph(ax, G.flow_graph)
+    for sid, serv in G._mobility_services.items():
+        if sid != 'CAR':
+            draw_mobility_service(ax, G, sid, np.random.rand(3), linkwidth=3)
+    plt.show()
 
     save_graph(G, file.replace('.xml', '.json'))
-
-
-
-
 
 
 if __name__ == "__main__":

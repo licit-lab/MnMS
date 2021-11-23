@@ -1,6 +1,6 @@
 import unittest
 
-from mnms.graph.structure import MultiModalGraph
+from mnms.graph.core import MultiModalGraph
 
 class TestCreate(unittest.TestCase):
     def setUp(self):
@@ -35,6 +35,17 @@ class TestCreate(unittest.TestCase):
         self.assertEqual(list(mmgraph.mobility_graph.nodes.keys()), ['dummy_0', 'dummy_1'])
         self.assertEqual(list(mmgraph.mobility_graph.links.keys()), [('dummy_0', 'dummy_1')])
 
+    def test_full_recovery_mobility(self):
+        mmgraph = MultiModalGraph()
+        mmgraph.flow_graph.add_node('0', [0, 0])
+        mmgraph.flow_graph.add_node('1', [1, 0])
+        mmgraph.flow_graph.add_link('0_1', '0', '1')
+
+        mmgraph.add_full_recovery_service('CAR')
+
+        # self.assertEqual(mmgraph.flow_graph._adjacency['0'], set('1'))
+        self.assertEqual(list(mmgraph.mobility_graph.nodes.keys()), ['CAR_0', 'CAR_1'])
+        self.assertEqual(list(mmgraph.mobility_graph.links.keys()), [('CAR_0', 'CAR_1')])
 
 class TestExtract(unittest.TestCase):
     def setUp(self):
