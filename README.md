@@ -1,1 +1,1 @@
-# MnMs : Multimodal network Models
+# MnMs : Multimodal network Modelling and Simulation
