@@ -11,8 +11,10 @@ class TopoNode(object):
 
     Parameters
     ----------
-    id: The identifier for this TopoNode
-    ref_node: A reference to GeoNode (default is None)
+    id: str
+        The identifier for this TopoNode
+    ref_node: str
+        A reference to GeoNode (default is None)
 
     """
     def __init__(self, id:str, ref_node:str=None):
@@ -23,6 +25,16 @@ class TopoNode(object):
         return f"TopoNode(id={self.id}, ref_node={self.reference_node})"
 
 class GeoNode(object):
+    """Class representing a geometric node
+
+    Parameters
+    ----------
+    id: str
+        The identifier for this GeoNode
+    pos: list
+        A list of float of size 2 representing the node position
+
+    """
     def __init__(self, id, pos):
         self.id = id
         self.pos = np.array(pos)
@@ -31,6 +43,25 @@ class GeoNode(object):
         return f"GeoNode(id={self.id}, pos={self.pos})"
 
 class TopoLink(object):
+    """Link between two TopoNode, it hold costs for shortest path computation
+
+    Parameters
+    ----------
+    id: str
+        The identifier for this TopoLink
+    upstream_node: str
+        Reference to uptream TopoNode
+    downstream_node: str
+        Reference to downstream TopoNode
+    costs: dict
+        Dictionnary of costs
+    reference_links: list
+        List of references of the associated GeoLinks
+    reference_lane_ids: list
+        List of index of lane id for each reference_links
+    mobility_service: str
+        Identifier of the mobility service that use this TopoLink
+    """
     def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None, reference_lane_ids=None,
                  mobility_service=None):
         self.id = lid
