@@ -1,7 +1,8 @@
 import unittest
 
 from mnms.graph import MultiModalGraph
-from mnms.graph.algorithms import dijkstra, astar, nearest_mobility_service
+from mnms.graph.algorithms import nearest_mobility_service
+from mnms.graph.algorithms.shortest_path import astar, dijkstra
 
 class TestAlgorithms(unittest.TestCase):
     def setUp(self):

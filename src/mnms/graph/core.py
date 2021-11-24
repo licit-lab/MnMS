@@ -3,7 +3,7 @@ from collections import defaultdict
 from abc import ABC, abstractmethod
 import numpy as np
 
-from mnms.graph.algorithms.shortest_path import dijkstra
+from mnms.graph.reservoir import Reservoir
 from mnms.log import logger
 
 class TopoNode(object):
@@ -23,13 +23,15 @@ class GeoNode(object):
         return f"GeoNode(id={self.id}, pos={self.pos})"
 
 class TopoLink(object):
-    def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None, reference_lane_ids=None):
+    def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None, reference_lane_ids=None,
+                 mobility_service=None):
         self.id = lid
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
         self.costs = costs if costs is not None else {}
         self.reference_links = reference_links if reference_links is not None else []
         self.reference_lane_ids = []
+        self.mobility_service = mobility_service
 
         if reference_links is not None:
             if reference_lane_ids is None:
@@ -46,7 +48,7 @@ class GeoLink(object):
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
         self.nb_lane = nb_lane
-        self.reservoirs = []
+        self.reservoir = None
 
     def __repr__(self):
         return f"GeoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
@@ -99,12 +101,12 @@ class TopoGraph(OrientedGraph):
         node = TopoNode(nodeid, ref_node)
         self.nodes[node.id] = node
 
-    def add_link(self, lid, upstream_node, downstream_node, costs, reference_links=None, reference_lane_ids=None) -> None:
+    def add_link(self, lid, upstream_node, downstream_node, costs, reference_links=None, reference_lane_ids=None,
+                 mobility_service=None) -> None:
         assert (upstream_node, downstream_node) not in self.links, f"Nodes {upstream_node}, {downstream_node} already in graph"
-
         assert lid not in self._map_lid_nodes, f"Link id {lid} already exist"
 
-        link = TopoLink(lid, upstream_node, downstream_node, costs, reference_links, reference_lane_ids)
+        link = TopoLink(lid, upstream_node, downstream_node, costs, reference_links, reference_lane_ids, mobility_service)
         self.links[(upstream_node, downstream_node)]= link
         self._map_lid_nodes[lid] = (upstream_node, downstream_node)
         self._adjacency[upstream_node].add(downstream_node)
@@ -156,7 +158,7 @@ class MobilityGraph(object):
 
     def add_link(self, lid, upstream_node: str, downstream_node: str, costs:Dict[str, float], reference_links=None, reference_lane_ids=None):
         self.links[(upstream_node, downstream_node)] = lid
-        self._graph.add_link(lid, self.id+"_"+upstream_node, self.id+"_"+downstream_node, costs, reference_links, reference_lane_ids)
+        self._graph.add_link(lid, self.id+"_"+upstream_node, self.id+"_"+downstream_node, costs, reference_links, reference_lane_ids, self.id)
 
     def set_cost(self, cost_name:str, default_value:float):
         for unode, dnode in self.links.keys():
@@ -187,6 +189,7 @@ class MultiModalGraph(object):
 
 
     def connect_mobility_service(self, upstream_service, downstream_service, nodeid, costs={}):
+        costs.update({"length":0})
         self.mobility_graph.add_link("_".join([upstream_service, downstream_service, nodeid]),
                                      upstream_service+"_"+nodeid,
                                      downstream_service+"_"+nodeid,
@@ -195,59 +198,11 @@ class MultiModalGraph(object):
         self._adjacency_services[upstream_service].add(downstream_service)
 
 
-    # def add_reservoir(self, resid: str, links: List):
-    #     for l in links:
-    #
-    #     self.reservoirs[resid] = links
-
-    def shortest_path(self, origin, dest, cost):
-
-        # Create artificial nodes
-
-        start_nodes = [name+'_'+origin for name, service in self._mobility_services.items() if origin in service.nodes]
-        end_nodes = [name+'_'+dest for name, service in self._mobility_services.items() if dest in service.nodes]
-
-        start_node = f"START_{origin}_{dest}"
-        end_node = f"END_{origin}_{dest}"
-        logger.debug(f"Create artitificial nodes: {start_node}, {end_node}")
-
-
-        self.mobility_graph.add_node(start_node)
-        self.mobility_graph.add_node(end_node)
-
-        logger.debug(f"Create start artitificial links with: {start_nodes}")
-        for n in start_nodes:
-            self.mobility_graph.add_link(start_node+'_'+n, start_node, n, {cost:0})
-
-        logger.debug(f"Create end artitificial links with: {end_nodes}")
-        for n in end_nodes:
-            self.mobility_graph.add_link(n+'_'+end_node, n, end_node, {cost:0})
-
-        # Compute paths
-
-        logger.debug(f"Compute path")
-        cost, path = dijkstra(self.mobility_graph, start_node, end_node, cost)
-
-        # Clean the graph from artificial nodes
-
-        logger.debug(f"Clean graph")
-        del self.mobility_graph.nodes[start_node]
-        del self.mobility_graph.nodes[end_node]
-        del self.mobility_graph._adjacency[start_node]
-
-
-        for n in start_nodes:
-            del self.mobility_graph.links[(start_node, n)]
-
-        for n in end_nodes:
-            del self.mobility_graph.links[(n, end_node)]
-            self.mobility_graph._adjacency[n].remove(end_node)
-
-        del path[0]
-        del path[-1]
-
-        return cost, tuple(path)
-
+    def add_reservoir(self, resid: str, links: List[str]):
+        for lid in links:
+            nodes = self.flow_graph._map_lid_nodes[lid]
+            self.flow_graph.links[nodes].reservoir = resid
+        self.reservoirs[resid] = Reservoir(resid, links)
 
 if __name__ == '__main__':
     from mnms.log import set_log_level, LOGLEVEL

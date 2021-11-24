@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from mnms.graph import MultiModalGraph
 from mnms.tools.io import save_graph
-from mnms.graph.render import draw_flow_graph, draw_mobility_service
+from mnms.tools.render import draw_flow_graph, draw_mobility_service
 
 
 def convert_symuflow_to_mmgraph(file):
@@ -59,16 +59,21 @@ def convert_symuflow_to_mmgraph(file):
                 service_stops.append(arret.attrib['troncon'])
 
         [service.add_node(service_links[s][0], service_links[s][0]) for s in service_stops]
-        [service.add_link(s, service_links[s][0],
+        [service.add_link("_".join([lid, service_links[s][0], service_links[s][1]]), service_links[s][0],
                           service_links[s][1],
                           costs={'length':np.linalg.norm(flow_graph.nodes[service_links[s][0]].pos-flow_graph.nodes[service_links[s][1]].pos)},
+                          reference_links=[s]) for s in service_stops]
+        [service.add_link("_".join([lid, service_links[s][1], service_links[s][0]]), service_links[s][1],
+                          service_links[s][0],
+                          costs={'length': np.linalg.norm(
+                              flow_graph.nodes[service_links[s][0]].pos - flow_graph.nodes[service_links[s][1]].pos)},
                           reference_links=[s]) for s in service_stops]
 
     for outer_sid, outer_serv in G._mobility_services.items():
         for inner_sid, inner_serv in G._mobility_services.items():
             if outer_sid != inner_sid:
                 for n in outer_serv.nodes.intersection(inner_serv.nodes):
-                    G.connect_mobility_service(outer_sid, inner_sid, n, {"length":0})
+                    G.connect_mobility_service(outer_sid, inner_sid, n)
 
     fig, ax = plt.subplots()
     draw_flow_graph(ax, G.flow_graph)
