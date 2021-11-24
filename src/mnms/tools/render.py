@@ -39,7 +39,7 @@ def draw_multi_layer_graph(ax, G, linewidth=1, nodesize=5):
 
 
 
-def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=5):
+def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=5, node_label=True):
     lines = list()
 
     # for u in G.nodes:
@@ -59,14 +59,17 @@ def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=5):
         # raise KeyboardInterrupt
     ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
 
+    if node_label:
+        [ax.annotate(n.id, n.pos) for n in G.nodes.values()]
+
     ax.margins(0.05, 0.05)
     ax.axis("equal")
     plt.tight_layout()
 
 
 def draw_mobility_service(ax, mmgraph, service, color, linkwidth=1, nodesize=5):
-    # nodes = [mmgraph.flow_graph.nodes[n.replace(f'{service}_', '')].id for n in mmgraph._mobility_services[service].nodes if n.replace(f'{service}_', '') in mmgraph.flow_graph.nodes]
-    # subgraph = mmgraph.flow_graph.extract_subgraph(nodes)
+    # nodes = [graph.flow_graph.nodes[n.replace(f'{service}_', '')].id for n in graph._mobility_services[service].nodes if n.replace(f'{service}_', '') in graph.flow_graph.nodes]
+    # subgraph = graph.flow_graph.extract_subgraph(nodes)
     # draw_flow_graph(ax, subgraph, color, linkwidth, nodesize)
 
     lines = list()

@@ -1,9 +1,12 @@
 from collections import deque, defaultdict
-from typing import Callable
+from typing import Callable, Tuple, Deque
+
+from mnms.log import logger
+from mnms.graph.core import TopoGraph
 
 import numpy as np
 
-def dijkstra(G, origin: str, destination: str, cost:str) -> deque:
+def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[float, Deque[str]]:
     vertices = set()
     dist = dict()
     prev = dict()
@@ -26,7 +29,6 @@ def dijkstra(G, origin: str, destination: str, cost:str) -> deque:
                 while u is not None:
                     path.appendleft(u)
                     u = prev[u]
-
             return dist[destination], path
 
         for neighbor in G.get_node_neighbors(u):
@@ -36,11 +38,11 @@ def dijkstra(G, origin: str, destination: str, cost:str) -> deque:
                     dist[neighbor] = alt
                     prev[neighbor] = u
 
-    return float('inf'), None
+    return float('inf'), deque()
 
 
 
-def astar(G, origin: str, destination: str, heuristic: Callable, cost:str):
+def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable, cost:str) -> Tuple[float, Deque[str]]:
     discovered_nodes = set([origin])
     prev = dict()
 
@@ -74,4 +76,52 @@ def astar(G, origin: str, destination: str, heuristic: Callable, cost:str):
                 if neighbor not in discovered_nodes:
                     discovered_nodes.add(neighbor)
 
-    return float('inf'), None
+    return float('inf'), deque()
+
+
+
+# TODO: make use of algorithm arg with either dijkstra or astar
+def compute_shortest_path(mmgraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra") -> Tuple[float, Deque[str]]:
+    # Create artificial nodes
+
+    start_nodes = [name + '_' + origin for name, service in mmgraph._mobility_services.items() if origin in service.nodes]
+    end_nodes = [name + '_' + destination for name, service in mmgraph._mobility_services.items() if destination in service.nodes]
+
+    start_node = f"START_{origin}_{destination}"
+    end_node = f"END_{origin}_{destination}"
+    logger.debug(f"Create artitificial nodes: {start_node}, {end_node}")
+
+    mmgraph.mobility_graph.add_node(start_node)
+    mmgraph.mobility_graph.add_node(end_node)
+
+    logger.debug(f"Create start artitificial links with: {start_nodes}")
+    for n in start_nodes:
+        mmgraph.mobility_graph.add_link(start_node + '_' + n, start_node, n, {cost: 0})
+
+    logger.debug(f"Create end artitificial links with: {end_nodes}")
+    for n in end_nodes:
+        mmgraph.mobility_graph.add_link(n + '_' + end_node, n, end_node, {cost: 0})
+
+    # Compute paths
+
+    logger.debug(f"Compute path")
+    cost, path = dijkstra(mmgraph.mobility_graph, start_node, end_node, cost)
+
+    # Clean the graph from artificial nodes
+
+    logger.debug(f"Clean graph")
+    del mmgraph.mobility_graph.nodes[start_node]
+    del mmgraph.mobility_graph.nodes[end_node]
+    del mmgraph.mobility_graph._adjacency[start_node]
+
+    for n in start_nodes:
+        del mmgraph.mobility_graph.links[(start_node, n)]
+
+    for n in end_nodes:
+        del mmgraph.mobility_graph.links[(n, end_node)]
+        mmgraph.mobility_graph._adjacency[n].remove(end_node)
+
+    del path[0]
+    del path[-1]
+
+    return cost, tuple(path)

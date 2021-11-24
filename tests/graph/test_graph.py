@@ -43,7 +43,7 @@ class TestCreate(unittest.TestCase):
 
         mmgraph.add_full_recovery_service('CAR')
 
-        # self.assertEqual(mmgraph.flow_graph._adjacency['0'], set('1'))
+        # self.assertEqual(graph.flow_graph._adjacency['0'], set('1'))
         self.assertEqual(list(mmgraph.mobility_graph.nodes.keys()), ['CAR_0', 'CAR_1'])
         self.assertEqual(list(mmgraph.mobility_graph.links.keys()), [('CAR_0', 'CAR_1')])
 

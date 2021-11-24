@@ -1,0 +1,2491 @@
+{
+    "FLOW_GRAPH": {
+        "NODES": {
+            "E_EO_1": {
+                "POSITION": [
+                    6994.0,
+                    1027.0
+                ]
+            },
+            "CAF_1_5": {
+                "POSITION": [
+                    5998.5,
+                    1025.5
+                ]
+            },
+            "CAF_1_4": {
+                "POSITION": [
+                    5001.5,
+                    1025.5
+                ]
+            },
+            "CAF_1_3": {
+                "POSITION": [
+                    3998.5,
+                    1025.5
+                ]
+            },
+            "CAF_1_2": {
+                "POSITION": [
+                    3001.5,
+                    1025.5
+                ]
+            },
+            "CAF_1_1": {
+                "POSITION": [
+                    1998.5,
+                    1025.5
+                ]
+            },
+            "CAF_1_0": {
+                "POSITION": [
+                    1001.5,
+                    1025.5
+                ]
+            },
+            "S_EO_1": {
+                "POSITION": [
+                    6.0,
+                    1027.0
+                ]
+            },
+            "E_EO_3": {
+                "POSITION": [
+                    6994.0,
+                    -973.0
+                ]
+            },
+            "CAF_3_5": {
+                "POSITION": [
+                    5998.5,
+                    -974.5
+                ]
+            },
+            "CAF_3_4": {
+                "POSITION": [
+                    5001.5,
+                    -974.5
+                ]
+            },
+            "CAF_3_3": {
+                "POSITION": [
+                    3998.5,
+                    -974.5
+                ]
+            },
+            "CAF_3_2": {
+                "POSITION": [
+                    3001.5,
+                    -974.5
+                ]
+            },
+            "CAF_3_1": {
+                "POSITION": [
+                    1998.5,
+                    -974.5
+                ]
+            },
+            "CAF_3_0": {
+                "POSITION": [
+                    1001.5,
+                    -974.5
+                ]
+            },
+            "S_EO_3": {
+                "POSITION": [
+                    6.0,
+                    -973.0
+                ]
+            },
+            "E_EO_5": {
+                "POSITION": [
+                    6994.0,
+                    -2973.0
+                ]
+            },
+            "CAF_5_5": {
+                "POSITION": [
+                    5998.5,
+                    -2974.5
+                ]
+            },
+            "CAF_5_4": {
+                "POSITION": [
+                    5001.5,
+                    -2974.5
+                ]
+            },
+            "CAF_5_3": {
+                "POSITION": [
+                    3998.5,
+                    -2974.5
+                ]
+            },
+            "CAF_5_2": {
+                "POSITION": [
+                    3001.5,
+                    -2974.5
+                ]
+            },
+            "CAF_5_1": {
+                "POSITION": [
+                    1998.5,
+                    -2974.5
+                ]
+            },
+            "CAF_5_0": {
+                "POSITION": [
+                    1001.5,
+                    -2974.5
+                ]
+            },
+            "S_EO_5": {
+                "POSITION": [
+                    6.0,
+                    -2973.0
+                ]
+            },
+            "E_NS_1": {
+                "POSITION": [
+                    1997.0,
+                    3018.0
+                ]
+            },
+            "CAF_0_1": {
+                "POSITION": [
+                    1998.5,
+                    2022.5
+                ]
+            },
+            "E_NS_3": {
+                "POSITION": [
+                    3997.0,
+                    3018.0
+                ]
+            },
+            "CAF_0_3": {
+                "POSITION": [
+                    3998.5,
+                    2022.5
+                ]
+            },
+            "E_NS_5": {
+                "POSITION": [
+                    5997.0,
+                    3018.0
+                ]
+            },
+            "CAF_0_5": {
+                "POSITION": [
+                    5998.5,
+                    2022.5
+                ]
+            },
+            "CAF_2_1": {
+                "POSITION": [
+                    1998.5,
+                    22.5
+                ]
+            },
+            "CAF_2_3": {
+                "POSITION": [
+                    3998.5,
+                    22.5
+                ]
+            },
+            "CAF_2_5": {
+                "POSITION": [
+                    5998.5,
+                    22.5
+                ]
+            },
+            "CAF_4_1": {
+                "POSITION": [
+                    1998.5,
+                    -1977.5
+                ]
+            },
+            "CAF_4_3": {
+                "POSITION": [
+                    3998.5,
+                    -1977.5
+                ]
+            },
+            "CAF_4_5": {
+                "POSITION": [
+                    5998.5,
+                    -1977.5
+                ]
+            },
+            "S_NS_1": {
+                "POSITION": [
+                    1997.0,
+                    -3970.0
+                ]
+            },
+            "S_NS_3": {
+                "POSITION": [
+                    3997.0,
+                    -3970.0
+                ]
+            },
+            "S_NS_5": {
+                "POSITION": [
+                    5997.0,
+                    -3970.0
+                ]
+            },
+            "E_OE_0": {
+                "POSITION": [
+                    6.0,
+                    2021.0
+                ]
+            },
+            "CAF_0_0": {
+                "POSITION": [
+                    1001.5,
+                    2022.5
+                ]
+            },
+            "CAF_0_2": {
+                "POSITION": [
+                    3001.5,
+                    2022.5
+                ]
+            },
+            "CAF_0_4": {
+                "POSITION": [
+                    5001.5,
+                    2022.5
+                ]
+            },
+            "S_OE_0": {
+                "POSITION": [
+                    6994.0,
+                    2021.0
+                ]
+            },
+            "E_OE_2": {
+                "POSITION": [
+                    6.0,
+                    21.0
+                ]
+            },
+            "CAF_2_0": {
+                "POSITION": [
+                    1001.5,
+                    22.5
+                ]
+            },
+            "CAF_2_2": {
+                "POSITION": [
+                    3001.5,
+                    22.5
+                ]
+            },
+            "CAF_2_4": {
+                "POSITION": [
+                    5001.5,
+                    22.5
+                ]
+            },
+            "S_OE_2": {
+                "POSITION": [
+                    6994.0,
+                    21.0
+                ]
+            },
+            "E_OE_4": {
+                "POSITION": [
+                    6.0,
+                    -1979.0
+                ]
+            },
+            "CAF_4_0": {
+                "POSITION": [
+                    1001.5,
+                    -1977.5
+                ]
+            },
+            "CAF_4_2": {
+                "POSITION": [
+                    3001.5,
+                    -1977.5
+                ]
+            },
+            "CAF_4_4": {
+                "POSITION": [
+                    5001.5,
+                    -1977.5
+                ]
+            },
+            "S_OE_4": {
+                "POSITION": [
+                    6994.0,
+                    -1979.0
+                ]
+            },
+            "E_SN_0": {
+                "POSITION": [
+                    1003.0,
+                    -3970.0
+                ]
+            },
+            "E_SN_2": {
+                "POSITION": [
+                    3003.0,
+                    -3970.0
+                ]
+            },
+            "E_SN_4": {
+                "POSITION": [
+                    5003.0,
+                    -3970.0
+                ]
+            },
+            "S_SN_0": {
+                "POSITION": [
+                    1003.0,
+                    3018.0
+                ]
+            },
+            "S_SN_2": {
+                "POSITION": [
+                    3003.0,
+                    3018.0
+                ]
+            },
+            "S_SN_4": {
+                "POSITION": [
+                    5003.0,
+                    3018.0
+                ]
+            }
+        },
+        "LINKS": {
+            "T_EO_1_0": {
+                "UPSTREAM_NODE": "E_EO_1",
+                "DOWNSTREAM_NODE": "CAF_1_5",
+                "NB_LANE": 1
+            },
+            "T_EO_1_1": {
+                "UPSTREAM_NODE": "CAF_1_5",
+                "DOWNSTREAM_NODE": "CAF_1_4",
+                "NB_LANE": 1
+            },
+            "T_EO_1_2": {
+                "UPSTREAM_NODE": "CAF_1_4",
+                "DOWNSTREAM_NODE": "CAF_1_3",
+                "NB_LANE": 1
+            },
+            "T_EO_1_3": {
+                "UPSTREAM_NODE": "CAF_1_3",
+                "DOWNSTREAM_NODE": "CAF_1_2",
+                "NB_LANE": 1
+            },
+            "T_EO_1_4": {
+                "UPSTREAM_NODE": "CAF_1_2",
+                "DOWNSTREAM_NODE": "CAF_1_1",
+                "NB_LANE": 1
+            },
+            "T_EO_1_5": {
+                "UPSTREAM_NODE": "CAF_1_1",
+                "DOWNSTREAM_NODE": "CAF_1_0",
+                "NB_LANE": 1
+            },
+            "T_EO_1_6": {
+                "UPSTREAM_NODE": "CAF_1_0",
+                "DOWNSTREAM_NODE": "S_EO_1",
+                "NB_LANE": 1
+            },
+            "T_EO_3_0": {
+                "UPSTREAM_NODE": "E_EO_3",
+                "DOWNSTREAM_NODE": "CAF_3_5",
+                "NB_LANE": 1
+            },
+            "T_EO_3_1": {
+                "UPSTREAM_NODE": "CAF_3_5",
+                "DOWNSTREAM_NODE": "CAF_3_4",
+                "NB_LANE": 1
+            },
+            "T_EO_3_2": {
+                "UPSTREAM_NODE": "CAF_3_4",
+                "DOWNSTREAM_NODE": "CAF_3_3",
+                "NB_LANE": 1
+            },
+            "T_EO_3_3": {
+                "UPSTREAM_NODE": "CAF_3_3",
+                "DOWNSTREAM_NODE": "CAF_3_2",
+                "NB_LANE": 1
+            },
+            "T_EO_3_4": {
+                "UPSTREAM_NODE": "CAF_3_2",
+                "DOWNSTREAM_NODE": "CAF_3_1",
+                "NB_LANE": 1
+            },
+            "T_EO_3_5": {
+                "UPSTREAM_NODE": "CAF_3_1",
+                "DOWNSTREAM_NODE": "CAF_3_0",
+                "NB_LANE": 1
+            },
+            "T_EO_3_6": {
+                "UPSTREAM_NODE": "CAF_3_0",
+                "DOWNSTREAM_NODE": "S_EO_3",
+                "NB_LANE": 1
+            },
+            "T_EO_5_0": {
+                "UPSTREAM_NODE": "E_EO_5",
+                "DOWNSTREAM_NODE": "CAF_5_5",
+                "NB_LANE": 1
+            },
+            "T_EO_5_1": {
+                "UPSTREAM_NODE": "CAF_5_5",
+                "DOWNSTREAM_NODE": "CAF_5_4",
+                "NB_LANE": 1
+            },
+            "T_EO_5_2": {
+                "UPSTREAM_NODE": "CAF_5_4",
+                "DOWNSTREAM_NODE": "CAF_5_3",
+                "NB_LANE": 1
+            },
+            "T_EO_5_3": {
+                "UPSTREAM_NODE": "CAF_5_3",
+                "DOWNSTREAM_NODE": "CAF_5_2",
+                "NB_LANE": 1
+            },
+            "T_EO_5_4": {
+                "UPSTREAM_NODE": "CAF_5_2",
+                "DOWNSTREAM_NODE": "CAF_5_1",
+                "NB_LANE": 1
+            },
+            "T_EO_5_5": {
+                "UPSTREAM_NODE": "CAF_5_1",
+                "DOWNSTREAM_NODE": "CAF_5_0",
+                "NB_LANE": 1
+            },
+            "T_EO_5_6": {
+                "UPSTREAM_NODE": "CAF_5_0",
+                "DOWNSTREAM_NODE": "S_EO_5",
+                "NB_LANE": 1
+            },
+            "T_NS_0_1": {
+                "UPSTREAM_NODE": "E_NS_1",
+                "DOWNSTREAM_NODE": "CAF_0_1",
+                "NB_LANE": 1
+            },
+            "T_NS_0_3": {
+                "UPSTREAM_NODE": "E_NS_3",
+                "DOWNSTREAM_NODE": "CAF_0_3",
+                "NB_LANE": 1
+            },
+            "T_NS_0_5": {
+                "UPSTREAM_NODE": "E_NS_5",
+                "DOWNSTREAM_NODE": "CAF_0_5",
+                "NB_LANE": 1
+            },
+            "T_NS_1_1": {
+                "UPSTREAM_NODE": "CAF_0_1",
+                "DOWNSTREAM_NODE": "CAF_1_1",
+                "NB_LANE": 1
+            },
+            "T_NS_1_3": {
+                "UPSTREAM_NODE": "CAF_0_3",
+                "DOWNSTREAM_NODE": "CAF_1_3",
+                "NB_LANE": 1
+            },
+            "T_NS_1_5": {
+                "UPSTREAM_NODE": "CAF_0_5",
+                "DOWNSTREAM_NODE": "CAF_1_5",
+                "NB_LANE": 1
+            },
+            "T_NS_2_1": {
+                "UPSTREAM_NODE": "CAF_1_1",
+                "DOWNSTREAM_NODE": "CAF_2_1",
+                "NB_LANE": 1
+            },
+            "T_NS_2_3": {
+                "UPSTREAM_NODE": "CAF_1_3",
+                "DOWNSTREAM_NODE": "CAF_2_3",
+                "NB_LANE": 1
+            },
+            "T_NS_2_5": {
+                "UPSTREAM_NODE": "CAF_1_5",
+                "DOWNSTREAM_NODE": "CAF_2_5",
+                "NB_LANE": 1
+            },
+            "T_NS_3_1": {
+                "UPSTREAM_NODE": "CAF_2_1",
+                "DOWNSTREAM_NODE": "CAF_3_1",
+                "NB_LANE": 1
+            },
+            "T_NS_3_3": {
+                "UPSTREAM_NODE": "CAF_2_3",
+                "DOWNSTREAM_NODE": "CAF_3_3",
+                "NB_LANE": 1
+            },
+            "T_NS_3_5": {
+                "UPSTREAM_NODE": "CAF_2_5",
+                "DOWNSTREAM_NODE": "CAF_3_5",
+                "NB_LANE": 1
+            },
+            "T_NS_4_1": {
+                "UPSTREAM_NODE": "CAF_3_1",
+                "DOWNSTREAM_NODE": "CAF_4_1",
+                "NB_LANE": 1
+            },
+            "T_NS_4_3": {
+                "UPSTREAM_NODE": "CAF_3_3",
+                "DOWNSTREAM_NODE": "CAF_4_3",
+                "NB_LANE": 1
+            },
+            "T_NS_4_5": {
+                "UPSTREAM_NODE": "CAF_3_5",
+                "DOWNSTREAM_NODE": "CAF_4_5",
+                "NB_LANE": 1
+            },
+            "T_NS_5_1": {
+                "UPSTREAM_NODE": "CAF_4_1",
+                "DOWNSTREAM_NODE": "CAF_5_1",
+                "NB_LANE": 1
+            },
+            "T_NS_5_3": {
+                "UPSTREAM_NODE": "CAF_4_3",
+                "DOWNSTREAM_NODE": "CAF_5_3",
+                "NB_LANE": 1
+            },
+            "T_NS_5_5": {
+                "UPSTREAM_NODE": "CAF_4_5",
+                "DOWNSTREAM_NODE": "CAF_5_5",
+                "NB_LANE": 1
+            },
+            "T_NS_6_1": {
+                "UPSTREAM_NODE": "CAF_5_1",
+                "DOWNSTREAM_NODE": "S_NS_1",
+                "NB_LANE": 1
+            },
+            "T_NS_6_3": {
+                "UPSTREAM_NODE": "CAF_5_3",
+                "DOWNSTREAM_NODE": "S_NS_3",
+                "NB_LANE": 1
+            },
+            "T_NS_6_5": {
+                "UPSTREAM_NODE": "CAF_5_5",
+                "DOWNSTREAM_NODE": "S_NS_5",
+                "NB_LANE": 1
+            },
+            "T_OE_0_0": {
+                "UPSTREAM_NODE": "E_OE_0",
+                "DOWNSTREAM_NODE": "CAF_0_0",
+                "NB_LANE": 1
+            },
+            "T_OE_0_1": {
+                "UPSTREAM_NODE": "CAF_0_0",
+                "DOWNSTREAM_NODE": "CAF_0_1",
+                "NB_LANE": 1
+            },
+            "T_OE_0_2": {
+                "UPSTREAM_NODE": "CAF_0_1",
+                "DOWNSTREAM_NODE": "CAF_0_2",
+                "NB_LANE": 1
+            },
+            "T_OE_0_3": {
+                "UPSTREAM_NODE": "CAF_0_2",
+                "DOWNSTREAM_NODE": "CAF_0_3",
+                "NB_LANE": 1
+            },
+            "T_OE_0_4": {
+                "UPSTREAM_NODE": "CAF_0_3",
+                "DOWNSTREAM_NODE": "CAF_0_4",
+                "NB_LANE": 1
+            },
+            "T_OE_0_5": {
+                "UPSTREAM_NODE": "CAF_0_4",
+                "DOWNSTREAM_NODE": "CAF_0_5",
+                "NB_LANE": 1
+            },
+            "T_OE_0_6": {
+                "UPSTREAM_NODE": "CAF_0_5",
+                "DOWNSTREAM_NODE": "S_OE_0",
+                "NB_LANE": 1
+            },
+            "T_OE_2_0": {
+                "UPSTREAM_NODE": "E_OE_2",
+                "DOWNSTREAM_NODE": "CAF_2_0",
+                "NB_LANE": 1
+            },
+            "T_OE_2_1": {
+                "UPSTREAM_NODE": "CAF_2_0",
+                "DOWNSTREAM_NODE": "CAF_2_1",
+                "NB_LANE": 1
+            },
+            "T_OE_2_2": {
+                "UPSTREAM_NODE": "CAF_2_1",
+                "DOWNSTREAM_NODE": "CAF_2_2",
+                "NB_LANE": 1
+            },
+            "T_OE_2_3": {
+                "UPSTREAM_NODE": "CAF_2_2",
+                "DOWNSTREAM_NODE": "CAF_2_3",
+                "NB_LANE": 1
+            },
+            "T_OE_2_4": {
+                "UPSTREAM_NODE": "CAF_2_3",
+                "DOWNSTREAM_NODE": "CAF_2_4",
+                "NB_LANE": 1
+            },
+            "T_OE_2_5": {
+                "UPSTREAM_NODE": "CAF_2_4",
+                "DOWNSTREAM_NODE": "CAF_2_5",
+                "NB_LANE": 1
+            },
+            "T_OE_2_6": {
+                "UPSTREAM_NODE": "CAF_2_5",
+                "DOWNSTREAM_NODE": "S_OE_2",
+                "NB_LANE": 1
+            },
+            "T_OE_4_0": {
+                "UPSTREAM_NODE": "E_OE_4",
+                "DOWNSTREAM_NODE": "CAF_4_0",
+                "NB_LANE": 1
+            },
+            "T_OE_4_1": {
+                "UPSTREAM_NODE": "CAF_4_0",
+                "DOWNSTREAM_NODE": "CAF_4_1",
+                "NB_LANE": 1
+            },
+            "T_OE_4_2": {
+                "UPSTREAM_NODE": "CAF_4_1",
+                "DOWNSTREAM_NODE": "CAF_4_2",
+                "NB_LANE": 1
+            },
+            "T_OE_4_3": {
+                "UPSTREAM_NODE": "CAF_4_2",
+                "DOWNSTREAM_NODE": "CAF_4_3",
+                "NB_LANE": 1
+            },
+            "T_OE_4_4": {
+                "UPSTREAM_NODE": "CAF_4_3",
+                "DOWNSTREAM_NODE": "CAF_4_4",
+                "NB_LANE": 1
+            },
+            "T_OE_4_5": {
+                "UPSTREAM_NODE": "CAF_4_4",
+                "DOWNSTREAM_NODE": "CAF_4_5",
+                "NB_LANE": 1
+            },
+            "T_OE_4_6": {
+                "UPSTREAM_NODE": "CAF_4_5",
+                "DOWNSTREAM_NODE": "S_OE_4",
+                "NB_LANE": 1
+            },
+            "T_SN_0_0": {
+                "UPSTREAM_NODE": "E_SN_0",
+                "DOWNSTREAM_NODE": "CAF_5_0",
+                "NB_LANE": 1
+            },
+            "T_SN_0_2": {
+                "UPSTREAM_NODE": "E_SN_2",
+                "DOWNSTREAM_NODE": "CAF_5_2",
+                "NB_LANE": 1
+            },
+            "T_SN_0_4": {
+                "UPSTREAM_NODE": "E_SN_4",
+                "DOWNSTREAM_NODE": "CAF_5_4",
+                "NB_LANE": 1
+            },
+            "T_SN_1_0": {
+                "UPSTREAM_NODE": "CAF_5_0",
+                "DOWNSTREAM_NODE": "CAF_4_0",
+                "NB_LANE": 1
+            },
+            "T_SN_1_2": {
+                "UPSTREAM_NODE": "CAF_5_2",
+                "DOWNSTREAM_NODE": "CAF_4_2",
+                "NB_LANE": 1
+            },
+            "T_SN_1_4": {
+                "UPSTREAM_NODE": "CAF_5_4",
+                "DOWNSTREAM_NODE": "CAF_4_4",
+                "NB_LANE": 1
+            },
+            "T_SN_2_0": {
+                "UPSTREAM_NODE": "CAF_4_0",
+                "DOWNSTREAM_NODE": "CAF_3_0",
+                "NB_LANE": 1
+            },
+            "T_SN_2_2": {
+                "UPSTREAM_NODE": "CAF_4_2",
+                "DOWNSTREAM_NODE": "CAF_3_2",
+                "NB_LANE": 1
+            },
+            "T_SN_2_4": {
+                "UPSTREAM_NODE": "CAF_4_4",
+                "DOWNSTREAM_NODE": "CAF_3_4",
+                "NB_LANE": 1
+            },
+            "T_SN_3_0": {
+                "UPSTREAM_NODE": "CAF_3_0",
+                "DOWNSTREAM_NODE": "CAF_2_0",
+                "NB_LANE": 1
+            },
+            "T_SN_3_2": {
+                "UPSTREAM_NODE": "CAF_3_2",
+                "DOWNSTREAM_NODE": "CAF_2_2",
+                "NB_LANE": 1
+            },
+            "T_SN_3_4": {
+                "UPSTREAM_NODE": "CAF_3_4",
+                "DOWNSTREAM_NODE": "CAF_2_4",
+                "NB_LANE": 1
+            },
+            "T_SN_4_0": {
+                "UPSTREAM_NODE": "CAF_2_0",
+                "DOWNSTREAM_NODE": "CAF_1_0",
+                "NB_LANE": 1
+            },
+            "T_SN_4_2": {
+                "UPSTREAM_NODE": "CAF_2_2",
+                "DOWNSTREAM_NODE": "CAF_1_2",
+                "NB_LANE": 1
+            },
+            "T_SN_4_4": {
+                "UPSTREAM_NODE": "CAF_2_4",
+                "DOWNSTREAM_NODE": "CAF_1_4",
+                "NB_LANE": 1
+            },
+            "T_SN_5_0": {
+                "UPSTREAM_NODE": "CAF_1_0",
+                "DOWNSTREAM_NODE": "CAF_0_0",
+                "NB_LANE": 1
+            },
+            "T_SN_5_2": {
+                "UPSTREAM_NODE": "CAF_1_2",
+                "DOWNSTREAM_NODE": "CAF_0_2",
+                "NB_LANE": 1
+            },
+            "T_SN_5_4": {
+                "UPSTREAM_NODE": "CAF_1_4",
+                "DOWNSTREAM_NODE": "CAF_0_4",
+                "NB_LANE": 1
+            },
+            "T_SN_6_0": {
+                "UPSTREAM_NODE": "CAF_0_0",
+                "DOWNSTREAM_NODE": "S_SN_0",
+                "NB_LANE": 1
+            },
+            "T_SN_6_2": {
+                "UPSTREAM_NODE": "CAF_0_2",
+                "DOWNSTREAM_NODE": "S_SN_2",
+                "NB_LANE": 1
+            },
+            "T_SN_6_4": {
+                "UPSTREAM_NODE": "CAF_0_4",
+                "DOWNSTREAM_NODE": "S_SN_4",
+                "NB_LANE": 1
+            }
+        },
+        "RESERVOIR": {}
+    },
+    "MOBILITY_GRAPH": {
+        "SERVICES": {
+            "L_EO": {
+                "NODES": {
+                    "CAF_3_5": {
+                        "REF_NODE": "CAF_3_5"
+                    },
+                    "CAF_3_4": {
+                        "REF_NODE": "CAF_3_4"
+                    },
+                    "CAF_3_3": {
+                        "REF_NODE": "CAF_3_3"
+                    },
+                    "E_EO_3": {
+                        "REF_NODE": "E_EO_3"
+                    },
+                    "CAF_3_2": {
+                        "REF_NODE": "CAF_3_2"
+                    },
+                    "CAF_3_1": {
+                        "REF_NODE": "CAF_3_1"
+                    }
+                },
+                "LINKS": {
+                    "L_EO_E_EO_3_CAF_3_5": {
+                        "UPSTREAM_NODE": "E_EO_3",
+                        "DOWNSTREAM_NODE": "CAF_3_5",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_0"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_5_CAF_3_4": {
+                        "UPSTREAM_NODE": "CAF_3_5",
+                        "DOWNSTREAM_NODE": "CAF_3_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_4_CAF_3_3": {
+                        "UPSTREAM_NODE": "CAF_3_4",
+                        "DOWNSTREAM_NODE": "CAF_3_3",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_3_CAF_3_2": {
+                        "UPSTREAM_NODE": "CAF_3_3",
+                        "DOWNSTREAM_NODE": "CAF_3_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_2_CAF_3_1": {
+                        "UPSTREAM_NODE": "CAF_3_2",
+                        "DOWNSTREAM_NODE": "CAF_3_1",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_1_CAF_3_0": {
+                        "UPSTREAM_NODE": "CAF_3_1",
+                        "DOWNSTREAM_NODE": "CAF_3_0",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_5"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_5_E_EO_3": {
+                        "UPSTREAM_NODE": "CAF_3_5",
+                        "DOWNSTREAM_NODE": "E_EO_3",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_0"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_4_CAF_3_5": {
+                        "UPSTREAM_NODE": "CAF_3_4",
+                        "DOWNSTREAM_NODE": "CAF_3_5",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_3_CAF_3_4": {
+                        "UPSTREAM_NODE": "CAF_3_3",
+                        "DOWNSTREAM_NODE": "CAF_3_4",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_2_CAF_3_3": {
+                        "UPSTREAM_NODE": "CAF_3_2",
+                        "DOWNSTREAM_NODE": "CAF_3_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_1_CAF_3_2": {
+                        "UPSTREAM_NODE": "CAF_3_1",
+                        "DOWNSTREAM_NODE": "CAF_3_2",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_CAF_3_0_CAF_3_1": {
+                        "UPSTREAM_NODE": "CAF_3_0",
+                        "DOWNSTREAM_NODE": "CAF_3_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_3_5"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    }
+                }
+            },
+            "L_EO_A": {
+                "NODES": {
+                    "CAF_1_2": {
+                        "REF_NODE": "CAF_1_2"
+                    },
+                    "CAF_1_1": {
+                        "REF_NODE": "CAF_1_1"
+                    },
+                    "E_EO_1": {
+                        "REF_NODE": "E_EO_1"
+                    },
+                    "CAF_1_3": {
+                        "REF_NODE": "CAF_1_3"
+                    },
+                    "CAF_1_4": {
+                        "REF_NODE": "CAF_1_4"
+                    },
+                    "CAF_1_5": {
+                        "REF_NODE": "CAF_1_5"
+                    }
+                },
+                "LINKS": {
+                    "L_EO_A_E_EO_1_CAF_1_5": {
+                        "UPSTREAM_NODE": "E_EO_1",
+                        "DOWNSTREAM_NODE": "CAF_1_5",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_0"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_5_CAF_1_4": {
+                        "UPSTREAM_NODE": "CAF_1_5",
+                        "DOWNSTREAM_NODE": "CAF_1_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_4_CAF_1_3": {
+                        "UPSTREAM_NODE": "CAF_1_4",
+                        "DOWNSTREAM_NODE": "CAF_1_3",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_3_CAF_1_2": {
+                        "UPSTREAM_NODE": "CAF_1_3",
+                        "DOWNSTREAM_NODE": "CAF_1_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_2_CAF_1_1": {
+                        "UPSTREAM_NODE": "CAF_1_2",
+                        "DOWNSTREAM_NODE": "CAF_1_1",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_1_CAF_1_0": {
+                        "UPSTREAM_NODE": "CAF_1_1",
+                        "DOWNSTREAM_NODE": "CAF_1_0",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_5"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_5_E_EO_1": {
+                        "UPSTREAM_NODE": "CAF_1_5",
+                        "DOWNSTREAM_NODE": "E_EO_1",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_0"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_4_CAF_1_5": {
+                        "UPSTREAM_NODE": "CAF_1_4",
+                        "DOWNSTREAM_NODE": "CAF_1_5",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_3_CAF_1_4": {
+                        "UPSTREAM_NODE": "CAF_1_3",
+                        "DOWNSTREAM_NODE": "CAF_1_4",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_2_CAF_1_3": {
+                        "UPSTREAM_NODE": "CAF_1_2",
+                        "DOWNSTREAM_NODE": "CAF_1_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_1_CAF_1_2": {
+                        "UPSTREAM_NODE": "CAF_1_1",
+                        "DOWNSTREAM_NODE": "CAF_1_2",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_EO_A_CAF_1_0_CAF_1_1": {
+                        "UPSTREAM_NODE": "CAF_1_0",
+                        "DOWNSTREAM_NODE": "CAF_1_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_EO_1_5"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    }
+                }
+            },
+            "L_NS": {
+                "NODES": {
+                    "CAF_2_3": {
+                        "REF_NODE": "CAF_2_3"
+                    },
+                    "CAF_1_3": {
+                        "REF_NODE": "CAF_1_3"
+                    },
+                    "CAF_4_3": {
+                        "REF_NODE": "CAF_4_3"
+                    },
+                    "E_NS_3": {
+                        "REF_NODE": "E_NS_3"
+                    },
+                    "CAF_3_3": {
+                        "REF_NODE": "CAF_3_3"
+                    },
+                    "CAF_0_3": {
+                        "REF_NODE": "CAF_0_3"
+                    }
+                },
+                "LINKS": {
+                    "L_NS_E_NS_3_CAF_0_3": {
+                        "UPSTREAM_NODE": "E_NS_3",
+                        "DOWNSTREAM_NODE": "CAF_0_3",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_NS_0_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_0_3_CAF_1_3": {
+                        "UPSTREAM_NODE": "CAF_0_3",
+                        "DOWNSTREAM_NODE": "CAF_1_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_1_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_1_3_CAF_2_3": {
+                        "UPSTREAM_NODE": "CAF_1_3",
+                        "DOWNSTREAM_NODE": "CAF_2_3",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_2_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_2_3_CAF_3_3": {
+                        "UPSTREAM_NODE": "CAF_2_3",
+                        "DOWNSTREAM_NODE": "CAF_3_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_3_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_3_3_CAF_4_3": {
+                        "UPSTREAM_NODE": "CAF_3_3",
+                        "DOWNSTREAM_NODE": "CAF_4_3",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_4_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_4_3_CAF_5_3": {
+                        "UPSTREAM_NODE": "CAF_4_3",
+                        "DOWNSTREAM_NODE": "CAF_5_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_5_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_0_3_E_NS_3": {
+                        "UPSTREAM_NODE": "CAF_0_3",
+                        "DOWNSTREAM_NODE": "E_NS_3",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_NS_0_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_1_3_CAF_0_3": {
+                        "UPSTREAM_NODE": "CAF_1_3",
+                        "DOWNSTREAM_NODE": "CAF_0_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_1_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_2_3_CAF_1_3": {
+                        "UPSTREAM_NODE": "CAF_2_3",
+                        "DOWNSTREAM_NODE": "CAF_1_3",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_2_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_3_3_CAF_2_3": {
+                        "UPSTREAM_NODE": "CAF_3_3",
+                        "DOWNSTREAM_NODE": "CAF_2_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_3_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_4_3_CAF_3_3": {
+                        "UPSTREAM_NODE": "CAF_4_3",
+                        "DOWNSTREAM_NODE": "CAF_3_3",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_4_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_CAF_5_3_CAF_4_3": {
+                        "UPSTREAM_NODE": "CAF_5_3",
+                        "DOWNSTREAM_NODE": "CAF_4_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_5_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    }
+                }
+            },
+            "L_NS_A": {
+                "NODES": {
+                    "CAF_0_1": {
+                        "REF_NODE": "CAF_0_1"
+                    },
+                    "E_NS_1": {
+                        "REF_NODE": "E_NS_1"
+                    },
+                    "CAF_4_1": {
+                        "REF_NODE": "CAF_4_1"
+                    },
+                    "CAF_1_1": {
+                        "REF_NODE": "CAF_1_1"
+                    },
+                    "CAF_2_1": {
+                        "REF_NODE": "CAF_2_1"
+                    },
+                    "CAF_3_1": {
+                        "REF_NODE": "CAF_3_1"
+                    }
+                },
+                "LINKS": {
+                    "L_NS_A_E_NS_1_CAF_0_1": {
+                        "UPSTREAM_NODE": "E_NS_1",
+                        "DOWNSTREAM_NODE": "CAF_0_1",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_NS_0_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_0_1_CAF_1_1": {
+                        "UPSTREAM_NODE": "CAF_0_1",
+                        "DOWNSTREAM_NODE": "CAF_1_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_1_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_1_1_CAF_2_1": {
+                        "UPSTREAM_NODE": "CAF_1_1",
+                        "DOWNSTREAM_NODE": "CAF_2_1",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_2_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_2_1_CAF_3_1": {
+                        "UPSTREAM_NODE": "CAF_2_1",
+                        "DOWNSTREAM_NODE": "CAF_3_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_3_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_3_1_CAF_4_1": {
+                        "UPSTREAM_NODE": "CAF_3_1",
+                        "DOWNSTREAM_NODE": "CAF_4_1",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_4_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_4_1_CAF_5_1": {
+                        "UPSTREAM_NODE": "CAF_4_1",
+                        "DOWNSTREAM_NODE": "CAF_5_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_5_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_0_1_E_NS_1": {
+                        "UPSTREAM_NODE": "CAF_0_1",
+                        "DOWNSTREAM_NODE": "E_NS_1",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_NS_0_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_1_1_CAF_0_1": {
+                        "UPSTREAM_NODE": "CAF_1_1",
+                        "DOWNSTREAM_NODE": "CAF_0_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_1_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_2_1_CAF_1_1": {
+                        "UPSTREAM_NODE": "CAF_2_1",
+                        "DOWNSTREAM_NODE": "CAF_1_1",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_2_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_3_1_CAF_2_1": {
+                        "UPSTREAM_NODE": "CAF_3_1",
+                        "DOWNSTREAM_NODE": "CAF_2_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_3_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_4_1_CAF_3_1": {
+                        "UPSTREAM_NODE": "CAF_4_1",
+                        "DOWNSTREAM_NODE": "CAF_3_1",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_4_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_NS_A_CAF_5_1_CAF_4_1": {
+                        "UPSTREAM_NODE": "CAF_5_1",
+                        "DOWNSTREAM_NODE": "CAF_4_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_NS_5_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    }
+                }
+            },
+            "L_OE": {
+                "NODES": {
+                    "CAF_2_3": {
+                        "REF_NODE": "CAF_2_3"
+                    },
+                    "CAF_2_4": {
+                        "REF_NODE": "CAF_2_4"
+                    },
+                    "CAF_2_2": {
+                        "REF_NODE": "CAF_2_2"
+                    },
+                    "E_OE_2": {
+                        "REF_NODE": "E_OE_2"
+                    },
+                    "CAF_2_0": {
+                        "REF_NODE": "CAF_2_0"
+                    },
+                    "CAF_2_1": {
+                        "REF_NODE": "CAF_2_1"
+                    }
+                },
+                "LINKS": {
+                    "L_OE_E_OE_2_CAF_2_0": {
+                        "UPSTREAM_NODE": "E_OE_2",
+                        "DOWNSTREAM_NODE": "CAF_2_0",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_0"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_0_CAF_2_1": {
+                        "UPSTREAM_NODE": "CAF_2_0",
+                        "DOWNSTREAM_NODE": "CAF_2_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_1_CAF_2_2": {
+                        "UPSTREAM_NODE": "CAF_2_1",
+                        "DOWNSTREAM_NODE": "CAF_2_2",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_2_CAF_2_3": {
+                        "UPSTREAM_NODE": "CAF_2_2",
+                        "DOWNSTREAM_NODE": "CAF_2_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_3_CAF_2_4": {
+                        "UPSTREAM_NODE": "CAF_2_3",
+                        "DOWNSTREAM_NODE": "CAF_2_4",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_4_CAF_2_5": {
+                        "UPSTREAM_NODE": "CAF_2_4",
+                        "DOWNSTREAM_NODE": "CAF_2_5",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_5"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_0_E_OE_2": {
+                        "UPSTREAM_NODE": "CAF_2_0",
+                        "DOWNSTREAM_NODE": "E_OE_2",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_0"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_1_CAF_2_0": {
+                        "UPSTREAM_NODE": "CAF_2_1",
+                        "DOWNSTREAM_NODE": "CAF_2_0",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_2_CAF_2_1": {
+                        "UPSTREAM_NODE": "CAF_2_2",
+                        "DOWNSTREAM_NODE": "CAF_2_1",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_3_CAF_2_2": {
+                        "UPSTREAM_NODE": "CAF_2_3",
+                        "DOWNSTREAM_NODE": "CAF_2_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_4_CAF_2_3": {
+                        "UPSTREAM_NODE": "CAF_2_4",
+                        "DOWNSTREAM_NODE": "CAF_2_3",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_CAF_2_5_CAF_2_4": {
+                        "UPSTREAM_NODE": "CAF_2_5",
+                        "DOWNSTREAM_NODE": "CAF_2_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_2_5"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    }
+                }
+            },
+            "L_OE_A": {
+                "NODES": {
+                    "CAF_4_2": {
+                        "REF_NODE": "CAF_4_2"
+                    },
+                    "CAF_4_4": {
+                        "REF_NODE": "CAF_4_4"
+                    },
+                    "CAF_4_1": {
+                        "REF_NODE": "CAF_4_1"
+                    },
+                    "CAF_4_3": {
+                        "REF_NODE": "CAF_4_3"
+                    },
+                    "E_OE_4": {
+                        "REF_NODE": "E_OE_4"
+                    },
+                    "CAF_4_0": {
+                        "REF_NODE": "CAF_4_0"
+                    }
+                },
+                "LINKS": {
+                    "L_OE_A_E_OE_4_CAF_4_0": {
+                        "UPSTREAM_NODE": "E_OE_4",
+                        "DOWNSTREAM_NODE": "CAF_4_0",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_0"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_0_CAF_4_1": {
+                        "UPSTREAM_NODE": "CAF_4_0",
+                        "DOWNSTREAM_NODE": "CAF_4_1",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_1_CAF_4_2": {
+                        "UPSTREAM_NODE": "CAF_4_1",
+                        "DOWNSTREAM_NODE": "CAF_4_2",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_2_CAF_4_3": {
+                        "UPSTREAM_NODE": "CAF_4_2",
+                        "DOWNSTREAM_NODE": "CAF_4_3",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_3_CAF_4_4": {
+                        "UPSTREAM_NODE": "CAF_4_3",
+                        "DOWNSTREAM_NODE": "CAF_4_4",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_4_CAF_4_5": {
+                        "UPSTREAM_NODE": "CAF_4_4",
+                        "DOWNSTREAM_NODE": "CAF_4_5",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_5"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_0_E_OE_4": {
+                        "UPSTREAM_NODE": "CAF_4_0",
+                        "DOWNSTREAM_NODE": "E_OE_4",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_0"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_1_CAF_4_0": {
+                        "UPSTREAM_NODE": "CAF_4_1",
+                        "DOWNSTREAM_NODE": "CAF_4_0",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_1"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_2_CAF_4_1": {
+                        "UPSTREAM_NODE": "CAF_4_2",
+                        "DOWNSTREAM_NODE": "CAF_4_1",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_3_CAF_4_2": {
+                        "UPSTREAM_NODE": "CAF_4_3",
+                        "DOWNSTREAM_NODE": "CAF_4_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_3"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_4_CAF_4_3": {
+                        "UPSTREAM_NODE": "CAF_4_4",
+                        "DOWNSTREAM_NODE": "CAF_4_3",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_OE_A_CAF_4_5_CAF_4_4": {
+                        "UPSTREAM_NODE": "CAF_4_5",
+                        "DOWNSTREAM_NODE": "CAF_4_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_OE_4_5"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    }
+                }
+            },
+            "L_SN": {
+                "NODES": {
+                    "CAF_1_2": {
+                        "REF_NODE": "CAF_1_2"
+                    },
+                    "CAF_5_2": {
+                        "REF_NODE": "CAF_5_2"
+                    },
+                    "CAF_4_2": {
+                        "REF_NODE": "CAF_4_2"
+                    },
+                    "CAF_2_2": {
+                        "REF_NODE": "CAF_2_2"
+                    },
+                    "CAF_3_2": {
+                        "REF_NODE": "CAF_3_2"
+                    },
+                    "E_SN_2": {
+                        "REF_NODE": "E_SN_2"
+                    }
+                },
+                "LINKS": {
+                    "L_SN_E_SN_2_CAF_5_2": {
+                        "UPSTREAM_NODE": "E_SN_2",
+                        "DOWNSTREAM_NODE": "CAF_5_2",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_SN_0_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_5_2_CAF_4_2": {
+                        "UPSTREAM_NODE": "CAF_5_2",
+                        "DOWNSTREAM_NODE": "CAF_4_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_1_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_4_2_CAF_3_2": {
+                        "UPSTREAM_NODE": "CAF_4_2",
+                        "DOWNSTREAM_NODE": "CAF_3_2",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_2_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_3_2_CAF_2_2": {
+                        "UPSTREAM_NODE": "CAF_3_2",
+                        "DOWNSTREAM_NODE": "CAF_2_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_3_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_2_2_CAF_1_2": {
+                        "UPSTREAM_NODE": "CAF_2_2",
+                        "DOWNSTREAM_NODE": "CAF_1_2",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_4_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_1_2_CAF_0_2": {
+                        "UPSTREAM_NODE": "CAF_1_2",
+                        "DOWNSTREAM_NODE": "CAF_0_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_5_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_5_2_E_SN_2": {
+                        "UPSTREAM_NODE": "CAF_5_2",
+                        "DOWNSTREAM_NODE": "E_SN_2",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_SN_0_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_4_2_CAF_5_2": {
+                        "UPSTREAM_NODE": "CAF_4_2",
+                        "DOWNSTREAM_NODE": "CAF_5_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_1_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_3_2_CAF_4_2": {
+                        "UPSTREAM_NODE": "CAF_3_2",
+                        "DOWNSTREAM_NODE": "CAF_4_2",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_2_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_2_2_CAF_3_2": {
+                        "UPSTREAM_NODE": "CAF_2_2",
+                        "DOWNSTREAM_NODE": "CAF_3_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_3_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_1_2_CAF_2_2": {
+                        "UPSTREAM_NODE": "CAF_1_2",
+                        "DOWNSTREAM_NODE": "CAF_2_2",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_4_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_CAF_0_2_CAF_1_2": {
+                        "UPSTREAM_NODE": "CAF_0_2",
+                        "DOWNSTREAM_NODE": "CAF_1_2",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_5_2"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    }
+                }
+            },
+            "L_SN_A": {
+                "NODES": {
+                    "CAF_2_4": {
+                        "REF_NODE": "CAF_2_4"
+                    },
+                    "CAF_5_4": {
+                        "REF_NODE": "CAF_5_4"
+                    },
+                    "E_SN_4": {
+                        "REF_NODE": "E_SN_4"
+                    },
+                    "CAF_3_4": {
+                        "REF_NODE": "CAF_3_4"
+                    },
+                    "CAF_1_4": {
+                        "REF_NODE": "CAF_1_4"
+                    },
+                    "CAF_4_4": {
+                        "REF_NODE": "CAF_4_4"
+                    }
+                },
+                "LINKS": {
+                    "L_SN_A_E_SN_4_CAF_5_4": {
+                        "UPSTREAM_NODE": "E_SN_4",
+                        "DOWNSTREAM_NODE": "CAF_5_4",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_SN_0_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_5_4_CAF_4_4": {
+                        "UPSTREAM_NODE": "CAF_5_4",
+                        "DOWNSTREAM_NODE": "CAF_4_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_1_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_4_4_CAF_3_4": {
+                        "UPSTREAM_NODE": "CAF_4_4",
+                        "DOWNSTREAM_NODE": "CAF_3_4",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_2_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_3_4_CAF_2_4": {
+                        "UPSTREAM_NODE": "CAF_3_4",
+                        "DOWNSTREAM_NODE": "CAF_2_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_3_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_2_4_CAF_1_4": {
+                        "UPSTREAM_NODE": "CAF_2_4",
+                        "DOWNSTREAM_NODE": "CAF_1_4",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_4_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_1_4_CAF_0_4": {
+                        "UPSTREAM_NODE": "CAF_1_4",
+                        "DOWNSTREAM_NODE": "CAF_0_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_5_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_5_4_E_SN_4": {
+                        "UPSTREAM_NODE": "CAF_5_4",
+                        "DOWNSTREAM_NODE": "E_SN_4",
+                        "COSTS": {
+                            "length": 995.5011300847428
+                        },
+                        "REF_LINKS": [
+                            "T_SN_0_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_4_4_CAF_5_4": {
+                        "UPSTREAM_NODE": "CAF_4_4",
+                        "DOWNSTREAM_NODE": "CAF_5_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_1_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_3_4_CAF_4_4": {
+                        "UPSTREAM_NODE": "CAF_3_4",
+                        "DOWNSTREAM_NODE": "CAF_4_4",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_2_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_2_4_CAF_3_4": {
+                        "UPSTREAM_NODE": "CAF_2_4",
+                        "DOWNSTREAM_NODE": "CAF_3_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_3_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_1_4_CAF_2_4": {
+                        "UPSTREAM_NODE": "CAF_1_4",
+                        "DOWNSTREAM_NODE": "CAF_2_4",
+                        "COSTS": {
+                            "length": 1003.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_4_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    },
+                    "L_SN_A_CAF_0_4_CAF_1_4": {
+                        "UPSTREAM_NODE": "CAF_0_4",
+                        "DOWNSTREAM_NODE": "CAF_1_4",
+                        "COSTS": {
+                            "length": 997.0
+                        },
+                        "REF_LINKS": [
+                            "T_SN_5_4"
+                        ],
+                        "REF_LANE_IDS": [
+                            0
+                        ]
+                    }
+                }
+            }
+        },
+        "CONNEXIONS": [
+            {
+                "UPSTREAM_SERVICE": "L_EO",
+                "DOWNSTREAM_SERVICE": "L_SN_A",
+                "NODE": "CAF_3_4",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_EO",
+                "DOWNSTREAM_SERVICE": "L_SN",
+                "NODE": "CAF_3_2",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_EO",
+                "DOWNSTREAM_SERVICE": "L_NS_A",
+                "NODE": "CAF_3_1",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_EO",
+                "DOWNSTREAM_SERVICE": "L_NS",
+                "NODE": "CAF_3_3",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_EO_A",
+                "DOWNSTREAM_SERVICE": "L_SN_A",
+                "NODE": "CAF_1_4",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_EO_A",
+                "DOWNSTREAM_SERVICE": "L_SN",
+                "NODE": "CAF_1_2",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_EO_A",
+                "DOWNSTREAM_SERVICE": "L_NS_A",
+                "NODE": "CAF_1_1",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_EO_A",
+                "DOWNSTREAM_SERVICE": "L_NS",
+                "NODE": "CAF_1_3",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_NS",
+                "DOWNSTREAM_SERVICE": "L_OE",
+                "NODE": "CAF_2_3",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_NS",
+                "DOWNSTREAM_SERVICE": "L_OE_A",
+                "NODE": "CAF_4_3",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_NS",
+                "DOWNSTREAM_SERVICE": "L_EO_A",
+                "NODE": "CAF_1_3",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_NS",
+                "DOWNSTREAM_SERVICE": "L_EO",
+                "NODE": "CAF_3_3",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_NS_A",
+                "DOWNSTREAM_SERVICE": "L_OE",
+                "NODE": "CAF_2_1",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_NS_A",
+                "DOWNSTREAM_SERVICE": "L_OE_A",
+                "NODE": "CAF_4_1",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_NS_A",
+                "DOWNSTREAM_SERVICE": "L_EO_A",
+                "NODE": "CAF_1_1",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_NS_A",
+                "DOWNSTREAM_SERVICE": "L_EO",
+                "NODE": "CAF_3_1",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_OE",
+                "DOWNSTREAM_SERVICE": "L_SN_A",
+                "NODE": "CAF_2_4",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_OE",
+                "DOWNSTREAM_SERVICE": "L_SN",
+                "NODE": "CAF_2_2",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_OE",
+                "DOWNSTREAM_SERVICE": "L_NS_A",
+                "NODE": "CAF_2_1",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_OE",
+                "DOWNSTREAM_SERVICE": "L_NS",
+                "NODE": "CAF_2_3",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_OE_A",
+                "DOWNSTREAM_SERVICE": "L_SN_A",
+                "NODE": "CAF_4_4",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_OE_A",
+                "DOWNSTREAM_SERVICE": "L_SN",
+                "NODE": "CAF_4_2",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_OE_A",
+                "DOWNSTREAM_SERVICE": "L_NS_A",
+                "NODE": "CAF_4_1",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_OE_A",
+                "DOWNSTREAM_SERVICE": "L_NS",
+                "NODE": "CAF_4_3",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_SN",
+                "DOWNSTREAM_SERVICE": "L_OE",
+                "NODE": "CAF_2_2",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_SN",
+                "DOWNSTREAM_SERVICE": "L_OE_A",
+                "NODE": "CAF_4_2",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_SN",
+                "DOWNSTREAM_SERVICE": "L_EO_A",
+                "NODE": "CAF_1_2",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_SN",
+                "DOWNSTREAM_SERVICE": "L_EO",
+                "NODE": "CAF_3_2",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_SN_A",
+                "DOWNSTREAM_SERVICE": "L_OE",
+                "NODE": "CAF_2_4",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_SN_A",
+                "DOWNSTREAM_SERVICE": "L_OE_A",
+                "NODE": "CAF_4_4",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_SN_A",
+                "DOWNSTREAM_SERVICE": "L_EO_A",
+                "NODE": "CAF_1_4",
+                "COSTS": {
+                    "length": 0
+                }
+            },
+            {
+                "UPSTREAM_SERVICE": "L_SN_A",
+                "DOWNSTREAM_SERVICE": "L_EO",
+                "NODE": "CAF_3_4",
+                "COSTS": {
+                    "length": 0
+                }
+            }
+        ]
+    }
+}
