@@ -30,3 +30,18 @@ To launch tests run the following command at the root of the project:
 ```bash
 pytest tests --cov=mnms -v
 ```
+
+
+## Documentation
+
+### Build
+
+To build the documentation using sphinx:
+
+```bash
+conda activate mnms
+cd doc
+make clean && make html
+```
+
+Then open the file `doc/_build/html/index.html` in your web browser.

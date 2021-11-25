@@ -211,3 +211,7 @@ class MultiModalGraph(object):
             nodes = self.flow_graph._map_lid_nodes[lid]
             self.flow_graph.links[nodes].reservoir = resid
         self.reservoirs[resid] = Reservoir(resid, links)
+
+    def get_extremities(self):
+        extremities = {nid for nid, neighbors in self.flow_graph._adjacency.items() if len(neighbors) == 1}
+        return extremities
