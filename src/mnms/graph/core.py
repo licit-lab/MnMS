@@ -92,15 +92,18 @@ class GeoLink(object):
         Reference to uptream GeoNode
     downstream_node: str
         Reference to downstream GeoNode
+    length:
+        Length of the link
     nb_lane: int
         Number of lane on this link (default 1)
     """
-    def __init__(self, lid, upstream_node, downstream_node, nb_lane=1):
+    def __init__(self, lid, upstream_node, downstream_node, length, nb_lane=1):
         self.id = lid
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
         self.nb_lane = nb_lane
         self.reservoir = None
+        self.length = length
 
     def __repr__(self):
         return f"GeoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
@@ -184,10 +187,11 @@ class GeoGraph(OrientedGraph):
         node = GeoNode(nodeid, pos)
         self.nodes[node.id] = node
 
-    def add_link(self, lid, upstream_node: str, downstream_node: str, nb_lane:int=1) -> None:
+    def add_link(self, lid, upstream_node: str, downstream_node: str, length:float=None, nb_lane:int=1) -> None:
         assert (upstream_node, downstream_node) not in self.links
-
-        link = GeoLink(lid, upstream_node, downstream_node, nb_lane=nb_lane)
+        if length is None:
+            length = np.linalg.norm(self.nodes[upstream_node].pos - self.nodes[downstream_node].pos)
+        link = GeoLink(lid, upstream_node, downstream_node, length=length, nb_lane=nb_lane)
         self.links[(upstream_node, downstream_node)] = link
         self._map_lid_nodes[lid] = (upstream_node, downstream_node)
         self._adjacency[upstream_node].add(downstream_node)

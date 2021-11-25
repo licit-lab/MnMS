@@ -19,11 +19,11 @@ def reconstruct_path(mmgraph: MultiModalGraph, path:List[str]):
             if curr_res != last_res or curr_mob != last_mob:
                 if last_mob is not None:
                     res.append({"reservoir": last_res, "mobility": last_mob, "length": length})
-                length = link.costs['length']
+                length = flow_link.length
                 last_mob = curr_mob
                 last_res = curr_res
             else:
-                length += link.costs['length']
+                length += flow_link.length
 
     res.append({"reservoir": last_res, "mobility": last_mob, "length": length})
     return res
