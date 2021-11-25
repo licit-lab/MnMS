@@ -14,6 +14,9 @@ Welcome to MnMS's documentation!
    Sources <_dvlpt/modules>
 
 
+
+`MnMS` stand for Multimodal Network Modelling and Simulation. It's a tool develop as a part of the DIT4TraM ERC project.
+
 Indices and tables
 ==================
 

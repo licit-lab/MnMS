@@ -82,6 +82,19 @@ class TopoLink(object):
         return f"TopoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
 
 class GeoLink(object):
+    """Link between two GeoNode, define a physical road link
+
+    Parameters
+    ----------
+    id: str
+        The identifier for this TopoLink
+    upstream_node: str
+        Reference to uptream GeoNode
+    downstream_node: str
+        Reference to downstream GeoNode
+    nb_lane: int
+        Number of lane on this link (default 1)
+    """
     def __init__(self, lid, upstream_node, downstream_node, nb_lane=1):
         self.id = lid
         self.upstream_node = upstream_node
@@ -93,14 +106,14 @@ class GeoLink(object):
         return f"GeoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
 
 class OrientedGraph(ABC):
-    """Short summary.
+    """Basic class for an oriented graph.
 
     Attributes
     ----------
-    nodes : type
-        Description of attribute `nodes`.
+    nodes : dict
+        Dict of nodes, key is the id of node, value is either a GeoNode or a Toponode
     links : type
-        Description of attribute `edges`.
+        Dict of links, key is the tuple of nodes, value is either a GeoLink or a TopoLink
 
     """
     def __init__(self):
@@ -134,6 +147,8 @@ class OrientedGraph(ABC):
 
 
 class TopoGraph(OrientedGraph):
+    """Class implementing a purely topological oriented graph
+    """
     def add_node(self, nodeid: str, ref_node:str=None) -> None:
         assert nodeid not in self.nodes
 
@@ -161,6 +176,8 @@ class TopoGraph(OrientedGraph):
 
 
 class GeoGraph(OrientedGraph):
+    """Class implementing a geometrical oriented graph
+    """
     def add_node(self, nodeid: str, pos: List[float]) -> None:
         assert nodeid not in self.nodes
 
@@ -185,6 +202,15 @@ class GeoGraph(OrientedGraph):
         return subgraph
 
 class MobilityGraph(object):
+    """Class implementing a purely topological oriented graph
+
+    Parameters
+    ----------
+    mid: str
+        Identifier of the mobility service
+    topograph:
+        Associated TopoGraph
+    """
     def __init__(self, mid: str, topograph: TopoGraph):
         self._graph = topograph
         self.nodes = set()
@@ -205,6 +231,18 @@ class MobilityGraph(object):
 
 
 class MultiModalGraph(object):
+    """MultiModalGraph class, it holds the geometry of the network in a GeoGraph and the mobility services in
+    a TopoGraph
+
+    Attributes
+    ----------
+    flow_graph: GeoGraph
+        Graph representing the geometry of the network
+    mobility_graph: TopoGraph
+        Graph representing all the mobility services and their connexions
+    reservoirs: dict
+        Dict of reservoirs define on flow_graph
+    """
     def __init__(self):
         self.flow_graph = GeoGraph()
         self.mobility_graph = TopoGraph()
