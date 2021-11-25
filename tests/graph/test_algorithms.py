@@ -1,7 +1,8 @@
 import unittest
 
-from symumaas.graph import MultiModalGraph
-from symumaas.graph.algorithms import dijkstra, astar
+from mnms.graph import MultiModalGraph
+from mnms.graph.algorithms import nearest_mobility_service
+from mnms.graph.algorithms.shortest_path import astar, dijkstra
 
 class TestAlgorithms(unittest.TestCase):
     def setUp(self):
@@ -93,3 +94,10 @@ class TestAlgorithms(unittest.TestCase):
         self.assertListEqual(list(path), ['Bus_0', 'Bus_1', 'Bus_2'])
         self.assertEqual(self.mmgraph.mobility_graph.links[('Bus_0', 'Bus_1')].costs['time']+self.mmgraph.mobility_graph.links[('Bus_1', 'Bus_2')].costs['time'], cost)
 
+    def test_nearest_mobility(self):
+        pos = [10, 10]
+        node = nearest_mobility_service(pos, self.mmgraph, 'Bus')
+        self.assertEqual(node, '2')
+
+        node = nearest_mobility_service(pos, self.mmgraph, 'Uber')
+        self.assertEqual(node, '1')
