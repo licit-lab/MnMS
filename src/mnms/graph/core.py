@@ -67,7 +67,11 @@ class TopoLink(object):
         self.id = lid
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
-        self.costs = costs if costs is not None else {}
+        # self.costs = costs if costs is not None else {}
+        self.costs = dict()
+        self.costs['_default'] = 1
+        if costs is not None:
+            self.costs.update(costs)
         self.reference_links = reference_links if reference_links is not None else []
         self.reference_lane_ids = []
         self.mobility_service = mobility_service
@@ -215,15 +219,18 @@ class MobilityGraph(object):
     topograph:
         Associated TopoGraph
     """
-    def __init__(self, mid: str, topograph: TopoGraph):
+    def __init__(self, mid: str, topograph: TopoGraph, node_referencing: dict):
         self._graph = topograph
         self.nodes = set()
         self.links = dict()
         self.id = mid
 
+        self.node_referencing = node_referencing
+
     def add_node(self, id, ref_node=None):
         self.nodes.add(id)
         self._graph.add_node(self.id+"_"+id, ref_node)
+        self.node_referencing[ref_node].append(self.id+"_"+id)
 
     def add_link(self, lid, upstream_node: str, downstream_node: str, costs:Dict[str, float], reference_links=None, reference_lane_ids=None):
         self.links[(upstream_node, downstream_node)] = lid
@@ -256,9 +263,11 @@ class MultiModalGraph(object):
         self._adjacency_services = defaultdict(set)
         self._mobility_services = dict()
 
+        self.node_referencing = defaultdict(list)
+
     def add_mobility_service(self, id):
         assert id not in self._mobility_services
-        self._mobility_services[id] = MobilityGraph(id, self.mobility_graph)
+        self._mobility_services[id] = MobilityGraph(id, self.mobility_graph, self.node_referencing)
         return self._mobility_services[id]
 
 

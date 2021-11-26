@@ -21,6 +21,18 @@ class Time(object):
         return float(self._hours*3600+self._minutes*60+self._seconds)
 
 
+    @classmethod
+    def fromSeconds(cls, seconds:float):
+        time = cls('')
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        time._seconds = s
+        time._minutes = int(m)
+        time._hours = int(h)
+
+        return time
+
+
     def __repr__(self):
         return f"Time({self.time})"
 
@@ -108,3 +120,6 @@ if __name__ == "__main__":
     t.create_table("07:00:00", "18:00:00", delta_min=15, delta_sec=33)
     print(t.table)
     print(t.get_next_departure("15:48:52"))
+
+
+    print(Time.fromSeconds(15000.35))

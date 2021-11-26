@@ -84,8 +84,17 @@ def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable, cost
 def compute_shortest_path(mmgraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra") -> Tuple[float, Deque[str]]:
     # Create artificial nodes
 
-    start_nodes = [name + '_' + origin for name, service in mmgraph._mobility_services.items() if origin in service.nodes]
-    end_nodes = [name + '_' + destination for name, service in mmgraph._mobility_services.items() if destination in service.nodes]
+    start_nodes = [n for n in mmgraph.node_referencing[origin]]
+    end_nodes = [n for n in mmgraph.node_referencing[destination]]
+
+    if len(start_nodes) == 0:
+        logger.error(f"There is no mobility service connected to origin node {origin}")
+        return float('inf'), deque()
+
+    if len(end_nodes) == 0:
+        logger.error(f"There is no mobility service connected to destination node {destination}")
+        return float('inf'), deque()
+
 
     start_node = f"START_{origin}_{destination}"
     end_node = f"END_{origin}_{destination}"

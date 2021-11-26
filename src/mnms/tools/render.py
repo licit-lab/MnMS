@@ -68,16 +68,19 @@ def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=5, node_label=Tr
     plt.tight_layout()
 
 
-def draw_mobility_service(ax, mmgraph, service, color, linkwidth=1, nodesize=5):
+def draw_mobility_service(ax, mmgraph, service, color, linkwidth=1, nodesize=5, node_label=False):
     # nodes = [graph.flow_graph.nodes[n.replace(f'{service}_', '')].id for n in graph._mobility_services[service].nodes if n.replace(f'{service}_', '') in graph.flow_graph.nodes]
     # subgraph = graph.flow_graph.extract_subgraph(nodes)
     # draw_flow_graph(ax, subgraph, color, linkwidth, nodesize)
 
     lines = list()
+    nodes = set()
     for (unode, dnode) in mmgraph._mobility_services[service].links:
         link = mmgraph.mobility_graph.links[(service+'_'+unode, service+'_'+dnode)]
         for lid in link.reference_links:
             unode, dnode  = mmgraph.flow_graph._map_lid_nodes[lid]
+            nodes.add(unode)
+            nodes.add(dnode)
             lines.append([mmgraph.flow_graph.nodes[unode].pos, mmgraph.flow_graph.nodes[dnode].pos])
 
     line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
