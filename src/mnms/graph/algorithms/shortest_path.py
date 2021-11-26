@@ -100,8 +100,8 @@ def compute_shortest_path(mmgraph, origin:str, destination:str, cost:str='length
     end_node = f"END_{origin}_{destination}"
     logger.debug(f"Create artitificial nodes: {start_node}, {end_node}")
 
-    mmgraph.mobility_graph.add_node(start_node)
-    mmgraph.mobility_graph.add_node(end_node)
+    mmgraph.mobility_graph.add_node(start_node, 'NULL')
+    mmgraph.mobility_graph.add_node(end_node, 'NULL')
 
     logger.debug(f"Create start artitificial links with: {start_nodes}")
     for n in start_nodes:

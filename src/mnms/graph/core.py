@@ -17,9 +17,10 @@ class TopoNode(object):
         A reference to GeoNode (default is None)
 
     """
-    def __init__(self, id:str, ref_node:str=None):
+    def __init__(self, id:str, mobility_service, ref_node:str=None):
         self.id = id
         self.reference_node = ref_node
+        self.mobility_service = mobility_service
 
     def __repr__(self):
         return f"TopoNode(id={self.id}, ref_node={self.reference_node})"
@@ -106,11 +107,11 @@ class GeoLink(object):
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
         self.nb_lane = nb_lane
-        self.reservoir = None
+        self.sensor = None
         self.length = length
 
     def __repr__(self):
-        return f"GeoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
+        return f"GeoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node}, len={self.length})"
 
 class OrientedGraph(ABC):
     """Basic class for an oriented graph.
@@ -156,10 +157,10 @@ class OrientedGraph(ABC):
 class TopoGraph(OrientedGraph):
     """Class implementing a purely topological oriented graph
     """
-    def add_node(self, nodeid: str, ref_node:str=None) -> None:
+    def add_node(self, nodeid: str, mobility_service:str, ref_node:str=None) -> None:
         assert nodeid not in self.nodes
 
-        node = TopoNode(nodeid, ref_node)
+        node = TopoNode(nodeid, mobility_service, ref_node)
         self.nodes[node.id] = node
 
     def add_link(self, lid, upstream_node, downstream_node, costs, reference_links=None, reference_lane_ids=None,
@@ -175,7 +176,7 @@ class TopoGraph(OrientedGraph):
     def extract_subgraph(self, nodes:set):
         subgraph = self.__class__()
         for n in nodes:
-            subgraph.add_node(n)
+            subgraph.add_node(n, None)
 
         [subgraph.add_link(self.links[(u_node, d_node)].id, u_node, d_node, self.links[(u_node, d_node)].costs) for u_node, d_node in self.links if u_node in nodes and d_node in nodes]
 
@@ -229,7 +230,7 @@ class MobilityGraph(object):
 
     def add_node(self, id, ref_node=None):
         self.nodes.add(id)
-        self._graph.add_node(self.id+"_"+id, ref_node)
+        self._graph.add_node(self.id+"_"+id, self.id, ref_node)
         self.node_referencing[ref_node].append(self.id+"_"+id)
 
     def add_link(self, lid, upstream_node: str, downstream_node: str, costs:Dict[str, float], reference_links=None, reference_lane_ids=None):
@@ -291,7 +292,7 @@ class MultiModalGraph(object):
     def add_sensor(self, sid: str, links: List[str]):
         for lid in links:
             nodes = self.flow_graph._map_lid_nodes[lid]
-            self.flow_graph.links[nodes].reservoir = sid
+            self.flow_graph.links[nodes].sensor = sid
         self.sensors[sid] = Sensor(sid, links)
 
     def get_extremities(self):

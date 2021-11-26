@@ -4,8 +4,8 @@ import copy
 # Define the region in which the vehicles of the same kind have the same mean speed, depending on the current
 # accumulation of vehicles
 class Reservoir(object):
-    # id to identify the reservoir, is not used for now, could be a string
-    # modes are the transportation modes available for the reservoir
+    # id to identify the sensor, is not used for now, could be a string
+    # modes are the transportation modes available for the sensor
     # fct_MFD_speed is the function returning the mean speeds as a function of the accumulations
     def __init__(self, id: int, modes, fct_MFD_speed):
         self.id = id
@@ -34,7 +34,7 @@ def calculate_trip_times(departure_times, trip_legs, time_stop=3600, delta_t=20,
                          list_reservoirs=[]):
     # INPUTS
     # departure_times: list of departure times of all agents
-    # trip_legs: list of the trip legs (mode, reservoir, distance) of all agents
+    # trip_legs: list of the trip legs (mode, sensor, distance) of all agents
     # time_stop: duration of the simulation
     # delta_t=20: time step for the numerical resolution
     # accumulation_weights: list of number of travelers of all agents. If None, it assumes each agent is one traveler
@@ -63,7 +63,7 @@ def calculate_trip_times(departure_times, trip_legs, time_stop=3600, delta_t=20,
     for i_user in range(nb_users):
         list_remaining_length[i_user] = trip_legs[i_user][list_current_leg[i_user]]['length']
         list_current_mode[i_user] = trip_legs[i_user][list_current_leg[i_user]]['mode']
-        list_current_reservoir[i_user] = trip_legs[i_user][list_current_leg[i_user]]['reservoir']
+        list_current_reservoir[i_user] = trip_legs[i_user][list_current_leg[i_user]]['sensor']
         list_time_completion_legs.append([-1] * len(trip_legs[i_user]))
     started_trips = [False] * nb_users
     completed_trips = [False] * nb_users
@@ -82,6 +82,9 @@ def calculate_trip_times(departure_times, trip_legs, time_stop=3600, delta_t=20,
             if (not started_trips[i_user]) and (departure_times[i_user] <= time):
                 print(i_user, time, departure_times[i_user])
                 started_trips[i_user] = True
+                print("CURR RES:", list_current_reservoir[i_user])
+                print("CURR MODE:", list_current_mode[i_user])
+                print("ACC:", list_dict_accumulations)
                 list_dict_accumulations[list_current_reservoir[i_user]][list_current_mode[i_user]] += \
                     accumulation_weights[i_user]
             # Agent is on the network
@@ -89,6 +92,7 @@ def calculate_trip_times(departure_times, trip_legs, time_stop=3600, delta_t=20,
                 remaining_time = delta_t
                 # print(list_remaining_length[i_user] <= remaining_time*list_dict_speeds[list_current_reservoir[i_user]][list_current_mode[i_user]],list_current_leg[i_user] < len(trip_legs[i_user])-1)
                 # Complete current trip leg
+                print("DICT SPEEDS", list_dict_speeds)
                 while list_remaining_length[i_user] <= remaining_time * \
                         list_dict_speeds[list_current_reservoir[i_user]][list_current_mode[i_user]] and \
                         list_current_leg[i_user] < len(trip_legs[i_user]) - 1:
@@ -101,7 +105,7 @@ def calculate_trip_times(departure_times, trip_legs, time_stop=3600, delta_t=20,
                     print('leg', i_user, list_current_leg[i_user])
                     list_remaining_length[i_user] = trip_legs[i_user][list_current_leg[i_user]]['length']
                     list_current_mode[i_user] = trip_legs[i_user][list_current_leg[i_user]]['mode']
-                    list_current_reservoir[i_user] = trip_legs[i_user][list_current_leg[i_user]]['reservoir']
+                    list_current_reservoir[i_user] = trip_legs[i_user][list_current_leg[i_user]]['sensor']
                     list_dict_accumulations[list_current_reservoir[i_user]][list_current_mode[i_user]] += \
                         accumulation_weights[i_user]
                 # Remove accomplished distance
@@ -148,13 +152,13 @@ if __name__ == "__main__":
     Res2 = Reservoir(id=2, modes=['car', 'bus'], fct_MFD_speed=res_fct2)
 
     departure_times = [700, 78]
-    trip_legs = [[{'length': 1200, 'mode': 'car', 'reservoir': 0}, {'length': 200, 'mode': 'bus', 'reservoir': 0},
-                  {'length': 2000, 'mode': 'bus', 'reservoir': 1}],
-                 [{'length': 2000, 'mode': 'car', 'reservoir': 0}]]
+    trip_legs = [[{'length': 1200, 'mode': 'car', 'sensor': 0}, {'length': 200, 'mode': 'bus', 'sensor': 0},
+                  {'length': 2000, 'mode': 'bus', 'sensor': 1}],
+                 [{'length': 2000, 'mode': 'car', 'sensor': 0}]]
     leg_times, hist_acc, hist_speeds = calculate_trip_times(departure_times, trip_legs, time_stop=1000, delta_t=30, accumulation_weights=[2000, 3000],
                                    list_reservoirs=[Res1, Res2])
 
-    print('Test', leg_times)
+    print('Test', hist_speeds)
 
     from matplotlib import pyplot as plt
     plt.figure()

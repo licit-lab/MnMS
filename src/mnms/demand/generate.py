@@ -3,7 +3,7 @@ from mnms.tools.time import Time
 
 import numpy as np
 
-def create_random_demand(mmgraph: "MultiModalGraph", tstart="07:00:00", tend="18:00:00", min_cost=float('inf'), cost_path=None, distrib_time=np.random.uniform):
+def create_random_demand(mmgraph: "MultiModalGraph", tstart="07:00:00", tend="18:00:00", min_cost=0, cost_path=None, distrib_time=np.random.uniform, repeat=1):
     if cost_path is None:
         cost_path = "_default"
 
@@ -12,13 +12,14 @@ def create_random_demand(mmgraph: "MultiModalGraph", tstart="07:00:00", tend="18
 
     demand = []
     extremities = mmgraph.get_extremities()
+    print(extremities)
     for unode in extremities:
         for dnode in extremities:
             if unode != dnode:
                 cost, path = compute_shortest_path(mmgraph, unode, dnode, cost_path)
                 if cost < float("inf"):
                     if cost >= min_cost:
-                        demand.append([Time.fromSeconds(distrib_time(tstart, tend)) ,(unode, dnode)])
+                        demand.extend([[Time.fromSeconds(distrib_time(tstart, tend)) ,path]  for _ in range(repeat)])
 
 
 
@@ -175,8 +176,9 @@ if __name__ == "__main__":
     mmgraph.connect_mobility_service('M2', 'M4', 'C2', {'time': 0})
     mmgraph.connect_mobility_service('M4', 'M2', 'C2', {'time': 0})
 
-    demand = create_random_demand(mmgraph, min_cost=4)
-    print(demand)
+    demand = create_random_demand(mmgraph, min_cost=6, repeat=2)
+    for t, p in demand:
+        print(t, p, sep='\t')
     print(len(demand))
 
     # cost, p = compute_shortest_path(mmgraph, 'O_0', 'E_1', 'time')

@@ -66,10 +66,10 @@ class TestExtract(unittest.TestCase):
         self.flow.add_link('2_3', '2', '3')
         self.flow.add_link('3_0', '3', '0')
 
-        self.mobility.add_node('0')
-        self.mobility.add_node('1')
-        self.mobility.add_node('2')
-        self.mobility.add_node('3')
+        self.mobility.add_node('0', 'TEST')
+        self.mobility.add_node('1', 'TEST')
+        self.mobility.add_node('2', 'TEST')
+        self.mobility.add_node('3', 'TEST')
 
         self.mobility.add_link('0_1', '0', '1', {})
         self.mobility.add_link('1_2', '1', '2', {})

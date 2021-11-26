@@ -80,14 +80,12 @@ class Time(object):
         hours = self._hours + Decimal(hours) + Decimal(minutes//60)
         minutes = minutes%60
         seconds = seconds%60
-
         assert hours < 24
 
         new_time = Time("")
         new_time._hours = hours
         new_time._minutes = minutes
         new_time._seconds = seconds
-
         return new_time
 
 

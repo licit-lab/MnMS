@@ -77,4 +77,4 @@ mmgraph.connect_mobility_service('Car', 'Uber', '2', {'time': 2})
 
 mmgraph.add_sensor('Res', [link for link in mmgraph.flow_graph.links.values()])
 
-print([l.reservoir for l in mmgraph.flow_graph.links.values()])
+print([l.sensor for l in mmgraph.flow_graph.links.values()])
