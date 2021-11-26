@@ -86,4 +86,4 @@ def convert_symuflow_to_mmgraph(file):
 
 
 if __name__ == "__main__":
-    convert_symuflow_to_mmgraph("/Users/florian.gacon/Work/DIT4TRAM/script/Network_v2_test_withreservedlanes.xml")
+    convert_symuflow_to_mmgraph("/Users/florian.gacon/Work/MnMS/script/Network_v2_test_withreservedlanes.xml")

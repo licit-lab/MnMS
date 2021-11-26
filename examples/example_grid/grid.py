@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 set_log_level(LOGLEVEL.DEBUG)
 
 mmgraph = load_graph('Network_v2_test_withreservedlanes.json')
-mmgraph.add_reservoir('Res', [link.id for link in mmgraph.flow_graph.links.values()])
+mmgraph.add_sensor('Res', [link.id for link in mmgraph.flow_graph.links.values()])
 
 cost, path = compute_shortest_path(mmgraph, "E_OE_2", "E_SN_4", cost='length')
 print(f"Cost of the path: {cost}")

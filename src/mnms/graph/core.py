@@ -3,7 +3,7 @@ from collections import defaultdict
 from abc import ABC, abstractmethod
 import numpy as np
 
-from mnms.graph.reservoir import Reservoir
+from mnms.graph.sensor import Sensor
 from mnms.log import logger
 
 class TopoNode(object):
@@ -251,13 +251,13 @@ class MultiModalGraph(object):
         Graph representing the geometry of the network
     mobility_graph: TopoGraph
         Graph representing all the mobility services and their connexions
-    reservoirs: dict
+    sensors: dict
         Dict of reservoirs define on flow_graph
     """
     def __init__(self):
         self.flow_graph = GeoGraph()
         self.mobility_graph = TopoGraph()
-        self.reservoirs = dict()
+        self.sensors = dict()
 
         self._connexion_services = defaultdict(set)
         self._adjacency_services = defaultdict(set)
@@ -288,11 +288,11 @@ class MultiModalGraph(object):
         self._adjacency_services[upstream_service].add(downstream_service)
 
 
-    def add_reservoir(self, resid: str, links: List[str]):
+    def add_sensor(self, sid: str, links: List[str]):
         for lid in links:
             nodes = self.flow_graph._map_lid_nodes[lid]
-            self.flow_graph.links[nodes].reservoir = resid
-        self.reservoirs[resid] = Reservoir(resid, links)
+            self.flow_graph.links[nodes].reservoir = sid
+        self.sensors[sid] = Sensor(sid, links)
 
     def get_extremities(self):
         extremities = {nid for nid, neighbors in self.flow_graph._adjacency.items() if len(neighbors) == 1}

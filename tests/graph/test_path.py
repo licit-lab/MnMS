@@ -23,8 +23,8 @@ class TestPath(unittest.TestCase):
         flow.add_link('1_2', '1', '2')
         flow.add_link('2_3', '2', '3')
 
-        self.mmgraph.add_reservoir('Res1', ['0_1', '1_2'])
-        self.mmgraph.add_reservoir('Res2', ['2_3'])
+        self.mmgraph.add_sensor('Res1', ['0_1', '1_2'])
+        self.mmgraph.add_sensor('Res2', ['2_3'])
 
         m1 = self.mmgraph.add_mobility_service('M1')
         m1.add_node('0', '0')
