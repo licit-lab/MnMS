@@ -1,8 +1,10 @@
 from mnms.tools.io import load_graph
+from mnms.tools.render import draw_multimodal_graph
 from mnms.graph.algorithms import compute_shortest_path
 from mnms.graph.path import reconstruct_path
-
 from mnms.log import set_log_level, LOGLEVEL
+
+import matplotlib.pyplot as plt
 
 set_log_level(LOGLEVEL.DEBUG)
 
@@ -16,3 +18,8 @@ reconstructed_path = reconstruct_path(mmgraph, path)
 print("Reconstructed path:")
 for p in reconstructed_path:
     print(p)
+
+
+fig, ax = plt.subplots()
+draw_multimodal_graph(ax, mmgraph, linkwidth=2, nodesize=6, dy=1500, node_label=False)
+plt.show()

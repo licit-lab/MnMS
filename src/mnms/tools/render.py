@@ -3,6 +3,7 @@ from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
+import matplotlib.colors as mcolors
 
 import numpy as np
 
@@ -81,3 +82,77 @@ def draw_mobility_service(ax, mmgraph, service, color, linkwidth=1, nodesize=5):
 
     line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
     ax.add_collection(line_segment)
+
+    x, y = zip(*[mmgraph.flow_graph.nodes[n].pos for n in nodes])
+    ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
+
+    if node_label:
+        [ax.annotate(n, mmgraph.flow_graph.nodes[n].pos) for n in nodes]
+
+
+def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True, dy=0.4, defo_scale=0.25):
+    flow_graph= mmgraph.flow_graph
+
+    lines = list()
+    deformation_matrix = np.array([[1, defo_scale], [0, defo_scale]])
+    defo_app = lambda x: deformation_matrix.dot(x)
+
+    for unode, dnode in flow_graph.links:
+        lines.append([defo_app(flow_graph.nodes[unode].pos), defo_app(flow_graph.nodes[dnode].pos)])
+
+    line_segment = LineCollection(lines, linestyles='solid', colors='black', linewidths=linkwidth)
+    ax.add_collection(line_segment)
+    x, y = zip(*[defo_app(n.pos) for n in flow_graph.nodes.values()])
+
+    ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor='black', fillstyle='full', markersize=nodesize)
+
+    if node_label:
+        [ax.annotate(n.id, defo_app(n.pos)) for n in flow_graph.nodes.values()]
+
+    ax.margins(0.05, 0.05)
+    ax.axis("equal")
+
+    all_color = list(mcolors.BASE_COLORS.keys())
+    all_color.remove('w')
+    colors = cycle(all_color)
+    yshift = dy
+
+    service_shift = dict()
+    custom_legend = []
+    for sid, service in mmgraph._mobility_services.items():
+        c = next(colors)
+        custom_legend.append(Line2D([0], [0], color=c, lw=2))
+        defo_app = lambda x: deformation_matrix.dot(x) + [0, yshift]
+        lines = list()
+        nodes = set()
+        for (unode, dnode) in service.links:
+            link = mmgraph.mobility_graph.links[(sid + '_' + unode, sid + '_' + dnode)]
+            nodes.add(unode)
+            nodes.add(dnode)
+            for lid in link.reference_links:
+                unode, dnode = mmgraph.flow_graph._map_lid_nodes[lid]
+                lines.append(
+                    [defo_app(mmgraph.flow_graph.nodes[unode].pos), defo_app(mmgraph.flow_graph.nodes[dnode].pos)])
+
+        line_segment = LineCollection(lines, linestyles='solid', colors=c, linewidths=linkwidth)
+        ax.add_collection(line_segment)
+
+        x, y = zip(*[defo_app(mmgraph.flow_graph.nodes[n].pos) for n in nodes])
+        ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=c, fillstyle='full', markersize=nodesize)
+
+        if node_label:
+            [ax.annotate(n, defo_app(mmgraph.flow_graph.nodes[n].pos)) for n in nodes]
+
+        service_shift[sid] = yshift
+        yshift += dy
+
+    lines = list()
+    for (upserv, downserv), nodes in mmgraph._connexion_services.items():
+        for n in nodes:
+            pos = deformation_matrix.dot(mmgraph.flow_graph.nodes[n].pos)
+            lines.append([pos + [0, service_shift[upserv]], pos + [0, service_shift[downserv]]])
+
+    line_segment = LineCollection(lines, linestyles='dashed', colors='black', linewidths=linkwidth, alpha=0.3)
+    ax.add_collection(line_segment)
+    ax.legend(custom_legend, list(mmgraph._mobility_services.keys()))
+    plt.tight_layout()

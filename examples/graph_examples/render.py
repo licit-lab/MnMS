@@ -1,5 +1,5 @@
 from mnms.graph import MultiModalGraph
-from mnms.tools.render import draw_flow_graph, draw_mobility_service
+from mnms.tools.render import draw_flow_graph, draw_mobility_service, draw_multimodal_graph
 
 import matplotlib.pyplot as plt
 
@@ -22,8 +22,9 @@ mmgraph.flow_graph.add_link('3_2', '3', '2')
 mmgraph.flow_graph.add_link('3_1', '3', '0')
 mmgraph.flow_graph.add_link('1_3', '0', '3')
 
-bus_service = mmgraph.add_mobility_service('Bus')
+
 car_service = mmgraph.add_mobility_service('Car')
+bus_service = mmgraph.add_mobility_service('Bus')
 uber_service = mmgraph.add_mobility_service('Uber')
 
 bus_service.add_node('0')
@@ -67,17 +68,14 @@ mmgraph.connect_mobility_service('Uber', 'Bus', '1', {'time': 2})
 mmgraph.connect_mobility_service('Uber', 'Car', '1', {'time': 2})
 mmgraph.connect_mobility_service('Car', 'Uber', '1', {'time': 2})
 
-mmgraph.connect_mobility_service('Bus', 'Car', '2', {'time': 2});
+mmgraph.connect_mobility_service('Bus', 'Car', '2', {'time': 2})
 mmgraph.connect_mobility_service('Car', 'Bus', '2', {'time': 2})
-mmgraph.connect_mobility_service('Bus', 'Uber', '2', {'time': 4})
+mmgraph.connect_mobility_service('Bus', 'Uber', '2', {'time': 2})
 mmgraph.connect_mobility_service('Uber', 'Bus', '2', {'time': 2})
 mmgraph.connect_mobility_service('Uber', 'Car', '2', {'time': 2})
 mmgraph.connect_mobility_service('Car', 'Uber', '2', {'time': 2})
 
 
 fig, ax = plt.subplots()
-draw_mobility_service(ax, mmgraph, 'Bus', 'red', linkwidth=4, nodesize=10)
-draw_mobility_service(ax, mmgraph, 'Car', 'green', linkwidth=3, nodesize=8)
-draw_flow_graph(ax, mmgraph.flow_graph, color='black', linkwidth=2, nodesize=6)
-
+draw_multimodal_graph(ax, mmgraph, linkwidth=2, nodesize=6)
 plt.show()
