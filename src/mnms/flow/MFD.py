@@ -74,7 +74,7 @@ class MFDFlow(AbstractFlowMotor):
             self.list_remaining_length[i_user] = sections[self.list_current_leg[i_user]]['length']
             self.list_current_mode[i_user] = sections[self.list_current_leg[i_user]]['mode']
             self.list_current_reservoir[i_user] = sections[self.list_current_leg[i_user]]['reservoir']
-            self.list_time_completion_legs.append([-1] * len(self._demand[i_user]))
+            self.list_time_completion_legs.append([-1] * len(self._demand[i_user][1]))
         self.started_trips = [False] * self.nb_user
         self.completed_trips = [False] * self.nb_user
 
@@ -101,7 +101,7 @@ class MFDFlow(AbstractFlowMotor):
         # Update the traffic conditions
         for i_res, res in enumerate(self.reservoirs):
             res.update_accumulations(self.list_dict_accumulations[res.id])
-            self.list_dict_speeds[i_res] = res.update_speeds()
+            self.list_dict_speeds[res.id] = res.update_speeds()
         self.hist_accumulations.append(deepcopy(self.list_dict_accumulations))
         self.hist_speeds.append(self.list_dict_speeds.copy())
 
@@ -115,34 +115,38 @@ class MFDFlow(AbstractFlowMotor):
             # Agent is on the network
             if (not self.completed_trips[i_user]) and (self.started_trips[i_user]):
                 remaining_time = time + dt
-                # print(list_remaining_length[i_user] <= remaining_time*list_dict_speeds[list_current_reservoir[i_user]][list_current_mode[i_user]],list_current_leg[i_user] < len(self._demand[i_user])-1)
                 # Complete current trip leg
-                while self.list_remaining_length[i_user] <= remaining_time * \
-                        self.list_dict_speeds[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] and \
-                        self.list_current_leg[i_user] < len(self._demand[i_user]) - 1:
+                remaining_length = self.list_remaining_length[i_user]
+                curr_res = self.list_current_reservoir[i_user]
+                curr_mode = self.list_current_mode[i_user]
+                curr_leg = self.list_current_leg[i_user]
+                while remaining_length <= remaining_time * self.list_dict_speeds[curr_res][curr_mode] and curr_leg < len(self._demand[i_user][1]) - 1:
                     remaining_time -= self.list_remaining_length[i_user] / self.list_dict_speeds[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]]
                     self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] -= self.accumulation_weights[i_user]
 
                     self.list_time_completion_legs[i_user][self.list_current_leg[i_user]] = time
                     self.list_current_leg[i_user] += 1
-                    self.list_remaining_length[i_user] = self._demand[i_user][1][self.list_current_leg[i_user]]['length']
-                    self.list_current_mode[i_user] = self._demand[i_user][1][self.list_current_leg[i_user]]['mode']
-                    self.list_current_reservoir[i_user] = self._demand[i_user][1][self.list_current_leg[i_user]]['reservoir']
-                    self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] += \
-                        self.accumulation_weights[i_user]
+
+                    path = self._demand[i_user][1]
+                    curr_leg  = self.list_current_leg[i_user]
+                    curr_mode = self.list_current_mode[i_user]
+                    curr_res = self.list_current_reservoir[i_user]
+                    self.list_remaining_length[i_user] = path[curr_leg]['length']
+                    self.list_current_mode[i_user] = path[curr_leg]['mode']
+                    self.list_current_reservoir[i_user] = path[curr_leg]['reservoir']
+                    self.list_dict_accumulations[curr_res][curr_mode] += self.accumulation_weights[i_user]
                 # Remove accomplished distance
                 self.list_remaining_length[i_user] -= remaining_time * self.list_dict_speeds[self.list_current_reservoir[i_user]][
                     self.list_current_mode[i_user]]
-                # print(i_user, remaining_time*list_dict_speeds[list_current_reservoir[i_user]][list_current_mode[i_user]])
-                # print(i_step, i_user, remaining_time*list_dict_speeds[list_current_reservoir[i_user]][list_current_mode[i_user]])
                 # Remove agent who reached destinations
                 if self.list_remaining_length[i_user] <= 0:
                     # Improvement pt: could take the ratio of remaining distance over possible distance to be more accurate
                     self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] -= \
                         self.accumulation_weights[i_user]
-                    self.list_time_completion_legs[i_user][self.list_current_leg[i_user]] = time
+                    curr_leg = self.list_current_leg[i_user]
+                    self.list_time_completion_legs[i_user][curr_leg] = time
                     self.completed_trips[i_user] = True
-        print(self.completed_trips)
+        # print(self.completed_trips)
         return self.list_time_completion_legs, self.hist_accumulations, self.hist_speeds
 
 
@@ -227,5 +231,17 @@ if __name__ == "__main__":
     flow_motor.add_reservoir(res1)
     flow_motor.add_reservoir(res2)
     flow_motor.set_inital_demand(demand)
-    flow_motor._tcurrent = Time("07:00:00").add_time(minutes=DT)
-    print(flow_motor.step(DT)[2])
+    print(flow_motor._demand)
+    flow_motor._tcurrent = Time.fromSeconds(0)
+    flow_motor._demand = [[Time.fromSeconds(700), [{'length': 1200, 'mode': 'car', 'reservoir': "SEN1"}, {'length': 200, 'mode': 'bus', 'reservoir': "SEN1"},
+                  {'length': 2000, 'mode': 'bus', 'reservoir': "SEN2"}]],
+                 [Time.fromSeconds(78), [{'length': 2000, 'mode': 'car', 'reservoir': "SEN1"}]]]
+
+    flow_motor.nb_user = 2
+    flow_motor.accumulation_number = np.ones(flow_motor.nb_user)
+
+    flow_motor.initialize()
+    flow_motor._tcurrent = Time("00:00:00").add_time(seconds=DT)
+    for _ in range(33):
+        flow_motor._tcurrent = flow_motor._tcurrent.add_time(seconds=DT)
+        print(flow_motor.step(DT)[2])
