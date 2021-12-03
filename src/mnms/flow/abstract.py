@@ -21,9 +21,12 @@ class AbstractFlowMotor(ABC):
         tend = Time(tend)
         self._tcurrent = Time(tstart)
         while self._tcurrent < tend:
-            self._tcurrent = self._tcurrent.add_time(seconds=dt)
+            self.update_time(dt)
             self.step(dt)
         self.finalize()
+
+    def update_time(self, dt):
+        self._tcurrent = self._tcurrent.add_time(seconds=dt)
 
     @abstractmethod
     def step(self, dt:float):
