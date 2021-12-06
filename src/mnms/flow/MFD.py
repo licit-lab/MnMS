@@ -81,7 +81,7 @@ class MFDFlow(AbstractFlowMotor):
     def add_reservoir(self, res: Reservoir):
         self.reservoirs.append(res)
 
-    def set_inital_demand(self, demand:List[List]):
+    def set_initial_demand(self, demand:List[List]):
         self._demand = list()
         for t, path in demand:
             recon_path = reconstruct_path(self._graph, path)
@@ -112,26 +112,25 @@ class MFDFlow(AbstractFlowMotor):
 
             # Agent is on the network
             if (not self.completed_trips[i_user]) and (self.started_trips[i_user]):
-                remaining_time = time + dt
+                remaining_time = dt
                 # Complete current trip leg
                 remaining_length = self.list_remaining_length[i_user]
                 curr_res = self.list_current_reservoir[i_user]
                 curr_mode = self.list_current_mode[i_user]
                 curr_leg = self.list_current_leg[i_user]
                 while remaining_length <= remaining_time * self.list_dict_speeds[curr_res][curr_mode] and curr_leg < len(self._demand[i_user][1]) - 1:
-                    remaining_time -= self.list_remaining_length[i_user] / self.list_dict_speeds[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]]
-                    self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] -= self.accumulation_weights[i_user]
-
-                    self.list_time_completion_legs[i_user][self.list_current_leg[i_user]] = time
+                    remaining_time -= remaining_length / self.list_dict_speeds[curr_res][curr_mode]
+                    self.list_dict_accumulations[curr_res][curr_mode] -= self.accumulation_weights[i_user]
+                    self.list_time_completion_legs[i_user][curr_leg] = time
                     self.list_current_leg[i_user] += 1
 
                     path = self._demand[i_user][1]
                     curr_leg  = self.list_current_leg[i_user]
-                    curr_mode = self.list_current_mode[i_user]
-                    curr_res = self.list_current_reservoir[i_user]
                     self.list_remaining_length[i_user] = path[curr_leg]['length']
                     self.list_current_mode[i_user] = path[curr_leg]['mode']
                     self.list_current_reservoir[i_user] = path[curr_leg]['reservoir']
+                    curr_mode = self.list_current_mode[i_user]
+                    curr_res = self.list_current_reservoir[i_user]
                     self.list_dict_accumulations[curr_res][curr_mode] += self.accumulation_weights[i_user]
                 # Remove accomplished distance
                 self.list_remaining_length[i_user] -= remaining_time * self.list_dict_speeds[self.list_current_reservoir[i_user]][

@@ -99,4 +99,6 @@ flow_motor._tcurrent = Time("00:00:00").add_time(seconds=DT)
 for _ in range(33):
     flow_motor.update_time(DT)
     flow_motor.step(DT)
-    print(flow_motor.hist_speeds)
+#print(flow_motor.hist_speeds)
+print(flow_motor.list_dict_accumulations)
+print(flow_motor.completed_trips)
