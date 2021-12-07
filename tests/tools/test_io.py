@@ -26,7 +26,7 @@ class TestIO(unittest.TestCase):
         self.flow.add_link('2_3', '2', '3')
         self.flow.add_link('3_0', '3', '0')
 
-        self.mmgraph.add_reservoir('Res', ['0_1', '1_2'])
+        self.mmgraph.add_sensor('Res', ['0_1', '1_2'])
 
         serv1 = self.mmgraph.add_mobility_service("s1")
         serv2 = self.mmgraph.add_mobility_service("s2")
@@ -79,4 +79,4 @@ class TestIO(unittest.TestCase):
             self.assertDictEqual(old_link.costs, new_link.costs)
 
 
-        self.assertEqual(list(new_graph.reservoirs.keys()), ['Res'])
+        self.assertEqual(list(new_graph.sensors.keys()), ['Res'])

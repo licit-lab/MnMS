@@ -10,7 +10,7 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
 
     d['FLOW_GRAPH']['NODES'] = {}
     d['FLOW_GRAPH']['LINKS'] = {}
-    d['FLOW_GRAPH']['RESERVOIR'] = {}
+    d['FLOW_GRAPH']['SENSORS'] = {}
 
     for nid, node in G.flow_graph.nodes.items():
         d['FLOW_GRAPH']['NODES'][nid] = {'POSITION': node.pos.tolist()}
@@ -20,8 +20,8 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
                                          'DOWNSTREAM_NODE': link.downstream_node,
                                          'NB_LANE': link.nb_lane}
 
-    for resid, res in G.reservoirs.items():
-        d['FLOW_GRAPH']['RESERVOIR'][resid] = list(res.links)
+    for sid, sens in G.sensors.items():
+        d['FLOW_GRAPH']['SENSORS'][sid] = list(sens.links)
 
     d['MOBILITY_GRAPH']['SERVICES'] = {}
     d['MOBILITY_GRAPH']['CONNEXIONS'] = []
@@ -68,8 +68,8 @@ def load_graph(filename:str):
     for id, d in data['FLOW_GRAPH']['LINKS'].items():
         flow_graph.add_link(id, d['UPSTREAM_NODE'], d['DOWNSTREAM_NODE'], d['NB_LANE'])
 
-    for id, d in data['FLOW_GRAPH']['RESERVOIR'].items():
-        G.add_reservoir(id, d)
+    for id, d in data['FLOW_GRAPH']['SENSORS'].items():
+        G.add_sensor(id, d)
 
     for service in data['MOBILITY_GRAPH']['SERVICES']:
         new_service = G.add_mobility_service(service)

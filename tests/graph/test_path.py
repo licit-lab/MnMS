@@ -23,8 +23,8 @@ class TestPath(unittest.TestCase):
         flow.add_link('1_2', '1', '2')
         flow.add_link('2_3', '2', '3')
 
-        self.mmgraph.add_reservoir('Res1', ['0_1', '1_2'])
-        self.mmgraph.add_reservoir('Res2', ['2_3'])
+        self.mmgraph.add_sensor('Res1', ['0_1', '1_2'])
+        self.mmgraph.add_sensor('Res2', ['2_3'])
 
         m1 = self.mmgraph.add_mobility_service('M1')
         m1.add_node('0', '0')
@@ -48,6 +48,6 @@ class TestPath(unittest.TestCase):
 
     def test_reconstruct(self):
         reconstructed = reconstruct_path(self.mmgraph, self.path)
-        self.assertDictEqual(reconstructed[0], {'reservoir': 'Res1', 'mobility': 'M1', 'length': 1.0})
-        self.assertDictEqual(reconstructed[1], {'reservoir': 'Res1', 'mobility': 'M2', 'length': 1.0})
-        self.assertDictEqual(reconstructed[2], {'reservoir': 'Res2', 'mobility': 'M2', 'length': 1.0})
+        self.assertDictEqual(reconstructed[0], {'sensor': 'Res1', 'mode': 'M1', 'length': 1.0})
+        self.assertDictEqual(reconstructed[1], {'sensor': 'Res1', 'mode': 'M2', 'length': 1.0})
+        self.assertDictEqual(reconstructed[2], {'sensor': 'Res2', 'mode': 'M2', 'length': 1.0})
