@@ -28,18 +28,18 @@ class TestCreate(unittest.TestCase):
         mmgraph = MultiModalGraph()
         service = mmgraph.add_mobility_service('dummy')
 
-        service.add_node('0')
-        service.add_node('1')
-        service.add_link('0_1', '0', '1', {'test': 2})
+        service.add_node('dummy_0')
+        service.add_node('dummy_1')
+        service.add_link('0_1', 'dummy_0', 'dummy_1', {'test': 2})
 
         self.assertEqual(list(mmgraph.mobility_graph.nodes.keys()), ['dummy_0', 'dummy_1'])
         self.assertEqual(list(mmgraph.mobility_graph.links.keys()), [('dummy_0', 'dummy_1')])
 
     def test_full_recovery_mobility(self):
         mmgraph = MultiModalGraph()
-        mmgraph.flow_graph.add_node('0', [0, 0])
-        mmgraph.flow_graph.add_node('1', [1, 0])
-        mmgraph.flow_graph.add_link('0_1', '0', '1')
+        mmgraph.flow_graph.add_node('CAR_0', [0, 0])
+        mmgraph.flow_graph.add_node('CAR_1', [1, 0])
+        mmgraph.flow_graph.add_link('0_1', 'CAR_0', 'CAR_1')
 
         mmgraph.add_full_recovery_service('CAR')
 

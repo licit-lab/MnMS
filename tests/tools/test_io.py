@@ -31,15 +31,15 @@ class TestIO(unittest.TestCase):
         serv1 = self.mmgraph.add_mobility_service("s1")
         serv2 = self.mmgraph.add_mobility_service("s2")
 
-        serv1.add_node('0')
-        serv1.add_node('1')
-        serv1.add_link('SERV1_0_1', '0', '1', {'test':0})
+        serv1.add_node('S1_0')
+        serv1.add_node('S1_1')
+        serv1.add_link('SERV1_0_1', 'S1_0', 'S1_1', {'test':0})
 
-        serv2.add_node('1')
-        serv2.add_node('2')
-        serv2.add_link('SERV2_0_1', '1', '2', {'test': 1})
+        serv2.add_node('S2_1')
+        serv2.add_node('S2_2')
+        serv2.add_link('SERV2_0_1', 'S2_1', 'S2_2', {'test': 1})
 
-        self.mmgraph.connect_mobility_service('s1', 's2', '1', {'test': 2})
+        self.mmgraph.connect_mobility_service('S1_S2_1', 'S1_1', 'S2_1', {'test': 2})
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -72,11 +72,11 @@ class TestIO(unittest.TestCase):
 
         for l in self.mmgraph.mobility_graph.links:
             old_link = self.mmgraph.mobility_graph.links[l]
+            print(new_graph.mobility_graph.links)
             new_link = new_graph.mobility_graph.links[l]
             self.assertTrue(old_link.id == new_link.id)
             self.assertTrue(old_link.upstream_node == new_link.upstream_node)
             self.assertTrue(old_link.downstream_node == new_link.downstream_node)
             self.assertDictEqual(old_link.costs, new_link.costs)
-
 
         self.assertEqual(list(new_graph.sensors.keys()), ['Res'])

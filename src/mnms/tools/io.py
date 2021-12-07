@@ -29,12 +29,12 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
     for service in G._mobility_services.values():
         d['MOBILITY_GRAPH']['SERVICES'][service.id] = {}
         new_service = d['MOBILITY_GRAPH']['SERVICES'][service.id]
-        new_service['NODES'] = {nid: {'REF_NODE': G.mobility_graph.nodes[service.id + "_" + nid].reference_node} for nid in service.nodes}
+        new_service['NODES'] = {nid: {'REF_NODE': G.mobility_graph.nodes[nid].reference_node} for nid in service.nodes}
         new_service['LINKS'] = {}
 
 
         for nodes, lid in service.links.items():
-            service_nodes = (f"{service.id}_{nodes[0]}", f"{service.id}_{nodes[1]}")
+            service_nodes = (nodes[0], nodes[1])
             link = G.mobility_graph.links[service_nodes]
             new_service['LINKS'][lid] = {'UPSTREAM_NODE': nodes[0],
                                          'DOWNSTREAM_NODE': nodes[1],
@@ -43,12 +43,16 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
                                          'REF_LANE_IDS': link.reference_lane_ids}
 
 
-    for upser, downservs in G._adjacency_services.items():
-        for downser in downservs:
-            for nid in G._connexion_services[upser, downser]:
-                nodes = (upser + '_' + nid, downser + '_' + nid)
-                link = G.mobility_graph.links[nodes]
-                d['MOBILITY_GRAPH']['CONNEXIONS'].append({"UPSTREAM_SERVICE": upser, "DOWNSTREAM_SERVICE": downser,  "NODE":nid, "COSTS": link.costs})
+    for (up_node_id, down_node_id), lid in G._connexion_services.items():
+        link = G.mobility_graph.links[(up_node_id, down_node_id)]
+        print(up_node_id, down_node_id)
+        print(lid)
+        print(link.costs)
+        d['MOBILITY_GRAPH']['CONNEXIONS'].append({
+                                                  "UPSTREAM_NODE":up_node_id,
+                                                  "DOWNSTREAM_NODE":down_node_id,
+                                                  "LINK":lid,
+                                                  "COSTS": link.costs})
 
     with open(filename, 'w') as f:
         json.dump(d, f, indent=indent)
@@ -58,6 +62,8 @@ def save_graph(G: MultiModalGraph, filename, indent=4):
 def load_graph(filename:str):
     with open(filename, 'r') as f:
         data = json.load(f)
+
+    print(json.dumps(data, indent=2))
 
     G = MultiModalGraph()
     flow_graph = G.flow_graph
@@ -79,6 +85,6 @@ def load_graph(filename:str):
             new_service.add_link(id, d['UPSTREAM_NODE'], d['DOWNSTREAM_NODE'], d['COSTS'], d['REF_LINKS'], d['REF_LANE_IDS'])
 
     for conn in data['MOBILITY_GRAPH']['CONNEXIONS']:
-        G.connect_mobility_service(conn['UPSTREAM_SERVICE'], conn['DOWNSTREAM_SERVICE'], conn['NODE'], conn['COSTS'])
+        G.connect_mobility_service(conn['LINK'], conn['UPSTREAM_NODE'], conn['DOWNSTREAM_NODE'], conn['COSTS'])
 
     return G

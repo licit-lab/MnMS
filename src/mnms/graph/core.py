@@ -230,12 +230,12 @@ class MobilityGraph(object):
 
     def add_node(self, id, ref_node=None):
         self.nodes.add(id)
-        self._graph.add_node(self.id+"_"+id, self.id, ref_node)
-        self.node_referencing[ref_node].append(self.id+"_"+id)
+        self._graph.add_node(id, self.id, ref_node)
+        self.node_referencing[ref_node].append(id)
 
-    def add_link(self, lid, upstream_node: str, downstream_node: str, costs:Dict[str, float], reference_links=None, reference_lane_ids=None):
+    def add_link(self, lid: str, upstream_node: str, downstream_node: str, costs:Dict[str, float], reference_links=None, reference_lane_ids=None):
         self.links[(upstream_node, downstream_node)] = lid
-        self._graph.add_link(lid, self.id+"_"+upstream_node, self.id+"_"+downstream_node, costs, reference_links, reference_lane_ids, self.id)
+        self._graph.add_link(lid, upstream_node, downstream_node, costs, reference_links, reference_lane_ids, self.id)
 
     def set_cost(self, cost_name:str, default_value:float):
         for unode, dnode in self.links.keys():
@@ -260,8 +260,8 @@ class MultiModalGraph(object):
         self.mobility_graph = TopoGraph()
         self.sensors = dict()
 
-        self._connexion_services = defaultdict(set)
-        self._adjacency_services = defaultdict(set)
+        self._connexion_services = dict()
+        # self._adjacency_services = defaultdict(set)
         self._mobility_services = dict()
 
         self.node_referencing = defaultdict(list)
@@ -279,14 +279,16 @@ class MultiModalGraph(object):
         [new_service.add_link('_'.join([name_serv, unode, dnode]), unode, dnode, {}, reference_links=[link.id]) for (unode, dnode), link in self.flow_graph.links.items()]
 
 
-    def connect_mobility_service(self, upstream_service, downstream_service, nodeid, costs={}):
+    def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, costs={}):
         costs.update({"length":0})
-        self.mobility_graph.add_link("_".join([upstream_service, downstream_service, nodeid]),
-                                     upstream_service+"_"+nodeid,
-                                     downstream_service+"_"+nodeid,
+        upstream_service = self.mobility_graph.nodes[upstream_node].mobility_service
+        downstream_service = self.mobility_graph.nodes[downstream_node].mobility_service
+        self.mobility_graph.add_link(lid,
+                                     upstream_node,
+                                     downstream_node,
                                      costs)
-        self._connexion_services[(upstream_service, downstream_service)].add(nodeid)
-        self._adjacency_services[upstream_service].add(downstream_service)
+        self._connexion_services[(upstream_node, downstream_node)] = lid
+        # self._adjacency_services[upstream_service].add(downstream_service)
 
 
     def add_sensor(self, sid: str, links: List[str]):
