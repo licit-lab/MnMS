@@ -2,11 +2,11 @@ from mnms.tools.io import load_graph
 from mnms.tools.render import draw_multimodal_graph
 from mnms.graph.algorithms import compute_shortest_path
 from mnms.graph.path import reconstruct_path
-from mnms.log import set_log_level, LOGLEVEL
+from mnms.log import LOGLEVEL, logger
 
 import matplotlib.pyplot as plt
 
-set_log_level(LOGLEVEL.DEBUG)
+logger.setLevel(LOGLEVEL.INFO)
 
 mmgraph = load_graph('Network_v2_test_withreservedlanes.json')
 mmgraph.add_sensor('Res', [link.id for link in mmgraph.flow_graph.links.values()])

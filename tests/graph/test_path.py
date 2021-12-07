@@ -48,8 +48,6 @@ class TestPath(unittest.TestCase):
 
     def test_reconstruct(self):
         reconstructed = reconstruct_path(self.mmgraph, self.path)
-        print(reconstructed)
-        assert False
-        self.assertDictEqual(reconstructed[0], {'sensor': 'Res1', 'mobility': 'M1', 'length': 1.0})
-        self.assertDictEqual(reconstructed[1], {'sensor': 'Res1', 'mobility': 'M2', 'length': 1.0})
-        self.assertDictEqual(reconstructed[2], {'sensor': 'Res2', 'mobility': 'M2', 'length': 1.0})
+        self.assertDictEqual(reconstructed[0], {'sensor': 'Res1', 'mode': 'M1', 'length': 1.0})
+        self.assertDictEqual(reconstructed[1], {'sensor': 'Res1', 'mode': 'M2', 'length': 1.0})
+        self.assertDictEqual(reconstructed[2], {'sensor': 'Res2', 'mode': 'M2', 'length': 1.0})

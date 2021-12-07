@@ -41,8 +41,7 @@ class TestAlgorithms(unittest.TestCase):
         for _ in range(100):
             self.mfd_flow.update_time(dt)
             self.mfd_flow.step(dt)
-        #print(self.mfd_flow.list_time_completion_legs)
-        #print(self.mfd_flow.list_remaining_length)
+
 
     def tearDown(self):
         """Concludes and closes the test.
