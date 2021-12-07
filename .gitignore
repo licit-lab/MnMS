@@ -135,3 +135,6 @@ doc/_dvlpt/
 
 #pycharm
 .idea/
+
+#OSX
+.DS_Store

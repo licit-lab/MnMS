@@ -8,15 +8,27 @@ class LOGLEVEL():
     DEBUG    = 10
     NOTSET   = 0
 
-logger = logging.getLogger('mnms')
-logger.setLevel(logging.INFO)
-_formatter = logging.Formatter('%(levelname)s(mnms): %(message)s')
-_ch = logging.StreamHandler()
-_ch.setLevel(logging.INFO)
-_ch.setFormatter(_formatter)
-logger.addHandler(_ch)
 
+def create_logger(logname,
+                  format='%(levelname)s(mnms): %(message)s',
+                  logfile=None,
+                  base_level=LOGLEVEL.INFO,
+                  stream_level=LOGLEVEL.ERROR,
+                  file_level=LOGLEVEL.INFO
+                  ):
+    logger = logging.getLogger(logname)
+    logger.setLevel(base_level)
+    formatter = logging.Formatter(format)
+    stream = logging.StreamHandler()
+    stream.setLevel(stream_level)
+    stream.setFormatter(formatter)
+    logger.addHandler(stream)
 
-def set_log_level(level):
-    logger.setLevel(level)
-    _ch.setLevel(level)
+    if logfile is not None:
+        file = logging.FileHandler(logfile)
+        file.setLevel(file_level)
+        logger.addHandler(file)
+
+    return logger
+
+logger = create_logger('mnms')
