@@ -89,7 +89,7 @@ class MFDFlow(AbstractFlowMotor):
                 section['reservoir'] = section.pop('sensor')
             self._demand.append([t, recon_path])
         self.nb_user = len(self._demand)
-        self.accumulation_number = np.ones(self.nb_user)
+        self.accumulation_weights = np.ones(self.nb_user)
 
         self.initialize()
 
