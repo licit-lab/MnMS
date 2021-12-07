@@ -105,14 +105,15 @@ class MFDFlow(AbstractFlowMotor):
 
         # Move the agents
         for i_user in range(self.nb_user):
+            remaining_time = dt
             # Agent enters the network
             if (not self.started_trips[i_user]) and (self.departure_times[i_user].to_seconds() <= time):
                 self.started_trips[i_user] = True
                 self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] += self.accumulation_weights[i_user]
+                remaining_time = time - self.departure_times[i_user].to_seconds()
 
             # Agent is on the network
             if (not self.completed_trips[i_user]) and (self.started_trips[i_user]):
-                remaining_time = dt
                 # Complete current trip leg
                 remaining_length = self.list_remaining_length[i_user]
                 curr_res = self.list_current_reservoir[i_user]
@@ -121,7 +122,7 @@ class MFDFlow(AbstractFlowMotor):
                 while remaining_length <= remaining_time * self.list_dict_speeds[curr_res][curr_mode] and curr_leg < len(self._demand[i_user][1]) - 1:
                     remaining_time -= remaining_length / self.list_dict_speeds[curr_res][curr_mode]
                     self.list_dict_accumulations[curr_res][curr_mode] -= self.accumulation_weights[i_user]
-                    self.list_time_completion_legs[i_user][curr_leg] = time
+                    self.list_time_completion_legs[i_user][curr_leg] = time-remaining_time
                     self.list_current_leg[i_user] += 1
 
                     path = self._demand[i_user][1]
@@ -132,14 +133,14 @@ class MFDFlow(AbstractFlowMotor):
                     curr_mode = self.list_current_mode[i_user]
                     curr_res = self.list_current_reservoir[i_user]
                     self.list_dict_accumulations[curr_res][curr_mode] += self.accumulation_weights[i_user]
-                # Remove accomplished distance
-                self.list_remaining_length[i_user] -= remaining_time * self.list_dict_speeds[self.list_current_reservoir[i_user]][
-                    self.list_current_mode[i_user]]
                 # Remove agent who reached destinations
-                if self.list_remaining_length[i_user] <= 0:
-                    # Improvement pt: could take the ratio of remaining distance over possible distance to be more accurate
-                    self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] -= \
-                        self.accumulation_weights[i_user]
-                    curr_leg = self.list_current_leg[i_user]
-                    self.list_time_completion_legs[i_user][curr_leg] = time
+                if self.list_remaining_length[i_user] < remaining_time * self.list_dict_speeds[curr_res][curr_mode]:
+                    self.list_dict_accumulations[curr_res][curr_mode] -= self.accumulation_weights[i_user]
+                    remaining_time -= self.list_remaining_length[i_user] / self.list_dict_speeds[curr_res][curr_mode]
+                    self.list_time_completion_legs[i_user][curr_leg] = time - remaining_time
                     self.completed_trips[i_user] = True
+                    self.list_remaining_length[i_user]=0
+                else:
+                    # Remove accomplished distance when staying in on the network
+                    self.list_remaining_length[i_user] -= remaining_time * self.list_dict_speeds[curr_res][curr_mode]
+
