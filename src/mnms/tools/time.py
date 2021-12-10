@@ -1,5 +1,7 @@
 from decimal import Decimal
+from typing import List
 
+import numpy as np
 
 class Time(object):
     def __init__(self, date):
@@ -91,27 +93,35 @@ class Time(object):
 
 
 class TimeTable(object):
-    def __init__(self):
-        self.table = []
+    def __init__(self, times:List[Time]=[]):
+        self.table:List[Time] = times
 
-    def create_table(self, start, end, delta_hour=0, delta_min=0, delta_sec=0):
+    @classmethod
+    def create_table_freq(cls, start, end, delta_hour=0, delta_min=0, delta_sec=0):
         assert delta_hour!=0 or delta_min!=0 or delta_sec!=0
-        self.table = []
+        table = []
         current_time = Time(start)
         end_time = Time(end)
 
-        self.table.append(current_time)
+        table.append(current_time)
         while current_time < end_time:
             ntime = current_time.add_time(hours=delta_hour, minutes=delta_min, seconds=delta_sec)
-            self.table.append(ntime)
+            table.append(ntime)
             current_time = ntime
 
+        return cls(table)
+
     def get_next_departure(self, date):
-        t = Time(date)
         for d in self.table:
-            if t < d:
+            if date < d:
                 return d
 
+    def get_freq(self):
+        if len(self.table) > 1:
+            waiting_times_seconds = [self.table[i+1].to_seconds()-self.table[i].to_seconds() for i in range(len(self.table)-1)]
+            return np.mean(waiting_times_seconds)
+        else:
+            return None
 
 if __name__ == "__main__":
     t = TimeTable()
@@ -121,3 +131,4 @@ if __name__ == "__main__":
 
 
     print(Time.fromSeconds(15000.35))
+    print(t.get_freq())

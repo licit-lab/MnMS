@@ -17,13 +17,17 @@ def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[flo
         vertices.add(v)
 
     dist[origin] = 0
+    logger.debug(f'Dist : {dist}')
 
     while len(vertices) > 0:
         d = {v:dist[v] for v in vertices}
         u = min(d, key=d.get)
         vertices.remove(u)
+        logger.debug(f'Prev {prev}')
+        logger.debug(f"Curr Node {u}")
 
         if u == destination:
+            logger.debug(f"Found destination {u}")
             path = deque()
             if prev[u] is not None or u == origin:
                 while u is not None:
@@ -32,6 +36,7 @@ def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[flo
             return dist[destination], path
 
         for neighbor in G.get_node_neighbors(u):
+            logger.debug(f"Neighbor Node {neighbor}")
             if neighbor in vertices:
                 alt = dist[u] + G.links[(u, neighbor)].costs[cost]
                 if alt < dist[neighbor]:
@@ -69,6 +74,7 @@ def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable, cost
 
         for neighbor in G.get_node_neighbors(current):
             tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
+
             if tentative_gscore < gscore[neighbor]:
                 prev[neighbor] = current
                 gscore[neighbor] = tentative_gscore
@@ -81,7 +87,7 @@ def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable, cost
 
 
 # TODO: make use of algorithm arg with either dijkstra or astar
-def compute_shortest_path(mmgraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra") -> Tuple[float, Deque[str]]:
+def compute_shortest_path(mmgraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra") -> Tuple[float, Tuple[str]]:
     # Create artificial nodes
 
     start_nodes = [n for n in mmgraph.node_referencing[origin]]
