@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List, Union, FrozenSet
+from typing import Dict, Tuple, List, Union, FrozenSet, Set
 from collections import defaultdict, ChainMap
 from abc import ABC, abstractmethod
 import numpy as np
@@ -31,25 +31,22 @@ class TopoNode(GraphElement):
         A reference to GeoNode (default is None)
 
     """
-    def __init__(self, id: str, mobility_service, ref_node:str=None, costs={}):
+    def __init__(self, id: str, mobility_service, ref_node:str=None):
         super(TopoNode, self).__init__(id)
         self.reference_node = ref_node
         self.mobility_service = mobility_service
-        self.costs = {'time': 0, '_default': 1}
-        self.costs.update(costs)
 
     def __repr__(self):
         return f"TopoNode(id={self.id}, ref_node={self.reference_node})"
 
     @classmethod
     def __load__(cls, data: dict) -> "TopoNode":
-        return cls(data['ID'], data['MOBILITY_SERVICE'], data['REF_NODE'], data['COSTS'])
+        return cls(data['ID'], data['MOBILITY_SERVICE'], data['REF_NODE'])
 
     def __dump__(self) -> dict:
         return {'ID': self.id,
                 'REF_NODE': self.reference_node,
-                'MOBILITY_SERVICE': self.mobility_service,
-                'COSTS': {key: val for key, val in self.costs.items() if key != "_default"}}
+                'MOBILITY_SERVICE': self.mobility_service}
 
 
 class GeoNode(GraphElement):
@@ -209,7 +206,7 @@ class OrientedGraph(object):
     def __init__(self):
         self.nodes: Dict[str, Union[TopoLink, GeoLink]] = dict()
         self.links: Dict[Tuple[str, str], Union[TransitLink, ConnectionLink, GeoLink]] = dict()
-        self._adjacency: Dict[str, List[str]] = dict()
+        self._adjacency: Dict[str, Set[str]] = dict()
         self._map_lid_nodes: Dict[str, Tuple[str, str]] = dict()
 
     def get_node_neighbors(self, nodeid: str) -> List[str]:
@@ -231,47 +228,32 @@ class TopoGraph(OrientedGraph):
         super(TopoGraph, self).__init__()
         self.node_referencing = defaultdict(list)
 
-
     def add_node(self, nid: str, mobility_service:str, ref_node=None) -> None:
         assert nid not in self.nodes
-        self.nodes[nid] = TopoNode(nid, mobility_service, ref_node)
-        if ref_node is not None:
-            self.node_referencing[ref_node].append(nid)
-        self._adjacency[nid] = set()
+        new_node = TopoNode(nid, mobility_service, ref_node)
+        self._add_node(new_node)
 
-    def add_link(self, link: ConnectionLink):
+    def _add_node(self, node:TopoNode):
+        self.nodes[node.id] = node
+        if node.reference_node is not None:
+            self.node_referencing[node.reference_node].append(node.id)
+        self._adjacency[node.id] = set()
+
+    def add_link(self, lid, upstream_node, downstream_node, costs, reference_links=None, reference_lane_ids=None,
+                 mobility_service=None) -> None:
+        assert (upstream_node, downstream_node) not in self.links, f"Nodes {upstream_node}, {downstream_node} already connected"
+        assert lid not in self._map_lid_nodes, f"Link id {lid} already exist"
+
+        link = ConnectionLink(lid, upstream_node, downstream_node, costs, reference_links, reference_lane_ids, mobility_service)
+        self._add_link(link)
+
+    def _add_link(self, link: [ConnectionLink, TransitLink]):
         self.links[(link.upstream_node, link.downstream_node)] = link
         self._map_lid_nodes[link.id] = (link.upstream_node, link.downstream_node)
         self._adjacency[link.upstream_node].add(link.downstream_node)
 
 
-    def add_connexion_link(self, lid, upstream_node, downstream_node, costs, reference_links=None, reference_lane_ids=None,
-                 mobility_service=None) -> None:
-        assert (upstream_node, downstream_node) not in self.links, f"Nodes {upstream_node}, {downstream_node} already in graph"
-        assert lid not in self._map_lid_nodes, f"Link id {lid} already exist"
-
-        link = ConnectionLink(lid, upstream_node, downstream_node, costs, reference_links, reference_lane_ids, mobility_service)
-        self.add_link(link)
-
-    # def add_transit_link(self, lid, upstream_node, downstream_node, costs):
-    #     assert (upstream_node, downstream_node) not in self.links, f"Nodes {upstream_node}, {downstream_node} already in graph"
-    #     assert lid not in self._map_lid_nodes, f"Link id {lid} already exist"
-    #
-    #     link = TransitLink(lid, upstream_node, downstream_node, costs)
-    #     self.add_link(link)
-
-    # def extract_subgraph(self, nodes:set):
-    #     subgraph = self.__class__()
-    #     for n in nodes:
-    #         subgraph.add_node(n, None)
-    #
-    #     [subgraph.add_link(self.links[(u_node, d_node)].id, u_node, d_node, self.links[(u_node, d_node)].costs) for u_node, d_node in self.links if u_node in nodes and d_node in nodes]
-    #
-    #     return subgraph
-
-
-
-class ComposedTopoGraph(object):
+class ComposedTopoGraph(TopoGraph):
     def __init__(self):
         self.nodes = ChainMap()
         self.links = ChainMap()
@@ -279,24 +261,20 @@ class ComposedTopoGraph(object):
         self._map_lid_nodes = ChainMap()
         self._node_referencing = []
 
-        self.graphs = dict()
-        self._nb_subgraph = 0
+        # self.graphs = dict()
+        # self._nb_subgraph = 0
 
-    def get_node_neighbors(self, nodeid: str) -> List[str]:
-        return self._adjacency[nodeid]
-
-    def add_topo_graph(self, gid:str, graph: "TopoGraph"):
+    def add_topo_graph(self, graph: TopoGraph):
         self.nodes.maps.append(graph.nodes)
         self.links.maps.append(graph.links)
         self._adjacency.maps.append(graph._adjacency)
         self._map_lid_nodes.maps.append(graph._map_lid_nodes)
         self._node_referencing.append(graph.node_referencing)
 
-        self.graphs[gid] = self._nb_subgraph
-        self._nb_subgraph += 1
+        # self.graphs[gid] = self._nb_subgraph
+        # self._nb_subgraph += 1
 
         self.check()
-
 
     def get_node_references(self, nid: str):
         node_refs = []
@@ -355,6 +333,12 @@ class ComposedTopoGraph(object):
         self.check_unicity_nodes()
         self.check_unicity_links()
 
+    def compute_cost_path(self, path:List[str], cost):
+        res = 0
+        for i in range(len(path)-1):
+            res += self.links[(path[i],path[i+1])].costs[cost]
+        return res
+
 
 class GeoGraph(OrientedGraph):
     """Class implementing a geometrical oriented graph
@@ -363,19 +347,23 @@ class GeoGraph(OrientedGraph):
         assert nodeid not in self.nodes
 
         node = GeoNode(nodeid, pos)
-        self.nodes[node.id] = node
+        self._add_node(node)
 
-        self._adjacency[nodeid] = set()
+    def _add_node(self, node:GeoNode):
+        self.nodes[node.id] = node
+        self._adjacency[node.id] = set()
 
     def add_link(self, lid, upstream_node: str, downstream_node: str, length:float=None, nb_lane:int=1) -> None:
         assert (upstream_node, downstream_node) not in self.links
         if length is None:
             length = np.linalg.norm(self.nodes[upstream_node].pos - self.nodes[downstream_node].pos)
         link = GeoLink(lid, upstream_node, downstream_node, length=length, nb_lane=nb_lane)
-        self.links[(upstream_node, downstream_node)] = link
-        self._map_lid_nodes[lid] = (upstream_node, downstream_node)
-        self._adjacency[link.upstream_node].add(link.downstream_node)
+        self._add_link(link)
 
+    def _add_link(self, link:GeoLink):
+        self.links[(link.upstream_node, link.downstream_node)] = link
+        self._map_lid_nodes[link.id] = (link.upstream_node, link.downstream_node)
+        self._adjacency[link.upstream_node].add(link.downstream_node)
 
     def extract_subgraph(self, nodes:set):
         subgraph = self.__class__()
@@ -392,7 +380,6 @@ class Sensor(GraphElement):
         super(Sensor, self).__init__(resid)
         self.mobility_services = frozenset(mobility_services)
         self.links: FrozenSet[str] = frozenset(links)
-
 
     def __dump__(self) -> dict:
         return {'ID': self.id, 'MOBILITY_SERVICES': list(self.mobility_services), 'LINKS': list(self.links)}
@@ -420,26 +407,28 @@ class MultiModalGraph(object):
         self.mobility_graph = ComposedTopoGraph()
         self.sensors = dict()
 
-        self._connexion_services = dict()
+        self._connection_services = dict()
         self._mobility_services = dict()
 
-        self.node_referencing = defaultdict(list)
+        # self.node_referencing = defaultdict(list)
 
         [self.flow_graph.add_node(nid, pos) for nid, pos in nodes.items()]
         [self.flow_graph.add_link(lid, unid, dnid) for lid, (unid, dnid) in  links.items()]
         [serv.connect_graph(self) for serv in mobility_services]
 
-    def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, costs={}):
-        costs.update({"length":0})
+    def add_mobility_service(self, service: "BaseMobilityService"):
+        self._mobility_services[service.id] = service
+        self.mobility_graph.add_topo_graph(service)
+
+    def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, costs):
         upstream_service = self.mobility_graph.nodes[upstream_node].mobility_service
         downstream_service = self.mobility_graph.nodes[downstream_node].mobility_service
         assert upstream_service != downstream_service, f"Upstream service must be different from downstream service ({upstream_service})"
+        assert "time" in costs, "time must pe present in the cost dictionnay"
 
         link = TransitLink(lid, upstream_node, downstream_node, costs)
-        self.mobility_graph.add_link(link)
-        self._connexion_services[(upstream_node, downstream_node)] = lid
-        # self._adjacency_services[upstream_service].add(downstream_service)
-
+        self.mobility_graph._add_link(link)
+        self._connection_services[(upstream_node, downstream_node)] = lid
 
     def add_sensor(self, sid: str, links: List[str]):
         for lid in links:

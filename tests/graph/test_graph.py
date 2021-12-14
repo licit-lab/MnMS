@@ -1,7 +1,7 @@
 import unittest
 
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.base import SimpleMobilityService
+from mnms.mobility_service.base import BaseMobilityService
 
 
 class TestCreate(unittest.TestCase):
@@ -28,13 +28,13 @@ class TestCreate(unittest.TestCase):
 
     def test_mobility_graph(self):
         mmgraph = MultiModalGraph()
-        service = SimpleMobilityService('dummy')
+        service = BaseMobilityService('dummy', 10)
 
         service.add_node('dummy_0')
         service.add_node('dummy_1')
         service.add_link('0_1', 'dummy_0', 'dummy_1', {'test': 2})
 
-        service.connect_graph(mmgraph)
+        mmgraph.add_mobility_service(service)
 
         self.assertEqual(list(mmgraph.mobility_graph.nodes.keys()), ['dummy_0', 'dummy_1'])
         self.assertEqual(list(mmgraph.mobility_graph.links.keys()), [('dummy_0', 'dummy_1')])

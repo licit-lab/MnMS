@@ -2,7 +2,7 @@ from collections import deque, defaultdict
 from typing import Callable, Tuple, Deque
 
 from mnms.log import logger
-from mnms.graph.core import TopoGraph
+from mnms.graph.core import TopoGraph, MultiModalGraph
 
 import numpy as np
 
@@ -87,11 +87,11 @@ def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable, cost
 
 
 # TODO: make use of algorithm arg with either dijkstra or astar
-def compute_shortest_path(mmgraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra") -> Tuple[float, Tuple[str]]:
+def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra") -> Tuple[float, Tuple[str]]:
     # Create artificial nodes
 
-    start_nodes = [n for n in mmgraph.node_referencing[origin]]
-    end_nodes = [n for n in mmgraph.node_referencing[destination]]
+    start_nodes = [n for n in mmgraph.mobility_graph.get_node_references(origin)]
+    end_nodes = [n for n in mmgraph.mobility_graph.get_node_references(destination)]
 
     if len(start_nodes) == 0:
         logger.error(f"There is no mobility service connected to origin node {origin}")

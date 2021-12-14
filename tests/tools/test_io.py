@@ -3,7 +3,7 @@ import unittest
 from tempfile import TemporaryDirectory
 
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.base import SimpleMobilityService
+from mnms.mobility_service.base import BaseMobilityService
 from mnms.tools.io import save_graph, load_graph
 
 
@@ -29,8 +29,8 @@ class TestIO(unittest.TestCase):
 
         self.mmgraph.add_sensor('Res', ['0_1', '1_2'])
 
-        serv1 = SimpleMobilityService("s1")
-        serv2 = SimpleMobilityService("s2")
+        serv1 = BaseMobilityService("s1", 10)
+        serv2 = BaseMobilityService("s2", 9)
 
         serv1.add_node('S1_0')
         serv1.add_node('S1_1')
@@ -40,9 +40,9 @@ class TestIO(unittest.TestCase):
         serv2.add_node('S2_2')
         serv2.add_link('SERV2_0_1', 'S2_1', 'S2_2', {'test': 1})
 
-        serv1.connect_graph(self.mmgraph)
-        serv2.connect_graph(self.mmgraph)
-        self.mmgraph.connect_mobility_service('S1_S2_1', 'S1_1', 'S2_1', {'test': 2})
+        self.mmgraph.add_mobility_service(serv1)
+        self.mmgraph.add_mobility_service(serv2)
+        self.mmgraph.connect_mobility_service('S1_S2_1', 'S1_1', 'S2_1', serv2.connect_to_service('S2_1'))
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -50,7 +50,7 @@ class TestIO(unittest.TestCase):
         self.tempfile.cleanup()
 
     def test_save_load(self):
-        save_graph(self.mmgraph, self.pathdir+'test.json')
+        save_graph(self.mmgraph, self.pathdir + 'test.json')
         new_graph = load_graph(self.pathdir+'test.json')
 
         self.assertEqual(self.mmgraph.flow_graph.nodes.keys(), new_graph.flow_graph.nodes.keys())

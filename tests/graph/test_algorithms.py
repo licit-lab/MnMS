@@ -3,6 +3,8 @@ import unittest
 from mnms.graph import MultiModalGraph
 from mnms.graph.algorithms import nearest_mobility_service
 from mnms.graph.algorithms.shortest_path import astar, dijkstra
+from mnms.mobility_service import BaseMobilityService
+
 
 class TestAlgorithms(unittest.TestCase):
     def setUp(self):
@@ -27,9 +29,9 @@ class TestAlgorithms(unittest.TestCase):
         self.mmgraph.flow_graph.add_link('3_1', '3', '1')
         self.mmgraph.flow_graph.add_link('1_3', '1', '3')
 
-        bus_service = self.mmgraph.add_mobility_service('Bus')
-        car_service = self.mmgraph.add_mobility_service('Car')
-        uber_service = self.mmgraph.add_mobility_service('Uber')
+        bus_service = BaseMobilityService('Bus', 10)
+        car_service = BaseMobilityService('Car', 10)
+        uber_service = BaseMobilityService('Uber', 10)
 
         bus_service.add_node('B0', '0')
         bus_service.add_node('B1', '1')
@@ -57,6 +59,11 @@ class TestAlgorithms(unittest.TestCase):
         uber_service.add_node('U1', '1')
 
         uber_service.add_link('UBER_0_1', 'U0', 'U1', {'time': 100}, reference_links=['0_1'])
+
+        self.mmgraph.add_mobility_service(bus_service)
+        self.mmgraph.add_mobility_service(uber_service)
+        self.mmgraph.add_mobility_service(car_service)
+
 
         self.mmgraph.connect_mobility_service('Bus_Car_0', 'B0', 'C0', {'time': 2})
         self.mmgraph.connect_mobility_service('Car_Bus_0', 'C0', 'B0', {'time': 2})

@@ -150,7 +150,7 @@ def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True,
         yshift += dy
 
     lines = list()
-    for (upserv, downserv), nodes in mmgraph._connexion_services.items():
+    for (upserv, downserv), nodes in mmgraph._connection_services.items():
         for n in nodes:
             pos = deformation_matrix.dot(mmgraph.flow_graph.nodes[n].pos)
             lines.append([pos + [0, service_shift[upserv]], pos + [0, service_shift[downserv]]])

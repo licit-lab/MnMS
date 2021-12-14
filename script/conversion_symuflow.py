@@ -37,7 +37,7 @@ def convert_symuflow_to_mmgraph(file):
     flow_graph = G.flow_graph
 
     [flow_graph.add_node(n, pos) for n, pos in nodes.items()]
-    [flow_graph.add_link(l, *n) for l, n in links.items()]
+    [flow_graph._add_link(l) for l, n in links.items()]
 
 
     line_elem = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/LIGNES_TRANSPORT_GUIDEES")[0]
@@ -59,15 +59,8 @@ def convert_symuflow_to_mmgraph(file):
                 service_stops.append(arret.attrib['troncon'])
 
         [service.add_node(service_links[s][0], service_links[s][0]) for s in service_stops]
-        [service.add_link("_".join([lid, service_links[s][0], service_links[s][1]]), service_links[s][0],
-                          service_links[s][1],
-                          costs={'length':np.linalg.norm(flow_graph.nodes[service_links[s][0]].pos-flow_graph.nodes[service_links[s][1]].pos)},
-                          reference_links=[s]) for s in service_stops]
-        [service.add_link("_".join([lid, service_links[s][1], service_links[s][0]]), service_links[s][1],
-                          service_links[s][0],
-                          costs={'length': np.linalg.norm(
-                              flow_graph.nodes[service_links[s][0]].pos - flow_graph.nodes[service_links[s][1]].pos)},
-                          reference_links=[s]) for s in service_stops]
+        [service._add_link("_".join([lid, service_links[s][0], service_links[s][1]])) for s in service_stops]
+        [service._add_link("_".join([lid, service_links[s][1], service_links[s][0]])) for s in service_stops]
 
     for outer_sid, outer_serv in G._mobility_services.items():
         for inner_sid, inner_serv in G._mobility_services.items():

@@ -4,13 +4,13 @@ from typing import List
 import numpy as np
 
 class Time(object):
-    def __init__(self, date):
+    def __init__(self, strdate="00:00:00"):
         self._hours = None
         self._minutes = None
         self._seconds = None
 
-        if date !=  "":
-            self._str_to_floats(date)
+        if strdate != "":
+            self._str_to_floats(strdate)
 
     def _str_to_floats(self, date):
         split_string = date.split(':')
@@ -34,6 +34,13 @@ class Time(object):
 
         return time
 
+    @classmethod
+    def fromFloats(cls, hours=0, minutes=0, seconds=0):
+        new_time = cls()
+        new_time.hours = hours
+        new_time.minutes = minutes
+        new_time.seconds = seconds
+        return new_time
 
     def __repr__(self):
         return f"Time({self.time})"
@@ -122,6 +129,7 @@ class TimeTable(object):
             return np.mean(waiting_times_seconds)
         else:
             return None
+
 
 if __name__ == "__main__":
     t = TimeTable()
