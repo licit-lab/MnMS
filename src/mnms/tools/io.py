@@ -1,84 +1,52 @@
 import json
+from collections import defaultdict
+from importlib import import_module
 
-from mnms.graph import MultiModalGraph
+from mnms.graph.core import MultiModalGraph, ConnectionLink, TransitLink, GeoNode, GeoLink
 
-def save_graph(G: MultiModalGraph, filename, indent=4):
 
+def save_graph(mmgraph: MultiModalGraph, filename, indent=4):
     d = {}
     d['FLOW_GRAPH'] = {}
     d['MOBILITY_GRAPH'] = {}
 
-    d['FLOW_GRAPH']['NODES'] = {}
-    d['FLOW_GRAPH']['LINKS'] = {}
-    d['FLOW_GRAPH']['SENSORS'] = {}
+    d['FLOW_GRAPH']['NODES'] = [node.__dump__() for node in mmgraph.flow_graph.nodes.values()]
+    d['FLOW_GRAPH']['LINKS'] = [link.__dump__() for link in mmgraph.flow_graph.links.values()]
+    d['FLOW_GRAPH']['SENSORS'] = [sensor.__dump__() for sensor in mmgraph.sensors.values()]
 
-    for nid, node in G.flow_graph.nodes.items():
-        d['FLOW_GRAPH']['NODES'][nid] = {'POSITION': node.pos.tolist()}
-
-    for link in G.flow_graph.links.values():
-        d['FLOW_GRAPH']['LINKS'][link.id] = {'UPSTREAM_NODE': link.upstream_node,
-                                         'DOWNSTREAM_NODE': link.downstream_node,
-                                         'NB_LANE': link.nb_lane}
-
-    for sid, sens in G.sensors.items():
-        d['FLOW_GRAPH']['SENSORS'][sid] = list(sens.links)
-
-    d['MOBILITY_GRAPH']['SERVICES'] = {}
-    d['MOBILITY_GRAPH']['CONNEXIONS'] = []
-
-    for service in G._mobility_services.values():
-        d['MOBILITY_GRAPH']['SERVICES'][service.id] = {}
-        new_service = d['MOBILITY_GRAPH']['SERVICES'][service.id]
-        new_service['NODES'] = {nid: {'REF_NODE': G.mobility_graph.nodes[service.id + "_" + nid].reference_node} for nid in service.nodes}
-        new_service['LINKS'] = {}
-
-
-        for nodes, lid in service.links.items():
-            service_nodes = (f"{service.id}_{nodes[0]}", f"{service.id}_{nodes[1]}")
-            link = G.mobility_graph.links[service_nodes]
-            new_service['LINKS'][lid] = {'UPSTREAM_NODE': nodes[0],
-                                         'DOWNSTREAM_NODE': nodes[1],
-                                         'COSTS': link.costs,
-                                         'REF_LINKS': link.reference_links,
-                                         'REF_LANE_IDS': link.reference_lane_ids}
-
-
-    for upser, downservs in G._adjacency_services.items():
-        for downser in downservs:
-            for nid in G._connexion_services[upser, downser]:
-                nodes = (upser + '_' + nid, downser + '_' + nid)
-                link = G.mobility_graph.links[nodes]
-                d['MOBILITY_GRAPH']['CONNEXIONS'].append({"UPSTREAM_SERVICE": upser, "DOWNSTREAM_SERVICE": downser,  "NODE":nid, "COSTS": link.costs})
+    d['MOBILITY_GRAPH']['SERVICES'] = [serv.__dump__() for serv in mmgraph._mobility_services.values()]
+    d['MOBILITY_GRAPH']['CONNECTIONS'] = [mmgraph.mobility_graph.links[nodes].__dump__() for nodes in mmgraph._connection_services]
 
     with open(filename, 'w') as f:
         json.dump(d, f, indent=indent)
-
 
 
 def load_graph(filename:str):
     with open(filename, 'r') as f:
         data = json.load(f)
 
-    G = MultiModalGraph()
-    flow_graph = G.flow_graph
+    mmgraph = MultiModalGraph()
+    flow_graph = mmgraph.flow_graph
 
-    for id, d in data['FLOW_GRAPH']['NODES'].items():
-        flow_graph.add_node(id, d['POSITION'])
+    for ndata in data['FLOW_GRAPH']['NODES']:
+        flow_graph._add_node(GeoNode.__load__(ndata))
 
-    for id, d in data['FLOW_GRAPH']['LINKS'].items():
-        flow_graph.add_link(id, d['UPSTREAM_NODE'], d['DOWNSTREAM_NODE'], d['NB_LANE'])
+    for ldata in data['FLOW_GRAPH']['LINKS']:
+        flow_graph._add_link(GeoLink.__load__(ldata))
 
-    for id, d in data['FLOW_GRAPH']['SENSORS'].items():
-        G.add_sensor(id, d)
+    for sdata in data['FLOW_GRAPH']['SENSORS']:
+        mmgraph.add_sensor(sdata['ID'], sdata['LINKS'])
 
-    for service in data['MOBILITY_GRAPH']['SERVICES']:
-        new_service = G.add_mobility_service(service)
-        for nid, node_data in data['MOBILITY_GRAPH']['SERVICES'][service]['NODES'].items():
-            new_service.add_node(nid, node_data['REF_NODE'])
-        for id, d in  data['MOBILITY_GRAPH']['SERVICES'][service]['LINKS'].items():
-            new_service.add_link(id, d['UPSTREAM_NODE'], d['DOWNSTREAM_NODE'], d['COSTS'], d['REF_LINKS'], d['REF_LANE_IDS'])
+    for sdata in data['MOBILITY_GRAPH']['SERVICES']:
+        service_type = sdata['TYPE']
+        service_class_name = service_type.split('.')[-1]
+        service_module_name = service_type.removesuffix('.'+service_class_name)
+        service_module = import_module(service_module_name)
+        service_class = getattr(service_module, service_class_name)
+        new_service = service_class.__load__(sdata)
+        mmgraph.add_mobility_service(new_service)
 
-    for conn in data['MOBILITY_GRAPH']['CONNEXIONS']:
-        G.connect_mobility_service(conn['UPSTREAM_SERVICE'], conn['DOWNSTREAM_SERVICE'], conn['NODE'], conn['COSTS'])
+    for cdata in data['MOBILITY_GRAPH']['CONNECTIONS']:
+        mmgraph.connect_mobility_service(cdata['ID'], cdata['UPSTREAM'], cdata['DOWNSTREAM'], cdata['COSTS'])
 
-    return G
+    return mmgraph
