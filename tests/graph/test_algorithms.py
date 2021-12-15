@@ -65,7 +65,6 @@ class TestAlgorithms(unittest.TestCase):
         self.mmgraph.add_mobility_service(uber_service)
         self.mmgraph.add_mobility_service(car_service)
 
-
         self.mmgraph.connect_mobility_service('Bus_Car_0', 'B0', 'C0', {'time': 2})
         self.mmgraph.connect_mobility_service('Car_Bus_0', 'C0', 'B0', {'time': 2})
         self.mmgraph.connect_mobility_service('Bus_Uber_0', 'B0', 'U0', {'time': 4})
@@ -82,10 +81,7 @@ class TestAlgorithms(unittest.TestCase):
 
         self.mmgraph.connect_mobility_service('Bus_Car_2', 'B2', 'C2', {'time': 2})
         self.mmgraph.connect_mobility_service('Car_Bus_2', 'C2', 'B2', {'time': 2})
-        # self.mmgraph.connect_mobility_service('Bus_Uber_2', 'B2', 'U2', {'time': 4})
-        # self.mmgraph.connect_mobility_service('Uber_Bus_2', 'U2', 'B2', {'time': 2})
-        # self.mmgraph.connect_mobility_service('Uber_Car_2', 'U2', 'C2', {'time': 2})
-        # self.mmgraph.connect_mobility_service('Car_Uber_2', 'C2', 'U2', {'time': 2})
+
 
     def tearDown(self):
         """Concludes and closes the test.
