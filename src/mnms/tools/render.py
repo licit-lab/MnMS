@@ -7,6 +7,7 @@ import matplotlib.colors as mcolors
 
 import numpy as np
 
+
 def draw_graph(ax, G, color='black', linkwidth=1, nodesize=5):
     lines = list()
 
@@ -39,25 +40,24 @@ def draw_multi_layer_graph(ax, G, linewidth=1, nodesize=5):
     ax.legend(custom_legend, list(G.layers.keys()))
 
 
-
-def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=5, node_label=True):
+def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=2, node_label=True, show_length=True, cmap=plt.cm.jet):
     lines = list()
 
-    # for u in G.nodes:
-    #     for v in G.get_node_neighbors(u):
-    #         lines.append([G.nodes[u].pos, G.nodes[v].pos])
+    if show_length:
+        lengths = list()
+        for (unode, dnode), l in G.links.items():
+            lines.append([G.nodes[unode].pos, G.nodes[dnode].pos])
+            lengths.append(l.length)
+        line_segment = LineCollection(lines, linestyles='solid', array=lengths, linewidths=linkwidth, cmap=cmap)
+        ax.add_collection(line_segment)
+        plt.colorbar(line_segment)
+    else:
+        for unode, dnode in G.links:
+            lines.append([G.nodes[unode].pos, G.nodes[dnode].pos])
+        line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
+        ax.add_collection(line_segment)
 
-    for unode, dnode in G.links:
-        lines.append([G.nodes[unode].pos, G.nodes[dnode].pos])
-
-
-    line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
-    ax.add_collection(line_segment)
-    # try:
     x, y = zip(*[n.pos for n in G.nodes.values()])
-    # except:
-    #     print(G.nodes)
-        # raise KeyboardInterrupt
     ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
 
     if node_label:

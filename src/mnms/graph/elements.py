@@ -57,9 +57,9 @@ class GeoNode(GraphElement):
         A list of float of size 2 representing the node position
 
     """
-    def __init__(self, id, pos):
+    def __init__(self, id: str, pos: List[float]):
         super(GeoNode, self).__init__(id)
-        self.pos = np.array(pos)
+        self.pos: np.ndarray = np.array(pos)
 
     def __repr__(self):
         return f"GeoNode(id={self.id}, pos={self.pos})"
