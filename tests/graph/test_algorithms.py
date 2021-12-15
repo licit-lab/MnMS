@@ -3,6 +3,7 @@ import unittest
 from mnms.graph import MultiModalGraph
 from mnms.graph.algorithms import nearest_mobility_service
 from mnms.graph.algorithms.shortest_path import astar, dijkstra
+from mnms.graph.algorithms.walk import walk_connect
 from mnms.mobility_service import BaseMobilityService
 
 
@@ -108,3 +109,44 @@ class TestAlgorithms(unittest.TestCase):
 
         node = nearest_mobility_service(pos, self.mmgraph, 'Uber')
         self.assertEqual(node, '1')
+
+    def test_walk(self):
+        mmgraph = MultiModalGraph()
+
+        mmgraph.flow_graph.add_node('0', [-1, 0])
+        mmgraph.flow_graph.add_node('1', [0, 0])
+        mmgraph.flow_graph.add_node('2', [1, 0])
+        mmgraph.flow_graph.add_node('3', [-0.8, -0.5])
+        mmgraph.flow_graph.add_node('4', [0.99, -0.5])
+        mmgraph.flow_graph.add_link('0_1', '0', '1')
+        mmgraph.flow_graph.add_link('1_2', '1', '2')
+        mmgraph.flow_graph.add_link('3_4', '3', '4')
+
+        serv1 = BaseMobilityService('SERV1', 10)
+        serv1.add_node('S10', '0')
+        serv1.add_node('S11', '1')
+        serv1.add_node('S12', '2')
+
+        serv1.add_link('0_1', 'S10', 'S11', {'time': 1}, '0_1', [0])
+        serv1.add_link('1_2', 'S11', 'S12', {'time': 1}, '1_2', [0])
+
+        serv2 = BaseMobilityService('SERV2', 10)
+        serv2.add_node('S23', '3')
+        serv2.add_node('S24', '4')
+
+        serv2.add_link('3_4', 'S23', 'S24', {'time': 1}, '3_4', [0])
+
+        mmgraph.add_mobility_service(serv1)
+        mmgraph.add_mobility_service(serv2)
+
+        mmgraph.mobility_graph.check()
+
+        walk_connect(mmgraph, radius=0.71, walk_speed=1.4)
+
+        self.assertTrue(("S10", "S23") in mmgraph.mobility_graph.links)
+        self.assertTrue(("S23", "S10") in mmgraph.mobility_graph.links)
+        self.assertTrue(("S24", "S12") in mmgraph.mobility_graph.links)
+        self.assertTrue(("S12", "S24") in mmgraph.mobility_graph.links)
+
+        self.assertAlmostEqual(0.7001399860027991, mmgraph.mobility_graph.links[("S24", "S12")].costs['time'])
+        self.assertAlmostEqual(0.7539230729988307, mmgraph.mobility_graph.links[("S10", "S23")].costs['time'])

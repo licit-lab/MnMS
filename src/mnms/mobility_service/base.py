@@ -37,4 +37,4 @@ class BaseMobilityService(TopoGraph):
         pass
 
     def connect_to_service(self, nid) -> dict:
-        return {"time": 1}
+        return {"time": 0}

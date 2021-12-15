@@ -141,19 +141,19 @@ class ComposedTopoGraph(TopoGraph):
         self._map_lid_nodes[lid] = (unid, dnid)
 
     def check_unicity_node(self, nid):
-        appearence = 0
+        appearance = 0
         for i in range(len(self.nodes.maps)):
             if nid in self.nodes.maps[i]:
-                appearence += 1
-        if appearence > 1:
+                appearance += 1
+        if appearance > 1:
             raise DuplicateNodesError({nid})
 
     def check_unicity_link(self, lid):
-        appearence = 0
+        appearance = 0
         for i in range(len(self.links.maps)):
             if lid in self.links.maps[i]:
-                appearence += 1
-        if appearence > 1:
+                appearance += 1
+        if appearance > 1:
             raise DuplicateNodesError({lid})
 
     def check_unicity_nodes(self):
