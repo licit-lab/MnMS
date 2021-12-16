@@ -2,7 +2,7 @@ import unittest
 
 from mnms.graph import MultiModalGraph
 from mnms.graph.algorithms import nearest_mobility_service
-from mnms.graph.algorithms.shortest_path import astar, dijkstra
+from mnms.graph.algorithms.shortest_path import astar, dijkstra, _euclidian_dist
 from mnms.graph.algorithms.walk import walk_connect
 from mnms.mobility_service import BaseMobilityService
 
@@ -97,6 +97,19 @@ class TestAlgorithms(unittest.TestCase):
 
         self.assertListEqual(list(path), ['B0', 'B1', 'B2'])
         self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time']+self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], cost)
+
+    def test_astar(self):
+        heuristic = lambda o, d, mmgraph=self.mmgraph: _euclidian_dist(o, d, mmgraph)
+        cost, path = astar(self.mmgraph.mobility_graph, 'B0', 'B2', heuristic,  cost='time')
+        self.assertListEqual(list(path), ['B0', 'B2'])
+        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], cost)
+
+        self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'] = 1e10
+        cost, path = astar(self.mmgraph.mobility_graph, 'B0', 'B2', heuristic, cost='time')
+
+        self.assertListEqual(list(path), ['B0', 'B1', 'B2'])
+        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time'] +
+                         self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], cost)
 
     def test_nearest_mobility(self):
         pos = [10, 10]

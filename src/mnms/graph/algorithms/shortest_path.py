@@ -1,10 +1,13 @@
 from collections import deque, defaultdict
 from typing import Callable, Tuple, Deque
+from functools import partial
+
+import numpy as np
 
 from mnms.log import logger
 from mnms.graph.core import TopoGraph, MultiModalGraph
+from mnms.tools.exceptions import PathNotFound
 
-import numpy as np
 
 def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[float, Deque[str]]:
     vertices = set()
@@ -43,19 +46,16 @@ def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[flo
                     dist[neighbor] = alt
                     prev[neighbor] = u
 
-    return float('inf'), deque()
 
-
-
-def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable, cost:str) -> Tuple[float, Deque[str]]:
-    discovered_nodes = set([origin])
+def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable[[str, str], float], cost:str) -> Tuple[float, Deque[str]]:
+    discovered_nodes = {origin}
     prev = dict()
 
     gscore = defaultdict(lambda : float('inf'))
     gscore[origin] = 0
 
     fscore = defaultdict(lambda : float('inf'))
-    fscore[origin] = heuristic(origin)
+    fscore[origin] = 0
 
     while len(discovered_nodes) > 0:
         d = {v: fscore[v] for v in discovered_nodes}
@@ -78,16 +78,26 @@ def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable, cost
             if tentative_gscore < gscore[neighbor]:
                 prev[neighbor] = current
                 gscore[neighbor] = tentative_gscore
-                fscore[neighbor] = gscore[neighbor] + heuristic(neighbor)
+                fscore[neighbor] = gscore[neighbor] + heuristic(current, neighbor)
                 if neighbor not in discovered_nodes:
                     discovered_nodes.add(neighbor)
 
     return float('inf'), deque()
 
 
+def _euclidian_dist(origin, dest, mmgraph):
+    ref_node_up = mmgraph.mobility_graph.nodes[origin].reference_node
+    ref_node_down = mmgraph.mobility_graph.nodes[dest].reference_node
+
+    if ref_node_up is not None and ref_node_down is not None:
+        return np.linalg.norm(mmgraph.flow_graph.nodes[ref_node_up].pos - mmgraph.flow_graph.nodes[ref_node_up].pos)
+    else:
+        return 0
+
+
 
 # TODO: make use of algorithm arg with either dijkstra or astar
-def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra") -> Tuple[float, Tuple[str]]:
+def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra", heuristic=None) -> Tuple[float, Tuple[str]]:
     # Create artificial nodes
 
     start_nodes = [n for n in mmgraph.mobility_graph.get_node_references(origin)]
@@ -120,7 +130,16 @@ def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str,
     # Compute paths
 
     logger.debug(f"Compute path")
-    cost, path = dijkstra(mmgraph.mobility_graph, start_node, end_node, cost)
+
+    if algorithm == "dijkstra":
+        cost, path = dijkstra(mmgraph.mobility_graph, start_node, end_node, cost)
+    elif algorithm == "astar":
+        if heuristic is None:
+            heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
+        cost, path = astar(mmgraph.mobility_graph, start_node, end_node, heuristic, cost)
+
+    if cost == float('inf'):
+        raise PathNotFound(origin, destination)
 
     # Clean the graph from artificial nodes
 

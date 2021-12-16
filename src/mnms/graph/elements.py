@@ -111,7 +111,7 @@ class ConnectionLink(GraphElement):
                 self.reference_lane_ids = reference_lane_ids
 
     def __repr__(self):
-        return f"TransitLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
+        return f"ConnectionLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
 
     @classmethod
     def __load__(cls, data: dict) -> "ConnectionLink":
@@ -138,7 +138,7 @@ class TransitLink(GraphElement):
 
 
     def __repr__(self):
-        return f"ConnectionLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
+        return f"TransitLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
 
     @classmethod
     def __load__(cls, data: dict) -> "TransitLink":
