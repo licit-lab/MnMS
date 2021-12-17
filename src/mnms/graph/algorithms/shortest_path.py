@@ -97,7 +97,7 @@ def _euclidian_dist(origin, dest, mmgraph):
 
 
 # TODO: make use of algorithm arg with either dijkstra or astar
-def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra", heuristic=None) -> Tuple[float, Tuple[str]]:
+def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra", heuristic=None) -> Tuple[float, Deque[str]]:
     # Create artificial nodes
 
     start_nodes = [n for n in mmgraph.mobility_graph.get_node_references(origin)]
@@ -137,6 +137,8 @@ def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str,
         if heuristic is None:
             heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
         cost, path = astar(mmgraph.mobility_graph, start_node, end_node, heuristic, cost)
+    else:
+        raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
 
     if cost == float('inf'):
         raise PathNotFound(origin, destination)
@@ -158,4 +160,8 @@ def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str,
     del path[0]
     del path[-1]
 
-    return cost, tuple(path)
+    return cost, path
+
+
+def batch_compute_shortest_path(mmgraph, origins, destinations, algorithm='astar', heuristic=None):
+    pass
