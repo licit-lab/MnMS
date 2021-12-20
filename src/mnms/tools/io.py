@@ -12,7 +12,7 @@ def save_graph(mmgraph: MultiModalGraph, filename, indent=4):
 
     d['FLOW_GRAPH']['NODES'] = [node.__dump__() for node in mmgraph.flow_graph.nodes.values()]
     d['FLOW_GRAPH']['LINKS'] = [link.__dump__() for link in mmgraph.flow_graph.links.values()]
-    d['FLOW_GRAPH']['SENSORS'] = [sensor.__dump__() for sensor in mmgraph.sensors.values()]
+    d['FLOW_GRAPH']['ZONES'] = [sensor.__dump__() for sensor in mmgraph.zones.values()]
 
     d['MOBILITY_GRAPH']['SERVICES'] = [serv.__dump__() for serv in mmgraph._mobility_services.values()]
     d['MOBILITY_GRAPH']['CONNECTIONS'] = [mmgraph.mobility_graph.links[nodes].__dump__() for nodes in mmgraph._connection_services]
@@ -34,8 +34,8 @@ def load_graph(filename:str):
     for ldata in data['FLOW_GRAPH']['LINKS']:
         flow_graph._add_link(GeoLink.__load__(ldata))
 
-    for sdata in data['FLOW_GRAPH']['SENSORS']:
-        mmgraph.add_sensor(sdata['ID'], sdata['LINKS'])
+    for sdata in data['FLOW_GRAPH']['ZONES']:
+        mmgraph.add_zone(sdata['ID'], sdata['LINKS'])
 
     for sdata in data['MOBILITY_GRAPH']['SERVICES']:
         service_type = sdata['TYPE']

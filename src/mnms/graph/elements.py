@@ -172,7 +172,7 @@ class GeoLink(GraphElement):
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
         self.nb_lane = nb_lane
-        self.sensor = None
+        self.zone = None
         self.length = length
 
     def __repr__(self):
@@ -190,9 +190,9 @@ class GeoLink(GraphElement):
                 'NB_LANES': self.nb_lane}
 
 
-class Sensor(GraphElement):
+class Zone(GraphElement):
     def __init__(self, resid: str, links:List[str]=[], mobility_services:List[str]=[]):
-        super(Sensor, self).__init__(resid)
+        super(Zone, self).__init__(resid)
         self.mobility_services = frozenset(mobility_services)
         self.links: FrozenSet[str] = frozenset(links)
 
@@ -201,4 +201,4 @@ class Sensor(GraphElement):
 
     @classmethod
     def __load__(cls, data: dict):
-        return Sensor(data['ID'], data['LINKS'], data['MOBILITY_SERVICES'])
+        return Zone(data['ID'], data['LINKS'], data['MOBILITY_SERVICES'])

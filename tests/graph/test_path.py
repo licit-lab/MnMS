@@ -24,8 +24,8 @@ class TestPath(unittest.TestCase):
         flow.add_link('1_2', '1', '2')
         flow.add_link('2_3', '2', '3')
 
-        self.mmgraph.add_sensor('Res1', ['0_1', '1_2'])
-        self.mmgraph.add_sensor('Res2', ['2_3'])
+        self.mmgraph.add_zone('Res1', ['0_1', '1_2'])
+        self.mmgraph.add_zone('Res2', ['2_3'])
 
         m1 = BaseMobilityService('M1', 10)
         m1.add_node('M1_0', '0')

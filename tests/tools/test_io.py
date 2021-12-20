@@ -27,7 +27,7 @@ class TestIO(unittest.TestCase):
         self.flow.add_link('2_3', '2', '3')
         self.flow.add_link('3_0', '3', '0')
 
-        self.mmgraph.add_sensor('Res', ['0_1', '1_2'])
+        self.mmgraph.add_zone('Res', ['0_1', '1_2'])
 
         serv1 = BaseMobilityService("s1", 10)
         serv2 = BaseMobilityService("s2", 9)
@@ -82,4 +82,4 @@ class TestIO(unittest.TestCase):
             self.assertTrue(old_link.downstream_node == new_link.downstream_node)
             self.assertDictEqual(old_link.costs, new_link.costs)
 
-        self.assertEqual(list(new_graph.sensors.keys()), ['Res'])
+        self.assertEqual(list(new_graph.zones.keys()), ['Res'])

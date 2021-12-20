@@ -35,6 +35,7 @@ class ProgressBar(object):
         else:
             self.update()
             self.show()
+            print('')
             raise StopIteration
 
 

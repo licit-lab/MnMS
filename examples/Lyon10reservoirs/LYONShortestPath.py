@@ -6,14 +6,14 @@ from mnms.tools.io import load_graph
 from mnms.tools.render import draw_flow_graph, draw_path
 from mnms.mobility_service import BaseMobilityService
 from mnms.graph.algorithms import compute_shortest_path
-from mnms.log import logger, LOGLEVEL
+from mnms.log import rootlogger, LOGLEVEL
 
-logger.setLevel(LOGLEVEL.INFO)
+rootlogger.setLevel(LOGLEVEL.INFO)
 
 input_graph = os.path.dirname(os.path.abspath(__file__)) + '/Lyon_symuviainput_1.json'
 mmgraph = load_graph(input_graph)
-logger.info(f"Nodes: {len(mmgraph.flow_graph.nodes)}")
-logger.info(f"Links: {len(mmgraph.flow_graph.links)}")
+rootlogger.info(f"Nodes: {len(mmgraph.flow_graph.nodes)}")
+rootlogger.info(f"Links: {len(mmgraph.flow_graph.links)}")
 
 car = BaseMobilityService('Car', 10)
 

@@ -15,7 +15,7 @@ def reconstruct_path(mmgraph: MultiModalGraph, path:List[str]):
         if isinstance(link, ConnectionLink):
             for lid in link.reference_links:
                 flow_link = mmgraph.flow_graph.links[mmgraph.flow_graph._map_lid_nodes[lid]]
-                curr_res = flow_link.sensor
+                curr_res = flow_link.zone
                 curr_mob = link.mobility_service
                 if curr_res != last_res or curr_mob != last_mob:
                     if last_mob is not None:

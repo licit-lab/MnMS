@@ -4,7 +4,7 @@ from functools import partial
 
 import numpy as np
 
-from mnms.log import logger
+from mnms.log import rootlogger
 from mnms.graph.core import TopoGraph, MultiModalGraph
 from mnms.tools.exceptions import PathNotFound
 
@@ -20,17 +20,17 @@ def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[flo
         vertices.add(v)
 
     dist[origin] = 0
-    logger.debug(f'Dist : {dist}')
+    rootlogger.debug(f'Dist : {dist}')
 
     while len(vertices) > 0:
         d = {v:dist[v] for v in vertices}
         u = min(d, key=d.get)
         vertices.remove(u)
-        logger.debug(f'Prev {prev}')
-        logger.debug(f"Curr Node {u}")
+        rootlogger.debug(f'Prev {prev}')
+        rootlogger.debug(f"Curr Node {u}")
 
         if u == destination:
-            logger.debug(f"Found destination {u}")
+            rootlogger.debug(f"Found destination {u}")
             path = deque()
             if prev[u] is not None or u == origin:
                 while u is not None:
@@ -39,7 +39,7 @@ def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[flo
             return dist[destination], path
 
         for neighbor in G.get_node_neighbors(u):
-            logger.debug(f"Neighbor Node {neighbor}")
+            rootlogger.debug(f"Neighbor Node {neighbor}")
             if neighbor in vertices:
                 alt = dist[u] + G.links[(u, neighbor)].costs[cost]
                 if alt < dist[neighbor]:
@@ -104,32 +104,32 @@ def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str,
     end_nodes = [n for n in mmgraph.mobility_graph.get_node_references(destination)]
 
     if len(start_nodes) == 0:
-        logger.error(f"There is no mobility service connected to origin node {origin}")
+        rootlogger.error(f"There is no mobility service connected to origin node {origin}")
         return float('inf'), deque()
 
     if len(end_nodes) == 0:
-        logger.error(f"There is no mobility service connected to destination node {destination}")
+        rootlogger.error(f"There is no mobility service connected to destination node {destination}")
         return float('inf'), deque()
 
 
     start_node = f"START_{origin}_{destination}"
     end_node = f"END_{origin}_{destination}"
-    logger.debug(f"Create artitificial nodes: {start_node}, {end_node}")
+    rootlogger.debug(f"Create artitificial nodes: {start_node}, {end_node}")
 
     mmgraph.mobility_graph.add_node(start_node, 'NULL')
     mmgraph.mobility_graph.add_node(end_node, 'NULL')
 
-    logger.debug(f"Create start artitificial links with: {start_nodes}")
+    rootlogger.debug(f"Create start artitificial links with: {start_nodes}")
     for n in start_nodes:
         mmgraph.mobility_graph.add_link(start_node + '_' + n, start_node, n, {cost: 0})
 
-    logger.debug(f"Create end artitificial links with: {end_nodes}")
+    rootlogger.debug(f"Create end artitificial links with: {end_nodes}")
     for n in end_nodes:
         mmgraph.mobility_graph.add_link(n + '_' + end_node, n, end_node, {cost: 0})
 
     # Compute paths
 
-    logger.debug(f"Compute path")
+    rootlogger.debug(f"Compute path")
 
     if algorithm == "dijkstra":
         cost, path = dijkstra(mmgraph.mobility_graph, start_node, end_node, cost)
@@ -145,7 +145,7 @@ def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str,
 
     # Clean the graph from artificial nodes
 
-    logger.debug(f"Clean graph")
+    rootlogger.debug(f"Clean graph")
     del mmgraph.mobility_graph.nodes[start_node]
     del mmgraph.mobility_graph.nodes[end_node]
     del mmgraph.mobility_graph._adjacency[start_node]

@@ -1,5 +1,6 @@
 from mnms.graph import MultiModalGraph
-from mnms.demand.generate import create_random_demand
+from mnms.mobility_service.base import BaseMobilityService
+from mnms.demand.generation import create_random_demand
 from mnms.tools.time import Time
 from mnms.flow.MFD import Reservoir, MFDFlow
 
@@ -14,29 +15,29 @@ flow.add_node('1', [1, 0])
 flow.add_node('2', [2, 0])
 flow.add_node('3', [3, 0])
 
-flow._add_link('0_1')
-flow._add_link('1_0')
+flow.add_link('0_1', '0', '1')
+flow.add_link('1_0', '1', '0')
 
-flow._add_link('1_2')
-flow._add_link('2_1')
+flow.add_link('1_2', '1', '2')
+flow.add_link('2_1', '2', '1')
 
-flow._add_link('2_3')
-flow._add_link('3_2')
+flow.add_link('2_3', '2', '3')
+flow.add_link('3_2', '3', '2')
 
-mmgraph.add_sensor('SEN1', ['0_1', '1_0', '1_2', '2_1'])
-mmgraph.add_sensor('SEN2', ['2_3', '3_2'])
+mmgraph.add_zone('SEN1', ['0_1', '1_0', '1_2', '2_1'])
+mmgraph.add_zone('SEN2', ['2_3', '3_2'])
 
-m1 = mmgraph.add_mobility_service('car')
+m1 = BaseMobilityService('car', 10)
 m1.add_node('0', '0')
 m1.add_node('1', '1')
 m1.add_node('3', '3')
 m1._add_link('M1_0_1')
 m1._add_link('M1_1_0')
 
-m1._add_link('M1_1_3')
+m1.add_link('M1_1_3', '1', '3')
 m1._add_link('M1_3_1')
 
-m2 = mmgraph.add_mobility_service('bus')
+m2 = BaseMobilityService('bus', 5)
 m2.add_node('0', '0')
 m2.add_node('1', '1')
 m2.add_node('3', '3')
@@ -70,8 +71,8 @@ def res_fct2(dict_accumulations):
     return dict_speeds
 
 
-res1 = Reservoir.fromSensor(mmgraph, 'SEN1', res_fct1)
-res2 = Reservoir.fromSensor(mmgraph, 'SEN2', res_fct2)
+res1 = Reservoir.fromZone(mmgraph, 'SEN1', res_fct1)
+res2 = Reservoir.fromZone(mmgraph, 'SEN2', res_fct2)
 
 demand = create_random_demand(mmgraph, repeat=1, cost_path='time', distrib_time=lambda s, e: s)
 

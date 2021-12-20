@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from mnms.graph import MultiModalGraph
 from mnms.tools.io import save_graph
 from mnms.tools.render import draw_flow_graph, draw_mobility_service
-from mnms.log import logger, LOGLEVEL
+from mnms.log import rootlogger, LOGLEVEL
 
 
 def convert_symuflow_to_mmgraph(file):
@@ -53,7 +53,7 @@ def convert_symuflow_to_mmgraph(file):
         try:
             flow_graph.add_link(l['ID'], l['UPSTREAM'], l['DOWNSTREAM'], length=l['LENGTH'])
         except AssertionError:
-            logger.warning(f"Skipping troncon: {l['ID']}, nodes {(l['UPSTREAM'], l['DOWNSTREAM'])} already connected")
+            rootlogger.warning(f"Skipping troncon: {l['ID']}, nodes {(l['UPSTREAM'], l['DOWNSTREAM'])} already connected")
 
 
     # line_elem = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/LIGNES_TRANSPORT_GUIDEES")[0]
@@ -84,8 +84,8 @@ def convert_symuflow_to_mmgraph(file):
     #             for n in outer_serv.nodes.intersection(inner_serv.nodes):
     #                 G.connect_mobility_service(outer_sid, inner_sid, n)
     #
-    logger.info(f"Number of nodes: {G.flow_graph.nb_nodes}")
-    logger.info(f"Number of links: {G.flow_graph.nb_links}")
+    rootlogger.info(f"Number of nodes: {G.flow_graph.nb_nodes}")
+    rootlogger.info(f"Number of links: {G.flow_graph.nb_links}")
 
     fig, ax = plt.subplots()
     draw_flow_graph(ax, G.flow_graph, node_label=False)
@@ -95,5 +95,5 @@ def convert_symuflow_to_mmgraph(file):
 
 
 if __name__ == "__main__":
-    logger.setLevel(LOGLEVEL.INFO)
+    rootlogger.setLevel(LOGLEVEL.INFO)
     convert_symuflow_to_mmgraph("/Users/florian.gacon/Work/MnMS/script/Lyon_symuviainput_1.xml")

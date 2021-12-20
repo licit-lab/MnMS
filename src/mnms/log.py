@@ -31,4 +31,4 @@ def create_logger(logname,
 
     return logger
 
-logger = create_logger('mnms')
+rootlogger = create_logger('mnms')

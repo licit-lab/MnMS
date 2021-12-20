@@ -82,19 +82,18 @@ class Time(object):
     def time(self):
         return f"{str(self._hours) if self._hours >= 10 else '0' + str(self._hours)}:{str(self._minutes) if self._minutes >= 10 else '0' + str(self._minutes)}:{str(round(self._seconds, 2)) if self._seconds >= 10 else '0' + str(round(self._seconds, 2))}"
 
-
     def add_time(self, hours:int=0, minutes:int=0, seconds:float=0):
-        seconds = self._seconds + Decimal(seconds%60)
-        minutes = self._minutes + Decimal(minutes) + Decimal(seconds//60)
-        hours = self._hours + Decimal(hours) + Decimal(minutes//60)
-        minutes = minutes%60
-        seconds = seconds%60
+        new_seconds = self._seconds + Decimal(seconds%60)
+        new_minutes = self._minutes + Decimal(minutes) + Decimal(seconds//60)
+        hours = self._hours + Decimal(hours) + Decimal(new_minutes//60)
+        new_minutes = new_minutes%60
+        new_seconds = new_seconds%60
         assert hours < 24
 
         new_time = Time("")
         new_time._hours = hours
-        new_time._minutes = minutes
-        new_time._seconds = seconds
+        new_time._minutes = new_minutes
+        new_time._seconds = new_seconds
         return new_time
 
 

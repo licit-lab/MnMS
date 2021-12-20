@@ -150,3 +150,6 @@ class MFDFlowEvent(AbstractFlowMotor):
             self.list_dict_speeds[res.id] = res.update_speeds()
         self.hist_accumulations.append(deepcopy(self.list_dict_accumulations))
         self.hist_speeds.append(self.list_dict_speeds.copy())
+
+    def update_graph(self, mmgraph):
+        pass

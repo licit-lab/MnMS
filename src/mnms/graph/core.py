@@ -4,7 +4,7 @@ from collections import defaultdict, ChainMap
 import numpy as np
 
 from mnms.tools.exceptions import DuplicateNodesError, DuplicateLinksError
-from mnms.graph.elements import GeoNode, TopoNode, GeoLink, ConnectionLink, TransitLink, Sensor
+from mnms.graph.elements import GeoNode, TopoNode, GeoLink, ConnectionLink, TransitLink, Zone
 
 
 class OrientedGraph(object):
@@ -200,13 +200,13 @@ class MultiModalGraph(object):
         Graph representing the geometry of the network
     mobility_graph: TopoGraph
         Graph representing all the mobility services and their connexions
-    sensors: dict
+    zones: dict
         Dict of reservoirs define on flow_graph
     """
     def __init__(self, nodes:Dict[str, Tuple[float]]={}, links:Dict[str, Tuple[float]]= {}, mobility_services=[]):
         self.flow_graph = GeoGraph()
         self.mobility_graph = ComposedTopoGraph()
-        self.sensors = dict()
+        self.zones = dict()
 
         self._connection_services = dict()
         self._mobility_services = dict()
@@ -231,11 +231,11 @@ class MultiModalGraph(object):
         self.mobility_graph._add_link(link)
         self._connection_services[(upstream_node, downstream_node)] = lid
 
-    def add_sensor(self, sid: str, links: List[str]):
+    def add_zone(self, sid: str, links: List[str]):
         for lid in links:
             nodes = self.flow_graph._map_lid_nodes[lid]
-            self.flow_graph.links[nodes].sensor = sid
-        self.sensors[sid] = Sensor(sid, links)
+            self.flow_graph.links[nodes].zone = sid
+        self.zones[sid] = Zone(sid, links)
 
     def get_extremities(self):
         extremities = {nid for nid, neighbors in self.flow_graph._adjacency.items() if len(neighbors) == 1}
