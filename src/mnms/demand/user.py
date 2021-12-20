@@ -1,5 +1,7 @@
+from mnms.tools.time import Time
+
 class User(object):
-    def __init__(self, id: str, origin: str, destination: str, departure_time: "Time",
+    def __init__(self, id: str, origin: str, destination: str, departure_time: Time,
                  available_mobility_services=None,
                  scale_factor=1,
                  path=None,

@@ -43,7 +43,7 @@ def create_simple_grid_multimodal():
 
 if __name__ == '__main__':
     mmgraph = create_simple_grid_multimodal()
-    demand = create_random_demand(mmgraph, "07:00:00", "10:00:00", cost_path='length', min_cost=5000)
+    demand = create_random_demand(mmgraph, "07:00:00", "10:00:00", cost_path='length', min_cost=5000, seed=42)
 
     def res_fct(dict_accumulations):
         V_car = 11.5 * (1 - (dict_accumulations['car'] + dict_accumulations['bus']) / 80000)
@@ -62,5 +62,7 @@ if __name__ == '__main__':
     supervisor.add_graph(mmgraph)
     supervisor.add_flow_motor(flow_motor)
     supervisor.add_demand(demand)
+
+    supervisor.update_graph_cost(3)
 
     supervisor.run(Time('07:00:00'), Time('10:00:00'), dt_minute=15)

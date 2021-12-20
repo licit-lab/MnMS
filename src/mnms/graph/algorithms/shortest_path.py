@@ -5,11 +5,15 @@ from functools import partial
 import numpy as np
 
 from mnms.log import rootlogger
-from mnms.graph.core import TopoGraph, MultiModalGraph
+from mnms.graph.core import TopoGraph, MultiModalGraph, TransitLink
 from mnms.tools.exceptions import PathNotFound
+from mnms.demand.user import User
 
 
-def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[float, Deque[str]]:
+# TODO: Adapt dijkstra with User class and available mobility service
+def dijkstra(G: TopoGraph, user:User, cost:str) -> Tuple[float, Deque[str]]:
+    origin = user.origin
+    destination = user.destination
     vertices = set()
     dist = dict()
     prev = dict()
@@ -36,7 +40,8 @@ def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[flo
                 while u is not None:
                     path.appendleft(u)
                     u = prev[u]
-            return dist[destination], path
+            user.destination = path
+            return dist[destination]
 
         for neighbor in G.get_node_neighbors(u):
             rootlogger.debug(f"Neighbor Node {neighbor}")
@@ -47,7 +52,10 @@ def dijkstra(G: TopoGraph, origin: str, destination: str, cost:str) -> Tuple[flo
                     prev[neighbor] = u
 
 
-def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable[[str, str], float], cost:str) -> Tuple[float, Deque[str]]:
+def astar(G: TopoGraph, user:User, heuristic: Callable[[str, str], float], cost:str) -> float:
+    # print(user)
+    origin = user.origin
+    destination = user.destination
     discovered_nodes = {origin}
     prev = dict()
 
@@ -68,12 +76,25 @@ def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable[[str,
                     path.appendleft(current)
                     current = prev[current]
                 path.appendleft(current)
-            return fscore[destination], path
+            user.path = list(path)
+            return fscore[destination]
 
         discovered_nodes.remove(current)
 
         for neighbor in G.get_node_neighbors(current):
-            tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
+
+            # Check if next node mobility service is available for the user
+            link = G.links[(current, neighbor)]
+            if isinstance(link, TransitLink):
+                if user.available_mobility_service is not None:
+                    if G.nodes[link.downstream_node].mobility_service not in user.available_mobility_service:
+                        tentative_gscore = float('inf')
+                    else:
+                        tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
+                else:
+                    tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
+            else:
+                tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
 
             if tentative_gscore < gscore[neighbor]:
                 prev[neighbor] = current
@@ -82,7 +103,7 @@ def astar(G: TopoGraph, origin: str, destination: str, heuristic: Callable[[str,
                 if neighbor not in discovered_nodes:
                     discovered_nodes.add(neighbor)
 
-    return float('inf'), deque()
+    return float('inf')
 
 
 def _euclidian_dist(origin, dest, mmgraph):
@@ -97,19 +118,20 @@ def _euclidian_dist(origin, dest, mmgraph):
 
 
 # TODO: make use of algorithm arg with either dijkstra or astar
-def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str, cost:str='length', algorithm:str="dijkstra", heuristic=None) -> Tuple[float, Deque[str]]:
+def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length', algorithm:str="dijkstra", heuristic=None) -> float:
     # Create artificial nodes
-
+    origin = user.origin
+    destination = user.destination
     start_nodes = [n for n in mmgraph.mobility_graph.get_node_references(origin)]
     end_nodes = [n for n in mmgraph.mobility_graph.get_node_references(destination)]
 
     if len(start_nodes) == 0:
         rootlogger.error(f"There is no mobility service connected to origin node {origin}")
-        return float('inf'), deque()
+        return float('inf')
 
     if len(end_nodes) == 0:
         rootlogger.error(f"There is no mobility service connected to destination node {destination}")
-        return float('inf'), deque()
+        return float('inf')
 
 
     start_node = f"START_{origin}_{destination}"
@@ -120,25 +142,33 @@ def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str,
     mmgraph.mobility_graph.add_node(end_node, 'NULL')
 
     rootlogger.debug(f"Create start artitificial links with: {start_nodes}")
+    virtual_cost = {cost: 0}
+    virtual_cost.update({'time': 0})
     for n in start_nodes:
-        mmgraph.mobility_graph.add_link(start_node + '_' + n, start_node, n, {cost: 0})
+        mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, virtual_cost)
 
     rootlogger.debug(f"Create end artitificial links with: {end_nodes}")
     for n in end_nodes:
-        mmgraph.mobility_graph.add_link(n + '_' + end_node, n, end_node, {cost: 0})
+        mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, virtual_cost)
 
     # Compute paths
 
     rootlogger.debug(f"Compute path")
+
+    user.origin = start_node
+    user.destination = end_node
 
     if algorithm == "dijkstra":
         cost, path = dijkstra(mmgraph.mobility_graph, start_node, end_node, cost)
     elif algorithm == "astar":
         if heuristic is None:
             heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
-        cost, path = astar(mmgraph.mobility_graph, start_node, end_node, heuristic, cost)
+        cost = astar(mmgraph.mobility_graph, user, heuristic, cost)
     else:
         raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
+
+    user.origin = origin
+    user.destination = destination
 
     if cost == float('inf'):
         raise PathNotFound(origin, destination)
@@ -152,15 +182,19 @@ def compute_shortest_path(mmgraph: MultiModalGraph, origin:str, destination:str,
 
     for n in start_nodes:
         del mmgraph.mobility_graph.links[(start_node, n)]
+        del mmgraph.mobility_graph._map_lid_nodes[start_node + '_' + n]
+        del mmgraph._connection_services[(start_node, n)]
 
     for n in end_nodes:
         del mmgraph.mobility_graph.links[(n, end_node)]
+        del mmgraph.mobility_graph._map_lid_nodes[n + '_' + end_node]
         mmgraph.mobility_graph._adjacency[n].remove(end_node)
+        del mmgraph._connection_services[(n, end_node)]
 
-    del path[0]
-    del path[-1]
+    del user.path[0]
+    del user.path[-1]
 
-    return cost, path
+    return cost
 
 
 def batch_compute_shortest_path(mmgraph, origins, destinations, algorithm='astar', heuristic=None):

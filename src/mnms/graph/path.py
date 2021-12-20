@@ -19,18 +19,18 @@ def reconstruct_path(mmgraph: MultiModalGraph, path:List[str]):
                 curr_mob = link.mobility_service
                 if curr_res != last_res or curr_mob != last_mob:
                     if last_mob is not None:
-                        res.append({"sensor": last_res, "mode": last_mob, "length": length})
+                        res.append({"reservoir": last_res, "mode": last_mob, "length": length})
                     length = flow_link.length
                     last_mob = curr_mob
                     last_res = curr_res
                 else:
                     length += flow_link.length
         elif isinstance(link, TransitLink):
-            res.append({"sensor": last_res, "mode": last_mob, "length": length})
+            res.append({"reservoir": last_res, "mode": last_mob, "length": length})
             length = 0
             last_mob = None
             last_res = None
 
 
-    res.append({"sensor": last_res, "mode": last_mob, "length": length})
+    res.append({"reservoir": last_res, "mode": last_mob, "length": length})
     return res

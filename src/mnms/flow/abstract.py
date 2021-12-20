@@ -26,17 +26,15 @@ class AbstractFlowMotor(ABC):
             self.step(dt)
         self.finalize()
 
-    def set_time(self, time:str):
-        self._tcurrent = Time(time)
+    def set_time(self, time:Time):
+        self._tcurrent = time
 
     @property
     def time(self):
         return self._tcurrent.time
 
-    def update_time(self, dt):
-        # print(dt)
-        self._tcurrent = self._tcurrent.add_time(seconds=dt)
-        # print(self._tcurrent)
+    def update_time(self, dt_hour=0, dt_minute=0, dt_second=0):
+        self._tcurrent = self._tcurrent.add_time(hours=dt_hour, minutes=dt_minute, seconds=dt_second)
 
     @abstractmethod
     def step(self, dt:float, new_users:List[User]):

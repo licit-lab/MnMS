@@ -7,6 +7,8 @@ from mnms.tools.render import draw_flow_graph, draw_path
 from mnms.mobility_service import BaseMobilityService
 from mnms.graph.algorithms import compute_shortest_path
 from mnms.log import rootlogger, LOGLEVEL
+from mnms.demand.user import User
+from mnms.tools.time import Time
 
 rootlogger.setLevel(LOGLEVEL.INFO)
 
@@ -30,12 +32,14 @@ for link in mmgraph.flow_graph.links.values():
 
 mmgraph.add_mobility_service(car)
 
-cost, path = compute_shortest_path(mmgraph, "E_82610778_T_58239512_FRef", "C_TRAM_535", algorithm="astar")
+
+user = User('0', "E_82610778_T_58239512_FRef", "C_TRAM_535", Time("07:00:00"))
+cost = compute_shortest_path(mmgraph, user, algorithm="astar")
 
 
 fig, ax = plt.subplots()
 draw_flow_graph(ax, mmgraph.flow_graph, node_label=False)
-draw_path(ax, mmgraph, path)
+draw_path(ax, mmgraph, user.path)
 plt.show()
 
 
