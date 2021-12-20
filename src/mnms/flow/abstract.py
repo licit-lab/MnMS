@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from mnms.tools.time import Time
+from mnms.demand.user import User
 
 
 class AbstractFlowMotor(ABC):
@@ -38,7 +39,7 @@ class AbstractFlowMotor(ABC):
         # print(self._tcurrent)
 
     @abstractmethod
-    def step(self, dt:float):
+    def step(self, dt:float, new_users:List[User]):
         pass
 
     def initialize(self):
@@ -48,5 +49,5 @@ class AbstractFlowMotor(ABC):
         pass
 
     @abstractmethod
-    def update_graph(self, mmgraph):
+    def update_graph(self):
         pass

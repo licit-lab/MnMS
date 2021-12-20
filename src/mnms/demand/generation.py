@@ -1,7 +1,11 @@
+from operator import attrgetter
+
 import numpy as np
 
 from mnms.graph.algorithms import compute_shortest_path
+from mnms.demand.user import User
 from mnms.tools.time import Time
+from mnms.demand.manager import DemandManager
 
 
 def create_random_demand(mmgraph: "MultiModalGraph", tstart="07:00:00", tend="18:00:00", min_cost=0, cost_path=None, distrib_time=np.random.uniform, repeat=1):
@@ -13,11 +17,19 @@ def create_random_demand(mmgraph: "MultiModalGraph", tstart="07:00:00", tend="18
 
     demand = []
     extremities = mmgraph.get_extremities()
+    uid = 0
     for unode in extremities:
         for dnode in extremities:
             if unode != dnode:
                 cost, path = compute_shortest_path(mmgraph, unode, dnode, cost_path, algorithm='astar')
                 if cost < float("inf"):
                     if cost >= min_cost:
-                        demand.extend([[Time.fromSeconds(distrib_time(tstart, tend)) ,path]  for _ in range(repeat)])
-    return demand
+                        # demand.extend([[Time.fromSeconds(distrib_time(tstart, tend)) ,path]  for _ in range(repeat)])
+                        demand.extend([User(str(uid),
+                                            unode,
+                                            dnode,
+                                            Time.fromSeconds(distrib_time(tstart, tend)),
+                                            path=path) for _ in range(repeat)])
+                        uid += 1
+    demand.sort(key=attrgetter('departure_time'))
+    return DemandManager(demand)

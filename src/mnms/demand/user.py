@@ -12,3 +12,6 @@ class User(object):
         self.scale_factor = scale_factor
         self.path = path
         self.conveyor = conveyor
+
+    def __repr__(self):
+        return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"

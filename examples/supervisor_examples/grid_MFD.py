@@ -5,6 +5,7 @@ from mnms.demand.generation import create_random_demand
 from mnms.flow.MFD import Reservoir, MFDFlow
 from mnms.mobility_service import BaseMobilityService
 from mnms.log import rootlogger, LOGLEVEL
+from mnms.tools.time import Time
 
 
 rootlogger.setLevel(LOGLEVEL.INFO)
@@ -56,10 +57,10 @@ if __name__ == '__main__':
 
     flow_motor = MFDFlow()
     flow_motor.add_reservoir(reservoir)
-    # flow_motor.set_initial_demand(demand)
-    # flow_motor.set_time("07:00:00")
-
 
     supervisor = Supervisor()
     supervisor.add_graph(mmgraph)
-    supervisor.connect_flow_motor(flow_motor)
+    supervisor.add_flow_motor(flow_motor)
+    supervisor.add_demand(demand)
+
+    supervisor.run(Time('07:00:00'), Time('10:00:00'), dt_minute=15)

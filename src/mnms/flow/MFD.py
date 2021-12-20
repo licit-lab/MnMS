@@ -98,7 +98,7 @@ class MFDFlow(AbstractFlowMotor):
 
         self.initialize()
 
-    def step(self, dt:float):
+    def step(self, dt:float, new_users):
         time = self._tcurrent.to_seconds()
         rootlogger.debug(f"Time: {time}")
         # Update the traffic conditions
@@ -183,4 +183,5 @@ class MFDFlow(AbstractFlowMotor):
                     total_len += length
             new_speed = new_speed/total_len
             mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
+            mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] = new_speed*total_len
 

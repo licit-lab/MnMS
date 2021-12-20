@@ -48,8 +48,14 @@ class Time(object):
     def __lt__(self, other):
         return self.to_seconds() < other.to_seconds()
 
+    def __le__(self, other):
+        return self.to_seconds() <= other.to_seconds()
+
     def __gt__(self, other):
         return self.to_seconds() > other.to_seconds()
+
+    def __ge__(self, other):
+        return self.to_seconds() >= other.to_seconds()
 
     @property
     def seconds(self):
