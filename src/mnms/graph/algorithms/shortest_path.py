@@ -170,9 +170,6 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
     user.origin = origin
     user.destination = destination
 
-    if cost == float('inf'):
-        raise PathNotFound(origin, destination)
-
     # Clean the graph from artificial nodes
 
     rootlogger.debug(f"Clean graph")
@@ -191,8 +188,13 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
         mmgraph.mobility_graph._adjacency[n].remove(end_node)
         del mmgraph._connection_services[(n, end_node)]
 
+    if cost == float('inf'):
+        raise PathNotFound(origin, destination)
+
     del user.path[0]
     del user.path[-1]
+
+
 
     return cost
 

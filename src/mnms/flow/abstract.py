@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from mnms.tools.time import Time
+from mnms.tools.time import Time, Dt
 from mnms.demand.user import User
 
 
@@ -33,8 +33,8 @@ class AbstractFlowMotor(ABC):
     def time(self):
         return self._tcurrent.time
 
-    def update_time(self, dt_hour=0, dt_minute=0, dt_second=0):
-        self._tcurrent = self._tcurrent.add_time(hours=dt_hour, minutes=dt_minute, seconds=dt_second)
+    def update_time(self, dt:Dt):
+        self._tcurrent = self._tcurrent.add_time(dt)
 
     @abstractmethod
     def step(self, dt:float, new_users:List[User]):

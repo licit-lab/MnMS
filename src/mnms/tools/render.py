@@ -71,14 +71,15 @@ def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=2, node_label=Tr
 def draw_path(ax, mmgraph, path, color='red', linkwidth=2, alpha=1):
     # print(path)
     lines = list()
-    for ni in range(len(path)-1):
-        nj = ni + 1
-        unode = mmgraph.mobility_graph.nodes[path[ni]].reference_node
-        dnode = mmgraph.mobility_graph.nodes[path[nj]].reference_node
-        lines.append([mmgraph.flow_graph.nodes[unode].pos, mmgraph.flow_graph.nodes[dnode].pos])
+    if path is not None:
+        for ni in range(len(path)-1):
+            nj = ni + 1
+            unode = mmgraph.mobility_graph.nodes[path[ni]].reference_node
+            dnode = mmgraph.mobility_graph.nodes[path[nj]].reference_node
+            lines.append([mmgraph.flow_graph.nodes[unode].pos, mmgraph.flow_graph.nodes[dnode].pos])
 
-    line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth, alpha=alpha)
-    ax.add_collection(line_segment)
+        line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth, alpha=alpha)
+        ax.add_collection(line_segment)
 
 def draw_mobility_service(ax, mmgraph, service, color, linkwidth=1, nodesize=5, node_label=False):
     # nodes = [graph.flow_graph.nodes[n.replace(f'{service}_', '')].id for n in graph._mobility_services[service].nodes if n.replace(f'{service}_', '') in graph.flow_graph.nodes]

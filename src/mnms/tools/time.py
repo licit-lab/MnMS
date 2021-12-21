@@ -3,6 +3,32 @@ from typing import List
 
 import numpy as np
 
+
+class Dt(object):
+    def __init__(self, hours:int=0, minutes:int=0, seconds:float=0):
+        new_seconds = seconds%60
+        new_minutes = minutes + seconds//60
+        hours = hours + new_minutes//60
+        minutes = new_minutes%60
+        seconds = new_seconds%60
+
+        self._hours = hours
+        self._minutes = minutes
+        self._seconds = seconds
+
+    def __mul__(self, other:int):
+        seconds = self._seconds*other
+        minutes = self._minutes*other
+        hours = self._hours*other
+        return Dt(hours, minutes, seconds)
+
+    def __repr__(self):
+        return f"dt(hours:{self._hours}, minutes:{self._minutes}, seconds:{self._seconds})"
+
+    def to_seconds(self):
+        return float(self._hours*3600+self._minutes*60+self._seconds)
+
+
 class Time(object):
     def __init__(self, strdate="00:00:00"):
         self._hours = None
@@ -18,10 +44,8 @@ class Time(object):
         self._minutes = Decimal(split_string[1])
         self._seconds = Decimal(split_string[2])
 
-
     def to_seconds(self):
         return float(self._hours*3600+self._minutes*60+self._seconds)
-
 
     @classmethod
     def fromSeconds(cls, seconds:float):
@@ -88,10 +112,10 @@ class Time(object):
     def time(self):
         return f"{str(self._hours) if self._hours >= 10 else '0' + str(self._hours)}:{str(self._minutes) if self._minutes >= 10 else '0' + str(self._minutes)}:{str(round(self._seconds, 2)) if self._seconds >= 10 else '0' + str(round(self._seconds, 2))}"
 
-    def add_time(self, hours:int=0, minutes:int=0, seconds:float=0):
-        new_seconds = self._seconds + Decimal(seconds%60)
-        new_minutes = self._minutes + Decimal(minutes) + Decimal(seconds//60)
-        hours = self._hours + Decimal(hours) + Decimal(new_minutes//60)
+    def add_time(self, dt: Dt):
+        new_seconds = self._seconds + Decimal(dt._seconds%60)
+        new_minutes = self._minutes + Decimal(dt._minutes) + Decimal(dt._seconds//60)
+        hours = self._hours + Decimal(dt._hours) + Decimal(new_minutes//60)
         new_minutes = new_minutes%60
         new_seconds = new_seconds%60
         assert hours < 24
@@ -101,7 +125,6 @@ class Time(object):
         new_time._minutes = new_minutes
         new_time._seconds = new_seconds
         return new_time
-
 
 
 class TimeTable(object):
@@ -137,11 +160,5 @@ class TimeTable(object):
 
 
 if __name__ == "__main__":
-    t = TimeTable()
-    t.create_table("07:00:00", "18:00:00", delta_min=15, delta_sec=33)
-    print(t.table)
-    print(t.get_next_departure("15:48:52"))
-
-
-    print(Time.fromSeconds(15000.35))
-    print(t.get_freq())
+    dt = Dt(hours=4, minutes=23, seconds=25)
+    print(dt*3)

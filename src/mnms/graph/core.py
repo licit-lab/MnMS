@@ -44,7 +44,7 @@ class TopoGraph(OrientedGraph):
         self.node_referencing = defaultdict(list)
 
     def add_node(self, nid: str, mobility_service:str, ref_node=None) -> None:
-        assert nid not in self.nodes
+        assert nid not in self.nodes, f"Node '{nid}' already in graph"
         new_node = TopoNode(nid, mobility_service, ref_node)
         self._add_node(new_node)
 

@@ -5,7 +5,7 @@ from mnms.demand.generation import create_random_demand
 from mnms.flow.MFD import Reservoir, MFDFlow
 from mnms.mobility_service import BaseMobilityService
 from mnms.log import rootlogger, LOGLEVEL
-from mnms.tools.time import Time
+from mnms.tools.time import Time, Dt
 
 
 rootlogger.setLevel(LOGLEVEL.INFO)
@@ -39,8 +39,6 @@ def create_simple_grid_multimodal():
     return mmgraph
 
 
-
-
 if __name__ == '__main__':
     mmgraph = create_simple_grid_multimodal()
     demand = create_random_demand(mmgraph, "07:00:00", "10:00:00", cost_path='length', min_cost=5000, seed=42)
@@ -65,4 +63,4 @@ if __name__ == '__main__':
 
     supervisor.update_graph_cost(3)
 
-    supervisor.run(Time('07:00:00'), Time('10:00:00'), dt_minute=15)
+    supervisor.run(Time('07:00:00'), Time('10:00:00'), Dt(minutes=1), 10)
