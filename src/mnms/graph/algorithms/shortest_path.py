@@ -194,8 +194,6 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
     del user.path[0]
     del user.path[-1]
 
-
-
     return cost
 
 

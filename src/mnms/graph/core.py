@@ -35,6 +35,19 @@ class OrientedGraph(object):
     def nb_links(self):
         return len(self.links)
 
+    def delete_node(self, nid):
+        assert nid in self.nodes, f"Node '{nid}' not in graph"
+        del self.nodes[nid]
+        del self._adjacency[nid]
+        [adj.discard(nid) for adj in self._adjacency.values()]
+
+    def delete_link(self, lid):
+        assert lid in self._map_lid_nodes, f"Link '{lid}' not in graph"
+        nodes = self._map_lid_nodes[lid]
+        del self.links[nodes]
+        del self._map_lid_nodes[lid]
+        self._adjacency[nodes[0]].remove(nodes[1])
+
 
 class TopoGraph(OrientedGraph):
     """Class implementing a purely topological oriented graph
@@ -187,7 +200,6 @@ class ComposedTopoGraph(TopoGraph):
         for i in range(len(path)-1):
             res += self.links[(path[i],path[i+1])].costs[cost]
         return res
-
 
 
 class MultiModalGraph(object):
