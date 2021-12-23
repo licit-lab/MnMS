@@ -18,25 +18,15 @@ class Line(object):
 
         self._adjacency = defaultdict(lambda: None)
 
-        self.start = None
-        self.end = None
-
     def add_stop(self, sid:str, ref_node:str=None) -> None:
         self.mobility_service.add_node(self._prefix(sid), ref_node)
         self.stops.add(sid)
 
-    def add_start_stop(self, sid: str, ref_node:str):
-        self.start = sid
-        self.add_stop(sid, ref_node)
-
-    def add_end_stop(self, sid:str, ref_node:str):
-        self.end = sid
-        self.add_stop(sid, ref_node)
-
-    def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, costs={}, reference_links=None,
+    def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, costs=None, reference_links=None,
                       reference_lane_ids=None) -> None:
         assert up_sid in self.stops
         assert down_sid in self.stops
+        costs = {} if costs is None else costs
         costs.update({'length': length})
         self.mobility_service.add_link(self._prefix(lid),
                                        self._prefix(up_sid),
@@ -52,19 +42,9 @@ class Line(object):
 
     def __dump__(self) -> dict:
         stops = deepcopy(self.stops)
-        start = self.start
-        end = self.end
-        if start is not None:
-            stops.remove(start)
-        if end is not None:
-            stops.remove(end)
         return {"ID": self.id,
-                "TIMETABLE": [{"HOURS": time.hours,
-                               "MINUTES": time.minutes,
-                               "SECONDS": time.seconds} for time in self.timetable.table],
-                "START": self.mobility_service.nodes[self._prefix(start)].__dump__() if start is not None else None,
+                "TIMETABLE": [time.time for time in self.timetable.table],
                 "STOPS": [self.mobility_service.nodes[self._prefix(s)].__dump__() for s in stops],
-                "END": self.mobility_service.nodes[self._prefix(end)].__dump__() if end is not None else None,
                 "LINKS":[self.mobility_service.links[self.mobility_service._map_lid_nodes[self._prefix(l)]].__dump__() for l in self.links]}
 
 
@@ -82,11 +62,12 @@ class PublicTransport(SharedMoblityService):
     def show_lines(self) -> None:
         print(self.lines)
 
-    def connect_lines(self, ulineid: str, dlineid: str, nid: str, costs:dict={}, two_ways=True) -> None:
+    def connect_lines(self, ulineid: str, dlineid: str, nid: str, costs:dict=None, two_ways=True) -> None:
         assert nid in self.lines[ulineid].stops
         assert nid in self.lines[dlineid].stops
         c = {'time': self.lines[dlineid].timetable.get_freq() / 2, "length": 0}
-        c.update(costs)
+        if costs is not None:
+            c.update(costs)
 
         self.add_link('_'.join([ulineid, dlineid, nid]),
                       ulineid + '_' + nid,
@@ -120,10 +101,7 @@ class PublicTransport(SharedMoblityService):
         for ldata in data['LINES']:
             tt = []
             for time in ldata['TIMETABLE']:
-                new_time = Time()
-                new_time.hours = time['HOURS']
-                new_time.minutes = time['MINUTES']
-                new_time.seconds = time['SECONDS']
+                new_time = Time(time)
                 tt.append(new_time)
             new_line = new_obj.add_line(ldata['ID'], TimeTable(tt))
             [new_line.add_stop(s['ID'], s['REF_NODE']) for s in ldata['STOPS']]
@@ -134,6 +112,7 @@ class PublicTransport(SharedMoblityService):
                                     l['COSTS'],
                                     l['REF_LINKS'],
                                     l['REF_LANE_IDS']) for l in ldata['LINKS']]
+        return new_obj
 
     def update_costs(self, time:"Time"):
         """

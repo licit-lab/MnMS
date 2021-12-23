@@ -2,7 +2,6 @@ import os
 import sys
 
 from mnms.tools.io import load_graph
-from mnms.graph.elements import ConnectionLink, TransitLink
 
 terminal_size = os.get_terminal_size()
 

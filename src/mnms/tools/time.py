@@ -118,7 +118,33 @@ class Time(object):
         hours = self._hours + Decimal(dt._hours) + Decimal(new_minutes//60)
         new_minutes = new_minutes%60
         new_seconds = new_seconds%60
-        assert hours < 24
+        # print(hours, new_minutes, new_seconds)
+        assert hours <= 24
+
+        new_time = Time("")
+        new_time._hours = hours
+        new_time._minutes = new_minutes
+        new_time._seconds = new_seconds
+        return new_time
+
+    def remove_time(self, dt:Dt):
+        new_seconds = self._seconds - Decimal(dt._seconds%60)
+        new_minutes = self._minutes - (Decimal(dt._minutes) + Decimal(dt._seconds//60))
+        hours = self._hours - (Decimal(dt._hours) + Decimal(new_minutes//60))
+        new_minutes = new_minutes%60
+        new_seconds = new_seconds%60
+        if new_seconds < 0:
+            n = -new_seconds//60
+            new_seconds = 60*n - new_seconds%60
+            new_minutes -= n
+        if new_minutes < 0:
+            n = -new_minutes // 60 +1
+            new_minutes = 60*n + new_minutes%60
+            hours -= n
+
+        assert new_seconds >= 0, f"{new_seconds}"
+        assert new_minutes >= 0, f"{new_minutes}"
+        assert hours >= 0
 
         new_time = Time("")
         new_time._hours = hours
@@ -128,21 +154,25 @@ class Time(object):
 
 
 class TimeTable(object):
-    def __init__(self, times:List[Time]=[]):
-        self.table:List[Time] = times
+    def __init__(self, times:List[Time]=None):
+        self.table:List[Time] = times if times is not None else []
 
     @classmethod
-    def create_table_freq(cls, start, end, delta_hour=0, delta_min=0, delta_sec=0):
-        assert delta_hour!=0 or delta_min!=0 or delta_sec!=0
+    def create_table_freq(cls, start, end, dt:Dt):
+        assert dt._hours!=0 or dt._minutes!=0 or dt._seconds!=0
         table = []
         current_time = Time(start)
         end_time = Time(end)
-
+        end_time_dt = end_time.remove_time(dt)
+        print(end_time_dt)
         table.append(current_time)
-        while current_time < end_time:
-            ntime = current_time.add_time(hours=delta_hour, minutes=delta_min, seconds=delta_sec)
+        while current_time <= end_time_dt:
+            ntime = current_time.add_time(dt)
+            print(ntime)
             table.append(ntime)
             current_time = ntime
+        # print(current_time)
+        # table.append(current_time)
 
         return cls(table)
 
@@ -160,5 +190,4 @@ class TimeTable(object):
 
 
 if __name__ == "__main__":
-    dt = Dt(hours=4, minutes=23, seconds=25)
-    print(dt*3)
+    t = TimeTable.create_table_freq("05:00:00", "22:00:00", Dt(seconds=600))
