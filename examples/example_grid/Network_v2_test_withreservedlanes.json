@@ -2229,7 +2229,7 @@
                 }
             }
         },
-        "CONNEXIONS": [
+        "CONNECTIONS": [
             {
                 "UPSTREAM_SERVICE": "L_EO",
                 "DOWNSTREAM_SERVICE": "L_SN_A",

@@ -13,7 +13,7 @@ def create_logger(logname,
                   format='%(levelname)s(mnms): %(message)s',
                   logfile=None,
                   base_level=LOGLEVEL.INFO,
-                  stream_level=LOGLEVEL.ERROR,
+                  stream_level=LOGLEVEL.DEBUG,
                   file_level=LOGLEVEL.INFO
                   ):
     logger = logging.getLogger(logname)
@@ -31,4 +31,4 @@ def create_logger(logname,
 
     return logger
 
-logger = create_logger('mnms')
+rootlogger = create_logger('mnms')

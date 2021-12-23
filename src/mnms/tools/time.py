@@ -1,14 +1,42 @@
 from decimal import Decimal
+from typing import List
+
+import numpy as np
+
+
+class Dt(object):
+    def __init__(self, hours:int=0, minutes:int=0, seconds:float=0):
+        new_seconds = seconds%60
+        new_minutes = minutes + seconds//60
+        hours = hours + new_minutes//60
+        minutes = new_minutes%60
+        seconds = new_seconds%60
+
+        self._hours = hours
+        self._minutes = minutes
+        self._seconds = seconds
+
+    def __mul__(self, other:int):
+        seconds = self._seconds*other
+        minutes = self._minutes*other
+        hours = self._hours*other
+        return Dt(hours, minutes, seconds)
+
+    def __repr__(self):
+        return f"dt(hours:{self._hours}, minutes:{self._minutes}, seconds:{self._seconds})"
+
+    def to_seconds(self):
+        return float(self._hours*3600+self._minutes*60+self._seconds)
 
 
 class Time(object):
-    def __init__(self, date):
+    def __init__(self, strdate="00:00:00"):
         self._hours = None
         self._minutes = None
         self._seconds = None
 
-        if date !=  "":
-            self._str_to_floats(date)
+        if strdate != "":
+            self._str_to_floats(strdate)
 
     def _str_to_floats(self, date):
         split_string = date.split(':')
@@ -16,10 +44,8 @@ class Time(object):
         self._minutes = Decimal(split_string[1])
         self._seconds = Decimal(split_string[2])
 
-
     def to_seconds(self):
         return float(self._hours*3600+self._minutes*60+self._seconds)
-
 
     @classmethod
     def fromSeconds(cls, seconds:float):
@@ -32,6 +58,13 @@ class Time(object):
 
         return time
 
+    @classmethod
+    def fromFloats(cls, hours=0, minutes=0, seconds=0):
+        new_time = cls()
+        new_time.hours = hours
+        new_time.minutes = minutes
+        new_time.seconds = seconds
+        return new_time
 
     def __repr__(self):
         return f"Time({self.time})"
@@ -39,8 +72,14 @@ class Time(object):
     def __lt__(self, other):
         return self.to_seconds() < other.to_seconds()
 
+    def __le__(self, other):
+        return self.to_seconds() <= other.to_seconds()
+
     def __gt__(self, other):
         return self.to_seconds() > other.to_seconds()
+
+    def __ge__(self, other):
+        return self.to_seconds() >= other.to_seconds()
 
     @property
     def seconds(self):
@@ -73,51 +112,82 @@ class Time(object):
     def time(self):
         return f"{str(self._hours) if self._hours >= 10 else '0' + str(self._hours)}:{str(self._minutes) if self._minutes >= 10 else '0' + str(self._minutes)}:{str(round(self._seconds, 2)) if self._seconds >= 10 else '0' + str(round(self._seconds, 2))}"
 
-
-    def add_time(self, hours:int=0, minutes:int=0, seconds:float=0):
-        seconds = self._seconds + Decimal(seconds%60)
-        minutes = self._minutes + Decimal(minutes) + Decimal(seconds//60)
-        hours = self._hours + Decimal(hours) + Decimal(minutes//60)
-        minutes = minutes%60
-        seconds = seconds%60
-        assert hours < 24
+    def add_time(self, dt: Dt):
+        new_seconds = self._seconds + Decimal(dt._seconds%60)
+        new_minutes = self._minutes + Decimal(dt._minutes) + Decimal(dt._seconds//60)
+        hours = self._hours + Decimal(dt._hours) + Decimal(new_minutes//60)
+        new_minutes = new_minutes%60
+        new_seconds = new_seconds%60
+        # print(hours, new_minutes, new_seconds)
+        assert hours <= 24
 
         new_time = Time("")
         new_time._hours = hours
-        new_time._minutes = minutes
-        new_time._seconds = seconds
+        new_time._minutes = new_minutes
+        new_time._seconds = new_seconds
+        return new_time
+
+    def remove_time(self, dt:Dt):
+        new_seconds = self._seconds - Decimal(dt._seconds%60)
+        new_minutes = self._minutes - (Decimal(dt._minutes) + Decimal(dt._seconds//60))
+        hours = self._hours - (Decimal(dt._hours) + Decimal(new_minutes//60))
+        new_minutes = new_minutes%60
+        new_seconds = new_seconds%60
+        if new_seconds < 0:
+            n = -new_seconds//60
+            new_seconds = 60*n - new_seconds%60
+            new_minutes -= n
+        if new_minutes < 0:
+            n = -new_minutes // 60 +1
+            new_minutes = 60*n + new_minutes%60
+            hours -= n
+
+        assert new_seconds >= 0, f"{new_seconds}"
+        assert new_minutes >= 0, f"{new_minutes}"
+        assert hours >= 0
+
+        new_time = Time("")
+        new_time._hours = hours
+        new_time._minutes = new_minutes
+        new_time._seconds = new_seconds
         return new_time
 
 
-
 class TimeTable(object):
-    def __init__(self):
-        self.table = []
+    def __init__(self, times:List[Time]=None):
+        self.table:List[Time] = times if times is not None else []
 
-    def create_table(self, start, end, delta_hour=0, delta_min=0, delta_sec=0):
-        assert delta_hour!=0 or delta_min!=0 or delta_sec!=0
-        self.table = []
+    @classmethod
+    def create_table_freq(cls, start, end, dt:Dt):
+        assert dt._hours!=0 or dt._minutes!=0 or dt._seconds!=0
+        table = []
         current_time = Time(start)
         end_time = Time(end)
-
-        self.table.append(current_time)
-        while current_time < end_time:
-            ntime = current_time.add_time(hours=delta_hour, minutes=delta_min, seconds=delta_sec)
-            self.table.append(ntime)
+        end_time_dt = end_time.remove_time(dt)
+        print(end_time_dt)
+        table.append(current_time)
+        while current_time <= end_time_dt:
+            ntime = current_time.add_time(dt)
+            print(ntime)
+            table.append(ntime)
             current_time = ntime
+        # print(current_time)
+        # table.append(current_time)
+
+        return cls(table)
 
     def get_next_departure(self, date):
-        t = Time(date)
         for d in self.table:
-            if t < d:
+            if date < d:
                 return d
+
+    def get_freq(self):
+        if len(self.table) > 1:
+            waiting_times_seconds = [self.table[i+1].to_seconds()-self.table[i].to_seconds() for i in range(len(self.table)-1)]
+            return np.mean(waiting_times_seconds)
+        else:
+            return None
 
 
 if __name__ == "__main__":
-    t = TimeTable()
-    t.create_table("07:00:00", "18:00:00", delta_min=15, delta_sec=33)
-    print(t.table)
-    print(t.get_next_departure("15:48:52"))
-
-
-    print(Time.fromSeconds(15000.35))
+    t = TimeTable.create_table_freq("05:00:00", "22:00:00", Dt(seconds=600))
