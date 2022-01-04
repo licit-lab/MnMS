@@ -1,7 +1,7 @@
 import unittest
 
 from mnms.graph.core import MultiModalGraph
-from mnms.graph.algorithms import compute_shortest_path
+from mnms.graph.algorithms import compute_shortest_path_nodes
 from mnms.graph.path import reconstruct_path
 from mnms.mobility_service import BaseMobilityService
 
@@ -44,7 +44,7 @@ class TestPath(unittest.TestCase):
 
         self.mmgraph.connect_mobility_service('M1_M2_1', 'M1_1', 'M2_1', {"time": 0})
 
-        cost, self.path = compute_shortest_path(self.mmgraph, '0', '3', cost='time')
+        cost, self.path = compute_shortest_path_nodes(self.mmgraph, '0', '3')
         print(self.path)
 
     def tearDown(self):

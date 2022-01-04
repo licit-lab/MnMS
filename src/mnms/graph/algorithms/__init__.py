@@ -1,2 +1,2 @@
-from .shortest_path import compute_shortest_path
+from .shortest_path import compute_shortest_path_nodes
 from .search import nearest_mobility_service

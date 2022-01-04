@@ -1,7 +1,11 @@
+from typing import Union, List
+
 from mnms.tools.time import Time
 
+import numpy as np
+
 class User(object):
-    def __init__(self, id: str, origin: str, destination: str, departure_time: Time,
+    def __init__(self, id: str, origin: Union[str, np.ndarray], destination: Union[str, np.ndarray], departure_time: Time,
                  available_mobility_services=None,
                  scale_factor=1,
                  path=None,

@@ -6,7 +6,7 @@ from mnms.graph.core import MultiModalGraph
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.demand.manager import BaseDemandManager
 from mnms.tools.time import Time, Dt
-from mnms.graph.algorithms import compute_shortest_path
+from mnms.graph.algorithms import compute_shortest_path_nodes
 from mnms.log import rootlogger
 from mnms.tools.exceptions import PathNotFound
 
@@ -66,10 +66,8 @@ class Supervisor(object):
             #TODO: shortest path computation will be in TravelDecision module
             for nu in new_users:
                 try:
-                    compute_shortest_path(self._graph, nu,
-                                          cost='time',
-                                          algorithm=self._shortest_path,
-                                          heuristic=self._heuristic)
+                    compute_shortest_path_nodes(self._graph, nu, cost='time', algorithm=self._shortest_path,
+                                                heuristic=self._heuristic)
                 except PathNotFound:
                     rootlogger.warning(f"Path not found for {nu}")
 
