@@ -128,9 +128,10 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_compute_nbest_shortest_path(self):
         user = User(id='TEST', departure_time=None, origin='0', destination='2')
-        paths, costs = compute_n_best_shortest_path(self.mmgraph, user, 5, cost='time')
+        paths, real_costs, penalized_costs = compute_n_best_shortest_path(self.mmgraph, user, 5, cost='time')
         print(paths)
-        print(costs)
+        print(real_costs)
+        print(penalized_costs)
         self.assertEqual(1, 2)
 
 

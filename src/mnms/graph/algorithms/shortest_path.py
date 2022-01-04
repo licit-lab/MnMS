@@ -177,7 +177,6 @@ def _delete_virtual_nodes(mmgraph, user):
         del mmgraph._connection_services[(n, end_node)]
 
 
-# TODO: make use of algorithm arg with either dijkstra or astar
 def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length', algorithm:str="dijkstra", heuristic=None) -> float:
     # Create artificial nodes
     origin = user.origin
@@ -203,7 +202,9 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
     # Clean the graph from artificial nodes
 
     rootlogger.debug(f"Clean graph")
+
     _delete_virtual_nodes(mmgraph, user)
+
     user.origin = origin
     user.destination = destination
 
@@ -220,21 +221,22 @@ def batch_compute_shortest_path(mmgraph, origins, destinations, algorithm='astar
     pass
 
 
-def compute_n_best_shortest_path(mmgraph, user, nrun, cost:str='length', algorithm='astar', heuristic=None, scale_factor=10) -> List[List[float]]:
+def compute_n_best_shortest_path(mmgraph, user, nrun, cost:str='length', algorithm='astar', heuristic=None, scale_factor=10) -> Tuple[List[List[float]], List[float], List[float]]:
     assert nrun >= 1
     modified_link_cost = dict()
     paths = []
-    costs = []
+    penalized_costs = []
+    topograph_links = mmgraph.mobility_graph.links
 
     counter = 0
     while counter < nrun:
         c = compute_shortest_path(mmgraph, user, cost, algorithm, heuristic)
         for ni in range(len(user.path) - 1):
             nj = ni + 1
-            link = mmgraph.mobility_graph.links[(user.path[ni], user.path[nj])]
+            link = topograph_links[(user.path[ni], user.path[nj])]
             if (user.path[ni], user.path[nj]) not in modified_link_cost:
                 modified_link_cost[(user.path[ni], user.path[nj])] = link.costs[cost]
-            link.costs[cost] = link.costs[cost] * 10
+            link.costs[cost] = link.costs[cost] * scale_factor
 
         if len(paths) > 0:
             current_path = set(user.path)
@@ -245,18 +247,20 @@ def compute_n_best_shortest_path(mmgraph, user, nrun, cost:str='length', algorit
             else:
                 counter += 1
                 paths.append(user.path[:])
-                costs.append(c)
+                penalized_costs.append(c)
         else:
             counter += 1
             paths.append(user.path[:])
-            costs.append(c)
+            penalized_costs.append(c)
 
     for lnodes, saved_cost in modified_link_cost.items():
         mmgraph.mobility_graph.links[lnodes].costs[cost] = saved_cost
 
     user.path = None
 
-    return paths, costs
+    real_costs = [sum(topograph_links[(p[n], p[n+1])].costs[cost] for n in range(len(p)-1)) for p in paths]
+
+    return paths, real_costs, penalized_costs
 
 
 
