@@ -4,7 +4,7 @@ from time import time
 from mnms.tools.io import load_graph
 from mnms.graph.core import MultiModalGraph
 from mnms.flow.abstract import AbstractFlowMotor
-from mnms.demand.manager import DemandManager
+from mnms.demand.manager import BaseDemandManager
 from mnms.tools.time import Time, Dt
 from mnms.graph.algorithms import compute_shortest_path
 from mnms.log import rootlogger
@@ -37,7 +37,7 @@ class Supervisor(object):
         self._flow_motor = flow
         flow.set_graph(self._graph)
 
-    def add_demand(self, demand: DemandManager):
+    def add_demand(self, demand: BaseDemandManager):
         self._demand = demand
 
     def update_graph_cost(self, nstep:int):

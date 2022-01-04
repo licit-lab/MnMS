@@ -1,5 +1,5 @@
 from collections import deque, defaultdict
-from typing import Callable, Tuple, Deque
+from typing import Callable, Tuple, Deque, List
 from functools import partial
 
 import numpy as np
@@ -40,7 +40,7 @@ def dijkstra(G: TopoGraph, user:User, cost:str) -> Tuple[float, Deque[str]]:
                 while u is not None:
                     path.appendleft(u)
                     u = prev[u]
-            user.destination = path
+            user.path = path
             return dist[destination]
 
         for neighbor in G.get_node_neighbors(u):
@@ -53,7 +53,6 @@ def dijkstra(G: TopoGraph, user:User, cost:str) -> Tuple[float, Deque[str]]:
 
 
 def astar(G: TopoGraph, user:User, heuristic: Callable[[str, str], float], cost:str) -> float:
-    # print(user)
     origin = user.origin
     destination = user.destination
     discovered_nodes = {origin}
@@ -99,7 +98,7 @@ def astar(G: TopoGraph, user:User, heuristic: Callable[[str, str], float], cost:
             if tentative_gscore < gscore[neighbor]:
                 prev[neighbor] = current
                 gscore[neighbor] = tentative_gscore
-                fscore[neighbor] = gscore[neighbor] + heuristic(current, neighbor)
+                fscore[neighbor] = gscore[neighbor] + heuristic(current, destination)
                 if neighbor not in discovered_nodes:
                     discovered_nodes.add(neighbor)
 
@@ -116,10 +115,7 @@ def _euclidian_dist(origin, dest, mmgraph):
         return 0
 
 
-
-# TODO: make use of algorithm arg with either dijkstra or astar
-def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length', algorithm:str="dijkstra", heuristic=None) -> float:
-    # Create artificial nodes
+def _create_virtual_nodes(mmgraph, user, cost_name):
     origin = user.origin
     destination = user.destination
     start_nodes = [n for n in mmgraph.mobility_graph.get_node_references(origin)]
@@ -142,7 +138,7 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
     mmgraph.mobility_graph.add_node(end_node, 'NULL')
 
     rootlogger.debug(f"Create start artitificial links with: {start_nodes}")
-    virtual_cost = {cost: 0}
+    virtual_cost = {cost_name: 0}
     virtual_cost.update({'time': 0})
     for n in start_nodes:
         mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, virtual_cost)
@@ -151,28 +147,20 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
     for n in end_nodes:
         mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, virtual_cost)
 
-    # Compute paths
-
-    rootlogger.debug(f"Compute path")
-
     user.origin = start_node
     user.destination = end_node
 
-    if algorithm == "dijkstra":
-        cost, path = dijkstra(mmgraph.mobility_graph, start_node, end_node, cost)
-    elif algorithm == "astar":
-        if heuristic is None:
-            heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
-        cost = astar(mmgraph.mobility_graph, user, heuristic, cost)
-    else:
-        raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
 
-    user.origin = origin
-    user.destination = destination
-
-    # Clean the graph from artificial nodes
-
+def _delete_virtual_nodes(mmgraph, user):
     rootlogger.debug(f"Clean graph")
+    start_node = user.origin
+    end_node = user.destination
+
+    splitted_start_node = start_node.split('_')
+    origin = splitted_start_node[1]
+    destination = splitted_start_node[2]
+    start_nodes = (n for n in mmgraph.mobility_graph.get_node_references(origin))
+    end_nodes = (n for n in mmgraph.mobility_graph.get_node_references(destination))
     del mmgraph.mobility_graph.nodes[start_node]
     del mmgraph.mobility_graph.nodes[end_node]
     del mmgraph.mobility_graph._adjacency[start_node]
@@ -188,6 +176,38 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
         mmgraph.mobility_graph._adjacency[n].remove(end_node)
         del mmgraph._connection_services[(n, end_node)]
 
+
+def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length', algorithm:str="dijkstra", heuristic=None) -> float:
+    # Create artificial nodes
+    origin = user.origin
+    destination = user.destination
+
+    _create_virtual_nodes(mmgraph, user, cost)
+
+    # Compute paths
+
+    rootlogger.debug(f"Compute path")
+
+    if algorithm == "dijkstra":
+        cost = dijkstra(mmgraph.mobility_graph, user, cost)
+    elif algorithm == "astar":
+        if heuristic is None:
+            heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
+        cost = astar(mmgraph.mobility_graph, user, heuristic, cost)
+    else:
+        user.origin = origin
+        user.destination = destination
+        raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
+
+    # Clean the graph from artificial nodes
+
+    rootlogger.debug(f"Clean graph")
+
+    _delete_virtual_nodes(mmgraph, user)
+
+    user.origin = origin
+    user.destination = destination
+
     if cost == float('inf'):
         raise PathNotFound(origin, destination)
 
@@ -199,3 +219,50 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
 
 def batch_compute_shortest_path(mmgraph, origins, destinations, algorithm='astar', heuristic=None):
     pass
+
+
+def compute_n_best_shortest_path(mmgraph, user, nrun, cost:str='length', algorithm='astar', heuristic=None, scale_factor=10) -> Tuple[List[List[float]], List[float], List[float]]:
+    assert nrun >= 1
+    modified_link_cost = dict()
+    paths = []
+    penalized_costs = []
+    topograph_links = mmgraph.mobility_graph.links
+
+    counter = 0
+    while counter < nrun:
+        c = compute_shortest_path(mmgraph, user, cost, algorithm, heuristic)
+        for ni in range(len(user.path) - 1):
+            nj = ni + 1
+            link = topograph_links[(user.path[ni], user.path[nj])]
+            if (user.path[ni], user.path[nj]) not in modified_link_cost:
+                modified_link_cost[(user.path[ni], user.path[nj])] = link.costs[cost]
+            link.costs[cost] = link.costs[cost] * scale_factor
+
+        if len(paths) > 0:
+            current_path = set(user.path)
+            for p in paths:
+                p = set(p)
+                if p == current_path:
+                    break
+            else:
+                counter += 1
+                paths.append(user.path[:])
+                penalized_costs.append(c)
+        else:
+            counter += 1
+            paths.append(user.path[:])
+            penalized_costs.append(c)
+
+    for lnodes, saved_cost in modified_link_cost.items():
+        mmgraph.mobility_graph.links[lnodes].costs[cost] = saved_cost
+
+    user.path = None
+
+    real_costs = [sum(topograph_links[(p[n], p[n+1])].costs[cost] for n in range(len(p)-1)) for p in paths]
+
+    return paths, real_costs, penalized_costs
+
+
+
+
+
