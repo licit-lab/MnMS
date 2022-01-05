@@ -66,9 +66,7 @@ class Supervisor(object):
             #TODO: shortest path computation will be in TravelDecision module
             for nu in new_users:
                 try:
-                    compute_shortest_path(self._graph, nu,
-                                          cost='time',
-                                          algorithm=self._shortest_path,
+                    compute_shortest_path(self._graph, nu, cost='time', algorithm=self._shortest_path,
                                           heuristic=self._heuristic)
                 except PathNotFound:
                     rootlogger.warning(f"Path not found for {nu}")

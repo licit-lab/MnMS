@@ -2,7 +2,7 @@ from mnms.graph.core import MultiModalGraph
 from mnms.tools.time import TimeTable, Time
 from mnms.mobility_service import BaseMobilityService, PublicTransport
 from mnms.log import rootlogger, LOGLEVEL
-from mnms.graph.algorithms.shortest_path import dijkstra, compute_shortest_path
+from mnms.graph.algorithms.shortest_path import dijkstra, compute_shortest_path_nodes
 from mnms.tools.render import draw_flow_graph
 from mnms.tools.io import save_graph
 
@@ -121,7 +121,7 @@ mmgraph.mobility_graph.check()
 # print(mmgraph.mobility_graph.links)
 # print(mmgraph.mobility_graph._adjacency)
 # print(mmgraph.mobility_graph._node_referencing)
-print(compute_shortest_path(mmgraph, '0', '7', cost='time'))
+print(compute_shortest_path_nodes(mmgraph, '0', '7'))
 print(mmgraph.mobility_graph.compute_cost_path(['0', '1', 'L0_5', 'L0_9', 'L0_10', 'L0_7'], 'time'))
 # print(tram.__dump__())
 
