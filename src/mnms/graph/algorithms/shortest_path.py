@@ -386,7 +386,7 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
                                  scale_factor=10,
                                  radius=500,
                                  growth_rate_radius=10,
-                                 walk_speed:float=1.4) -> Tuple[List[List[float]], List[float], List[float]]:
+                                 walk_speed:float=1.4) -> Tuple[List[List[str]], List[float], List[float]]:
 
     assert nrun >= 1
     modified_link_cost = dict()
