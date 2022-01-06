@@ -6,6 +6,8 @@ from mnms.flow.MFD import Reservoir, MFDFlow
 from mnms.mobility_service import BaseMobilityService
 from mnms.log import rootlogger, LOGLEVEL
 from mnms.tools.time import Time, Dt
+from mnms.travel_decision.model import SimpleDecisionModel
+from mnms.travel_decision.logit import LogitDecisionModel
 
 
 rootlogger.setLevel(LOGLEVEL.INFO)
@@ -27,8 +29,8 @@ def create_simple_grid_multimodal():
     for l in mmgraph.flow_graph.links.values():
         uid = l.upstream_node
         did = l.downstream_node
-        car.add_link('CAR_'+uid+'_'+did, 'CAR_'+uid, 'CAR_'+did, {'length': DIST}, [l.id])
-        bus.add_link('BUS_' + uid + '_' + did, 'BUS_' + uid, 'BUS_' + did, {'length': DIST}, [l.id])
+        car.add_link('CAR_'+uid+'_'+did, 'CAR_'+uid, 'CAR_'+did, {'length': DIST, 'time':DIST/car.default_speed}, [l.id])
+        bus.add_link('BUS_' + uid + '_' + did, 'BUS_' + uid, 'BUS_' + did, {'length': DIST, 'time':DIST/bus.default_speed}, [l.id])
 
     mmgraph.add_mobility_service(car)
     mmgraph.add_mobility_service(bus)
@@ -56,11 +58,15 @@ if __name__ == '__main__':
     flow_motor = MFDFlow()
     flow_motor.add_reservoir(reservoir)
 
+    travel_decision = LogitDecisionModel(mmgraph)
+
     supervisor = Supervisor()
     supervisor.add_graph(mmgraph)
     supervisor.add_flow_motor(flow_motor)
     supervisor.add_demand(demand)
+    supervisor.add_decision_model(travel_decision)
 
     supervisor.update_graph_cost(3)
 
     supervisor.run(Time('07:00:00'), Time('10:00:00'), Dt(minutes=1), 10)
+    pass

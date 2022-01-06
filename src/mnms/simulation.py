@@ -5,6 +5,7 @@ from mnms.tools.io import load_graph
 from mnms.graph.core import MultiModalGraph
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.demand.manager import BaseDemandManager
+from mnms.travel_decision.model import DecisionModel
 from mnms.tools.time import Time, Dt
 from mnms.graph.algorithms import compute_shortest_path
 from mnms.log import rootlogger
@@ -14,9 +15,10 @@ from mnms.tools.exceptions import PathNotFound
 class Supervisor(object):
     def __init__(self):
         self._graph: MultiModalGraph = None
-        self._demand: DemandManager = None
+        self._demand: BaseDemandManager = None
         self._parameters = None
         self._flow_motor: AbstractFlowMotor = None
+        self._decision_model:DecisionModel = None
         self._update_graph = 1
         self._shortest_path = 'astar'
         self._heuristic = None
@@ -39,6 +41,9 @@ class Supervisor(object):
 
     def add_demand(self, demand: BaseDemandManager):
         self._demand = demand
+
+    def add_decision_model(self, model: DecisionModel):
+        self._decision_model = model
 
     def update_graph_cost(self, nstep:int):
         self._update_graph = nstep
@@ -63,11 +68,9 @@ class Supervisor(object):
             rootlogger.info('Computing paths for new users ..')
             start = time()
 
-            #TODO: shortest path computation will be in TravelDecision module
             for nu in new_users:
                 try:
-                    compute_shortest_path(self._graph, nu, cost='time', algorithm=self._shortest_path,
-                                          heuristic=self._heuristic)
+                    self._decision_model(nu)
                 except PathNotFound:
                     rootlogger.warning(f"Path not found for {nu}")
 
