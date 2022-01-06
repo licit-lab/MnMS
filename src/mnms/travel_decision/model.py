@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Literal, List
+from typing import Literal, List, Tuple
+import csv
 
 from mnms.demand.user import User
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.algorithms.shortest_path import compute_n_best_shortest_path
 from mnms.log import rootlogger
+
 
 class DecisionModel(ABC):
     def __init__(self, mmgraph:MultiModalGraph,
@@ -14,7 +16,8 @@ class DecisionModel(ABC):
                  walk_speed:float=1.4,
                  scale_factor_sp:int=10,
                  algorithm:Literal['astar', 'dijkstra']='astar',
-                 heuristic=None):
+                 heuristic=None,
+                 outfile:str=None):
 
         self._n_shortest_path = n_shortest_path
         self._radius_sp = radius_sp
@@ -24,13 +27,20 @@ class DecisionModel(ABC):
         self._scale_factor = scale_factor_sp
         self._algorithm = algorithm
         self._heuristic = heuristic
+        if outfile is None:
+            self._write = False
+        else:
+            self._write = True
+            self._outfile = open(outfile, 'w')
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+            self._csvhandler.writerow(['ID', 'COST', 'PATH'])
+
 
     @abstractmethod
-    def path_choice(self, paths:List[List[str]], costs:List[float]) -> List[str]:
+    def path_choice(self, paths:List[List[str]], costs:List[float]) -> Tuple[List[str], float]:
         pass
 
     def __call__(self, user:User):
-        rootlogger.info(f"Compute path for user {user.id} ..")
         paths, costs, _ = compute_n_best_shortest_path(self._mmgraph,
                                                        user,
                                                        self._n_shortest_path,
@@ -41,13 +51,19 @@ class DecisionModel(ABC):
                                                        radius=self._radius_sp,
                                                        growth_rate_radius=self._radius_growth_sp,
                                                        walk_speed=self._walk_speed)
-        rootlogger.info(f"Done ..")
-        user.path = self.path_choice(paths, costs)
+        user.path, cost = self.path_choice(paths, costs)
+
+        if self._write:
+            self._csvhandler.writerow([user.id, str(cost),' '.join(user.path)])
+
+    def __del__(self):
+        if self._write:
+            self._outfile.close()
 
 
 class SimpleDecisionModel(DecisionModel):
-    def __init__(self, mmgraph: MultiModalGraph):
-        super(SimpleDecisionModel, self).__init__(mmgraph, n_shortest_path=1)
+    def __init__(self, mmgraph: MultiModalGraph, outfile:str=None):
+        super(SimpleDecisionModel, self).__init__(mmgraph, n_shortest_path=1, outfile=outfile)
 
-    def path_choice(self, paths:List[List[str]], costs:List[float]):
-        return paths[0]
+    def path_choice(self, paths:List[List[str]], costs:List[float]) -> Tuple[List[str], float]:
+        return paths[0], costs[0]

@@ -1,5 +1,6 @@
 import configparser
 from time import time
+import csv
 
 from mnms.tools.io import load_graph
 from mnms.graph.core import MultiModalGraph
@@ -7,21 +8,33 @@ from mnms.flow.abstract import AbstractFlowMotor
 from mnms.demand.manager import BaseDemandManager
 from mnms.travel_decision.model import DecisionModel
 from mnms.tools.time import Time, Dt
-from mnms.graph.algorithms import compute_shortest_path
 from mnms.log import rootlogger
 from mnms.tools.exceptions import PathNotFound
 
 
 class Supervisor(object):
-    def __init__(self):
-        self._graph: MultiModalGraph = None
-        self._demand: BaseDemandManager = None
-        self._parameters = None
-        self._flow_motor: AbstractFlowMotor = None
-        self._decision_model:DecisionModel = None
-        self._update_graph = 1
-        self._shortest_path = 'astar'
-        self._heuristic = None
+    def __init__(self,
+                 graph:MultiModalGraph=None,
+                 demand:BaseDemandManager=None,
+                 flow_motor:AbstractFlowMotor=None,
+                 decision_model:DecisionModel=None,
+                 outfile:str=None):
+
+        self._graph: MultiModalGraph = graph
+        self._demand: BaseDemandManager = demand
+        self._flow_motor: AbstractFlowMotor = flow_motor
+        self._decision_model:DecisionModel = decision_model
+
+        if flow_motor is not None:
+            flow_motor.set_graph(graph)
+
+        if outfile is None:
+            self._write = False
+        else:
+            self._write = True
+            self._outfile = open(outfile, "w")
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+            self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'TRAVEL_TIME'])
 
     def load_graph(self, file:str):
         self.graph = load_graph(file)
@@ -45,20 +58,18 @@ class Supervisor(object):
     def add_decision_model(self, model: DecisionModel):
         self._decision_model = model
 
-    def update_graph_cost(self, nstep:int):
-        self._update_graph = nstep
-
     def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
         rootlogger.info(f'Start run from {tstart} to {tend}')
         tcurrent = tstart
-        step = 0
+        affectation_step = 0
+        flow_step = 0
         principal_dt = flow_dt * affectation_factor
 
         self._flow_motor.set_time(tcurrent)
         self._flow_motor.initialize()
 
         while tcurrent < tend:
-            rootlogger.info(f'Current time: {tcurrent}, step: {step}')
+            rootlogger.info(f'Current time: {tcurrent}, affectation step: {affectation_step}')
 
             rootlogger.info(f'Getting next departures {tcurrent}->{tcurrent.add_time(principal_dt)} ..')
             new_users = self._demand.get_next_departures(tcurrent, tcurrent.add_time(principal_dt))
@@ -92,14 +103,20 @@ class Supervisor(object):
                         pass
                     self._flow_motor.update_time(flow_dt)
                     self._flow_motor.step(flow_dt.to_seconds(), users_step)
+                    if self._flow_motor._write:
+                        self._flow_motor.write_result(affectation_step, flow_step)
                     tcurrent = next_time
+                    flow_step += 1
 
             else:
                 for _ in range(affectation_factor):
                     next_time = tcurrent.add_time(flow_dt)
                     self._flow_motor.update_time(flow_dt)
                     self._flow_motor.step(flow_dt.to_seconds(), [])
+                    if self._flow_motor._write:
+                        self._flow_motor.write_result(affectation_step, flow_step)
                     tcurrent = next_time
+                    flow_step += 1
             end = time()
             rootlogger.info(f'Done [{end-start:.5} s]')
 
@@ -108,5 +125,15 @@ class Supervisor(object):
             self._flow_motor.update_graph()
             end = time()
             rootlogger.info(f'Done [{end-start:.5} s]')
+
+            if self._write:
+                rootlogger.info('Writing travel time of each link in graph ...')
+                start = time()
+                t_str = self._flow_motor.time
+                for link in self._graph.mobility_graph.links.values():
+                    self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['time']])
+                end = time()
+                rootlogger.info(f'Done [{end - start:.5} s]')
+
             rootlogger.info('-'*50)
-            step += 1
+            affectation_step += 1

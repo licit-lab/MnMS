@@ -175,8 +175,11 @@ class Reservoir(object):
 #
 
 class MFDFlow(AbstractFlowMotor):
-    def __init__(self):
-        super(MFDFlow, self).__init__()
+    def __init__(self, outfile:str=None):
+        super(MFDFlow, self).__init__(outfile=outfile)
+        if outfile is not None:
+            self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'MODE', 'SPEED', 'ACCUMULATION'])
+
         self.reservoirs: List[Reservoir] = list()
         self.users = []
 
@@ -307,4 +310,11 @@ class MFDFlow(AbstractFlowMotor):
             new_speed = new_speed / total_len
             mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
             mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] =  total_len/new_speed
+
+    def write_result(self, step_affectation:int, step_flow:int):
+        tcurrent = self._tcurrent.time
+        for res in self.reservoirs:
+            resid = res.id
+            for mode in res.modes:
+                self._csvhandler.writerow([str(step_affectation), str(step_flow), tcurrent, resid, mode, res.dict_speeds[mode], res.dict_accumulations[mode]])
 
