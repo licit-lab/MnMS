@@ -3,8 +3,6 @@ import unittest
 from mnms.mobility_service import PublicTransport
 from mnms.tools.time import TimeTable
 
-from pprint import pprint
-
 
 class TestPublicTransport(unittest.TestCase):
     def setUp(self):
@@ -59,7 +57,6 @@ class TestPublicTransport(unittest.TestCase):
 
         self.assertTrue('L0' in service.lines)
         self.assertTrue('TEST2' in service.lines)
-        print(service.links)
         self.assertDictEqual({'_default': 1, 'length': 0, 'speed': 1, 'test': 0, 'time': 1800.0}, service.links[('L0_1', 'TEST2_1')].costs)
         self.assertListEqual([], service.links[('L0_1', 'TEST2_1')].reference_links)
         self.assertListEqual([], service.links[('L0_1', 'TEST2_1')].reference_lane_ids)

@@ -274,10 +274,8 @@ class MultiModalGraph(object):
                 exclusion_ni = exclusion_matrix.get(node_ni.mobility_service, set())
                 exclusion_nj = exclusion_matrix.get(node_nj.mobility_service, set())
                 dist = np.linalg.norm(flow_graph_nodes[node_nj.reference_node].pos - flow_graph_nodes[node_ni.reference_node].pos)
-                c = {'length': dist, 'time': dist/walk_speed, 'speed':walk_speed}
                 if node_nj.mobility_service not in exclusion_ni:
-                    print(f"Connect {ni} -> {nj}")
-                    print(f"Connect {node_ni.mobility_service} -> {node_nj.mobility_service}")
+                    c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
                     cost_connect = mservice_nj.connect_to_service(nj)
                     for key, val in cost_connect.items():
                         if key in c:
@@ -285,8 +283,7 @@ class MultiModalGraph(object):
                     self.mobility_graph.add_link(f'_WALK_{ni}_{nj}', ni, nj, c, mobility_service='HUB')
 
                 if node_ni.mobility_service not in exclusion_nj:
-                    print(f"Connect {nj} -> {ni}")
-                    print(f"Connect {node_nj.mobility_service} -> {node_ni.mobility_service}")
+                    c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
                     cost_connect = mservice_nj.connect_to_service(nj)
                     for key, val in cost_connect.items():
                         if key in c:
