@@ -1,9 +1,7 @@
-import json
 from collections import defaultdict
 from copy import deepcopy
 
 from mnms.mobility_service.shared import SharedMoblityService
-from mnms.graph.core import TopoNode, ConnectionLink, TransitLink
 from mnms.tools.time import TimeTable, Time
 
 
@@ -11,7 +9,7 @@ class Line(object):
     def __init__(self, id: str, mobility_service: "PublicTransport", timetable: "TimeTable"):
         self.id = id
         self.timetable = timetable
-        self.stops = set()
+        self.stops = list()
         self.links = set()
         self.mobility_service = mobility_service
         self.service_id = mobility_service.id
@@ -20,7 +18,7 @@ class Line(object):
 
     def add_stop(self, sid:str, ref_node:str=None) -> None:
         self.mobility_service.add_node(self._prefix(sid), ref_node)
-        self.stops.add(sid)
+        self.stops.append(sid)
 
     def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, costs=None, reference_links=None,
                       reference_lane_ids=None) -> None:
@@ -36,6 +34,15 @@ class Line(object):
                                        reference_lane_ids=reference_lane_ids)
         self.links.add(lid)
         self._adjacency[up_sid] = down_sid
+
+
+    @property
+    def start(self):
+        return self.stops[0]
+
+    @property
+    def end(self):
+        return self.stops[-1]
 
     def _prefix(self, name):
         return self.id+'_'+name
@@ -76,7 +83,8 @@ class PublicTransport(SharedMoblityService):
 
         if two_ways:
             c = {'time': self.lines[ulineid].timetable.get_freq() / 2, "length": 0}
-            c.update(costs)
+            if costs is not None:
+                c.update(costs)
             self.add_link('_'.join([dlineid, ulineid, nid]),
                           dlineid + '_' + nid,
                           ulineid + '_' + nid,

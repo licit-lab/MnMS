@@ -1,7 +1,7 @@
 import unittest
 
 from mnms.graph import MultiModalGraph
-from mnms.graph.algorithms import nearest_mobility_service
+from mnms.graph.search import nearest_mobility_service
 from mnms.graph.algorithms.shortest_path import (astar, dijkstra, _euclidian_dist, compute_shortest_path,
                                                  compute_n_best_shortest_path)
 from mnms.graph.algorithms.walk import walk_connect

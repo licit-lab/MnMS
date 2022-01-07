@@ -1,8 +1,10 @@
 from typing import Dict, Tuple, List, Union, Set
 from collections import defaultdict, ChainMap
+from itertools import combinations
 
 import numpy as np
 
+from mnms.graph.search import mobility_nodes_in_radius
 from mnms.tools.exceptions import DuplicateNodesError, DuplicateLinksError
 from mnms.graph.elements import GeoNode, TopoNode, GeoLink, ConnectionLink, TransitLink, Zone
 
@@ -67,8 +69,8 @@ class TopoGraph(OrientedGraph):
             self.node_referencing[node.reference_node].append(node.id)
         self._adjacency[node.id] = set()
 
-    def add_link(self, lid, upstream_node, downstream_node, costs, reference_links=None, reference_lane_ids=None,
-                 mobility_service=None) -> None:
+    def add_link(self, lid:str, upstream_node:str, downstream_node:str, costs:Dict[str, float],
+                 reference_links:List[str]=None, reference_lane_ids:List[int]=None, mobility_service:str=None) -> None:
         assert (upstream_node, downstream_node) not in self.links, f"Nodes {upstream_node}, {downstream_node} already connected"
         assert lid not in self._map_lid_nodes, f"Link id {lid} already exist"
 
@@ -252,3 +254,38 @@ class MultiModalGraph(object):
     def get_extremities(self):
         extremities = {nid for nid, neighbors in self.flow_graph._adjacency.items() if len(neighbors) == 1}
         return extremities
+
+    def construct_hub(self, nid:str, radius:float, walk_speed:float=1.4, exclusion_matrix:Dict[str, Set[str]]={}):
+        assert nid in self.flow_graph.nodes, f"{nid} is not in the flow graph"
+        node = self.flow_graph.nodes[nid]
+        node_pos = node.pos
+        flow_graph_nodes = self.flow_graph.nodes
+
+        service_nodes, _ = mobility_nodes_in_radius(node_pos, self, radius)
+
+        for ni, nj in combinations(service_nodes, 2):
+            node_ni = self.mobility_graph.nodes[ni]
+            node_nj = self.mobility_graph.nodes[nj]
+
+            mservice_ni = self._mobility_services[node_ni.mobility_service]
+            mservice_nj = self._mobility_services[node_nj.mobility_service]
+
+            if type(mservice_ni) != type(mservice_nj):
+                exclusion_ni = exclusion_matrix.get(node_ni.mobility_service, set())
+                exclusion_nj = exclusion_matrix.get(node_nj.mobility_service, set())
+                dist = np.linalg.norm(flow_graph_nodes[node_nj.reference_node].pos - flow_graph_nodes[node_ni.reference_node].pos)
+                if node_nj.mobility_service not in exclusion_ni:
+                    c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
+                    cost_connect = mservice_nj.connect_to_service(nj)
+                    for key, val in cost_connect.items():
+                        if key in c:
+                            c[key] += val
+                    self.mobility_graph.add_link(f'_WALK_{ni}_{nj}', ni, nj, c, mobility_service='HUB')
+
+                if node_ni.mobility_service not in exclusion_nj:
+                    c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
+                    cost_connect = mservice_nj.connect_to_service(nj)
+                    for key, val in cost_connect.items():
+                        if key in c:
+                            c[key] += val
+                    self.mobility_graph.add_link(f'_WALK_{nj}_{ni}', nj, ni, c, mobility_service='HUB')
