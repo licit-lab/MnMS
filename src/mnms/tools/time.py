@@ -113,10 +113,13 @@ class Time(object):
         return f"{str(self._hours) if self._hours >= 10 else '0' + str(self._hours)}:{str(self._minutes) if self._minutes >= 10 else '0' + str(self._minutes)}:{str(round(self._seconds, 2)) if self._seconds >= 10 else '0' + str(round(self._seconds, 2))}"
 
     def add_time(self, dt: Dt):
-        new_seconds = self._seconds + Decimal(dt._seconds%60)
-        new_minutes = self._minutes + Decimal(dt._minutes) + Decimal(dt._seconds//60)
+        new_seconds = self._seconds + Decimal(dt._seconds)
+        new_minutes = self._minutes + Decimal(dt._minutes) + Decimal(new_seconds//60)
+        new_seconds = new_seconds%60
+        # print(new_minutes)
         hours = self._hours + Decimal(dt._hours) + Decimal(new_minutes//60)
         new_minutes = new_minutes%60
+        # print(new_minutes)
         new_seconds = new_seconds%60
         # print(hours, new_minutes, new_seconds)
         assert hours <= 24
@@ -188,4 +191,10 @@ class TimeTable(object):
 
 
 if __name__ == "__main__":
-    t = TimeTable.create_table_freq("05:00:00", "22:00:00", Dt(seconds=600))
+    # t = TimeTable.create_table_freq("05:00:00", "22:00:00", Dt(seconds=600))
+
+    t = Time.fromSeconds(0)
+
+    t2 = t.add_time(Dt(seconds=32))
+    t3 = t2.add_time(Dt(seconds=30))
+    print(t3)
