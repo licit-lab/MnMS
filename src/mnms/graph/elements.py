@@ -72,6 +72,7 @@ class GeoNode(GraphElement):
         return {'ID': self.id,
                 'POSITION': self.pos.tolist()}
 
+
 class ConnectionLink(GraphElement):
     """Link between two Mobility Service.
 
@@ -135,7 +136,6 @@ class TransitLink(GraphElement):
         self.costs = {'time': 0, '_default': 1}
         if costs is not None:
             self.costs.update(costs)
-
 
     def __repr__(self):
         return f"TransitLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"

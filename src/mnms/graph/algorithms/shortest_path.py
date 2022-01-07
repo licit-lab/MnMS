@@ -6,7 +6,7 @@ import numpy as np
 
 from mnms.log import rootlogger
 from mnms.graph.core import TopoGraph, MultiModalGraph, TransitLink
-from mnms.graph.algorithms.search import mobility_nodes_in_radius
+from mnms.graph.search import mobility_nodes_in_radius
 from mnms.graph.edition import delete_node_upstream_links, delete_node_downstream_links
 from mnms.tools.exceptions import PathNotFound
 from mnms.demand.user import User
@@ -261,120 +261,6 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
 
         return cost
 
-
-def compute_n_best_shortest_path_coordinates(mmgraph:MultiModalGraph, user:User, cost:str='length', algorithm:str="dijkstra", heuristic=None, radius:float=500, growth_rate_radius:float=10, walk_speed:float=1.4,
-                                             scale_factor: object = 10) -> object:
-    '''
-
-    Parameters
-    ----------
-    mmgraph
-    user
-    nrun
-    cost
-    algorithm
-    heuristic
-    radius
-    growth_rate_radius
-    walk_speed
-    scale_factor
-
-    Returns
-    -------
-
-    '''
-    user_pos_origin = user.origin
-    user_pos_destination = user.destination
-    current_radius = radius
-    while True:
-        service_nodes_origin, dist_origin = mobility_nodes_in_radius(user_pos_origin, mmgraph, current_radius)
-        service_nodes_destination, dist_destination = mobility_nodes_in_radius(user_pos_destination, mmgraph, current_radius)
-
-        if len(service_nodes_destination) == 0 or service_nodes_destination == 0:
-            current_radius += growth_rate_radius
-        else:
-            start_node = f"_{user.id}_START"
-            end_node = f"_{user.id}_END"
-
-            mmgraph.mobility_graph.add_node(start_node, 'WALK')
-            mmgraph.mobility_graph.add_node(end_node, 'WALK')
-
-            rootlogger.debug(f"Create start artificial links with: {service_nodes_origin}")
-            # print(dist_origin[0]/walk_speed)
-            for ind, n in enumerate(service_nodes_origin):
-                mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, {'time': dist_origin[ind]/walk_speed,
-                                                                                       'length': dist_origin[ind]})
-
-            rootlogger.debug(f"Create end artificial links with: {service_nodes_destination}")
-            for ind, n in enumerate(service_nodes_destination):
-                mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, {'time': dist_destination[ind]/walk_speed,
-                                                                                   'length': dist_destination[ind]})
-
-            user.origin = start_node
-            user.destination = end_node
-
-            if algorithm == "dijkstra":
-                cost_path = dijkstra(mmgraph.mobility_graph, user, cost)
-            elif algorithm == "astar":
-                if heuristic is None:
-                    heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
-                cost_path = astar(mmgraph.mobility_graph, user, heuristic, cost)
-            else:
-                user.origin = user_pos_origin
-                user.destination = user_pos_destination
-                raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
-
-            if cost_path != float('inf'):
-
-                # path, real_cost, penalized_cost = compute_n_best_shortest_path_nodes(mmgraph, user, nrun, cost, algorithm, heuristic, scale_factor)
-
-                rootlogger.debug(f"Clean graph")
-
-                del mmgraph.mobility_graph.nodes[start_node]
-                del mmgraph.mobility_graph.nodes[end_node]
-                del mmgraph.mobility_graph._adjacency[start_node]
-                del mmgraph.mobility_graph._adjacency[end_node]
-
-                for n in service_nodes_origin:
-                    del mmgraph.mobility_graph.links[(start_node, n)]
-                    del mmgraph.mobility_graph._map_lid_nodes[start_node + '_' + n]
-                    del mmgraph._connection_services[(start_node, n)]
-
-                for n in service_nodes_destination:
-                    del mmgraph.mobility_graph.links[(n, end_node)]
-                    del mmgraph.mobility_graph._map_lid_nodes[n + '_' + end_node]
-                    mmgraph.mobility_graph._adjacency[n].remove(end_node)
-                    del mmgraph._connection_services[(n, end_node)]
-
-                user.origin = user_pos_origin
-                user.destination = user_pos_destination
-
-                return path, real_cost, penalized_cost
-
-            else:
-
-                current_radius += growth_rate_radius
-
-                rootlogger.debug(f"Clean graph")
-
-                del mmgraph.mobility_graph.nodes[start_node]
-                del mmgraph.mobility_graph.nodes[end_node]
-                del mmgraph.mobility_graph._adjacency[start_node]
-                del mmgraph.mobility_graph._adjacency[end_node]
-
-                for n in service_nodes_origin:
-                    del mmgraph.mobility_graph.links[(start_node, n)]
-                    del mmgraph.mobility_graph._map_lid_nodes[start_node + '_' + n]
-                    del mmgraph._connection_services[(start_node, n)]
-
-                for n in service_nodes_destination:
-                    del mmgraph.mobility_graph.links[(n, end_node)]
-                    del mmgraph.mobility_graph._map_lid_nodes[n + '_' + end_node]
-                    mmgraph.mobility_graph._adjacency[n].remove(end_node)
-                    del mmgraph._connection_services[(n, end_node)]
-
-                user.origin = user_pos_origin
-                user.destination = user_pos_destination
 
 
 def compute_n_best_shortest_path(mmgraph:MultiModalGraph,

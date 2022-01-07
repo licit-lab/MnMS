@@ -17,7 +17,7 @@ def walk_connect(mmgraph:MultiModalGraph, radius:float=100, walk_speed:float=1.4
                         for mserv_node_j in mappping_nodes[nj.id]:
                             downstream_node = mmgraph.mobility_graph.nodes[mserv_node_j]
                             if upstream_node.mobility_service != downstream_node.mobility_service:
-                                label = f'_Walk_{upstream_node.id}_{downstream_node.id}'
+                                label = f'_WALK_{upstream_node.id}_{downstream_node.id}'
                                 cost = mmgraph._mobility_services[downstream_node.mobility_service].connect_to_service(downstream_node.id)
                                 cost['time'] += walk_speed*dist
                                 cost['length'] = dist

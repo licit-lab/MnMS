@@ -164,11 +164,9 @@ class TimeTable(object):
         current_time = Time(start)
         end_time = Time(end)
         end_time_dt = end_time.remove_time(dt)
-        print(end_time_dt)
         table.append(current_time)
         while current_time <= end_time_dt:
             ntime = current_time.add_time(dt)
-            print(ntime)
             table.append(ntime)
             current_time = ntime
         # print(current_time)
