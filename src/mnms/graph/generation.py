@@ -3,6 +3,20 @@ from mnms.graph.core import MultiModalGraph
 
 
 def create_grid_graph(nx, ny, dist=1):
+    """ Return a `MultiModalGraph` with a grid like flow graph
+
+    Parameters
+    ----------
+    nx: int
+        number of nodes in the x direction
+    ny: int
+        number of nodes in the y direction
+    dist: float
+        distance between two nodes
+    Returns
+    -------
+
+    """
     mmgraph = MultiModalGraph()
     fgraph = mmgraph.flow_graph
 

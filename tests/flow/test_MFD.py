@@ -1,7 +1,6 @@
 import unittest
 
-from mnms.flow.MFD import Reservoir, MFDFlow
-from mnms.graph.path import reconstruct_path
+from mnms.flow.MFD import Reservoir, MFDFlow, reconstruct_path
 from mnms.tools.time import Time, Dt
 from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.base import BaseMobilityService
@@ -9,7 +8,7 @@ from mnms.demand.user import User
 from mnms.graph.algorithms import compute_shortest_path
 
 
-class TestAlgorithms(unittest.TestCase):
+class TestMFD(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """

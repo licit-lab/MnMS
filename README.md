@@ -24,6 +24,10 @@ python -m pip install -e .
 ````
 
 
+## Tutorials
+
+Tutorials can be found in the doc/tutorials folder as jupyter notebook.
+
 ## Tests
 
 To launch tests run the following command at the root of the project:

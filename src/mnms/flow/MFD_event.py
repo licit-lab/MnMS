@@ -2,7 +2,7 @@ from typing import List
 from copy import deepcopy
 
 from mnms.flow.abstract import AbstractFlowMotor
-from mnms.graph.path import reconstruct_path
+from mnms.flow.MFD import reconstruct_path
 from mnms.tools.time import Time
 from mnms.flow.MFD import Reservoir
 

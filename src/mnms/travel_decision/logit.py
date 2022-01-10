@@ -1,7 +1,7 @@
 from math import exp, fsum
 from typing import List, Tuple
 
-from numpy.random import choice
+from numpy.random import choice as _choice
 
 from mnms.travel_decision.model import DecisionModel
 
@@ -15,5 +15,5 @@ class LogitDecisionModel(DecisionModel):
         sum_cost_exp = fsum(exp(-self._theta*c) for c in costs)
         proba_path = [exp(-self._theta*c)/sum_cost_exp for c in costs]
 
-        selected_ind = choice(range(len(proba_path)), 1,  p=proba_path)[0]
+        selected_ind = _choice(range(len(proba_path)), 1,  p=proba_path)[0]
         return paths[selected_ind], costs[selected_ind]

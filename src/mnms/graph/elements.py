@@ -74,7 +74,7 @@ class GeoNode(GraphElement):
 
 
 class ConnectionLink(GraphElement):
-    """Link between two Mobility Service.
+    """Link between two Mobility Service of the same kind.
 
     Parameters
     ----------
@@ -129,6 +129,19 @@ class ConnectionLink(GraphElement):
 
 
 class TransitLink(GraphElement):
+    """ Link between two different mobility service
+
+    Parameters
+    ----------
+    lid: str
+        id of the link
+    upstream_node: str
+        id of upstream node
+    downstream_node: str
+        id of downstream node
+    costs: dict
+        dictionary of costs
+    """
     def __init__(self, lid, upstream_node, downstream_node, costs=None):
         super(TransitLink, self).__init__(lid)
         self.upstream_node = upstream_node
@@ -191,6 +204,17 @@ class GeoLink(GraphElement):
 
 
 class Zone(GraphElement):
+    """Set of links that define a geographic zone
+
+    Parameters
+    ----------
+    resid: str
+        id of the zone
+    links: list
+        list of links id
+    mobility_services:
+        list of mobility services present in the zone
+    """
     def __init__(self, resid: str, links:List[str]=[], mobility_services:List[str]=[]):
         super(Zone, self).__init__(resid)
         self.mobility_services = frozenset(mobility_services)

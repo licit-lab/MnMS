@@ -11,11 +11,25 @@ Welcome to MnMS's documentation!
    :maxdepth: 2
    :hidden:
 
+   Home <self>
+   tutorials
    Sources <_dvlpt/modules>
 
 
 
-`MnMS` stand for Multimodal Network Modelling and Simulation. It's a tool develop as a part of the DIT4TraM ERC project.
+Description
+===========
+
+`MnMS` stand for Multimodal Network Modelling and Simulation. It's a tool develop as a part of the DIT4TraM European project.
+
+
+Requirements
+============
+
+- python=3.9
+- matplotlib
+- numpy
+- pandas
 
 Indices and tables
 ==================
