@@ -142,7 +142,7 @@ def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True,
         lines = list()
         nodes = set()
         for (unode, dnode) in service.links:
-            link = mmgraph.mobility_graph.links[(sid + '_' + unode, sid + '_' + dnode)]
+            link = mmgraph.mobility_graph.links[(unode, dnode)]
             nodes.add(unode)
             nodes.add(dnode)
             for lid in link.reference_links:

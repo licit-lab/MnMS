@@ -35,7 +35,7 @@ class TestPublicTransport(unittest.TestCase):
 
         self.assertListEqual([('L0_0', 'L0_1')], list(service.links.keys()))
 
-        self.assertDictEqual({'_default': 1, 'length': 10, 'speed': 10, 'test': 32, 'time': 0}, service.links[('L0_0', 'L0_1')].costs)
+        self.assertDictEqual({'_default': 1, 'length': 10, 'test': 32, 'time': 0}, service.links[('L0_0', 'L0_1')].costs)
         self.assertListEqual(["0_1"], service.links[('L0_0', 'L0_1')].reference_links)
         self.assertListEqual([2], service.links[('L0_0', 'L0_1')].reference_lane_ids)
 
@@ -57,7 +57,7 @@ class TestPublicTransport(unittest.TestCase):
 
         self.assertTrue('L0' in service.lines)
         self.assertTrue('TEST2' in service.lines)
-        self.assertDictEqual({'_default': 1, 'length': 0, 'speed': 1, 'test': 0, 'time': 1800.0}, service.links[('L0_1', 'TEST2_1')].costs)
+        self.assertDictEqual({'_default': 1, 'length': 0, 'test': 0, 'time': 1800.0}, service.links[('L0_1', 'TEST2_1')].costs)
         self.assertListEqual([], service.links[('L0_1', 'TEST2_1')].reference_links)
         self.assertListEqual([], service.links[('L0_1', 'TEST2_1')].reference_lane_ids)
 
@@ -90,7 +90,7 @@ class TestPublicTransport(unittest.TestCase):
                                     'LINKS': [{'ID': 'L0_0_1',
                                                'UPSTREAM': 'L0_0',
                                                'DOWNSTREAM': 'L0_1',
-                                               'COSTS': {'time': 0, 'test': 32, 'length': 10, 'speed': 1},
+                                               'COSTS': {'time': 0, 'test': 32, 'length': 10},
                                                'REF_LINKS': ['0_1'],
                                                'REF_LANE_IDS': [2],
                                                'MOBILITY_SERVICE': 'TEST'}]},
@@ -102,14 +102,14 @@ class TestPublicTransport(unittest.TestCase):
                                     'LINKS': [{'ID': 'TEST2_32_1',
                                                'UPSTREAM': 'TEST2_32',
                                                'DOWNSTREAM': 'TEST2_1',
-                                               'COSTS': {'time': 0, 'test': 2, 'length': 10, 'speed': 1},
+                                               'COSTS': {'time': 0, 'test': 2, 'length': 10},
                                                'REF_LINKS': ['0_99'],
                                                'REF_LANE_IDS': [0], 'MOBILITY_SERVICE': 'TEST'}]}],
                          'CONNECTIONS': [
                              {'ID': 'TEST2_L0_1',
                               'UPSTREAM': 'TEST2_1',
                               'DOWNSTREAM': 'L0_1',
-                              'COSTS': {'time': 1800.0, 'length': 0, 'test': 0, 'speed': 1},
+                              'COSTS': {'time': 1800.0, 'length': 0, 'test': 0},
                               'REF_LINKS': [],
                               'REF_LANE_IDS': [],
                               'MOBILITY_SERVICE': 'TEST'}]}

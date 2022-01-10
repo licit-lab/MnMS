@@ -28,7 +28,7 @@ class TestSimpleMobilityService(unittest.TestCase):
         self.assertListEqual(['00', '11'], [n.reference_node for n in service.nodes.values()])
 
         self.assertListEqual(['0_1'], [l.id for l in service.links.values()])
-        self.assertDictEqual({'test': 32, '_default': 1, 'speed': 1, 'time': 0}, service.links[('0', '1')].costs)
+        self.assertDictEqual({'test': 32, '_default': 1, 'time': 0}, service.links[('0', '1')].costs)
         self.assertListEqual(['0_2', '2_3'], service.links[('0', '1')].reference_links)
         self.assertListEqual([0, 2], service.links[('0', '1')].reference_lane_ids)
 
@@ -46,8 +46,7 @@ class TestSimpleMobilityService(unittest.TestCase):
                                     'UPSTREAM': '0',
                                     'DOWNSTREAM': '1',
                                     'COSTS': {'time': 0,
-                                              'test': 32,
-                                              'speed': 1},
+                                              'test': 32},
                                     'REF_LINKS': ['0_2', '2_3'],
                                     'REF_LANE_IDS': [0, 2],
                                     'MOBILITY_SERVICE': 'TEST'}]}
@@ -63,8 +62,7 @@ class TestSimpleMobilityService(unittest.TestCase):
                                     'UPSTREAM': '0',
                                     'DOWNSTREAM': '1',
                                     'COSTS': {'time': 0,
-                                              'test': 32,
-                                              'speed': 1},
+                                              'test': 32},
                                     'REF_LINKS': ['0_2', '2_3'],
                                     'REF_LANE_IDS': [0, 2],
                                     'MOBILITY_SERVICE': 'TEST'}]}
@@ -74,6 +72,6 @@ class TestSimpleMobilityService(unittest.TestCase):
         self.assertEqual('TEST', service.id)
         self.assertEqual('1', service.nodes['1'].id)
         self.assertEqual('11', service.nodes['1'].reference_node)
-        self.assertDictEqual({'test': 32, '_default': 1, 'speed': 1, 'time': 0}, service.links[('0', '1')].costs)
+        self.assertDictEqual({'test': 32, '_default': 1, 'time': 0}, service.links[('0', '1')].costs)
         self.assertListEqual(['0_2', '2_3'], service.links[('0', '1')].reference_links)
         self.assertListEqual([0, 2], service.links[('0', '1')].reference_lane_ids)
