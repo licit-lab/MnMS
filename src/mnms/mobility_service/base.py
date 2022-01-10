@@ -30,7 +30,6 @@ class BaseMobilityService(TopoGraph):
         super(BaseMobilityService, self).add_node(nid, self.id, ref_node)
 
     def add_link(self, lid: str, unid: str, dnid:str, costs:dict={}, reference_links=None, reference_lane_ids=None) -> None:
-        costs.update({'speed': self.default_speed})
         super(BaseMobilityService, self).add_link(lid, unid, dnid, costs, reference_links, reference_lane_ids, self.id)
 
     def update_costs(self, time:"Time"):

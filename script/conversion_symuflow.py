@@ -121,7 +121,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
             upstream = links[l]['UPSTREAM']
             downstream = links[l]['DOWNSTREAM']
             length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-            car.add_link(l, upstream, downstream, {'time': length/links[l].get('VIT_REG', speed_car), 'length': length}, reference_links=[l])
+            car.add_link(l, upstream, downstream, {'time': length/min(links[l].get('VIT_REG', speed_car), speed_car), 'length': length}, reference_links=[l])
 
     G.add_mobility_service(car)
 
@@ -202,7 +202,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
                 up = links[l]['UPSTREAM']
                 down = links[l]['DOWNSTREAM']
                 length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-                costs = {'time': length/links[l].get('VIT_REG', service.default_speed)}
+                costs = {'time': length/min(links[l].get('VIT_REG', service.default_speed), service.default_speed)}
                 new_line.connect_stops(l, up, down, length, costs=costs, reference_links=[l])
             print('----------')
 
