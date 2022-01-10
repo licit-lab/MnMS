@@ -1,6 +1,8 @@
 import csv
-from typing import List
+from typing import List, Literal
 from abc import ABC, abstractmethod
+
+import numpy as np
 
 from mnms.demand.user import User
 from mnms.tools.time import Time
@@ -32,10 +34,11 @@ class BaseDemandManager(ABC):
 
 
 class CSVDemandManager(AbstractDemandManager):
-    def __init__(self, csvfile, delimiter=';'):
+    def __init__(self, csvfile, demand_type:Literal['node', 'coordinate']='node', delimiter=';'):
         self._filename = csvfile
         self._file = open(self._filename, 'r')
         self._reader = csv.reader(self._file, delimiter=delimiter, quotechar='|')
+        self._demand_type = demand_type
 
         next(self._reader)
         self._current_user = self.construct_user(next(self._reader))
@@ -50,9 +53,14 @@ class CSVDemandManager(AbstractDemandManager):
                 return departure
         return departure
 
-    @staticmethod
-    def construct_user(row):
-        return User(row[0], row[2], row[3], Time(row[1]))
+    def construct_user(self, row):
+        if self._demand_type == 'node':
+            user = User(row[0], row[2], row[3], Time(row[1]))
+        elif self._demand_type == 'coordinate':
+            user = User(row[0], np.fromstring(row[2], sep=' '), np.fromstring(row[3], sep=' '), Time(row[1]))
+        else:
+            raise TypeError(f"demand_type must be either 'node' or 'coordinate'")
+        return user
 
     def __del__(self):
         self._file.close()
