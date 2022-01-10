@@ -33,7 +33,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
         down_nid = tr.attrib['id_eltaval']
         up_coord = np.fromstring(tr.attrib['extremite_amont'], sep=" ")
         down_coord = np.fromstring(tr.attrib['extremite_aval'], sep=" ")
-
+        # vit_reg = tr.attrib['vit_reg']
         nodes[up_nid].append(up_coord)
         nodes[down_nid].append(down_coord)
 
@@ -47,7 +47,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
             node_car.add(up_nid)
             node_car.add(down_nid)
 
-        if tr.find('POINTS_INTERNES'):
+        if tr.find('POINTS_INTERNES') is not None:
             length = 0
             last_coords = up_coord
             for pi_elem in tr.iter('POINT_INTERNE'):
@@ -58,6 +58,12 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
             links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': length}
         else:
             links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': None}
+
+        if 'vit_reg' in tr.attrib:
+            links[lid]['VIT_REG'] = float(tr.attrib['vit_reg'])
+        else:
+            print(lid)
+
     nodes = {n: np.mean(pos, axis=0) for n, pos in nodes.items()}
 
     arret_elem = root.xpath('/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/ARRETS')[0]
@@ -115,7 +121,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
             upstream = links[l]['UPSTREAM']
             downstream = links[l]['DOWNSTREAM']
             length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-            car.add_link(l, upstream, downstream, {'time': length/speed_car, 'length': length}, reference_links=[l])
+            car.add_link(l, upstream, downstream, {'time': length/links[l].get('VIT_REG', speed_car), 'length': length}, reference_links=[l])
 
     G.add_mobility_service(car)
 
@@ -196,7 +202,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
                 up = links[l]['UPSTREAM']
                 down = links[l]['DOWNSTREAM']
                 length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-                costs = {'time': length/service.default_speed}
+                costs = {'time': length/links[l].get('VIT_REG', service.default_speed)}
                 new_line.connect_stops(l, up, down, length, costs=costs, reference_links=[l])
             print('----------')
 
@@ -220,4 +226,4 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
 
 if __name__ == "__main__":
     rootlogger.setLevel(LOGLEVEL.INFO)
-    convert_symuflow_to_mmgraph("/Users/florian.gacon/Work/MnMS/script/Lyon_symuviainput_1.xml")
+    convert_symuflow_to_mmgraph(r"/Users/florian/Dropbox (LICIT_LAB)/MnMS/Lyon/Lyon_symuviainput_1.xml")
