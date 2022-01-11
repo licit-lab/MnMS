@@ -1,0 +1,16 @@
+[html]
+title = mnms's coverage
+directory = build/htmlcov
+
+[run]
+source = mnms
+
+[report]
+show_missing = True
+exclude_lines =
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplemented
+    raise NotImplementedError
+    __main__
+

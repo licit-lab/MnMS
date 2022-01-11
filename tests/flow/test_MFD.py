@@ -111,7 +111,6 @@ class TestMFD(unittest.TestCase):
         """
 
     def test_mfd(self):
-        pass
         self.assertEqual(self.mfd_flow.list_dict_accumulations, {'res1': {'car': 4.0, 'bus': 0}, 'res2': {'car': 0, 'bus': 0}})
         self.assertEqual(self.mfd_flow.list_dict_speeds, {'res1': {'car': 9.5, 'bus': 4.75}, 'res2': {'car': 12.0,
                                                                                                       'bus': 4.0}})

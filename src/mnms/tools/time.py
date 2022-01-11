@@ -6,7 +6,7 @@ import numpy as np
 
 class Dt(object):
     def __init__(self, hours:int=0, minutes:int=0, seconds:float=0):
-        new_seconds = seconds%60
+        new_seconds = Decimal(seconds)%60
         new_minutes = minutes + seconds//60
         hours = hours + new_minutes//60
         minutes = new_minutes%60
@@ -14,19 +14,19 @@ class Dt(object):
 
         self._hours = hours
         self._minutes = minutes
-        self._seconds = seconds
+        self._seconds = Decimal(seconds)
 
     def __mul__(self, other:int):
         seconds = self._seconds*other
-        minutes = self._minutes*other
-        hours = self._hours*other
+        minutes = int(self._minutes*other)
+        hours = int(self._hours*other)
         return Dt(hours, minutes, seconds)
 
     def __repr__(self):
         return f"dt(hours:{self._hours}, minutes:{self._minutes}, seconds:{self._seconds})"
 
     def to_seconds(self):
-        return float(self._hours*3600+self._minutes*60+self._seconds)
+        return float(int(self._hours*3600)+int(self._minutes*60)+self._seconds)
 
 
 class Time(object):
@@ -57,14 +57,6 @@ class Time(object):
         time._hours = int(h)
 
         return time
-
-    @classmethod
-    def fromFloats(cls, hours=0, minutes=0, seconds=0):
-        new_time = cls()
-        new_time.hours = hours
-        new_time.minutes = minutes
-        new_time.seconds = seconds
-        return new_time
 
     def __repr__(self):
         return f"Time({self.time})"

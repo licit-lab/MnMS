@@ -44,6 +44,7 @@ To build the documentation using sphinx:
 
 ```bash
 conda activate mnms
+conda env update --file conda/env.yaml
 cd doc
 make clean && make html
 ```
