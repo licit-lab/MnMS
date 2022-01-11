@@ -6,3 +6,4 @@ dependencies:
   - sphinx-book-theme
   - nbsphinx
   - pandoc
+  - notebook

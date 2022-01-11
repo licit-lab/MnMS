@@ -153,11 +153,11 @@ def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True,
         line_segment = LineCollection(lines, linestyles='solid', colors=c, linewidths=linkwidth)
         ax.add_collection(line_segment)
 
-        x, y = zip(*[defo_app(mmgraph.flow_graph.nodes[n].pos) for n in nodes])
+        x, y = zip(*[defo_app(mmgraph.flow_graph.nodes[mmgraph.mobility_graph.nodes[n].reference_node].pos) for n in nodes])
         ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=c, fillstyle='full', markersize=nodesize)
 
         if node_label:
-            [ax.annotate(n, defo_app(mmgraph.flow_graph.nodes[n].pos)) for n in nodes]
+            [ax.annotate(n, defo_app((mmgraph.flow_graph.nodes[mmgraph.mobility_graph.nodes[n].reference_node].pos))) for n in nodes]
 
         service_shift[sid] = yshift
         yshift += dy
