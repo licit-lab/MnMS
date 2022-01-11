@@ -5,17 +5,15 @@ Implement a xml parser of symuflow input to get a MultiModdalGraph
 from lxml import etree
 from collections import defaultdict
 import numpy as np
-import matplotlib.pyplot as plt
 
 from mnms.graph import MultiModalGraph
 from mnms.tools.io import save_graph
 from mnms.tools.time import Time, TimeTable, Dt
 from mnms.mobility_service import BaseMobilityService, PublicTransport
-from mnms.tools.render import draw_flow_graph, draw_mobility_service
 from mnms.log import rootlogger, LOGLEVEL
 
 
-def convert_symuflow_to_mmgraph(file, speed_car=25):
+def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
     tree = etree.parse(file)
     root = tree.getroot()
 
@@ -217,13 +215,26 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
     rootlogger.info(f"Number of nodes: {G.mobility_graph.nb_nodes}")
     rootlogger.info(f"Number of links: {G.mobility_graph.nb_links}")
 
-    # fig, ax = plt.subplots()
-    # draw_flow_graph(ax, G.flow_graph, node_label=False, show_length=True, linkwidth=3)
-    # plt.show()
+    if zone_file is not None:
+        zone_dict = defaultdict(set)
+        with open(zone_file, 'r') as reader:
+            reader.readline()
+            line = reader.readline()
+            while line:
+                link, zone = line.split(';')
+                zone_dict[zone.upper().removesuffix('\n')].add(link)
+
+                line = reader.readline()
+
+        for zone, links in sorted(zone_dict.items()):
+            print(zone)
+            links = [l for l in links if l in G.flow_graph._map_lid_nodes]
+            G.add_zone(zone, links)
 
     save_graph(G, file.replace('.xml', '.json'), indent=1)
 
 
 if __name__ == "__main__":
     rootlogger.setLevel(LOGLEVEL.INFO)
-    convert_symuflow_to_mmgraph(r"/Users/florian/Dropbox (LICIT_LAB)/MnMS/Lyon/Lyon_symuviainput_1.xml")
+    convert_symuflow_to_mmgraph(r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/Lyon_symuviainput_1.xml",
+                                zone_file=r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/fichier_liens.csv")
