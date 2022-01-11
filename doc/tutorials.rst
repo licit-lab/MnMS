@@ -3,8 +3,11 @@
 Tutorials
 *********
 
-.. toctree::
-	:titlesonly:
-	:maxdepth: 1
+Here you can find the tutorials for the modules of *mnms*:
 
-	tutorials/TutorialGraph
+.. toctree::
+    :titlesonly:
+    :maxdepth: 1
+
+    tutorials/TutorialGraph
+    tutorials/TutorialDemandTravelDecision

@@ -32,6 +32,10 @@ class BaseDemandManager(ABC):
                 return departure
         return departure
 
+    def show_users(self):
+        for u in self._users:
+            print(u)
+
 
 class CSVDemandManager(AbstractDemandManager):
     def __init__(self, csvfile, demand_type:Literal['node', 'coordinate']='node', delimiter=';'):
