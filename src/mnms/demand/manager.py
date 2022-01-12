@@ -9,12 +9,35 @@ from mnms.tools.time import Time
 
 
 class AbstractDemandManager(ABC):
+    """Abstract class for loading a User demand
+    """
     @abstractmethod
     def get_next_departures(self, tstart:Time, tend: Time) -> List[User]:
+        """Return the Users with a departure time between tstart and tend
+
+        Parameters
+        ----------
+        tstart: Time
+            Lower bound of departure time
+        tend: Time
+            Upper bound of departure time
+
+        Returns
+        -------
+        List[User]
+
+        """
         pass
 
 
 class BaseDemandManager(ABC):
+    """Basic demand manager, it takes a list of User as input
+
+    Parameters
+    ----------
+    users: List[User]
+        list of User to manage
+    """
     def __init__(self, users):
         self._users = users
         self._iter_demand = iter(self._users)
@@ -38,7 +61,19 @@ class BaseDemandManager(ABC):
 
 
 class CSVDemandManager(AbstractDemandManager):
+    """Read a demand from a CSV file
+
+    Parameters
+    ----------
+    csvfile: str
+        Path to the CSV file
+    demand_type: Literal[node, coordinate]
+        Type of demand, either the origin?destination are node ids or coordinates
+    delimiter: str
+        Delimiter for the CSV file
+    """
     def __init__(self, csvfile, demand_type:Literal['node', 'coordinate']='node', delimiter=';'):
+
         self._filename = csvfile
         self._file = open(self._filename, 'r')
         self._reader = csv.reader(self._file, delimiter=delimiter, quotechar='|')

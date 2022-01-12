@@ -7,8 +7,8 @@ from mnms.travel_decision.model import DecisionModel
 
 
 class LogitDecisionModel(DecisionModel):
-    def __init__(self, mmgraph, theta=0.01, outfile:str=None):
-        super(LogitDecisionModel, self).__init__(mmgraph, outfile=outfile)
+    def __init__(self, mmgraph, theta=0.01, n_shortest_path=3, outfile:str=None):
+        super(LogitDecisionModel, self).__init__(mmgraph, outfile=outfile, n_shortest_path=n_shortest_path)
         self._theta = theta
 
     def path_choice(self, paths:List[List[str]], costs:List[float]) -> Tuple[List[str], float]:

@@ -40,11 +40,16 @@ pytest tests --cov=mnms -v
 
 ### Build
 
-To build the documentation using sphinx:
+To build the documentation using sphinx, first update your conda environment with the doc dependencies:
 
 ```bash
 conda activate mnms
-conda env update --file conda/env.yaml
+conda env update --file conda/doc.yaml
+```
+
+Then build the doc:
+
+```bash
 cd doc
 make clean && make html
 ```

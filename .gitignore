@@ -138,3 +138,5 @@ doc/_dvlpt/
 
 #OSX
 .DS_Store
+
+doc/tutorials/results/*

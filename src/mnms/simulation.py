@@ -36,15 +36,6 @@ class Supervisor(object):
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
             self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'TRAVEL_TIME'])
 
-    def load_graph(self, file:str):
-        self.graph = load_graph(file)
-
-    def load_config(self, file:str):
-        config = configparser.ConfigParser()
-        config.read(file)
-
-        self.load_graph(config['GRAPH']['PATH'])
-
     def add_graph(self, mmgraph: MultiModalGraph):
         self._graph = mmgraph
 
@@ -137,3 +128,11 @@ class Supervisor(object):
 
             rootlogger.info('-'*50)
             affectation_step += 1
+
+        self._flow_motor.finalize()
+
+        if self._decision_model._write:
+            self._decision_model._outfile.close()
+
+        if self._write:
+            self._outfile.close()

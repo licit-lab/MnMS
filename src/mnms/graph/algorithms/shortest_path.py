@@ -48,7 +48,15 @@ def dijkstra(G: TopoGraph, user:User, cost:str) -> Tuple[float, Deque[str]]:
         for neighbor in G.get_node_neighbors(u):
             rootlogger.debug(f"Neighbor Node {neighbor}")
             if neighbor in vertices:
+
+                # Check if next node mobility service is available for the user
+                link = G.links[(u, neighbor)]
                 alt = dist[u] + G.links[(u, neighbor)].costs[cost]
+                if isinstance(link, TransitLink):
+                    if user.available_mobility_service is not None:
+                        if G.nodes[link.downstream_node].mobility_service not in user.available_mobility_service:
+                            alt = float('inf')
+
                 if alt < dist[neighbor]:
                     dist[neighbor] = alt
                     prev[neighbor] = u
@@ -86,16 +94,11 @@ def astar(G: TopoGraph, user:User, heuristic: Callable[[str, str], float], cost:
 
             # Check if next node mobility service is available for the user
             link = G.links[(current, neighbor)]
+            tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
             if isinstance(link, TransitLink):
                 if user.available_mobility_service is not None:
                     if G.nodes[link.downstream_node].mobility_service not in user.available_mobility_service:
                         tentative_gscore = float('inf')
-                    else:
-                        tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
-                else:
-                    tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
-            else:
-                tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
 
             if tentative_gscore < gscore[neighbor]:
                 prev[neighbor] = current

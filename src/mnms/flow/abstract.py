@@ -63,5 +63,6 @@ class AbstractFlowMotor(ABC):
         pass
 
     def finalize(self):
-        pass
+        if self._write:
+            self._outfile.close()
 
