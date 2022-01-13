@@ -31,12 +31,21 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
         down_nid = tr.attrib['id_eltaval']
         up_coord = np.fromstring(tr.attrib['extremite_amont'], sep=" ")
         down_coord = np.fromstring(tr.attrib['extremite_aval'], sep=" ")
+        nb_lane = float(tr.attrib.get('nb_voie', '1'))
         # vit_reg = tr.attrib['vit_reg']
         nodes[up_nid].append(up_coord)
         nodes[down_nid].append(down_coord)
 
         if "exclusion_types_vehicules" in tr.attrib:
             if "VL" not in tr.attrib["exclusion_types_vehicules"]:
+                link_car.add(lid)
+                node_car.add(up_nid)
+                node_car.add(down_nid)
+
+        elif tr.find('VOIES_RESERVEES') is not None:
+            print("RESERVED LANE", lid)
+            nb_reserved_lane = sum(1 for _ in tr.iter("VOIE_RESERVEE"))
+            if nb_reserved_lane != nb_lane:
                 link_car.add(lid)
                 node_car.add(up_nid)
                 node_car.add(down_nid)
@@ -53,14 +62,13 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
                 length += np.linalg.norm(curr_coords-last_coords)
                 last_coords = curr_coords
             length += np.linalg.norm(down_coord-last_coords)
-            links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': length}
+            links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': length, "NB_LANE":nb_lane}
         else:
-            links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': None}
+            links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': None, "NB_LANE":nb_lane}
 
         if 'vit_reg' in tr.attrib:
             links[lid]['VIT_REG'] = float(tr.attrib['vit_reg'])
-        else:
-            print(lid)
+
 
     nodes = {n: np.mean(pos, axis=0) for n, pos in nodes.items()}
 
@@ -84,8 +92,8 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
 
         up_new_lid = f"{upstream}_{stop_id}"
         down_new_lid = f"{stop_id}_{downstream}"
-        links[up_new_lid] =  {'UPSTREAM': upstream, 'DOWNSTREAM': stop_id, 'ID': up_new_lid, 'LENGTH': None}
-        links[down_new_lid] = {'UPSTREAM': stop_id, 'DOWNSTREAM': downstream, 'ID': down_new_lid, 'LENGTH': None}
+        links[up_new_lid] =  {'UPSTREAM': upstream, 'DOWNSTREAM': stop_id, 'ID': up_new_lid, 'LENGTH': None, "NB_LANE": 1}
+        links[down_new_lid] = {'UPSTREAM': stop_id, 'DOWNSTREAM': downstream, 'ID': down_new_lid, 'LENGTH': None, "NB_LANE": 1}
         link_to_del[tr_id] = (up_new_lid, down_new_lid)
 
         if tr_id in link_car:
@@ -105,7 +113,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
     already_present_link = dict()
     for l in links.values():
         try:
-            flow_graph.add_link(l['ID'], l['UPSTREAM'], l['DOWNSTREAM'], length=l['LENGTH'])
+            flow_graph.add_link(l['ID'], l['UPSTREAM'], l['DOWNSTREAM'], length=l['LENGTH'], nb_lane=l['NB_LANE'])
         except AssertionError:
             rootlogger.warning(f"Skipping troncon: {l['ID']}, nodes {(l['UPSTREAM'], l['DOWNSTREAM'])} already connected")
             already_present_link[l['ID']] = flow_graph.links[(l['UPSTREAM'], l['DOWNSTREAM'])].id
@@ -165,6 +173,10 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
                 for time_elem in cal_elem.iter("HORAIRE"):
                     # print(time_elem.attrib['heuredepart'])
                     line_timetable.table.append(Time(time_elem.attrib['heuredepart']))
+
+            if len(line_timetable.table) == 0:
+                rootlogger.warning(f'There is an empty TimeTable for {service.id}')
+
             new_line = service.add_line(line_elem.attrib['id'], line_timetable)
             # print('-'*50)
             for tr_elem in troncons_elem.iter('TRONCON'):
