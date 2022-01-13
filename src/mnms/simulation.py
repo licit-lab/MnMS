@@ -5,23 +5,24 @@ import csv
 from mnms.tools.io import load_graph
 from mnms.graph.core import MultiModalGraph
 from mnms.flow.abstract import AbstractFlowMotor
-from mnms.demand.manager import BaseDemandManager
+from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.model import DecisionModel
 from mnms.tools.time import Time, Dt
 from mnms.log import rootlogger
 from mnms.tools.exceptions import PathNotFound
+from mnms.tools.progress import ProgressBar
 
 
 class Supervisor(object):
     def __init__(self,
                  graph:MultiModalGraph=None,
-                 demand:BaseDemandManager=None,
+                 demand:AbstractDemandManager=None,
                  flow_motor:AbstractFlowMotor=None,
                  decision_model:DecisionModel=None,
                  outfile:str=None):
 
         self._graph: MultiModalGraph = graph
-        self._demand: BaseDemandManager = demand
+        self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
         self._decision_model:DecisionModel = decision_model
 
@@ -43,7 +44,7 @@ class Supervisor(object):
         self._flow_motor = flow
         flow.set_graph(self._graph)
 
-    def add_demand(self, demand: BaseDemandManager):
+    def add_demand(self, demand: AbstractDemandManager):
         self._demand = demand
 
     def add_decision_model(self, model: DecisionModel):
@@ -70,11 +71,12 @@ class Supervisor(object):
             rootlogger.info('Computing paths for new users ..')
             start = time()
 
+            # for nu in ProgressBar(new_users, "Compute paths"):
             for nu in new_users:
                 try:
                     self._decision_model(nu)
                 except PathNotFound:
-                    rootlogger.warning(f"Path not found for {nu}")
+                    pass
 
             end = time()
             rootlogger.info(f'Done [{end-start:.5} s]')

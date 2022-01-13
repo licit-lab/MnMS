@@ -3,6 +3,8 @@ from typing import List
 
 import numpy as np
 
+from mnms.log import rootlogger
+
 
 class Dt(object):
     def __init__(self, hours:int=0, minutes:int=0, seconds:float=0):
@@ -179,6 +181,7 @@ class TimeTable(object):
             waiting_times_seconds = [self.table[i+1].to_seconds()-self.table[i].to_seconds() for i in range(len(self.table)-1)]
             return np.mean(waiting_times_seconds)
         else:
+            rootlogger.warning("TimeTable has no Time and cant compute a frequency")
             return None
 
 

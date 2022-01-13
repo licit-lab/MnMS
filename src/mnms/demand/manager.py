@@ -30,7 +30,7 @@ class AbstractDemandManager(ABC):
         pass
 
 
-class BaseDemandManager(ABC):
+class BaseDemandManager(AbstractDemandManager):
     """Basic demand manager, it takes a list of User as input
 
     Parameters
@@ -84,12 +84,19 @@ class CSVDemandManager(AbstractDemandManager):
 
     def get_next_departures(self, tstart:Time, tend:Time) -> List[User]:
         departure = list()
+
+        # If the lower bound of next departures is after the fist departure in the demand, we skip the first users until
+        # reaching the  lower bound of next departures
+        while self._current_user.departure_time < tstart:
+            self._current_user = self.construct_user(next(self._reader))
+
         while tstart <= self._current_user.departure_time < tend:
             departure.append(self._current_user)
             try:
                 self._current_user = self.construct_user(next(self._reader))
             except StopIteration:
                 return departure
+
         return departure
 
     def construct_user(self, row):

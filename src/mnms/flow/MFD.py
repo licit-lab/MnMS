@@ -213,7 +213,11 @@ class MFDFlow(AbstractFlowMotor):
                 if speed is not None:
                     new_speed += length * speed
                     total_len += length
-            new_speed = new_speed / total_len
+                else:
+                    link_node = mobility_graph._map_lid_nodes[tid]
+                    link = mobility_graph.links[link_node]
+                    new_speed = self._graph._mobility_services[link.mobility_service].default_speed
+            new_speed = new_speed / total_len if total_len != 0 else new_speed
             mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
             mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] =  total_len/new_speed
 

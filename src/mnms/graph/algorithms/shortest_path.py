@@ -200,12 +200,12 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
         end_nodes = [n for n in mmgraph.mobility_graph.get_node_references(destination)]
 
         if len(start_nodes) == 0:
-            rootlogger.error(f"There is no mobility service connected to origin node {origin}")
-            return float('inf')
+            rootlogger.warning(f"There is no mobility service connected to origin node {origin}")
+            raise PathNotFound(origin, destination)
 
         if len(end_nodes) == 0:
-            rootlogger.error(f"There is no mobility service connected to destination node {destination}")
-            return float('inf')
+            rootlogger.warning(f"There is no mobility service connected to destination node {destination}")
+            raise PathNotFound(origin, destination)
 
         start_node = f"START_{origin}_{destination}"
         end_node = f"END_{origin}_{destination}"
@@ -257,6 +257,7 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
         user.destination = destination
 
         if cost == float('inf'):
+            rootlogger.warning(f"Path not found for {user}")
             raise PathNotFound(origin, destination)
 
         del user.path[0]
@@ -299,6 +300,7 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
 
             if len(service_nodes_destination) == 0 or len(service_nodes_destination) == 0:
                 current_radius += growth_rate_radius
+                rootlogger.debug(f"No service found, increase radius of search: {current_radius}")
             else:
                 start_node = f"_{user.id}_START"
                 end_node = f"_{user.id}_END"
