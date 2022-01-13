@@ -275,7 +275,7 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
                                  heuristic=None,
                                  scale_factor=10,
                                  radius=500,
-                                 growth_rate_radius=10,
+                                 growth_rate_radius=50,
                                  walk_speed:float=1.4) -> Tuple[List[List[str]], List[float], List[float]]:
 
     assert nrun >= 1
@@ -283,6 +283,8 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
     paths = []
     penalized_costs = []
     topograph_links = mmgraph.mobility_graph.links
+
+    rootlogger.info(f"Compute shortest path User {user.id}")
 
     if heuristic is None:
         heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
@@ -300,7 +302,7 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
 
             if len(service_nodes_destination) == 0 or len(service_nodes_destination) == 0:
                 current_radius += growth_rate_radius
-                rootlogger.debug(f"No service found, increase radius of search: {current_radius}")
+                rootlogger.info(f"No service found, increase radius of search: {current_radius}")
             else:
                 start_node = f"_{user.id}_START"
                 end_node = f"_{user.id}_END"
@@ -334,13 +336,14 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
                     raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
 
                 if cost_path != float('inf'):
-
                     counter = 0
                     while counter < nrun:
                         if algorithm == "dijkstra":
                             c = dijkstra(mmgraph.mobility_graph, user, cost)
                         elif algorithm == "astar":
                             c = astar(mmgraph.mobility_graph, user, heuristic, cost)
+                            # rootlogger.info('ASTAR')
+                            # rootlogger.info(f"{user.path}")
                         else:
                             user.origin = user_pos_origin
                             user.destination = user_pos_destination
@@ -348,6 +351,12 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
 
                         del user.path[0]
                         del user.path[-1]
+
+                        # Only one possible path
+                        if len(user.path) == 1:
+                            paths.append(user.path[:])
+                            penalized_costs.append(c)
+                            break
 
                         for ni in range(len(user.path) - 1):
                             nj = ni + 1
@@ -391,8 +400,8 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
                     break
 
                 else:
-
                     current_radius += growth_rate_radius
+                    rootlogger.info(f"No path found, increase radius of search: {current_radius}")
 
                     rootlogger.debug(f"Clean graph")
 

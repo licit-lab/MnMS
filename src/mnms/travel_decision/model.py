@@ -12,7 +12,7 @@ class DecisionModel(ABC):
     def __init__(self, mmgraph:MultiModalGraph,
                  n_shortest_path:int=3,
                  radius_sp:float=500,
-                 radius_growth_sp:float=10,
+                 radius_growth_sp:float=50,
                  walk_speed:float=1.4,
                  scale_factor_sp:int=10,
                  algorithm:Literal['astar', 'dijkstra']='astar',
