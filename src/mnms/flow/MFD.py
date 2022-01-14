@@ -95,6 +95,8 @@ class MFDFlow(AbstractFlowMotor):
         for res in self.reservoirs:
             self.list_dict_accumulations[res.id] = res.dict_accumulations
             self.list_dict_speeds[res.id] = res.dict_speeds
+        self.list_dict_accumulations[None] = {m: 0 for r in self.reservoirs for m in r.modes} | {None: 0}
+        self.list_dict_speeds[None] = {m: 0 for r in self.reservoirs for m in r.modes} | {None: 0}
         self.hist_accumulations = []
         self.hist_speeds = []
         self.list_current_leg = []

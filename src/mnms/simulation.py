@@ -2,7 +2,6 @@ import configparser
 from time import time
 import csv
 
-from mnms.tools.io import load_graph
 from mnms.graph.core import MultiModalGraph
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.demand.manager import AbstractDemandManager
