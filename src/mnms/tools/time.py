@@ -3,7 +3,7 @@ from typing import List
 
 import numpy as np
 
-from mnms.log import rootlogger
+from mnms import log as rootlogger
 
 
 class Dt(object):

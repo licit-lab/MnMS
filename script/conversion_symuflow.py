@@ -10,7 +10,8 @@ from mnms.graph import MultiModalGraph
 from mnms.tools.io import save_graph
 from mnms.tools.time import Time, TimeTable, Dt
 from mnms.mobility_service import BaseMobilityService, PublicTransport
-from mnms.log import rootlogger, LOGLEVEL
+from mnms import log as rootlogger
+from mnms.log import LOGLEVEL
 
 
 def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
