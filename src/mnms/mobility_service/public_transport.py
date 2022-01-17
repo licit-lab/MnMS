@@ -4,6 +4,8 @@ from copy import deepcopy
 from mnms.mobility_service.shared import SharedMoblityService
 from mnms.tools.time import TimeTable, Time
 
+def _NoneDefault():
+    return None
 
 class Line(object):
     def __init__(self, id: str, mobility_service: "PublicTransport", timetable: "TimeTable"):
@@ -14,7 +16,7 @@ class Line(object):
         self.mobility_service = mobility_service
         self.service_id = mobility_service.id
 
-        self._adjacency = defaultdict(lambda: None)
+        self._adjacency = defaultdict(_NoneDefault)
 
     def add_stop(self, sid:str, ref_node:str=None) -> None:
         self.mobility_service.add_node(self._prefix(sid), ref_node)
