@@ -2,7 +2,7 @@ import unittest
 
 from mnms.flow.MFD import Reservoir
 from mnms.flow.MFD_event import MFDFlowEvent
-from mnms.tools.time import Time
+from mnms.tools.time import Time, Dt
 
 class TestAlgorithms(unittest.TestCase):
     def setUp(self):
@@ -38,8 +38,10 @@ class TestAlgorithms(unittest.TestCase):
         self.mfd_flow.initialize()
         self.mfd_flow.accumulation_weights = [2, 4]
         self.mfd_flow._tcurrent = Time.fromSeconds(0)
-        for _ in range(5):
-            self.mfd_flow.step()
+        dt = Dt(seconds=30)
+        for _ in range(100):
+            self.mfd_flow.update_time(dt)
+            self.mfd_flow.step(dt)
 
 
     def tearDown(self):
@@ -47,13 +49,12 @@ class TestAlgorithms(unittest.TestCase):
         """
 
     def test_mfd(self):
-        print(self.mfd_flow.event_start_per_user)
         self.assertEqual(self.mfd_flow.list_dict_accumulations, {'res1': {'car': 4.0, 'bus': 0.0},
                                                                  'res2': {'car': 0, 'bus': 0.0}})
         self.assertEqual(self.mfd_flow.list_dict_speeds, {'res1': {'car': 9.5, 'bus': 4.75}, 'res2': {'car': 12.0,
                                                                                                       'bus': 4.0}})
         self.assertAlmostEqual(self.mfd_flow.list_remaining_length[0], 0, places=7)
-        self.assertAlmostEqual(self.mfd_flow.list_remaining_length[1]/4e4, 1, places=1)
+        self.assertAlmostEqual(self.mfd_flow.list_remaining_length[1]/3e4, 1, places=1)
         self.assertTrue(self.mfd_flow.started_trips)
         self.assertTrue(self.mfd_flow.completed_trips[0] and not self.mfd_flow.completed_trips[1])
         self.assertEqual(self.mfd_flow.list_current_reservoir, {0: 'res2', 1: 'res1'})
@@ -62,10 +63,10 @@ class TestAlgorithms(unittest.TestCase):
         self.assertEqual(self.mfd_flow.list_current_leg[0], 2)
         self.assertEqual(self.mfd_flow.list_current_leg[1], 0)
         self.assertEqual(self.mfd_flow.list_current_mode[0], 'bus')
+        self.assertEqual(self.mfd_flow._tcurrent.to_seconds(), 3000)
         # Tests specific to event based resolution
         self.assertEqual(self.mfd_flow.exit_user_per_event, [-1, -1, 0, 0, 0, -1])
         self.assertEqual(self.mfd_flow.event_start_per_user[1], 5)
         self.assertEqual(self.mfd_flow.event_exit_per_user[0][2], 4)
         self.assertEqual(self.mfd_flow.id_event, 5)
-        self.assertEqual(self.mfd_flow._tcurrent.to_seconds(), 2000)
         return

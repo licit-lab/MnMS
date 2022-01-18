@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.flow.MFD import reconstruct_path
-from mnms.tools.time import Time
+from mnms.tools.time import Time, Dt
 from mnms.flow.MFD import Reservoir
 
 import numpy as np
@@ -73,10 +73,10 @@ class MFDFlowEvent(AbstractFlowMotor):
         self.initialize()
 
 
-    def step(self): # time step is internal, depends on the next event
-        time = self._tcurrent.to_seconds()
-        self.id_event += 1
-
+    def step(self, dt:Dt): # compute events during time step
+        time = self._tcurrent.to_seconds() - dt.to_seconds() #  time at the start of the step
+        time_cur = time #  current time
+        # Find first next event
         # Find next entry
         waiting_entry = [d for d in range(self.nb_user) if not self.started_trips[d]]
         if waiting_entry:
@@ -91,65 +91,94 @@ class MFDFlowEvent(AbstractFlowMotor):
             list_next_exit = [self.list_remaining_length[i_user]/self.list_dict_speeds[
                 self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] for i_user in running]
             id_next_exit = np.argmin(list_next_exit)
-            t_next_exit = time + list_next_exit[id_next_exit]
+            t_next_exit = time_cur + list_next_exit[id_next_exit]
         else:
             t_next_exit = np.infty
         entry_is_next = t_next_entry < t_next_exit
-        if entry_is_next:
-            t_new = t_next_entry
-            for i in running:
-                v = self.list_dict_speeds[
-            self.list_current_reservoir[i]][self.list_current_mode[i]]
-                self.list_remaining_length[i] -= v * (t_new - time)
-            # add new user
-            i_user = waiting_entry[id_next_entry]
-            self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] += \
-            self.accumulation_weights[i_user]
-            self.started_trips[i_user] = True
-            self.exit_user_per_event.append(-1)
-            self.event_start_per_user[i_user] = self.id_event
-        else: # user finishes trip leg
-            t_new = t_next_exit
-            for i in running:
-                v = self.list_dict_speeds[
-                    self.list_current_reservoir[i]][self.list_current_mode[i]]
-                self.list_remaining_length[i] -= v * (t_new - time)
-            # user left current leg
-            i_user = running[id_next_exit]
-            curr_leg = self.list_current_leg[i_user]
-            self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] -= \
+        t_new = min(t_next_entry, t_next_exit)
+        #-- Begin loop on events
+        while t_new <= time + dt.to_seconds():
+            self.id_event += 1
+            if entry_is_next:
+                for i in running:
+                    v = self.list_dict_speeds[
+                self.list_current_reservoir[i]][self.list_current_mode[i]]
+                    self.list_remaining_length[i] -= v * (t_new - time_cur)
+                # add new user
+                i_user = waiting_entry[id_next_entry]
+                self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] += \
                 self.accumulation_weights[i_user]
-            self.list_time_completion_legs[i_user][curr_leg] = t_new
-            self.event_exit_per_user[i_user][curr_leg] = self.id_event
-            if self.list_current_leg[i_user] < len(self._demand[i_user][1]) - 1: # still some legs to complete
-                self.list_current_leg[i_user] += 1
-                path = self._demand[i_user][1]
+                self.started_trips[i_user] = True
+                self.exit_user_per_event.append(-1)
+                self.event_start_per_user[i_user] = self.id_event
+            else: # user finishes trip leg
+                for i in running:
+                    v = self.list_dict_speeds[
+                        self.list_current_reservoir[i]][self.list_current_mode[i]]
+                    self.list_remaining_length[i] -= v * (t_new - time_cur)
+                # user left current leg
+                i_user = running[id_next_exit]
                 curr_leg = self.list_current_leg[i_user]
-                self.list_remaining_length[i_user] = path[curr_leg]['length']
-                self.list_current_mode[i_user] = path[curr_leg]['mode']
-                self.list_current_reservoir[i_user] = path[curr_leg]['reservoir']
-                curr_mode = self.list_current_mode[i_user]
-                curr_res = self.list_current_reservoir[i_user]
-                self.list_dict_accumulations[curr_res][curr_mode] += self.accumulation_weights[i_user]
-            else: # finish the trip
-                self.completed_trips[i_user] = True
-            self.exit_user_per_event.append(i_user)
-        self._tcurrent = Time.fromSeconds(t_new)
-        virt_len_loc = {}
-        for res in self.reservoirs:
-            virt_len_loc[res.id] = {}
-            for mode in res.modes:
-                v = self.list_dict_speeds[res.id][mode]
-                virt_len_loc[res.id][mode] = self.hist_virtual_lengths[-1][res.id][mode] + v*(t_new - time)
-        self.hist_virtual_lengths.append(virt_len_loc.copy())
+                self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] -= \
+                    self.accumulation_weights[i_user]
+                self.list_time_completion_legs[i_user][curr_leg] = t_new
+                self.event_exit_per_user[i_user][curr_leg] = self.id_event
+                if self.list_current_leg[i_user] < len(self._demand[i_user][1]) - 1: # still some legs to complete
+                    self.list_current_leg[i_user] += 1
+                    path = self._demand[i_user][1]
+                    curr_leg = self.list_current_leg[i_user]
+                    self.list_remaining_length[i_user] = path[curr_leg]['length']
+                    self.list_current_mode[i_user] = path[curr_leg]['mode']
+                    self.list_current_reservoir[i_user] = path[curr_leg]['reservoir']
+                    curr_mode = self.list_current_mode[i_user]
+                    curr_res = self.list_current_reservoir[i_user]
+                    self.list_dict_accumulations[curr_res][curr_mode] += self.accumulation_weights[i_user]
+                else: # finish the trip
+                    self.completed_trips[i_user] = True
+                self.exit_user_per_event.append(i_user)
+            virt_len_loc = {}
+            for res in self.reservoirs:
+                virt_len_loc[res.id] = {}
+                for mode in res.modes:
+                    v = self.list_dict_speeds[res.id][mode]
+                    virt_len_loc[res.id][mode] = self.hist_virtual_lengths[-1][res.id][mode] + v*(t_new - time_cur)
+            self.hist_virtual_lengths.append(virt_len_loc.copy())
 
-        # Update the traffic conditions
-        for i_res, res in enumerate(self.reservoirs):
-            res.update_accumulations(self.list_dict_accumulations[res.id])
-            res.update_speeds()
-            self.list_dict_speeds[res.id] = res.update_speeds()
-        self.hist_accumulations.append(deepcopy(self.list_dict_accumulations))
-        self.hist_speeds.append(self.list_dict_speeds.copy())
+            # Update the traffic conditions
+            for i_res, res in enumerate(self.reservoirs):
+                res.update_accumulations(self.list_dict_accumulations[res.id])
+                res.update_speeds()
+                self.list_dict_speeds[res.id] = res.update_speeds()
+            self.hist_accumulations.append(deepcopy(self.list_dict_accumulations))
+            self.hist_speeds.append(self.list_dict_speeds.copy())
+
+            # Compute time of next event to check if it's still in the time step
+            # Find next entry - improvement idea: calculate it once and update the list
+            time_cur = t_new
+            waiting_entry = [d for d in range(self.nb_user) if not self.started_trips[d]]
+            if waiting_entry:
+                list_next_dept_time = [self.departure_times[d].to_seconds() for d in waiting_entry]
+                id_next_entry = np.argmin(list_next_dept_time)
+                t_next_entry = list_next_dept_time[id_next_entry]
+            else:
+                t_next_entry = np.infty
+            # Find next exit (from leg) - improvement idea: calculate it once and update the list
+            running = [d for d in range(self.nb_user) if self.started_trips[d] and not self.completed_trips[d]]
+            if running:
+                list_next_exit = [self.list_remaining_length[i_user] / self.list_dict_speeds[
+                    self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] for i_user in running]
+                id_next_exit = np.argmin(list_next_exit)
+                t_next_exit = time_cur + list_next_exit[id_next_exit]
+            else:
+                t_next_exit = np.infty
+            entry_is_next = t_next_entry < t_next_exit
+            t_new = min(t_next_entry, t_next_exit)
+        #-- End loop on events
+        # Move the agents until the end of the time step
+        for i in running:
+            v = self.list_dict_speeds[
+                self.list_current_reservoir[i]][self.list_current_mode[i]]
+            self.list_remaining_length[i] -= v * (time + dt.to_seconds() - time_cur)
 
     def update_graph(self, mmgraph):
         pass
