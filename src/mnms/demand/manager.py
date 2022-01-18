@@ -101,12 +101,14 @@ class CSVDemandManager(AbstractDemandManager):
 
     def construct_user(self, row):
         if self._demand_type == 'node':
-            user = User(row[0], row[2], row[3], Time(row[1]))
+            origin = row[2]
+            destination = row[3]
         elif self._demand_type == 'coordinate':
-            user = User(row[0], np.fromstring(row[2], sep=' '), np.fromstring(row[3], sep=' '), Time(row[1]))
+            origin = np.fromstring(row[2], sep=' ')
+            destination = np.fromstring(row[3], sep=' ')
         else:
             raise TypeError(f"demand_type must be either 'node' or 'coordinate'")
-        return user
+        return User(row[0], origin, destination, Time(row[1]), available_mobility_services=None if len(row) == 4 else row[4].split(' '))
 
     def __del__(self):
         self._file.close()

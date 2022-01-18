@@ -6,7 +6,11 @@ from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.base import BaseMobilityService
 from mnms.demand.user import User
 from mnms.graph.algorithms import compute_shortest_path
+from mnms.flow.MFD import log
+from mnms.log import LOGLEVEL
 
+
+log.setLevel(LOGLEVEL.WARNING)
 
 class TestMFD(unittest.TestCase):
     def setUp(self):
@@ -111,9 +115,8 @@ class TestMFD(unittest.TestCase):
         """
 
     def test_mfd(self):
-        self.assertEqual(self.mfd_flow.list_dict_accumulations, {'res1': {'car': 4.0, 'bus': 0}, 'res2': {'car': 0, 'bus': 0}})
-        self.assertEqual(self.mfd_flow.list_dict_speeds, {'res1': {'car': 9.5, 'bus': 4.75}, 'res2': {'car': 12.0,
-                                                                                                      'bus': 4.0}})
+        self.assertEqual(self.mfd_flow.list_dict_accumulations, {'res1': {'car': 4.0, 'bus': 0}, 'res2': {'car': 0, 'bus': 0}, None: {None:0, 'car': 0, 'bus': 0}})
+        self.assertEqual(self.mfd_flow.list_dict_speeds, {'res1': {'car': 9.5, 'bus': 4.75}, 'res2': {'car': 12.0, 'bus': 4.0}, None: {None:0, 'car': 0, 'bus': 0}})
         self.assertTrue(self.mfd_flow.list_remaining_length[0] <= 0)
         self.assertAlmostEqual(self.mfd_flow.list_remaining_length[1]/3e4, 1, places=1)
         self.assertTrue(self.mfd_flow.started_trips)
