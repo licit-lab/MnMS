@@ -5,7 +5,6 @@ import csv
 from mnms.demand.user import User
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.algorithms.shortest_path import compute_n_best_shortest_path
-from mnms.log import rootlogger
 
 
 class DecisionModel(ABC):

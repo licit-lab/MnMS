@@ -5,9 +5,11 @@ from typing import Callable, Dict
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.elements import ConnectionLink, TransitLink
-from mnms.log import rootlogger
+from mnms.log import create_logger
 from mnms.demand.user import User
 
+
+log = create_logger(__name__)
 
 def reconstruct_path(mmgraph: MultiModalGraph, path:List[str]):
     res = list()
@@ -114,7 +116,8 @@ class MFDFlow(AbstractFlowMotor):
 
     def step(self, dt: float, new_users:List[User]):
         time = self._tcurrent.to_seconds()
-        rootlogger.debug(f"Time: {time}")
+        log.info(f'MFD step {self._tcurrent}')
+        log.debug(f"Time: {time}")
         # Update the traffic conditions
         for i_res, res in enumerate(self.reservoirs):
             res.update_accumulations(self.list_dict_accumulations[res.id])
@@ -142,10 +145,10 @@ class MFDFlow(AbstractFlowMotor):
         for i_user, user in enumerate(self.users):
             remaining_time = dt
             # Agent enters the network
-            # rootlogger.debug(f"USER {self.departure_times[i_user].to_seconds()}")
-            # rootlogger.info(f"{user}, {self.started_trips[i_user]}, {self.departure_times[i_user].to_seconds()}, {time}")
+            # log.debug(f"USER {self.departure_times[i_user].to_seconds()}")
+            # log.info(f"{user}, {self.started_trips[i_user]}, {self.departure_times[i_user].to_seconds()}, {time}")
             if (not self.started_trips[i_user]) and (self.departure_times[i_user].to_seconds() <= time):
-                # rootlogger.info(f'New user entering the Network: {user}')
+                # log.info(f'New user entering the Network: {user}')
                 self.started_trips[i_user] = True
                 self.list_dict_accumulations[self.list_current_reservoir[i_user]][self.list_current_mode[i_user]] += user.scale_factor
                 remaining_time = time - self.departure_times[i_user].to_seconds()
@@ -183,7 +186,7 @@ class MFDFlow(AbstractFlowMotor):
                     # Remove accomplished distance when staying in on the network
                     self.list_remaining_length[i_user] -= remaining_time * self.list_dict_speeds[curr_res][curr_mode]
 
-        # rootlogger.info(f"{self.completed_trips}")
+        # log.info(f"{self.completed_trips}")
 
     def update_graph(self):
         mobility_graph = self._graph.mobility_graph

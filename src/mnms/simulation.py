@@ -7,10 +7,11 @@ from mnms.flow.abstract import AbstractFlowMotor
 from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.model import DecisionModel
 from mnms.tools.time import Time, Dt
-from mnms.log import rootlogger
+from mnms.log import create_logger
 from mnms.tools.exceptions import PathNotFound
 from mnms.tools.progress import ProgressBar
 
+log = create_logger(__name__)
 
 class Supervisor(object):
     def __init__(self,
@@ -50,7 +51,7 @@ class Supervisor(object):
         self._decision_model = model
 
     def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
-        rootlogger.info(f'Start run from {tstart} to {tend}')
+        log.info(f'Start run from {tstart} to {tend}')
         tcurrent = tstart
         affectation_step = 0
         flow_step = 0
@@ -60,14 +61,14 @@ class Supervisor(object):
         self._flow_motor.initialize()
 
         while tcurrent < tend:
-            rootlogger.info(f'Current time: {tcurrent}, affectation step: {affectation_step}')
+            log.info(f'Current time: {tcurrent}, affectation step: {affectation_step}')
 
-            rootlogger.info(f'Getting next departures {tcurrent}->{tcurrent.add_time(principal_dt)} ..')
+            log.info(f'Getting next departures {tcurrent}->{tcurrent.add_time(principal_dt)} ..')
             new_users = self._demand.get_next_departures(tcurrent, tcurrent.add_time(principal_dt))
             iter_new_users = iter(new_users)
-            rootlogger.info(f'Done, {len(new_users)} new departure')
+            log.info(f'Done, {len(new_users)} new departure')
 
-            rootlogger.info('Computing paths for new users ..')
+            log.info('Computing paths for new users ..')
             start = time()
 
             # for nu in ProgressBar(new_users, "Compute paths"):
@@ -78,9 +79,9 @@ class Supervisor(object):
                     pass
 
             end = time()
-            rootlogger.info(f'Done [{end-start:.5} s]')
+            log.info(f'Done [{end-start:.5} s]')
 
-            rootlogger.info(f'Launching {affectation_factor} step of {self._flow_motor.__class__.__name__} ...')
+            log.info(f'Launching {affectation_factor} step of {self._flow_motor.__class__.__name__} ...')
             start = time()
             if len(new_users) > 0:
                 u = next(iter_new_users)
@@ -110,24 +111,24 @@ class Supervisor(object):
                     tcurrent = next_time
                     flow_step += 1
             end = time()
-            rootlogger.info(f'Done [{end-start:.5} s]')
+            log.info(f'Done [{end-start:.5} s]')
 
-            rootlogger.info('Updating graph ...')
+            log.info('Updating graph ...')
             start = time()
             self._flow_motor.update_graph()
             end = time()
-            rootlogger.info(f'Done [{end-start:.5} s]')
+            log.info(f'Done [{end-start:.5} s]')
 
             if self._write:
-                rootlogger.info('Writing travel time of each link in graph ...')
+                log.info('Writing travel time of each link in graph ...')
                 start = time()
                 t_str = self._flow_motor.time
                 for link in self._graph.mobility_graph.links.values():
                     self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['time']])
                 end = time()
-                rootlogger.info(f'Done [{end - start:.5} s]')
+                log.info(f'Done [{end - start:.5} s]')
 
-            rootlogger.info('-'*50)
+            log.info('-'*50)
             affectation_step += 1
 
         self._flow_motor.finalize()
