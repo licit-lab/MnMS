@@ -99,8 +99,6 @@ class MFDFlow(AbstractFlowMotor):
             self.list_dict_speeds[res.id] = res.dict_speeds
         self.list_dict_accumulations[None] = {m: 0 for r in self.reservoirs for m in r.modes} | {None: 0}
         self.list_dict_speeds[None] = {m: 0 for r in self.reservoirs for m in r.modes} | {None: 0}
-        self.hist_accumulations = []
-        self.hist_speeds = []
         self.list_current_leg = []
         self.list_remaining_length = []
         self.list_current_mode = []
@@ -117,13 +115,10 @@ class MFDFlow(AbstractFlowMotor):
     def step(self, dt: float, new_users:List[User]):
         time = self._tcurrent.to_seconds()
         log.info(f'MFD step {self._tcurrent}')
-        log.debug(f"Time: {time}")
         # Update the traffic conditions
         for i_res, res in enumerate(self.reservoirs):
             res.update_accumulations(self.list_dict_accumulations[res.id])
             self.list_dict_speeds[res.id] = res.update_speeds()
-        self.hist_accumulations.append(deepcopy(self.list_dict_accumulations))
-        self.hist_speeds.append(self.list_dict_speeds.copy())
 
         # Update data structure for new users
         for ni, nu in enumerate(new_users):

@@ -7,6 +7,14 @@ from mnms.demand.user import User
 
 
 class AbstractFlowMotor(ABC):
+    """Abstraction of a flow motor, two methods must be overridden `step` and `update_graph`.
+    `step` define the core of the motor, i.e. the way `User` move. `update_graph` must update the cost of the graph.
+
+    Parameters
+    ----------
+    outfile: str
+        If not `None` store the `User` position at each `step`
+    """
     def __init__(self, outfile:str=None):
         self._graph = None
         self._demand = list()

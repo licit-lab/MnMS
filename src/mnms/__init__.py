@@ -8,6 +8,6 @@ from mnms.demand import *
 from mnms.flow import *
 
 from .simulation import Supervisor
-from .log import create_logger
+from .log import create_logger, LOGLEVEL
 
-log = create_logger(__name__)
+log = create_logger(__name__, stream_level=LOGLEVEL.WARNING)

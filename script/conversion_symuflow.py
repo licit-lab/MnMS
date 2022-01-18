@@ -14,7 +14,7 @@ from mnms import log as rootlogger
 from mnms.log import LOGLEVEL
 
 
-def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
+def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None, ban_mobility_services=[]):
     tree = etree.parse(file)
     root = tree.getroot()
 
@@ -97,10 +97,10 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
         links[down_new_lid] = {'UPSTREAM': stop_id, 'DOWNSTREAM': downstream, 'ID': down_new_lid, 'LENGTH': None, "NB_LANE": 1}
         link_to_del[tr_id] = (up_new_lid, down_new_lid)
 
-        if tr_id in link_car:
-            link_car.add(up_new_lid)
-            link_car.add(down_new_lid)
-            node_car.add(stop_id)
+        # if tr_id in link_car:
+        #     link_car.add(up_new_lid)
+        #     link_car.add(down_new_lid)
+        #     node_car.add(stop_id)
 
     for lid in link_to_del:
         del links[lid]
@@ -217,8 +217,9 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
                 new_line.connect_stops(l, up, down, length, costs=costs, reference_links=[l])
             print('----------')
 
-    for service in mobility_services.values():
-        G.add_mobility_service(service)
+    for sid, service in mobility_services.items():
+        if sid not in ban_mobility_services:
+            G.add_mobility_service(service)
 
     G.mobility_graph.check()
     rootlogger.info("Flow Graph:")
@@ -227,6 +228,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
     rootlogger.info("Mobility Graph:")
     rootlogger.info(f"Number of nodes: {G.mobility_graph.nb_nodes}")
     rootlogger.info(f"Number of links: {G.mobility_graph.nb_links}")
+    rootlogger.info(f"Mobility services: {list(G._mobility_services.keys())}")
 
     if zone_file is not None:
         zone_dict = defaultdict(set)
@@ -250,4 +252,5 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None):
 if __name__ == "__main__":
     rootlogger.setLevel(LOGLEVEL.INFO)
     convert_symuflow_to_mmgraph(r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/Lyon_symuviainput_1.xml",
-                                zone_file=r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/fichier_liens.csv")
+                                zone_file=r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/fichier_liens.csv",
+                                ban_mobility_services=['METRO', 'TRAM'])
