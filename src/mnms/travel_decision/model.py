@@ -4,10 +4,35 @@ import csv
 
 from mnms.demand.user import User
 from mnms.graph.core import MultiModalGraph
-from mnms.graph.algorithms.shortest_path import compute_n_best_shortest_path
+from mnms.graph.shortest_path import compute_n_best_shortest_path
 
 
 class DecisionModel(ABC):
+    """Base class for a travel decision model
+
+    Parameters
+    ----------
+    mmgraph: MultiModalGraph
+        The graph on which the model compute the path
+    n_shortest_path: int
+        Number of shortest path top compute
+    radius_sp: float
+        Radius of search if the User as coordinates as origin/destination
+    radius_growth_sp: float
+        Growth rate if no path is found for the User
+    walk_speed: float
+        Walk speed
+    scale_factor_sp: int
+        Scale factor for the increase of link costs in the compute_n_best_shortest_path
+    algorithm: str
+        Shortest path algorithm
+    heuristic: function
+        Function to use as heuristic of astar is the sortest path algorithm
+    outfile: str
+        Path to result CSV file, nothing is written if None
+    cost: str
+        Name of the cost to use in the shortest path algorithm
+    """
     def __init__(self, mmgraph:MultiModalGraph,
                  n_shortest_path:int=3,
                  radius_sp:float=500,
@@ -42,14 +67,9 @@ class DecisionModel(ABC):
         pass
 
     def __call__(self, user:User):
-        paths, costs, _ = compute_n_best_shortest_path(self._mmgraph,
-                                                       user,
-                                                       self._n_shortest_path,
-                                                       cost=self._cost,
-                                                       algorithm=self._algorithm,
-                                                       heuristic=self._heuristic,
-                                                       scale_factor=self._scale_factor,
-                                                       radius=self._radius_sp,
+        paths, costs, _ = compute_n_best_shortest_path(self._mmgraph, user, self._n_shortest_path, cost=self._cost,
+                                                       algorithm=self._algorithm, heuristic=self._heuristic,
+                                                       scale_factor=self._scale_factor, radius=self._radius_sp,
                                                        growth_rate_radius=self._radius_growth_sp,
                                                        walk_speed=self._walk_speed)
         user.path, cost = self.path_choice(paths, costs)

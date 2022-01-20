@@ -5,7 +5,23 @@ from importlib import import_module
 from mnms.graph.core import MultiModalGraph, ConnectionLink, TransitLink, GeoNode, GeoLink
 
 
-def save_graph(mmgraph: MultiModalGraph, filename, indent=4):
+def save_graph(mmgraph: MultiModalGraph, filename, indent=2):
+    """Save a MultiModalGraph as a JSON file
+
+    Parameters
+    ----------
+    mmgraph: MultiModalGraph
+        Graph to save
+    filename: str
+        Name of the JSON file
+    indent: int
+        Indentation of the JSON
+
+    Returns
+    -------
+    None
+
+    """
     d = {}
     d['FLOW_GRAPH'] = {}
     d['MOBILITY_GRAPH'] = {}
@@ -21,7 +37,20 @@ def save_graph(mmgraph: MultiModalGraph, filename, indent=4):
         json.dump(d, f, indent=indent)
 
 
-def load_graph(filename:str):
+def load_graph(filename:str) -> MultiModalGraph:
+    """Load in memory a MultiModalGraph from a JSON file
+
+    Parameters
+    ----------
+    filename: str
+        Name of the JSON file
+
+    Returns
+    -------
+    MultiModalGraph
+        Return the corresponding MultiModalGraph
+
+    """
     with open(filename, 'r') as f:
         data = json.load(f)
 

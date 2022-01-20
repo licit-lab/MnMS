@@ -2,7 +2,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from mnms.tools.io import load_graph
+from mnms.graph.io import load_graph
 from mnms.tools.render import draw_flow_graph, draw_path
 from mnms.mobility_service import BaseMobilityService
 from mnms.graph.algorithms import compute_shortest_path_nodes

@@ -1,4 +1,4 @@
-from mnms.tools.io import load_graph
+from mnms.graph.io import load_graph
 from mnms.tools.render import draw_multimodal_graph
 from mnms.graph.algorithms import compute_shortest_path_nodes
 from mnms.graph.path import reconstruct_path

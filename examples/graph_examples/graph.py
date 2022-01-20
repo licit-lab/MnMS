@@ -1,7 +1,5 @@
 from mnms.log import set_log_level, LOGLEVEL
 from mnms.graph import MultiModalGraph
-from mnms.tools.io import save_graph, load_graph
-from mnms.graph.algorithms import nearest_mobility_service
 
 set_log_level(LOGLEVEL.DEBUG)
 mmgraph = MultiModalGraph()

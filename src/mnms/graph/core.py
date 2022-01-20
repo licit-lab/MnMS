@@ -3,6 +3,7 @@ from collections import defaultdict, ChainMap
 from itertools import combinations
 
 import numpy as np
+from scipy.spatial.kdtree import KDTree
 
 from mnms.graph.search import mobility_nodes_in_radius
 from mnms.tools.exceptions import DuplicateNodesError, DuplicateLinksError
@@ -82,9 +83,15 @@ class TopoGraph(OrientedGraph):
         self._map_lid_nodes[link.id] = (link.upstream_node, link.downstream_node)
         self._adjacency[link.upstream_node].add(link.downstream_node)
 
+
 class GeoGraph(OrientedGraph):
     """Class implementing a geometrical oriented graph
     """
+    def __init__(self):
+        super(GeoGraph, self).__init__()
+        self.tree = None
+
+
     def add_node(self, nodeid: str, pos: List[float]) -> None:
         assert nodeid not in self.nodes
 
@@ -115,6 +122,9 @@ class GeoGraph(OrientedGraph):
         [subgraph.add_link(self.links[(u_node, d_node)].id, u_node, d_node) for u_node, d_node in self.links if u_node in nodes and d_node in nodes]
 
         return subgraph
+
+    def build_tree(self):
+        self.tree = KDTree([n.pos for n in self.nodes])
 
 
 class ComposedTopoGraph(TopoGraph):

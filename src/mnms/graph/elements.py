@@ -5,6 +5,14 @@ import numpy as np
 
 
 class GraphElement(ABC):
+    """Base class for the creation of a graph element
+
+    Parameters
+    ----------
+    id: str
+        Id of the element
+
+    """
     def __init__(self, id: str):
         self.id = id
 

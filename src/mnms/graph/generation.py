@@ -1,7 +1,6 @@
 from mnms.graph.core import MultiModalGraph
 
 
-
 def create_grid_graph(nx, ny, dist=1):
     """ Return a `MultiModalGraph` with a grid like flow graph
 

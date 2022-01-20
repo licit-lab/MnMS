@@ -1,5 +1,5 @@
 from collections import deque, defaultdict
-from typing import Callable, Tuple, Deque, List, Literal
+from typing import Callable, Tuple, List, Literal
 from functools import partial
 
 import numpy as np
@@ -15,8 +15,25 @@ from mnms.demand.user import User
 log = create_logger(__name__)
 
 
-# TODO: Adapt dijkstra with User class and available mobility service
-def dijkstra(G: TopoGraph, user:User, cost:str) -> Tuple[float, Deque[str]]:
+def dijkstra(G: TopoGraph, user: User, cost: str) -> float:
+    """Simple dijkstra shortest path algorithm, it set the `path` attribute of the User with the computed shortest
+    path
+
+    Parameters
+    ----------
+    G: TopoGraph
+        Topological graph used to compute the shortest path
+    user: User
+        The user with an origin/destination
+    cost: str
+        Cost name
+    Returns
+    -------
+    float
+        The cost of the path
+
+
+    """
     origin = user.origin
     destination = user.destination
     vertices = set()
@@ -65,7 +82,27 @@ def dijkstra(G: TopoGraph, user:User, cost:str) -> Tuple[float, Deque[str]]:
                     prev[neighbor] = u
 
 
-def astar(G: TopoGraph, user:User, heuristic: Callable[[str, str], float], cost:str) -> float:
+def astar(G: TopoGraph, user: User, cost: str, heuristic: Callable[[str, str], float]) -> float:
+    """A* shortest path algorithm, it set the `path` attribute of the User with the computed shortest
+    path
+
+    Parameters
+    ----------
+    G: TopoGraph
+        Topological graph used to compute the shortest path
+    user: User
+        The user with an origin/destination
+    heuristic: function
+        Heuristic to use in the shortest path, take the current node and the destination node and return a float
+    cost: str
+        Cost name
+    Returns
+    -------
+    float
+        The cost of the path
+
+
+    """
     origin = user.origin
     destination = user.destination
     discovered_nodes = {origin}
@@ -123,7 +160,51 @@ def _euclidian_dist(origin:str, dest:str, mmgraph:MultiModalGraph):
         return 0
 
 
-def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length', algorithm:str="dijkstra", heuristic=None, radius:float=500, growth_rate_radius:float=10,  walk_speed:float=1.4) -> float:
+def compute_shortest_path(mmgraph: MultiModalGraph,
+                          user: User,
+                          cost: str = 'length',
+                          algorithm: Literal['dijkstra', 'astar'] = "dijkstra",
+                          heuristic: Callable[[str, str], float] = None,
+                          radius: float = 500,
+                          growth_rate_radius: float = 10,
+                          walk_speed: float = 1.4) -> float:
+    """Compute shortest path from a User origin/destination and a multimodal graph
+
+    Parameters
+    ----------
+    mmgraph: MultiModalGraph
+        The multimodal graph to use for the shortest path algorithm
+    user: User
+        The user with an origin/destination
+    cost: str
+        The cost name
+    algorithm: str
+        The algorithm to use for the shortest path computation
+    heuristic: function
+        The heuristic function to use if astar is chosen as algorithm
+    radius: float
+        The radius of mobility service search around the User if its origin/destination are coordinates
+    growth_rate_radius: float
+        The radius growth if no path is found from origin to destination if User origin/destination are coordinates
+    walk_speed: float
+        The walk speed in m/s
+
+    Returns
+    -------
+    float
+        The cost of the path
+
+    """
+
+    if algorithm == "dijkstra":
+        sh_algo = dijkstra
+    elif algorithm == "astar":
+        if heuristic is None:
+            heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
+        sh_algo = partial(astar, heuristic=heuristic)
+    else:
+        raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
+
     # If user has coordinates as origin/destination
     if isinstance(user.origin, np.ndarray):
         user_pos_origin = user.origin
@@ -160,18 +241,9 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
                 user.origin = start_node
                 user.destination = end_node
 
-                if algorithm == "dijkstra":
-                    cost_path = dijkstra(mmgraph.mobility_graph, user, cost)
-                elif algorithm == "astar":
-                    if heuristic is None:
-                        heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
-                    cost_path = astar(mmgraph.mobility_graph, user, heuristic, cost)
-                else:
-                    user.origin = user_pos_origin
-                    user.destination = user_pos_destination
-                    raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
+                cost_path = sh_algo(mmgraph.mobility_graph, user, cost)
 
-                    # Clean the graph from artificial nodes
+                # Clean the graph from artificial nodes
 
                 log.debug(f"Clean graph")
 
@@ -234,16 +306,7 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
 
         log.debug(f"Compute path")
 
-        if algorithm == "dijkstra":
-            cost = dijkstra(mmgraph.mobility_graph, user, cost)
-        elif algorithm == "astar":
-            if heuristic is None:
-                heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
-            cost = astar(mmgraph.mobility_graph, user, heuristic, cost)
-        else:
-            user.origin = origin
-            user.destination = destination
-            raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
+        cost_path = sh_algo(mmgraph.mobility_graph, user, cost)
 
         # Clean the graph from artificial nodes
 
@@ -259,35 +322,74 @@ def compute_shortest_path(mmgraph: MultiModalGraph, user:User, cost:str='length'
         user.origin = origin
         user.destination = destination
 
-        if cost == float('inf'):
+        if cost_path == float('inf'):
             log.warning(f"Path not found for {user}")
             raise PathNotFound(origin, destination)
 
         del user.path[0]
         del user.path[-1]
 
-        return cost
+        return cost_path
 
 
+def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
+                                 user: User,
+                                 npath: int,
+                                 cost: str='length',
+                                 algorithm: Literal['astar', 'dijkstra']='astar',
+                                 heuristic: Callable[[str, str], float]=None,
+                                 scale_factor: float = 10,
+                                 radius:float = 500,
+                                 growth_rate_radius: float = 50,
+                                 walk_speed: float = 1.4) -> Tuple[List[List[str]], List[float], List[float]]:
+    """Compute n best shortest path by increasing the costs of the links previously found as shortest path.
 
-def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
-                                 user:User,
-                                 nrun:int,
-                                 cost:str='length',
-                                 algorithm:Literal['astar', 'dijkstra']='astar',
-                                 heuristic=None,
-                                 scale_factor=10,
-                                 radius=500,
-                                 growth_rate_radius=50,
-                                 walk_speed:float=1.4) -> Tuple[List[List[str]], List[float], List[float]]:
+    Parameters
+    ----------
+    mmgraph: MultiModalGraph
+        The multimodal graph to use for the shortest path algorithm
+    user: User
+        The user with an origin/destination
+    npath: int
+        Number of shortest path to compute
+    cost: str
+        The cost name
+    algorithm: str
+        The algorithm to use for the shortest path computation
+    heuristic: function
+        The heuristic function to use if astar is chosen as algorithm
+    scale_factor: int
+        The factor to use for increasing the link costs
+    radius: float
+        The radius of mobility service search around the User if its origin/destination are coordinates
+    growth_rate_radius: float
+        The radius growth if no path is found from origin to destination if User origin/destination are coordinates
+    walk_speed: float
+        The walk speed in m/s
 
-    assert nrun >= 1
+    Returns
+    -------
+    list(list(str)), list(float), list(float)
+        Returns the computed paths, the real costs of those paths and the penalized costs of the paths
+
+    """
+
+    assert npath >= 1
     modified_link_cost = dict()
     paths = []
     penalized_costs = []
     topograph_links = mmgraph.mobility_graph.links
 
-    log.info(f"Compute shortest path User {user.id}")
+    if algorithm == "dijkstra":
+        sh_algo = dijkstra
+    elif algorithm == "astar":
+        if heuristic is None:
+            heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
+        sh_algo = partial(astar, heuristic=heuristic)
+    else:
+        raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
+
+    log.debug(f"Compute shortest path User {user.id}")
 
     if heuristic is None:
         heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
@@ -329,29 +431,13 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
                 user.origin = start_node
                 user.destination = end_node
 
-                if algorithm == "dijkstra":
-                    cost_path = dijkstra(mmgraph.mobility_graph, user, cost)
-                elif algorithm == "astar":
-                    cost_path = astar(mmgraph.mobility_graph, user, heuristic, cost)
-                else:
-                    user.origin = user_pos_origin
-                    user.destination = user_pos_destination
-                    raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
+                cost_path = sh_algo(mmgraph.mobility_graph, user, cost)
 
                 if cost_path != float('inf'):
                     counter = 0
                     similar_path = 0
-                    while counter < nrun:
-                        if algorithm == "dijkstra":
-                            c = dijkstra(mmgraph.mobility_graph, user, cost)
-                        elif algorithm == "astar":
-                            c = astar(mmgraph.mobility_graph, user, heuristic, cost)
-                            log.debug('Computing astar')
-                            # log.info(f"{user.path}")
-                        else:
-                            user.origin = user_pos_origin
-                            user.destination = user_pos_destination
-                            raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
+                    while counter < npath:
+                        c = sh_algo(mmgraph.mobility_graph, user, cost)
 
                         del user.path[0]
                         del user.path[-1]
@@ -426,7 +512,7 @@ def compute_n_best_shortest_path(mmgraph:MultiModalGraph,
     else:
 
         counter = 0
-        while counter < nrun:
+        while counter < npath:
             c = compute_shortest_path(mmgraph, user, cost, algorithm, heuristic)
             for ni in range(len(user.path) - 1):
                 nj = ni + 1

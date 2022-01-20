@@ -4,10 +4,23 @@ from typing import List, Tuple
 from numpy.random import choice as _choice
 
 from mnms.travel_decision.model import DecisionModel
-
+from mnms.graph.core import MultiModalGraph
 
 class LogitDecisionModel(DecisionModel):
-    def __init__(self, mmgraph, theta=0.01, n_shortest_path=3, outfile:str=None):
+    def __init__(self, mmgraph: MultiModalGraph, theta=0.01, n_shortest_path=3, outfile:str=None):
+        """Logit decision model for the path of a user
+
+        Parameters
+        ----------
+        mmgraph: MultiModalGraph
+            The graph on which the model compute the path
+        theta: float
+            Parameter of the logit
+        n_shortest_path: int
+            Number of shortest path top compute
+        outfile: str
+            Path to result CSV file, nothing is written if None
+        """
         super(LogitDecisionModel, self).__init__(mmgraph, outfile=outfile, n_shortest_path=n_shortest_path)
         self._theta = theta
 

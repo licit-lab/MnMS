@@ -4,10 +4,24 @@ from copy import deepcopy
 from mnms.mobility_service.shared import SharedMoblityService
 from mnms.tools.time import TimeTable, Time
 
+
 def _NoneDefault():
     return None
 
+
 class Line(object):
+    """Represent a line of a PublicTransport mobility service
+
+    Parameters
+    ----------
+    id: str
+        Id of the line
+    mobility_service: PublicTransport
+        The PublicTransport class in which the line is
+    timetable: TimeTable
+        The time table of departure
+
+    """
     def __init__(self, id: str, mobility_service: "PublicTransport", timetable: "TimeTable"):
         self.id = id
         self.timetable = timetable
@@ -58,6 +72,16 @@ class Line(object):
 
 
 class PublicTransport(SharedMoblityService):
+    """Public transport class, manage its lines
+
+    Parameters
+    ----------
+    id: str
+        Id of the public transport class
+    default_speed: float
+        Default speed of the public transport
+
+    """
     def __init__(self, id:str, default_speed:float):
         super(PublicTransport, self).__init__(id, default_speed)
         self.lines = dict()

@@ -3,7 +3,7 @@ from mnms.demand import CSVDemandManager
 from mnms.flow.MFD import Reservoir, MFDFlow
 from mnms.log import rootlogger, LOGLEVEL
 from mnms.tools.time import Time, Dt
-from mnms.tools.io import load_graph
+from mnms.graph.io import load_graph
 from mnms.travel_decision.logit import LogitDecisionModel
 
 import os

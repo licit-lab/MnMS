@@ -7,7 +7,7 @@ from collections import defaultdict
 import numpy as np
 
 from mnms.graph import MultiModalGraph
-from mnms.tools.io import save_graph
+from mnms.graph.io import save_graph
 from mnms.tools.time import Time, TimeTable, Dt
 from mnms.mobility_service import BaseMobilityService, PublicTransport
 from mnms import log as rootlogger

@@ -1,4 +1,4 @@
-from mnms.tools.io import load_graph, save_graph
+from mnms.graph.io import load_graph, save_graph
 from mnms.graph.core import MultiModalGraph
 
 from mnms.mobility_service import *

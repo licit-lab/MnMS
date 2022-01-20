@@ -1,7 +1,7 @@
 import os
 import sys
 
-from mnms.tools.io import load_graph
+from mnms.graph.io import load_graph
 
 terminal_size = os.get_terminal_size()
 

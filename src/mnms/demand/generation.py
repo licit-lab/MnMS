@@ -2,7 +2,7 @@ from operator import attrgetter
 
 import numpy as np
 
-from mnms.graph.algorithms import compute_shortest_path
+from mnms.graph.shortest_path import compute_shortest_path
 from mnms.demand.user import User
 from mnms.tools.time import Time
 from mnms.demand.manager import BaseDemandManager

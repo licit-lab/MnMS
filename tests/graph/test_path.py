@@ -2,7 +2,7 @@ import unittest
 
 from mnms import User
 from mnms.graph.core import MultiModalGraph
-from mnms.graph.algorithms import compute_shortest_path
+from mnms.graph.shortest_path import compute_shortest_path
 from mnms.flow.MFD import reconstruct_path
 from mnms.mobility_service import BaseMobilityService
 

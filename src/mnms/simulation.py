@@ -13,6 +13,7 @@ from mnms.tools.progress import ProgressBar
 
 log = create_logger(__name__)
 
+
 class Supervisor(object):
     def __init__(self,
                  graph:MultiModalGraph=None,

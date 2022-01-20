@@ -5,7 +5,7 @@ from mnms.tools.time import Time, Dt
 from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.base import BaseMobilityService
 from mnms.demand.user import User
-from mnms.graph.algorithms import compute_shortest_path
+from mnms.graph.shortest_path import compute_shortest_path
 from mnms.flow.MFD import log
 from mnms.log import LOGLEVEL
 
