@@ -90,4 +90,6 @@ destdir = os.path.abspath(os.path.join(project_root, "doc", "_dvlpt"))
 if not os.path.isdir(destdir):
     os.makedirs(destdir)
 
+nbsphinx_execute = 'always'
+
 main(['-e', '-o', destdir, '-d', '4', '-s', source_suffix[1:], '--force', src_dir])

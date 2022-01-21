@@ -11,7 +11,7 @@ class LOGLEVEL():
 
 
 def create_logger(logname,
-                  base_level=LOGLEVEL.INFO,
+                  base_level=LOGLEVEL.WARNING,
                   stream_level=LOGLEVEL.INFO,
                   ):
     format = f'%(levelname)s(%(name)s): %(message)s'
