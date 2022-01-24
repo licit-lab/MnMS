@@ -2,7 +2,7 @@ from typing import List
 from copy import deepcopy
 
 from mnms.flow.abstract import AbstractFlowMotor
-from mnms.flow.MFD import reconstruct_path
+from mnms.flow.MFD import construct_leg
 from mnms.tools.time import Time, Dt
 from mnms.flow.MFD import Reservoir
 
@@ -63,7 +63,7 @@ class MFDFlowEvent(AbstractFlowMotor):
     def set_initial_demand(self, demand:List[List]):
         self._demand = list()
         for t, path in demand:
-            recon_path = reconstruct_path(self._graph, path)
+            recon_path = construct_leg(self._graph, path)
             for section in recon_path:
                 section['reservoir'] = section.pop('sensor')
             self._demand.append([t, recon_path])

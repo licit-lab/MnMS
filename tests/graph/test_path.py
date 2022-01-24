@@ -3,7 +3,7 @@ import unittest
 from mnms import User
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.shortest_path import compute_shortest_path
-from mnms.flow.MFD import reconstruct_path
+from mnms.flow.MFD import construct_leg
 from mnms.mobility_service import BaseMobilityService
 
 
@@ -52,7 +52,7 @@ class TestPath(unittest.TestCase):
         """
 
     def test_reconstruct(self):
-        reconstructed = reconstruct_path(self.mmgraph, self.path)
+        reconstructed = construct_leg(self.mmgraph, self.path)
         self.assertDictEqual(reconstructed[0], {'reservoir': 'Res1', 'mode': 'M1', 'length': 1.0})
         self.assertDictEqual(reconstructed[1], {'reservoir': 'Res1', 'mode': 'M2', 'length': 1.0})
         self.assertDictEqual(reconstructed[2], {'reservoir': 'Res2', 'mode': 'M2', 'length': 1.0})

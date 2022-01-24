@@ -2,6 +2,8 @@ from typing import List
 from copy import deepcopy
 from typing import Callable, Dict
 
+import numpy as np
+
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.elements import ConnectionLink, TransitLink
@@ -11,7 +13,8 @@ from mnms.demand.user import User
 
 log = create_logger(__name__)
 
-def reconstruct_path(mmgraph: MultiModalGraph, path:List[str]):
+
+def construct_leg(mmgraph: MultiModalGraph, path:List[str]):
     res = list()
     last_res = None
     last_mob = None
@@ -42,6 +45,64 @@ def reconstruct_path(mmgraph: MultiModalGraph, path:List[str]):
 
     res.append({"reservoir": last_res, "mode": last_mob, "length": length})
     return res
+
+
+def get_user_position(mmgraph: MultiModalGraph, user:User, legs:List[Dict], remaining_length:float):
+    """Get the User position from a leg.
+
+    Parameters
+    ----------
+    mmgraph: MultiModalGraph
+        The mulitmodal graph
+    user: User
+        The user to compute the position
+    legs: list[dict]
+        The User legs
+    remaining_length: float
+        Remaining length of the User on its path
+
+    Returns
+    -------
+    np.ndarray
+        The User position
+
+    """
+    total_length = sum(d["length"] for d in legs)
+    current_length = total_length - remaining_length
+    flow_graph = mmgraph.flow_graph
+    flow_links = mmgraph.flow_graph.links
+    mobility_links = mmgraph.mobility_graph.links
+    flow_nodes = mmgraph.flow_graph.nodes
+    mobility_nodes = mmgraph.mobility_graph.nodes
+    upath = user.path
+
+    traveled_distance = 0
+    fnode = mobility_nodes[upath[0]].reference_node
+    upos = flow_nodes[fnode].pos
+    for i in range(len(upath)-1):
+        j = i + 1
+        flink = mobility_links[(upath[i], upath[j])]
+        if isinstance(flink, TransitLink):
+            length_link = 0
+        else:
+            length_link = sum(flow_links[flow_graph._map_lid_nodes[l]].length for l in flink.reference_links)
+        traveled_distance += length_link
+        fnode = mobility_nodes[upath[j]].reference_node
+        upos = flow_nodes[fnode].pos
+        if traveled_distance >= current_length:
+            diff_distance = length_link - (traveled_distance - current_length)
+            fnode = mobility_nodes[upath[i]].reference_node
+            prev_pos = flow_nodes[fnode].pos
+
+            direction = upos - prev_pos
+            norm_direction = np.linalg.norm(direction)
+            direction = direction/norm_direction
+
+            upos = prev_pos + direction*diff_distance
+
+    return upos
+
+
 
 
 class Reservoir(object):
@@ -122,7 +183,7 @@ class MFDFlow(AbstractFlowMotor):
 
         # Update data structure for new users
         for ni, nu in enumerate(new_users):
-            path = reconstruct_path(self._graph, nu.path)
+            path = construct_leg(self._graph, nu.path)
             self._demand.append(path)
             self.remaining_length.append(path[0]['length'])
             self.current_mode.append(path[0]['mode'])
