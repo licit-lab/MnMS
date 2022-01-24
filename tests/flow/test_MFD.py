@@ -109,16 +109,16 @@ class TestMFD(unittest.TestCase):
     def test_mfd(self):
         self.assertEqual(self.mfd_flow.dict_accumulations, {'res1': {'car': 4.0, 'bus': 0}, 'res2': {'car': 0, 'bus': 0}, None: {None:0, 'car': 0, 'bus': 0}})
         self.assertEqual(self.mfd_flow.dict_speeds, {'res1': {'car': 9.5, 'bus': 4.75}, 'res2': {'car': 12.0, 'bus': 4.0}, None: {None:0, 'car': 0, 'bus': 0}})
-        self.assertTrue(self.mfd_flow.remaining_length[0] <= 0)
-        self.assertAlmostEqual(self.mfd_flow.remaining_length[1]/3e4, 1, places=1)
+        self.assertTrue(self.mfd_flow.remaining_length['1'] <= 0)
+        self.assertAlmostEqual(self.mfd_flow.remaining_length['2']/3e4, 1, places=1)
         self.assertTrue(self.mfd_flow.started_trips)
-        self.assertTrue(self.mfd_flow.completed_trips[0] and not self.mfd_flow.completed_trips[1])
-        self.assertEqual(self.mfd_flow.current_reservoir, {0: 'res2', 1: 'res1'})
-        self.assertAlmostEqual(self.mfd_flow.time_completion_legs[0][2] / 770, 1, places=1)
-        self.assertEqual(self.mfd_flow.time_completion_legs[1][0], -1)
-        self.assertEqual(self.mfd_flow.current_leg[0], 2)
-        self.assertEqual(self.mfd_flow.current_leg[1], 0)
-        self.assertEqual(self.mfd_flow.current_mode[0], 'bus')
+        self.assertTrue(self.mfd_flow.completed_trips['1'] and not self.mfd_flow.completed_trips['2'])
+        self.assertEqual(self.mfd_flow.current_reservoir, {'1': 'res2', '2': 'res1'})
+        self.assertAlmostEqual(self.mfd_flow.time_completion_legs['1'][2] / 770, 1, places=1)
+        self.assertEqual(self.mfd_flow.time_completion_legs['2'][0], -1)
+        self.assertEqual(self.mfd_flow.current_leg['1'], 2)
+        self.assertEqual(self.mfd_flow.current_leg['2'], 0)
+        self.assertEqual(self.mfd_flow.current_mode['1'], 'bus')
 
 
 class TestPath(unittest.TestCase):

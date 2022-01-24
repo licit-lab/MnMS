@@ -150,7 +150,7 @@ class MFDFlow(AbstractFlowMotor):
             self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'MODE', 'SPEED', 'ACCUMULATION'])
 
         self.reservoirs: List[Reservoir] = list()
-        self.users = []
+        self.users = dict()
 
     def initialize(self):
         self.dict_accumulations = {}
@@ -160,19 +160,20 @@ class MFDFlow(AbstractFlowMotor):
             self.dict_speeds[res.id] = res.dict_speeds
         self.dict_accumulations[None] = {m: 0 for r in self.reservoirs for m in r.modes} | {None: 0}
         self.dict_speeds[None] = {m: 0 for r in self.reservoirs for m in r.modes} | {None: 0}
-        self.current_leg = []
-        self.remaining_length = []
-        self.current_mode = []
-        self.current_reservoir = {}
-        self.time_completion_legs = []
-        self.started_trips = []
-        self.completed_trips = []
+        self.current_leg = dict()
+        self.remaining_length = dict()
+        self.current_mode = dict()
+        self.current_reservoir = dict()
+        self.time_completion_legs = dict()
+        self.started_trips = dict()
+        self.completed_trips = dict()
         self.nb_user = 0
-        self.departure_times = []
+        self.departure_times = dict()
 
     def add_reservoir(self, res: Reservoir):
         self.reservoirs.append(res)
 
+    # TODO: del User that finish their path
     def step(self, dt: float, new_users:List[User]):
         time = self._tcurrent.to_seconds()
         log.info(f'MFD step {self._tcurrent}')
@@ -182,23 +183,23 @@ class MFDFlow(AbstractFlowMotor):
             self.dict_speeds[res.id] = res.update_speeds()
 
         # Update data structure for new users
-        for ni, nu in enumerate(new_users):
+        for nu in new_users:
             path = construct_leg(self._graph, nu.path)
-            self._demand.append(path)
-            self.remaining_length.append(path[0]['length'])
-            self.current_mode.append(path[0]['mode'])
-            self.current_reservoir[self.nb_user + ni] = path[0]['reservoir']
-            self.current_leg.append(0)
-            self.time_completion_legs.append([-1] * len(path))
+            self._demand[nu.id] = path
+            self.remaining_length[nu.id] = path[0]['length']
+            self.current_mode[nu.id] = path[0]['mode']
+            self.current_reservoir[nu.id] = path[0]['reservoir']
+            self.current_leg[nu.id] = 0
+            self.time_completion_legs[nu.id] = [-1] * len(path)
 
-            self.departure_times.append(nu.departure_time)
-            self.started_trips.append(False)
-            self.completed_trips.append(False)
-            self.users.append(nu)
+            self.departure_times[nu.id] = nu.departure_time
+            self.started_trips[nu.id] = False
+            self.completed_trips[nu.id] = False
+            self.users[nu.id] = nu
 
         self.nb_user += len(new_users)
         # Move the agents
-        for i_user, user in enumerate(self.users):
+        for i_user, user in self.users.items():
             remaining_time = dt
             # Agent enters the network
             # log.debug(f"USER {self.departure_times[i_user].to_seconds()}")

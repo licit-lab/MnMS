@@ -17,7 +17,7 @@ class AbstractFlowMotor(ABC):
     """
     def __init__(self, outfile:str=None):
         self._graph = None
-        self._demand = list()
+        self._demand = dict()
         self._tcurrent: Time = Time()
 
         if outfile is None:
