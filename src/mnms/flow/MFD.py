@@ -152,6 +152,18 @@ class MFDFlow(AbstractFlowMotor):
         self.reservoirs: List[Reservoir] = list()
         self.users = dict()
 
+        self.dict_accumulations = None
+        self.dict_speeds = None
+        self.current_leg = None
+        self.remaining_length = None
+        self.current_mode = None
+        self.current_reservoir = None
+        self.time_completion_legs = None
+        self.started_trips = None
+        self.completed_trips = None
+        self.nb_user = 0
+        self.departure_times = None
+
     def initialize(self):
         self.dict_accumulations = {}
         self.dict_speeds = {}
@@ -177,6 +189,7 @@ class MFDFlow(AbstractFlowMotor):
     def step(self, dt: float, new_users:List[User]):
         time = self._tcurrent.to_seconds()
         log.info(f'MFD step {self._tcurrent}')
+        user_to_del = set()
         # Update the traffic conditions
         for i_res, res in enumerate(self.reservoirs):
             res.update_accumulations(self.dict_accumulations[res.id])
@@ -211,7 +224,7 @@ class MFDFlow(AbstractFlowMotor):
                 remaining_time = time - self.departure_times[i_user].to_seconds()
 
             # Agent is on the network
-            if (not self.completed_trips[i_user]) and (self.started_trips[i_user]):
+            if self.started_trips[i_user]:
                 # Complete current trip leg
                 remaining_length = self.remaining_length[i_user]
                 curr_res = self.current_reservoir[i_user]
@@ -235,15 +248,25 @@ class MFDFlow(AbstractFlowMotor):
                 # Remove agent who reached destinations
                 if self.remaining_length[i_user] < remaining_time * self.dict_speeds[curr_res][curr_mode]:
                     self.dict_accumulations[curr_res][curr_mode] -= user.scale_factor
-                    remaining_time -= self.remaining_length[i_user] / self.dict_speeds[curr_res][curr_mode]
-                    self.time_completion_legs[i_user][curr_leg] = time - remaining_time
-                    self.completed_trips[i_user] = True
-                    self.remaining_length[i_user] = 0
+                    user_to_del.add(i_user)
+                    # remaining_time -= self.remaining_length[i_user] / self.dict_speeds[curr_res][curr_mode]
+                    # self.time_completion_legs[i_user][curr_leg] = time - remaining_time
+                    # self.completed_trips[i_user] = True
+                    # self.remaining_length[i_user] = 0
                 else:
                     # Remove accomplished distance when staying in on the network
                     self.remaining_length[i_user] -= remaining_time * self.dict_speeds[curr_res][curr_mode]
 
         # log.info(f"{self.completed_trips}")
+        for iu in user_to_del:
+            del self.users[iu]
+            del self.completed_trips[iu]
+            del self.started_trips[iu]
+            del self.remaining_length[iu]
+            del self.current_mode[iu]
+            del self.current_leg[iu]
+            del self.current_reservoir[iu]
+            del self.time_completion_legs[iu]
 
     def update_graph(self):
         mobility_graph = self._graph.mobility_graph
