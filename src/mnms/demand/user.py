@@ -34,6 +34,7 @@ class User(object):
         self.origin = origin
         self.destination = destination
         self.departure_time = departure_time
+        self.arrival_time = None
         self.available_mobility_service = available_mobility_services
         self.scale_factor = scale_factor
         self.path = path

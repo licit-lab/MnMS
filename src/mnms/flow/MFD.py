@@ -9,6 +9,7 @@ from mnms.graph.core import MultiModalGraph
 from mnms.graph.elements import ConnectionLink, TransitLink
 from mnms.log import create_logger
 from mnms.demand.user import User
+from mnms.tools.time import Dt, Time
 
 
 log = create_logger(__name__)
@@ -186,7 +187,7 @@ class MFDFlow(AbstractFlowMotor):
         self.reservoirs.append(res)
 
     # TODO: del User that finish their path
-    def step(self, dt: float, new_users:List[User]):
+    def step(self, dt: Dt, new_users:List[User]):
         time = self._tcurrent.to_seconds()
         log.info(f'MFD step {self._tcurrent}')
         user_to_del = set()
@@ -249,6 +250,7 @@ class MFDFlow(AbstractFlowMotor):
                 if self.remaining_length[i_user] < remaining_time * self.dict_speeds[curr_res][curr_mode]:
                     self.dict_accumulations[curr_res][curr_mode] -= user.scale_factor
                     user_to_del.add(i_user)
+                    user.arrival_time = Time.fromSeconds(time - remaining_time)
                     # remaining_time -= self.remaining_length[i_user] / self.dict_speeds[curr_res][curr_mode]
                     # self.time_completion_legs[i_user][curr_leg] = time - remaining_time
                     # self.completed_trips[i_user] = True
