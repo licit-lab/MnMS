@@ -1,11 +1,12 @@
 from typing import Union, List
 
 from mnms.tools.time import Time
+from mnms.tools.observer import Subject
 
 import numpy as np
 
 
-class User(object):
+class User(Subject):
     """User data class
 
     Parameters
@@ -30,13 +31,27 @@ class User(object):
                  available_mobility_services=None,
                  scale_factor=1,
                  path=None):
+        super(User, self).__init__()
         self.id = id
         self.origin = origin
         self.destination = destination
         self.departure_time = departure_time
+        self.arrival_time = None
+        self.path = path
+        self.path_cost = None
         self.available_mobility_service = available_mobility_services
         self.scale_factor = scale_factor
-        self.path = path
 
     def __repr__(self):
         return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"
+
+    def notify(self):
+        p = ' '.join(self.path) if self.path is not None else None
+        for obs in self._observers:
+            obs.update(id=self.id,
+                       origin=self.origin,
+                       destination=self.destination,
+                       departure_time=self.departure_time,
+                       arrival_time=self.arrival_time,
+                       path=p,
+                       cost_path=self.path_cost)
