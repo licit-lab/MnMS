@@ -55,3 +55,7 @@ class User(Subject):
                        arrival_time=self.arrival_time,
                        path=p,
                        cost_path=self.path_cost)
+    
+    def finish_trip(self, arrival_time:Time):
+        self.arrival_time = arrival_time
+        self.notify()

@@ -5,11 +5,11 @@ from typing import List, Dict
 
 class Observer(ABC):
     @abstractmethod
-    def update(self, **kwargs):
+    def update(self, subject:'Subject'):
         pass
 
 
-class Subject():
+class Subject(ABC):
     def __init__(self):
         self._observers: List[Observer] = []
 
@@ -23,7 +23,7 @@ class Subject():
         raise NotImplementedError
 
 
-class CSVObserver(Observer):
+class CSVUserObserver(Observer):
     def __init__(self, filename: str, header:List[str]):
         self._header = header
         self._filename = filename
@@ -34,6 +34,12 @@ class CSVObserver(Observer):
     def __del__(self):
         self._file.close()
 
-    def update(self, **kwargs):
-        row = [kwargs.get(key) for key in self._header]
+    def update(self, subject: 'User'):
+        row = [subject.id,
+               subject.origin,
+               subject.destination,
+               subject.departure_time,
+               subject.arrival_time,
+               ' '.join(subject.path) if subject.path is not None else None,
+               subject.path_cost]
         self._csvhandler.writerow(row)
