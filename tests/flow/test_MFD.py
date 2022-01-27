@@ -115,6 +115,8 @@ class TestMFD(unittest.TestCase):
         self.assertTrue(not self.mfd_flow.completed_trips['2'])
         self.assertEqual(self.mfd_flow.current_reservoir, {'2': 'res1'})
         # self.assertAlmostEqual(self.mfd_flow.time_completion_legs['1'][2] / 770, 1, places=1)
+        # TODO: check if the time computation makes sense, see below
+        # self.assertAlmostEqual(user1.arrival_time / 770, 1, places=1)
         self.assertEqual(self.mfd_flow.time_completion_legs['2'][0], -1)
         # self.assertEqual(self.mfd_flow.current_leg['1'], 2)
         self.assertEqual(self.mfd_flow.current_leg['2'], 0)

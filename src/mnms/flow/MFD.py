@@ -235,6 +235,7 @@ class MFDFlow(AbstractFlowMotor):
                     curr_mode] and curr_leg < len(self._demand[i_user]) - 1:
                     remaining_time -= remaining_length / self.dict_speeds[curr_res][curr_mode]
                     self.dict_accumulations[curr_res][curr_mode] -= user.scale_factor
+                    # TODO discuss saving completion time of legs
                     self.time_completion_legs[i_user][curr_leg] = time - remaining_time
                     self.current_leg[i_user] += 1
 
@@ -269,6 +270,7 @@ class MFDFlow(AbstractFlowMotor):
             del self.current_leg[iu]
             del self.current_reservoir[iu]
             del self.time_completion_legs[iu]
+            self.nb_user -= 1
 
     def update_graph(self):
         mobility_graph = self._graph.mobility_graph
