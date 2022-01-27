@@ -35,9 +35,9 @@ class AbstractDemandManager(ABC):
         """
         pass
 
-    def add_user_observer(self, obs:Observer, users_ids:Union[Literal['all'], List[str]]="all"):
+    def add_user_observer(self, obs:Observer, user_ids:Union[Literal['all'], List[str]]="all"):
         self._observers.append(obs)
-        self._user_to_attach.append(users_ids)
+        self._user_to_attach.append(user_ids)
 
 
 class BaseDemandManager(AbstractDemandManager):
