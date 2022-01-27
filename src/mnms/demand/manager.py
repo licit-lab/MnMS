@@ -6,11 +6,17 @@ import numpy as np
 
 from mnms.demand.user import User
 from mnms.tools.time import Time
+from mnms.tools.observer import Observer
 
 
 class AbstractDemandManager(ABC):
     """Abstract class for loading a User demand
     """
+    def __init__(self):
+        self._observers = []
+        self._user_to_attach = []
+
+
     @abstractmethod
     def get_next_departures(self, tstart:Time, tend: Time) -> List[User]:
         """Return the Users with a departure time between tstart and tend
@@ -28,6 +34,10 @@ class AbstractDemandManager(ABC):
 
         """
         pass
+
+    def add_user_observer(self, obs:Observer, users_ids="all"):
+        self._observers.append(obs)
+        self._user_to_attach(users_ids)
 
 
 class BaseDemandManager(AbstractDemandManager):
@@ -48,6 +58,11 @@ class BaseDemandManager(AbstractDemandManager):
     def get_next_departures(self, tstart:Time, tend:Time) -> List[User]:
         departure = list()
         while tstart <= self._current_user.departure_time < tend:
+            # Attaching observers to Users
+            for iobs, obs in enumerate(self._observers):
+                if self._user_to_attach[iobs] == 'all' or self._current_user.id in self._user_to_attach[iobs]:
+                    self._current_user.attach(obs)
+
             departure.append(self._current_user)
             try:
                 self._current_user = next(self._iter_demand)
@@ -91,6 +106,11 @@ class CSVDemandManager(AbstractDemandManager):
             self._current_user = self.construct_user(next(self._reader))
 
         while tstart <= self._current_user.departure_time < tend:
+            # Attaching observers to Users
+            for iobs, obs in enumerate(self._observers):
+                if self._user_to_attach[iobs] == 'all' or self._current_user.id in self._user_to_attach[iobs]:
+                    self._current_user.attach(obs)
+
             departure.append(self._current_user)
             try:
                 self._current_user = self.construct_user(next(self._reader))
