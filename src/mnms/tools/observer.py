@@ -24,12 +24,12 @@ class Subject(ABC):
 
 
 class CSVUserObserver(Observer):
-    def __init__(self, filename: str, header:List[str]):
-        self._header = header
+    def __init__(self, filename: str):
+        self._header = ["ID", "ORIGIN", "DESTINATION", "DEPARTURE_TIME", "ARRIVAL_TIME", "PATH", "COST_PATH"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
-        self._csvhandler.writerow(header)
+        self._csvhandler.writerow(self._header)
 
     def __del__(self):
         self._file.close()
@@ -38,8 +38,8 @@ class CSVUserObserver(Observer):
         row = [subject.id,
                subject.origin,
                subject.destination,
-               subject.departure_time,
-               subject.arrival_time,
+               subject.departure_time.time,
+               subject.arrival_time.time,
                ' '.join(subject.path) if subject.path is not None else None,
                subject.path_cost]
         self._csvhandler.writerow(row)

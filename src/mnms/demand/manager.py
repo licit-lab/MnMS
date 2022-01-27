@@ -1,5 +1,5 @@
 import csv
-from typing import List, Literal
+from typing import List, Literal, Union
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -35,9 +35,9 @@ class AbstractDemandManager(ABC):
         """
         pass
 
-    def add_user_observer(self, obs:Observer, users_ids="all"):
+    def add_user_observer(self, obs:Observer, users_ids:Union[Literal['all'], List[str]]="all"):
         self._observers.append(obs)
-        self._user_to_attach(users_ids)
+        self._user_to_attach.append(users_ids)
 
 
 class BaseDemandManager(AbstractDemandManager):
@@ -49,6 +49,7 @@ class BaseDemandManager(AbstractDemandManager):
         list of User to manage
     """
     def __init__(self, users):
+        super(BaseDemandManager, self).__init__()
         self._users = users
         self._iter_demand = iter(self._users)
         self._current_user = next(self._iter_demand)
@@ -88,7 +89,7 @@ class CSVDemandManager(AbstractDemandManager):
         Delimiter for the CSV file
     """
     def __init__(self, csvfile, demand_type:Literal['node', 'coordinate']='node', delimiter=';'):
-
+        super(CSVDemandManager, self).__init__()
         self._filename = csvfile
         self._file = open(self._filename, 'r')
         self._reader = csv.reader(self._file, delimiter=delimiter, quotechar='|')

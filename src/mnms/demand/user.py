@@ -46,15 +46,8 @@ class User(Subject):
         return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"
 
     def notify(self):
-        p = ' '.join(self.path) if self.path is not None else None
         for obs in self._observers:
-            obs.update(id=self.id,
-                       origin=self.origin,
-                       destination=self.destination,
-                       departure_time=self.departure_time,
-                       arrival_time=self.arrival_time,
-                       path=p,
-                       cost_path=self.path_cost)
+            obs.update(self)
     
     def finish_trip(self, arrival_time:Time):
         self.arrival_time = arrival_time
