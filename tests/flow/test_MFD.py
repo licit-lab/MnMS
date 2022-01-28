@@ -1,4 +1,5 @@
 import unittest
+from tempfile import TemporaryDirectory
 
 from mnms.flow.MFD import Reservoir, MFDFlow, construct_leg, get_user_position
 from mnms.tools.time import Time, Dt
@@ -17,6 +18,8 @@ class TestMFD(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
+        self.tempfile = TemporaryDirectory()
+        self.pathdir = self.tempfile.name+'/'
 
         mmgraph = MultiModalGraph()
         flow_graph = mmgraph.flow_graph
@@ -73,7 +76,7 @@ class TestMFD(unittest.TestCase):
         res1 = Reservoir('res1', ['car', 'bus'], res_fct1)
         res2 = Reservoir('res2', ['car', 'bus'], res_fct2)
 
-        self.mfd_flow = MFDFlow()
+        self.mfd_flow = MFDFlow(outfile=self.pathdir + 'test.csv')
         self.mfd_flow.add_reservoir(res1)
         self.mfd_flow.add_reservoir(res2)
         self.mfd_flow.set_graph(mmgraph)
@@ -83,28 +86,30 @@ class TestMFD(unittest.TestCase):
         #                                                {'length': 2000, 'mode': 'bus', 'reservoir': "res2"}]],
         #                       [Time.fromSeconds(2000), [{'length': 40000, 'mode': 'car', 'reservoir': "res1"}]]]
 
-        user1 = User('1', '0', '4', Time.fromSeconds(100), scale_factor=2)
-        user2 = User('2', '0', '1', Time.fromSeconds(2000), scale_factor=4)
+        self.user1 = User('1', '0', '4', Time.fromSeconds(100), scale_factor=2)
+        self.user2 = User('2', '0', '1', Time.fromSeconds(2000), scale_factor=4)
 
-        compute_shortest_path(mmgraph, user1, cost='length')
-        compute_shortest_path(mmgraph, user2, cost='length')
+        compute_shortest_path(mmgraph, self.user1, cost='length')
+        compute_shortest_path(mmgraph, self.user2, cost='length')
 
         self.mfd_flow.nb_user = 2
         self.mfd_flow.initialize()
         self.mfd_flow._tcurrent = Time.fromSeconds(0)
         dt = Dt(seconds=30)
-        for _ in range(100):
+        for step in range(100):
             if self.mfd_flow._tcurrent < Time.fromSeconds(100) < self.mfd_flow._tcurrent.add_time(dt):
-                self.mfd_flow.step(dt.to_seconds(), [user1])
+                self.mfd_flow.step(dt.to_seconds(), [self.user1])
             elif self.mfd_flow._tcurrent < Time.fromSeconds(2000) < self.mfd_flow._tcurrent.add_time(dt):
-                self.mfd_flow.step(dt.to_seconds(), [user2])
+                self.mfd_flow.step(dt.to_seconds(), [self.user2])
             else:
                 self.mfd_flow.step(dt.to_seconds(), [])
             self.mfd_flow.update_time(dt)
+            self.mfd_flow.write_result(step_affectation=0, step_flow=step)
 
     def tearDown(self):
         """Concludes and closes the test.
         """
+        self.tempfile.cleanup()
 
     def test_mfd(self):
         self.assertEqual(self.mfd_flow.dict_accumulations, {'res1': {'car': 4.0, 'bus': 0}, 'res2': {'car': 0, 'bus': 0}, None: {None:0, 'car': 0, 'bus': 0}})
@@ -115,8 +120,7 @@ class TestMFD(unittest.TestCase):
         self.assertTrue(not self.mfd_flow.completed_trips['2'])
         self.assertEqual(self.mfd_flow.current_reservoir, {'2': 'res1'})
         # self.assertAlmostEqual(self.mfd_flow.time_completion_legs['1'][2] / 770, 1, places=1)
-        # TODO: check if the time computation makes sense, see below
-        # self.assertAlmostEqual(user1.arrival_time / 770, 1, places=1)
+        self.assertAlmostEqual(self.user1.arrival_time.to_seconds() / 770, 1, places=1)
         self.assertEqual(self.mfd_flow.time_completion_legs['2'][0], -1)
         # self.assertEqual(self.mfd_flow.current_leg['1'], 2)
         self.assertEqual(self.mfd_flow.current_leg['2'], 0)
