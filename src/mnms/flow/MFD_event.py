@@ -148,7 +148,7 @@ class MFDFlowEvent(AbstractFlowMotor):
             if entry_is_next:
                 for i in running:
                     v = self.dict_speeds[
-                self.list_current_reservoir[i]][self.list_current_mode[i]]
+                self.current_reservoir[i]][self.current_mode[i]]
                     self.remaining_length[i] -= v * (t_new - time_cur)
                 # add new user
                 i_user = waiting_entry[id_next_entry]
