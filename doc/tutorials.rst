@@ -11,4 +11,5 @@ Here you can find the tutorials for the modules of *mnms*:
 
     tutorials/TutorialGraph
     tutorials/TutorialDemandTravelDecision
+    tutorials/TutorialEnginesMFD
     tutorials/TutorialSimulationMFD
