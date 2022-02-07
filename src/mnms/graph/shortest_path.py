@@ -475,7 +475,6 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                             log.warning(f'Cant find different paths user {user}')
                             break
 
-
                     for lnodes, saved_cost in modified_link_cost.items():
                         mmgraph.mobility_graph.links[lnodes].costs[cost] = saved_cost
 

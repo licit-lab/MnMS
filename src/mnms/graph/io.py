@@ -1,8 +1,7 @@
 import json
-from collections import defaultdict
 from importlib import import_module
 
-from mnms.graph.core import MultiModalGraph, ConnectionLink, TransitLink, GeoNode, GeoLink
+from mnms.graph.core import MultiModalGraph, GeoNode, GeoLink
 
 
 def save_graph(mmgraph: MultiModalGraph, filename, indent=2):
