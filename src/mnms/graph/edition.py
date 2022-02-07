@@ -5,6 +5,7 @@ import numpy as np
 from mnms.graph.core import OrientedGraph, MultiModalGraph
 from mnms.tools.progress import ProgressBar
 
+
 def delete_node(graph: OrientedGraph, nid:str, upstream_nodes:List[str]=[]):
     """Safe deletion of a node in a graph
 

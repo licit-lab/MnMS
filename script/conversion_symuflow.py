@@ -252,5 +252,4 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None, ban_mobi
 if __name__ == "__main__":
     rootlogger.setLevel(LOGLEVEL.INFO)
     convert_symuflow_to_mmgraph(r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/Lyon_symuviainput_1.xml",
-                                zone_file=r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/fichier_liens.csv",
-                                ban_mobility_services=['METRO', 'TRAM'])
+                                zone_file=r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/fichier_liens_Without_RES0.csv")

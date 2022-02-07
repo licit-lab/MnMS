@@ -23,12 +23,6 @@ def create_logger(logname,
     stream.setFormatter(formatter)
     logger.addHandler(stream)
     logger.propagate = False
-
-    # if logfile is not None:
-    #     file = logging.FileHandler(logfile)
-    #     file.setLevel(file_level)
-    #     logger.addHandler(file)
-
     return logger
 
 
@@ -39,6 +33,9 @@ def get_all_mnms_logger():
 def get_logger(logger_name):
     return logging.getLogger(logger_name)
 
+
+def set_all_mnms_logger_level(level):
+    [logger.setLevel(level) for logger in get_all_mnms_logger()]
 
 def attach_log_file(filename:str, file_level=LOGLEVEL.INFO):
     loggers = get_all_mnms_logger()

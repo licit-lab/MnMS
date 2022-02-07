@@ -84,8 +84,6 @@ class TopoGraph(OrientedGraph):
 
 
 class GeoGraph(OrientedGraph):
-    """Class implementing a geometrical oriented graph
-    """
     def add_node(self, nodeid: str, pos: List[float]) -> None:
         assert nodeid not in self.nodes
 
@@ -225,8 +223,6 @@ class MultiModalGraph(object):
 
         self._connection_services = dict()
         self._mobility_services = dict()
-
-        # self.node_referencing = defaultdict(list)
 
         [self.flow_graph.add_node(nid, pos) for nid, pos in nodes.items()]
         [self.flow_graph.add_link(lid, unid, dnid) for lid, (unid, dnid) in  links.items()]

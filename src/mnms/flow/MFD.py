@@ -251,7 +251,8 @@ class MFDFlow(AbstractFlowMotor):
                 if self.remaining_length[i_user] < remaining_time * self.dict_speeds[curr_res][curr_mode]:
                     self.dict_accumulations[curr_res][curr_mode] -= user.scale_factor
                     user_to_del.add(i_user)
-                    user.arrival_time = Time.fromSeconds(time - remaining_time)
+                    arrival_time = Time.fromSeconds(time - remaining_time)
+                    user.finish_trip(arrival_time)
                     # remaining_time -= self.remaining_length[i_user] / self.dict_speeds[curr_res][curr_mode]
                     # self.time_completion_legs[i_user][curr_leg] = time - remaining_time
                     # self.completed_trips[i_user] = True

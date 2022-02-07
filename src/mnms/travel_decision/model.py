@@ -72,10 +72,10 @@ class DecisionModel(ABC):
                                                        scale_factor=self._scale_factor, radius=self._radius_sp,
                                                        growth_rate_radius=self._radius_growth_sp,
                                                        walk_speed=self._walk_speed)
-        user.path, cost = self.path_choice(paths, costs)
+        user.path, user.path_cost = self.path_choice(paths, costs)
 
         if self._write:
-            self._csvhandler.writerow([user.id, str(cost),' '.join(user.path)])
+            self._csvhandler.writerow([user.id, str(user.path_cost),' '.join(user.path)])
 
 
 class SimpleDecisionModel(DecisionModel):
