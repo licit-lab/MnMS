@@ -7,7 +7,7 @@ from mnms.travel_decision.model import DecisionModel
 from mnms.graph.core import MultiModalGraph
 
 class LogitDecisionModel(DecisionModel):
-    def __init__(self, mmgraph: MultiModalGraph, theta=0.01, n_shortest_path=3, outfile:str=None):
+    def __init__(self, mmgraph: MultiModalGraph, theta=0.01, n_shortest_path=3, outfile:str=None, verbose_file=False):
         """Logit decision model for the path of a user
 
         Parameters
@@ -21,7 +21,7 @@ class LogitDecisionModel(DecisionModel):
         outfile: str
             Path to result CSV file, nothing is written if None
         """
-        super(LogitDecisionModel, self).__init__(mmgraph, outfile=outfile, n_shortest_path=n_shortest_path)
+        super(LogitDecisionModel, self).__init__(mmgraph, outfile=outfile, n_shortest_path=n_shortest_path, verbose_file=verbose_file)
         self._theta = theta
 
     def path_choice(self, paths:List[List[str]], costs:List[float]) -> Tuple[List[str], float]:

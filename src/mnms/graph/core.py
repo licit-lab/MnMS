@@ -50,6 +50,9 @@ class OrientedGraph(object):
         del self._map_lid_nodes[lid]
         self._adjacency[nodes[0]].remove(nodes[1])
 
+    def get_link(self, id:str):
+        return self.links[self._map_lid_nodes[id]]
+
 
 class TopoGraph(OrientedGraph):
     """Class implementing a purely topological oriented graph
