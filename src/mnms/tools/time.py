@@ -63,6 +63,9 @@ class Time(object):
     def __repr__(self):
         return f"Time({self.time})"
 
+    def __str__(self):
+        return self.time
+
     def __lt__(self, other):
         return self.to_seconds() < other.to_seconds()
 

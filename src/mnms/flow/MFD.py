@@ -318,3 +318,7 @@ class MFDFlow(AbstractFlowMotor):
             for mode in res.modes:
                 self._csvhandler.writerow([str(step_affectation), str(step_flow), tcurrent, resid, mode, res.dict_speeds[mode], res.dict_accumulations[mode]])
 
+    def finalize(self):
+        super(MFDFlow, self).finalize()
+        for u in self.users.values():
+            u.finish_trip(None)

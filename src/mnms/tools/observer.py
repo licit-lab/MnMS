@@ -38,8 +38,8 @@ class CSVUserObserver(Observer):
         row = [subject.id,
                subject.origin,
                subject.destination,
-               subject.departure_time.time,
-               subject.arrival_time.time,
+               subject.departure_time,
+               subject.arrival_time,
                ' '.join(subject.path) if subject.path is not None else None,
                subject.path_cost]
         self._csvhandler.writerow(row)
