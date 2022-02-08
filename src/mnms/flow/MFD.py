@@ -300,9 +300,9 @@ class MFDFlow(AbstractFlowMotor):
             new_speed = 0
             for gid, length in tdata['lengths'].items():
                 speed = tdata['speeds'][gid]
+                total_len += length
                 if speed is not None:
                     new_speed += length * speed
-                    total_len += length
                 else:
                     link_node = mobility_graph._map_lid_nodes[tid]
                     link = mobility_graph.links[link_node]
