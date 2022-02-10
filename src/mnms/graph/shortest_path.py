@@ -101,7 +101,6 @@ def astar(G: TopoGraph, user: User, cost: str, heuristic: Callable[[str, str], f
     float
         The cost of the path
 
-
     """
     origin = user.origin
     destination = user.destination
@@ -286,8 +285,8 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         end_node = f"END_{origin}_{destination}"
         log.debug(f"Create artitificial nodes: {start_node}, {end_node}")
 
-        mmgraph.mobility_graph.add_node(start_node, 'NULL')
-        mmgraph.mobility_graph.add_node(end_node, 'NULL')
+        mmgraph.mobility_graph.add_node(start_node, 'WALK')
+        mmgraph.mobility_graph.add_node(end_node, 'WALK')
 
         log.debug(f"Create start artificial links with: {start_nodes}")
         virtual_cost = {cost: 0}

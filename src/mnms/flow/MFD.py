@@ -248,10 +248,10 @@ class MFDFlow(AbstractFlowMotor):
                     curr_res = self.current_reservoir[i_user]
                     self.dict_accumulations[curr_res][curr_mode] += user.scale_factor
                 # Remove agent who reached destinations
-                if self.remaining_length[i_user] < remaining_time * self.dict_speeds[curr_res][curr_mode]:
+                if remaining_length < remaining_time * self.dict_speeds[curr_res][curr_mode]:
                     self.dict_accumulations[curr_res][curr_mode] -= user.scale_factor
                     user_to_del.add(i_user)
-                    arrival_time = Time.fromSeconds(time - remaining_time)
+                    arrival_time = Time.fromSeconds(time - remaining_length/self.dict_speeds[curr_res][curr_mode])
                     user.finish_trip(arrival_time)
                     # remaining_time -= self.remaining_length[i_user] / self.dict_speeds[curr_res][curr_mode]
                     # self.time_completion_legs[i_user][curr_leg] = time - remaining_time

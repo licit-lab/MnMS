@@ -235,12 +235,16 @@ class MultiModalGraph(object):
         self._mobility_services[service.id] = service
         self.mobility_graph.add_topo_graph(service)
 
-    def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, costs):
+    def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, costs:Dict[str, float]):
         upstream_service = self.mobility_graph.nodes[upstream_node].mobility_service
         downstream_service = self.mobility_graph.nodes[downstream_node].mobility_service
         assert upstream_service != downstream_service, f"Upstream service must be different from downstream service ({upstream_service})"
         assert "time" in costs, "time must pe present in the cost dictionnay"
-
+        # If service in the mobility services of MultiModalGraph, we compute the cost of connection
+        if downstream_service in self._mobility_services:
+            dserv = self._mobility_services[downstream_service]
+            connect_cost = dserv.connect_to_service(downstream_node)
+            costs = dict(list(costs.items()) + list(connect_cost.items()) + [(k, costs[k] + connect_cost[k]) for k in set(costs) & set(connect_cost)])
         link = TransitLink(lid, upstream_node, downstream_node, costs)
         self.mobility_graph._add_link(link)
         self._connection_services[(upstream_node, downstream_node)] = lid
@@ -276,16 +280,8 @@ class MultiModalGraph(object):
                 dist = np.linalg.norm(flow_graph_nodes[node_nj.reference_node].pos - flow_graph_nodes[node_ni.reference_node].pos)
                 if node_nj.mobility_service not in exclusion_ni:
                     c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
-                    cost_connect = mservice_nj.connect_to_service(nj)
-                    for key, val in cost_connect.items():
-                        if key in c:
-                            c[key] += val
-                    self.mobility_graph.add_link(f'_WALK_{ni}_{nj}', ni, nj, c, mobility_service='HUB')
+                    self.connect_mobility_service(f'_WALK_{ni}_{nj}', ni, nj, c)
 
                 if node_ni.mobility_service not in exclusion_nj:
                     c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
-                    cost_connect = mservice_nj.connect_to_service(nj)
-                    for key, val in cost_connect.items():
-                        if key in c:
-                            c[key] += val
-                    self.mobility_graph.add_link(f'_WALK_{nj}_{ni}', nj, ni, c, mobility_service='HUB')
+                    self.connect_mobility_service(f'_WALK_{nj}_{ni}', nj, ni, c)
