@@ -138,6 +138,7 @@ def astar(G: TopoGraph, user: User, cost: str, heuristic: Callable[[str, str], f
                 if user.available_mobility_service is not None:
                     if G.nodes[link.downstream_node].mobility_service not in user.available_mobility_service:
                         tentative_gscore = float('inf')
+                        discovered_nodes.add(neighbor)
 
             if tentative_gscore < gscore[neighbor]:
                 prev[neighbor] = current
