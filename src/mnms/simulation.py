@@ -110,7 +110,7 @@ class Supervisor(object):
                     self._user_flow.update_time(flow_dt)
                     self._user_flow.step(flow_dt.to_seconds(), users_step)
                     self._flow_motor.update_time(flow_dt)
-                    self._flow_motor.step(flow_dt.to_seconds(), users_step)
+                    self._flow_motor.step(flow_dt.to_seconds())
                     if self._flow_motor._write:
                         self._flow_motor.write_result(affectation_step, flow_step)
                     tcurrent = next_time
@@ -120,7 +120,7 @@ class Supervisor(object):
                 for _ in range(affectation_factor):
                     next_time = tcurrent.add_time(flow_dt)
                     self._flow_motor.update_time(flow_dt)
-                    self._flow_motor.step(flow_dt.to_seconds(), [])
+                    self._flow_motor.step(flow_dt.to_seconds())
                     if self._flow_motor._write:
                         self._flow_motor.write_result(affectation_step, flow_step)
                     tcurrent = next_time

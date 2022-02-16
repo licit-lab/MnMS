@@ -188,15 +188,54 @@ class MFDFlow(AbstractFlowMotor):
         self.reservoirs.append(res)
 
     # TODO: del User that finish their path
-    def step(self, dt: Dt, new_users:List[User]):
+    def step(self, dt: Dt):#, veh_manager:VehicleManager):# new_users:List[User]):
+        veh_manager = VehicleManager()
         time = self._tcurrent.to_seconds()
         log.info(f'MFD step {self._tcurrent}')
         user_to_del = set()
+
+        # Calculate accumulations
+        for veh_id in veh_manager._vehicles:
+            veh = veh_manager._vehicles[veh_id]
+            curr_link = self._graph.mobility_graph.links[(veh.current_link)]
+            lid = curr_link.reference_links[0] # take reservoir of first part of trip
+            flow_link = self._graph.flow_graph.get_link(lid)
+            res_id = flow_link.zone
+            veh_type = veh.type.upper() # dirty
+            self.dict_accumulations[res_id][veh_type] += 1
+
         # Update the traffic conditions
         for i_res, res in enumerate(self.reservoirs):
             res.update_accumulations(self.dict_accumulations[res.id])
             self.dict_speeds[res.id] = res.update_speeds()
 
+        # Move the vehicles
+        veh_to_remove = []
+        for veh_id in veh_manager._vehicles:
+            veh = veh_manager._vehicles[veh_id]
+            curr_link = self._graph.mobility_graph.links[(veh.current_link)]
+            lid = curr_link.reference_links[0]
+            flow_link = self._graph.flow_graph.get_link(lid)
+            res_id = flow_link.zone
+            veh_type = veh.type.upper()
+            speed = self.dict_speeds[res_id][veh_type]
+            dist = dt * speed
+            veh.move(dist)
+            if veh.is_arrived:
+                veh_to_remove.append(veh)
+
+        # Remove vehicles which arrived destination
+        for veh in veh_to_remove:
+            veh_manager.remove_vehicle(veh)
+
+        # for veh in self.vehicules:
+        #     new_link = veh.move(d)
+        #     if veh.is_arrived:
+        #         self.vehicles.remove_vehicle(veh)
+        #     else:
+        #         new_res = self._graph.mobility_graph.links[new_link].zone
+
+        '''
         # Update data structure for new users
         for nu in new_users:
             path = construct_leg(self._graph, nu.path)
@@ -273,14 +312,8 @@ class MFDFlow(AbstractFlowMotor):
             del self.current_reservoir[iu]
             del self.time_completion_legs[iu]
             self.nb_user -= 1
+        '''
 
-
-        # for veh in self.vehicules:
-        #     new_link = veh.move(d)
-        #     if veh.is_arrived:
-        #         self.vehicles.remove_vehicle(veh)
-        #     else:
-        #         new_res = self._graph.mobility_graph.links[new_link].zone
 
     def update_graph(self):
         mobility_graph = self._graph.mobility_graph

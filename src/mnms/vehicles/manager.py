@@ -25,7 +25,8 @@ class VehicleManager(object):
 if __name__ == "__main__":
     from mnms.vehicles.veh_type import Car
     manager = VehicleManager()
-    c = Car('7896', '0', '1', [0,0])
+    #c = Car('7896', '0', '1', [0,0])
+    c = Car('C0', 'C3', [(('C0', 'C1'), 1), (('C1', 'C2'), 1), (('C2', 'C3'), 1)])
     manager.add_vehicle(c)
     print(manager._vehicles)
 
