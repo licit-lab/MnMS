@@ -1,5 +1,4 @@
 from typing import List
-from copy import deepcopy
 from typing import Callable, Dict
 
 import numpy as np
@@ -10,7 +9,7 @@ from mnms.graph.elements import ConnectionLink, TransitLink
 from mnms.log import create_logger
 from mnms.demand.user import User
 from mnms.tools.time import Dt, Time
-
+from mnms.vehicles.manager import VehicleManager
 
 log = create_logger(__name__)
 
@@ -26,7 +25,7 @@ def construct_leg(mmgraph: MultiModalGraph, path:List[str]):
         link = mmgraph.mobility_graph.links[(path[ni], path[nj])]
         if isinstance(link, ConnectionLink):
             for lid in link.reference_links:
-                flow_link = mmgraph.flow_graph.links[mmgraph.flow_graph._map_lid_nodes[lid]]
+                flow_link = mmgraph.flow_graph.get_link(lid)
                 curr_res = flow_link.zone
                 curr_mob = link.mobility_service
                 if curr_res != last_res or curr_mob != last_mob:
@@ -165,6 +164,8 @@ class MFDFlow(AbstractFlowMotor):
         self.nb_user = 0
         self.departure_times = None
 
+        self.vehicles = VehicleManager()
+
     def initialize(self):
         self.dict_accumulations = {}
         self.dict_speeds = {}
@@ -272,6 +273,14 @@ class MFDFlow(AbstractFlowMotor):
             del self.current_reservoir[iu]
             del self.time_completion_legs[iu]
             self.nb_user -= 1
+
+
+        # for veh in self.vehicules:
+        #     new_link = veh.move(d)
+        #     if veh.is_arrived:
+        #         self.vehicles.remove_vehicle(veh)
+        #     else:
+        #         new_res = self._graph.mobility_graph.links[new_link].zone
 
     def update_graph(self):
         mobility_graph = self._graph.mobility_graph

@@ -225,7 +225,7 @@ class MultiModalGraph(object):
         self.zones = dict()
 
         self._connection_services = dict()
-        self._mobility_services = dict()
+        self._mobility_services:Dict[str, "BaseMobilityService"] = dict()
 
         [self.flow_graph.add_node(nid, pos) for nid, pos in nodes.items()]
         [self.flow_graph.add_link(lid, unid, dnid) for lid, (unid, dnid) in  links.items()]

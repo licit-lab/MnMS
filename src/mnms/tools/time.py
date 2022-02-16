@@ -30,6 +30,9 @@ class Dt(object):
     def to_seconds(self):
         return float(int(self._hours*3600)+int(self._minutes*60)+self._seconds)
 
+    def __eq__(self, other):
+        return self.to_seconds() == other.to_seconds()
+
 
 class Time(object):
     def __init__(self, strdate="00:00:00"):

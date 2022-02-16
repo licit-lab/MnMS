@@ -4,6 +4,7 @@ import csv
 
 from mnms.graph.core import MultiModalGraph
 from mnms.flow.abstract import AbstractFlowMotor
+from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.model import DecisionModel
 from mnms.tools.time import Time, Dt
@@ -16,19 +17,20 @@ log = create_logger(__name__)
 
 class Supervisor(object):
     def __init__(self,
-                 graph:MultiModalGraph=None,
-                 demand:AbstractDemandManager=None,
-                 flow_motor:AbstractFlowMotor=None,
-                 decision_model:DecisionModel=None,
-                 outfile:str=None):
+                 graph: MultiModalGraph,
+                 demand: AbstractDemandManager,
+                 flow_motor: AbstractFlowMotor,
+                 decision_model: DecisionModel,
+                 outfile: str = None):
 
         self._graph: MultiModalGraph = graph
         self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
         self._decision_model:DecisionModel = decision_model
+        self._user_flow = UserFlow()
 
-        if flow_motor is not None:
-            flow_motor.set_graph(graph)
+        flow_motor.set_graph(graph)
+        self._user_flow.set_graph(graph)
 
         if outfile is None:
             self._write = False
@@ -51,6 +53,26 @@ class Supervisor(object):
     def add_decision_model(self, model: DecisionModel):
         self._decision_model = model
 
+    def get_new_users(self, tcurrent, principal_dt):
+        log.info(f'Getting next departures {tcurrent}->{tcurrent.add_time(principal_dt)} ..')
+        new_users = self._demand.get_next_departures(tcurrent, tcurrent.add_time(principal_dt))
+        log.info(f'Done, {len(new_users)} new departure')
+
+        return new_users
+
+    def compute_user_paths(self, new_users):
+        log.info('Computing paths for new users ..')
+        start = time()
+        # for nu in ProgressBar(new_users, "Compute paths"):
+        for nu in new_users:
+            try:
+                self._decision_model(nu)
+            except PathNotFound:
+                pass
+
+        end = time()
+        log.info(f'Done [{end - start:.5} s]')
+
     def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
         log.info(f'Start run from {tstart} to {tend}')
         tcurrent = tstart
@@ -61,26 +83,16 @@ class Supervisor(object):
         self._flow_motor.set_time(tcurrent)
         self._flow_motor.initialize()
 
+        self._user_flow.set_time(tcurrent)
+        self._user_flow.initialize()
+
         while tcurrent < tend:
             log.info(f'Current time: {tcurrent}, affectation step: {affectation_step}')
 
-            log.info(f'Getting next departures {tcurrent}->{tcurrent.add_time(principal_dt)} ..')
-            new_users = self._demand.get_next_departures(tcurrent, tcurrent.add_time(principal_dt))
+            new_users = self.get_new_users(tcurrent, principal_dt)
             iter_new_users = iter(new_users)
-            log.info(f'Done, {len(new_users)} new departure')
 
-            log.info('Computing paths for new users ..')
-            start = time()
-
-            # for nu in ProgressBar(new_users, "Compute paths"):
-            for nu in new_users:
-                try:
-                    self._decision_model(nu)
-                except PathNotFound:
-                    pass
-
-            end = time()
-            log.info(f'Done [{end-start:.5} s]')
+            self.compute_user_paths(new_users)
 
             log.info(f'Launching {affectation_factor} step of {self._flow_motor.__class__.__name__} ...')
             start = time()
@@ -95,6 +107,8 @@ class Supervisor(object):
                             u = next(iter_new_users)
                     except StopIteration:
                         pass
+                    self._user_flow.update_time(flow_dt)
+                    self._user_flow.step(flow_dt.to_seconds(), users_step)
                     self._flow_motor.update_time(flow_dt)
                     self._flow_motor.step(flow_dt.to_seconds(), users_step)
                     if self._flow_motor._write:
