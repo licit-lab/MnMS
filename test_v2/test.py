@@ -8,8 +8,8 @@ from mnms.simulation import Supervisor
 from mnms.travel_decision.model import SimpleDecisionModel
 from mnms.tools.observer import CSVUserObserver
 from mnms.flow.MFD import MFDFlow, Reservoir
+from mnms.tools.observer import CSVVehicleObserver
 import os
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -32,16 +32,20 @@ car.add_node('C1', '1')
 car.add_node('C2', '2')
 car.add_node('C3', '3')
 
-car.add_link('C0_C1', 'C0', 'C1', {'length':1}, ['0_1'])
-car.add_link('C1_C2', 'C1', 'C2', {'length':1}, ['1_2'])
-car.add_link('C2_C3', 'C2', 'C3', {'length':1}, ['2_3'])
+car.add_link('C0_C1', 'C0', 'C1', {'length':1000}, ['0_1'])
+car.add_link('C1_C2', 'C1', 'C2', {'length':1000}, ['1_2'])
+car.add_link('C2_C3', 'C2', 'C3', {'length':1000}, ['2_3'])
+
+car.attach_vehicle_observer(CSVVehicleObserver(dir_path+"/veh.csv"))
+
 mmgraph.add_mobility_service(car)
 mmgraph.add_zone('ZONE', ['0_1', '1_2', '2_3'])
 
 
 users = [User('U0', '0', '3', Time("07:00:00")),
          User('U1', '0', '3', Time("07:10:00")),
-         User('U2', '0', '3', Time("07:20:00"))]
+         User('U2', '0', '3', Time("07:20:00")),
+         User('U3', '0', '3', Time("07:21:00"))]
 
 obs = CSVUserObserver(dir_path+'/user.csv')
 for u in users:

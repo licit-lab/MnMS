@@ -42,13 +42,15 @@ class User(Subject):
         self.available_mobility_service = available_mobility_services
         self.scale_factor = scale_factor
 
+        self._vehicle = None
+
     def __repr__(self):
         return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"
 
-    def notify(self):
-        for obs in self._observers:
-            obs.update(self)
-    
+    @property
+    def vehicle(self):
+        return self._vehicle
+
     def finish_trip(self, arrival_time:Time):
         self.arrival_time = arrival_time
         self.notify()

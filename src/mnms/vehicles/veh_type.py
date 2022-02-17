@@ -1,7 +1,9 @@
 from typing import List, Dict, Tuple
 
+from mnms.tools.observer import TimeDependentSubject
 
-class Vehicle(object):
+
+class Vehicle(TimeDependentSubject):
     _counter = 0
 
     def __init__(self,
@@ -10,6 +12,7 @@ class Vehicle(object):
                  path: List[Tuple[Tuple[str, str], float]],
                  capacity:int):
 
+        super(Vehicle, self).__init__()
         self._global_id = str(Vehicle._counter)
         Vehicle._counter += 1
 
@@ -44,14 +47,24 @@ class Vehicle(object):
     def current_link(self):
         return self._current_link
 
-    def take_user(self, user:str):
+
+    @property
+    def remaining_link_length(self):
+        return self._remaining_link_length
+
+    def take_user(self, user:'User'):
+        user._vehicle = self.id
         self._passenger[user.id] = user
 
-    def drop_user(self, user:str):
+    def drop_user(self, user:'User'):
+        user.is_in_vehicle = False
         del self._passenger[user.id]
 
-    def set_speed(self, speed:float):
-        self._speed = speed
+    def drop_all_passengers(self):
+        uids = list(self._passenger.keys())
+        for u in uids:
+            self._passenger[u].is_in_vehicle = False
+            del self._passenger[u]
 
     def move(self, dist: float):
         dist_travelled = self._remaining_link_length - dist
@@ -85,9 +98,4 @@ class Subway(Vehicle):
 
 if __name__ == "__main__":
     veh = Car('C0', 'C3', [(('C0', 'C1'), 1), (('C1', 'C2'), 1), (('C2', 'C3'), 1)])
-    # for i in range(31):
-    #     veh.move(0.1)
-    #     print(i, veh._current_link, veh._remaining_link_length)
 
-    veh.move(2.5)
-    print(veh._current_link, veh._remaining_link_length)

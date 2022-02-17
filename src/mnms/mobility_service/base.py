@@ -26,6 +26,8 @@ class BaseMobilityService(TopoGraph):
         self.default_speed = default_speed
         self.fleet = FleetManager(Car)
 
+        self._observer = None
+
     @classmethod
     def __load__(cls, data:dict) -> "BaseMobilityService":
         new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
@@ -54,7 +56,13 @@ class BaseMobilityService(TopoGraph):
 
     def request_vehicle(self, user: User) -> Tuple[Dt, str, Vehicle]:
         veh_path = self._construct_veh_path(user)
-        return Dt(), user.path[0], self.fleet.create_veh(user.origin, user.destination, veh_path, capacity=1)
+        new_veh =  self.fleet.create_veh(user.origin, user.destination, veh_path, capacity=1)
+        if self._observer is not None:
+            new_veh.attach(self._observer)
+        return Dt(), user.path[0], new_veh
+
+    def attach_vehicle_observer(self, observer):
+        self._observer = observer
 
     def _construct_veh_path(self, user: User):
         veh_path = list()

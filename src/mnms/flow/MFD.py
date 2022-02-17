@@ -103,8 +103,6 @@ def get_user_position(mmgraph: MultiModalGraph, user:User, legs:List[Dict], rema
     return upos
 
 
-
-
 class Reservoir(object):
     # id to identify the sensor, is not used for now, could be a string
     # modes are the transportation modes available for the sensor
@@ -190,9 +188,11 @@ class MFDFlow(AbstractFlowMotor):
     # TODO: del User that finish their path
     def step(self, dt: Dt):#, veh_manager:VehicleManager):# new_users:List[User]):
         veh_manager = VehicleManager()
-        time = self._tcurrent.to_seconds()
         log.info(f'MFD step {self._tcurrent}')
-        user_to_del = set()
+
+        for res in self.reservoirs:
+            for mode in res.modes:
+                res.dict_accumulations[mode] = 0
 
         # Calculate accumulations
         for veh_id in veh_manager._vehicles:
@@ -213,7 +213,7 @@ class MFDFlow(AbstractFlowMotor):
         veh_to_remove = []
         for veh_id in veh_manager._vehicles:
             veh = veh_manager._vehicles[veh_id]
-            curr_link = self._graph.mobility_graph.links[(veh.current_link)]
+            curr_link = self._graph.mobility_graph.links[veh.current_link]
             lid = curr_link.reference_links[0]
             flow_link = self._graph.flow_graph.get_link(lid)
             res_id = flow_link.zone
@@ -221,19 +221,17 @@ class MFDFlow(AbstractFlowMotor):
             speed = self.dict_speeds[res_id][veh_type]
             dist = dt * speed
             veh.move(dist)
+            veh.notify(self._tcurrent)
             if veh.is_arrived:
                 veh_to_remove.append(veh)
 
         # Remove vehicles which arrived destination
         for veh in veh_to_remove:
-            veh_manager.remove_vehicle(veh)
 
-        # for veh in self.vehicules:
-        #     new_link = veh.move(d)
-        #     if veh.is_arrived:
-        #         self.vehicles.remove_vehicle(veh)
-        #     else:
-        #         new_res = self._graph.mobility_graph.links[new_link].zone
+            veh.drop_all_passengers()
+
+            # TODO: Deletion of the vehicles must be done with an update of the fleet mobility service
+            veh_manager.remove_vehicle(veh)
 
         '''
         # Update data structure for new users
