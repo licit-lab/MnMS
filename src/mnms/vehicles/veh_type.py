@@ -1,7 +1,9 @@
 from typing import List, Dict, Tuple
 
 from mnms.tools.observer import TimeDependentSubject
+from mnms.log import create_logger
 
+log = create_logger(__name__)
 
 class Vehicle(TimeDependentSubject):
     _counter = 0
@@ -57,14 +59,12 @@ class Vehicle(TimeDependentSubject):
         self._passenger[user.id] = user
 
     def drop_user(self, user:'User'):
-        user.is_in_vehicle = False
+        user._vehicle = None
+        user._current_node = self._current_link[1]
         del self._passenger[user.id]
 
     def drop_all_passengers(self):
-        uids = list(self._passenger.keys())
-        for u in uids:
-            self._passenger[u].is_in_vehicle = False
-            del self._passenger[u]
+        [self.drop_user(u) for u in list(self._passenger.values())]
 
     def move(self, dist: float):
         self.started = True
@@ -74,11 +74,13 @@ class Vehicle(TimeDependentSubject):
                 self._current_link, self._remaining_link_length = next(self._iter_path)
                 self.move(abs(dist_travelled))
             except StopIteration:
+                log.info(f"{self} is arrived")
                 self._remaining_link_length = 0
                 self.is_arrived = True
         else:
             self._remaining_link_length = dist_travelled
-
+        for p in self._passenger.values():
+            p._current_node = self._current_link[0]
         return self._current_link
 
 

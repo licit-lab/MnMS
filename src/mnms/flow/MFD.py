@@ -220,15 +220,7 @@ class MFDFlow(AbstractFlowMotor):
             veh.move(dist)
             veh.notify(self._tcurrent)
             if veh.is_arrived:
-                veh_to_remove.append(veh)
-
-        # Remove vehicles which arrived destination
-        for veh in veh_to_remove:
-
-            veh.drop_all_passengers()
-
-            # TODO: Deletion of the vehicles must be done with an update of the fleet mobility service
-            veh_manager.remove_vehicle(veh)
+                veh.drop_all_passengers()
 
         '''
         # Update data structure for new users

@@ -43,6 +43,7 @@ class User(Subject):
         self.scale_factor = scale_factor
 
         self._vehicle = None
+        self._current_node = None
 
     def __repr__(self):
         return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"
@@ -50,6 +51,10 @@ class User(Subject):
     @property
     def vehicle(self):
         return self._vehicle
+
+    @property
+    def is_in_vehicle(self):
+        return self._vehicle is not None
 
     def finish_trip(self, arrival_time:Time):
         self.arrival_time = arrival_time

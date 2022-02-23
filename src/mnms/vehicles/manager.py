@@ -2,6 +2,9 @@ from typing import Dict, Set
 from collections import defaultdict
 
 from mnms.vehicles.veh_type import Vehicle
+from mnms.log import create_logger
+
+log = create_logger(__name__)
 
 
 class VehicleManager(object):
@@ -13,12 +16,13 @@ class VehicleManager(object):
         return len(self._vehicles)
 
     def add_vehicle(self, veh:Vehicle) -> None:
-        self._vehicles[veh._global_id] = veh
-        self._type_vehicles[veh.__class__.__name__].add(veh._global_id)
+        VehicleManager._vehicles[veh._global_id] = veh
+        VehicleManager._type_vehicles[veh.__class__.__name__].add(veh._global_id)
 
     def remove_vehicle(self, veh:Vehicle) -> None:
-        del self._vehicles[veh._global_id]
-        for veh_set in self._type_vehicles.values():
+        log.info(f"Deleting {veh}")
+        del VehicleManager._vehicles[veh._global_id]
+        for veh_set in VehicleManager._type_vehicles.values():
             veh_set.remove(veh._global_id)
 
 

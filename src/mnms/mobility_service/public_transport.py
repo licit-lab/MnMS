@@ -1,5 +1,5 @@
 import sys
-from collections import defaultdict
+from collections import defaultdict, deque
 from copy import deepcopy
 from typing import Type, Tuple
 
@@ -45,6 +45,8 @@ class Line(object):
 
         self._next_veh_departure = None
 
+        self.vehicles = deque()
+
     def add_stop(self, sid:str, ref_node:str=None) -> None:
         self._service_graph.add_node(self._prefix(sid), self.mobility_service.id, ref_node)
         self.stops.append(self._prefix(sid))
@@ -63,8 +65,11 @@ class Line(object):
                                      reference_lane_ids=reference_lane_ids,
                                      mobility_service=self.mobility_service.id)
         self.links.add(lid)
-        self._adjacency[up_sid] = down_sid
-        self._rev_adjacency[down_sid] = up_sid
+
+        p_up_dis = self._prefix(up_sid)
+        p_down_dis = self._prefix(down_sid)
+        self._adjacency[p_up_dis] = p_down_dis
+        self._rev_adjacency[p_down_dis] = p_up_dis
 
 
     @property
@@ -116,6 +121,7 @@ class Line(object):
         next_time = time.add_time(dt)
         if time <= self._current_time_table < next_time:
             all_departures.append(self._next_veh_departure[1])
+            self.vehicles.appendleft(self._next_veh_departure[1])
             self._current_time_table = self._next_time_table
             try:
                 self._next_time_table = next(self._timetable_iter)
@@ -126,6 +132,15 @@ class Line(object):
             self.new_departures(time, dt, all_departures)
 
         return all_departures
+
+    def clean_arrived_vehicles(self):
+        if len(self.vehicles) > 0:
+            first_veh = self.vehicles[-1]
+            if first_veh.is_arrived:
+                log.info(f"Deleting arrived veh: {first_veh}")
+                self.vehicles.pop()
+                self.mobility_service.fleet.delete_vehicle(first_veh.id)
+                self.clean_arrived_vehicles()
 
 
 class PublicTransport(AbstractMobilityService):
@@ -232,6 +247,8 @@ class PublicTransport(AbstractMobilityService):
                 if self._observer is not None:
                     new_veh.attach(self._observer)
                     new_veh.notify(self._tcurrent)
+
+            line.clean_arrived_vehicles()
         log.info(f"Number of VEH in fleet: {len(self.fleet.vehicles)}")
 
     def construct_veh_path(self, lid: str):
