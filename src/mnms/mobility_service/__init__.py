@@ -1,4 +1,4 @@
-from .base import BaseMobilityService
+from .personal_car import PersonalCar
 from .public_transport import PublicTransport
 
 from mnms.log import create_logger

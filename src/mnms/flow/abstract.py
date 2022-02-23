@@ -48,7 +48,7 @@ class AbstractFlowMotor(ABC):
         self.finalize()
 
     def set_time(self, time:Time):
-        self._tcurrent = time
+        self._tcurrent = time.copy()
 
     @property
     def time(self):
@@ -58,7 +58,7 @@ class AbstractFlowMotor(ABC):
         self._tcurrent = self._tcurrent.add_time(dt)
 
     @abstractmethod
-    def step(self, dt:float, new_users:List[User]):
+    def step(self, dt:float):
         pass
 
     @abstractmethod

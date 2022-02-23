@@ -39,7 +39,7 @@ class User(Subject):
         self.arrival_time = None
         self.path = path
         self.path_cost = None
-        self.available_mobility_service = available_mobility_services
+        self.available_mobility_service = available_mobility_services if available_mobility_services is None else set(available_mobility_services)
         self.scale_factor = scale_factor
 
         self._vehicle = None

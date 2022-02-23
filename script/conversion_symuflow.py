@@ -9,7 +9,7 @@ import numpy as np
 from mnms.graph import MultiModalGraph
 from mnms.graph.io import save_graph
 from mnms.tools.time import Time, TimeTable, Dt
-from mnms.mobility_service import BaseMobilityService, PublicTransport
+from mnms.mobility_service import PersonalCar, PublicTransport
 from mnms import log as rootlogger
 from mnms.log import LOGLEVEL
 
@@ -120,7 +120,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None, ban_mobi
             already_present_link[l['ID']] = flow_graph.links[(l['UPSTREAM'], l['DOWNSTREAM'])].id
             num_skip += 1
     rootlogger.warning(f"Number of skipped link: {num_skip}")
-    car = BaseMobilityService('CAR', speed_car)
+    car = PersonalCar('CAR', speed_car)
 
     [car.add_node(n, n) for n in node_car]
     for l in link_car:

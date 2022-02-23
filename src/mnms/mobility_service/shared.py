@@ -1,4 +1,4 @@
-from mnms.mobility_service.base import BaseMobilityService
+from mnms.mobility_service.abstract import AbstractMobilityService
 
-class SharedMoblityService(BaseMobilityService):
+class SharedMoblityService(AbstractMobilityService):
     pass

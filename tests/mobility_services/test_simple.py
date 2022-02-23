@@ -1,6 +1,6 @@
 import unittest
 
-from mnms.mobility_service import BaseMobilityService
+from mnms.mobility_service import PersonalCar
 
 
 class TestSimpleMobilityService(unittest.TestCase):
@@ -11,13 +11,13 @@ class TestSimpleMobilityService(unittest.TestCase):
         """Concludes and closes the test.
         """
     def test_create(self):
-        service = BaseMobilityService("TEST", 1)
+        service = PersonalCar("TEST", 1)
         self.assertEqual(service.id, "TEST")
         self.assertDictEqual({}, service.links)
         self.assertDictEqual({}, service.nodes)
 
     def test_fill(self):
-        service = BaseMobilityService("TEST", 1)
+        service = PersonalCar("TEST", 1)
 
         service.add_node('0', '00')
         service.add_node('1', '11')
@@ -33,12 +33,12 @@ class TestSimpleMobilityService(unittest.TestCase):
         self.assertListEqual([0, 2], service.links[('0', '1')].reference_lane_ids)
 
     def test_dump_JSON(self):
-        service = BaseMobilityService("TEST", 1)
+        service = PersonalCar("TEST", 1)
         service.add_node('0', '00')
         service.add_node('1', '11')
         service.add_link('0_1', '0', '1', {'test': 32, '_default': 1}, ['0_2', '2_3'], [0, 2])
         expected_dict = {'ID': 'TEST',
-                         'TYPE': 'mnms.mobility_service.base.BaseMobilityService',
+                         'TYPE': 'mnms.mobility_service.base.PersonalCar',
                          'DEFAULT_SPEED': 1,
                          'NODES': [{'ID': '0', 'REF_NODE': '00', 'MOBILITY_SERVICE': 'TEST'},
                                    {'ID': '1', 'REF_NODE': '11', 'MOBILITY_SERVICE': 'TEST'}],
@@ -54,7 +54,7 @@ class TestSimpleMobilityService(unittest.TestCase):
 
     def test_load_JSON(self):
         data = {'ID': 'TEST',
-                         'TYPE': 'mnms.mobility_service.base.BaseMobilityService',
+                         'TYPE': 'mnms.mobility_service.base.PersonalCar',
                          'DEFAULT_SPEED': 1,
                          'NODES': [{'ID': '0', 'REF_NODE': '00', 'MOBILITY_SERVICE': 'TEST'},
                                    {'ID': '1', 'REF_NODE': '11', 'MOBILITY_SERVICE': 'TEST'}],
@@ -67,7 +67,7 @@ class TestSimpleMobilityService(unittest.TestCase):
                                     'REF_LANE_IDS': [0, 2],
                                     'MOBILITY_SERVICE': 'TEST'}]}
 
-        service = BaseMobilityService.__load__(data)
+        service = PersonalCar.__load__(data)
 
         self.assertEqual('TEST', service.id)
         self.assertEqual('1', service.nodes['1'].id)

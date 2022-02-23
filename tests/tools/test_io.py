@@ -3,7 +3,7 @@ import unittest
 from tempfile import TemporaryDirectory
 
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.base import BaseMobilityService
+from mnms.mobility_service.personal_car import PersonalCar
 from mnms.graph.io import save_graph, load_graph
 
 
@@ -29,8 +29,8 @@ class TestIO(unittest.TestCase):
 
         self.mmgraph.add_zone('Res', ['0_1', '1_2'])
 
-        serv1 = BaseMobilityService("s1", 10)
-        serv2 = BaseMobilityService("s2", 9)
+        serv1 = PersonalCar("s1", 10)
+        serv2 = PersonalCar("s2", 9)
 
         serv1.add_node('S1_0')
         serv1.add_node('S1_1')

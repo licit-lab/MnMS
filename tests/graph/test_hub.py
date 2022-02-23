@@ -1,6 +1,6 @@
 import unittest
 
-from mnms import MultiModalGraph, BaseMobilityService, PublicTransport
+from mnms import MultiModalGraph, PersonalCar, PublicTransport
 from mnms.tools.time import TimeTable, Dt
 
 
@@ -40,7 +40,7 @@ class TestHub(unittest.TestCase):
         flow_graph.add_link('10_7', '10', '7')
         flow_graph.add_link('3_10', '3', '10')
 
-        tram = BaseMobilityService('TRAM', 10)
+        tram = PersonalCar('TRAM', 10)
         tram.add_node('0', '0')
         tram.add_node('1', '1')
         tram.add_node('5', '5')

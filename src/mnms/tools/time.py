@@ -8,6 +8,9 @@ from mnms import log as rootlogger
 
 class Dt(object):
     def __init__(self, hours:int=0, minutes:int=0, seconds:float=0):
+        assert hours >= 0
+        assert minutes >= 0
+        assert seconds >= 0
         new_seconds = Decimal(seconds)%60
         new_minutes = minutes + seconds//60
         hours = hours + new_minutes//60
@@ -24,14 +27,44 @@ class Dt(object):
         hours = int(self._hours*other)
         return Dt(hours, minutes, seconds)
 
+    def __add__(self, other):
+        seconds = self._seconds+other._seconds
+        minutes = int(self._minutes+other._minutes)
+        hours = int(self._hours+other._hours)
+        return Dt(hours, minutes, seconds)
+
+    def __sub__(self, other):
+        seconds = self._seconds-other._seconds
+        minutes = int(self._minutes-other._minutes)
+        hours = int(self._hours-other._hours)
+        if seconds < 0:
+            seconds = 60 + seconds
+            minutes -= 1
+        if minutes < 0:
+            minutes = 60 + seconds
+            hours -= 1
+        return Dt(hours, minutes, seconds)
+
     def __repr__(self):
         return f"dt(hours:{self._hours}, minutes:{self._minutes}, seconds:{self._seconds})"
 
-    def to_seconds(self):
-        return float(int(self._hours*3600)+int(self._minutes*60)+self._seconds)
-
     def __eq__(self, other):
         return self.to_seconds() == other.to_seconds()
+
+    def __lt__(self, other):
+        return self.to_seconds() < other.to_seconds()
+
+    def __le__(self, other):
+        return self.to_seconds() <= other.to_seconds()
+
+    def __gt__(self, other):
+        return self.to_seconds() > other.to_seconds()
+
+    def __ge__(self, other):
+        return self.to_seconds() >= other.to_seconds()
+
+    def to_seconds(self):
+        return float(int(self._hours * 3600) + int(self._minutes * 60) + self._seconds)
 
 
 class Time(object):
@@ -80,6 +113,9 @@ class Time(object):
 
     def __ge__(self, other):
         return self.to_seconds() >= other.to_seconds()
+
+    def __sub__(self, other):
+        return Dt(seconds=self.to_seconds()-other.to_seconds())
 
     @property
     def seconds(self):
@@ -154,6 +190,14 @@ class Time(object):
         new_time._minutes = new_minutes
         new_time._seconds = new_seconds
         return new_time
+
+    def copy(self):
+        copy = Time()
+        copy._hours = self._hours
+        copy._minutes = self._minutes
+        copy._seconds = self._seconds
+
+        return copy
 
 
 class TimeTable(object):

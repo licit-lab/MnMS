@@ -76,6 +76,9 @@ class Supervisor(object):
     def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
         log.info(f'Start run from {tstart} to {tend}')
         tcurrent = tstart
+        for mservice in self._graph._mobility_services.values():
+            mservice.set_time(tcurrent)
+
         affectation_step = 0
         flow_step = 0
         principal_dt = flow_dt * affectation_factor
@@ -94,7 +97,7 @@ class Supervisor(object):
 
             self.compute_user_paths(new_users)
 
-            log.info(f'Launching {affectation_factor} step of {self._flow_motor.__class__.__name__} ...')
+            log.info(f'Launching {affectation_factor} step of flow ...')
             start = time()
             if len(new_users) > 0:
                 u = next(iter_new_users)
@@ -107,10 +110,15 @@ class Supervisor(object):
                             u = next(iter_new_users)
                     except StopIteration:
                         pass
+
+                    for mservice in self._graph._mobility_services.values():
+                        mservice.update(flow_dt)
+                        mservice.update_time(flow_dt)
+
                     self._user_flow.update_time(flow_dt)
-                    self._user_flow.step(flow_dt.to_seconds(), users_step)
+                    self._user_flow.step(flow_dt, users_step)
                     self._flow_motor.update_time(flow_dt)
-                    self._flow_motor.step(flow_dt.to_seconds())
+                    self._flow_motor.step(flow_dt)
                     if self._flow_motor._write:
                         self._flow_motor.write_result(affectation_step, flow_step)
                     tcurrent = next_time
@@ -119,8 +127,13 @@ class Supervisor(object):
             else:
                 for _ in range(affectation_factor):
                     next_time = tcurrent.add_time(flow_dt)
+
+                    for mservice in self._graph._mobility_services.values():
+                        mservice.update(flow_dt)
+                        mservice.update_time(flow_dt)
+
                     self._flow_motor.update_time(flow_dt)
-                    self._flow_motor.step(flow_dt.to_seconds())
+                    self._flow_motor.step(flow_dt)
                     if self._flow_motor._write:
                         self._flow_motor.write_result(affectation_step, flow_step)
                     tcurrent = next_time

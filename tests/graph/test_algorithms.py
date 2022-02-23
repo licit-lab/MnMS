@@ -5,7 +5,7 @@ from mnms.graph.search import nearest_mobility_service
 from mnms.graph.shortest_path import (astar, dijkstra, _euclidian_dist, compute_shortest_path,
                                       compute_n_best_shortest_path)
 from mnms.graph.edition import walk_connect
-from mnms.mobility_service import BaseMobilityService
+from mnms.mobility_service import PersonalCar
 from mnms.demand.user import User
 
 import numpy as np
@@ -33,9 +33,9 @@ class TestAlgorithms(unittest.TestCase):
         self.mmgraph.flow_graph.add_link('3_1', '3', '1')
         self.mmgraph.flow_graph.add_link('1_3', '1', '3')
 
-        bus_service = BaseMobilityService('Bus', 10)
-        car_service = BaseMobilityService('Car', 10)
-        uber_service = BaseMobilityService('Uber', 10)
+        bus_service = PersonalCar('Bus', 10)
+        car_service = PersonalCar('Car', 10)
+        uber_service = PersonalCar('Uber', 10)
 
         bus_service.add_node('B0', '0')
         bus_service.add_node('B1', '1')
@@ -179,7 +179,7 @@ class TestAlgorithms(unittest.TestCase):
         mmgraph.flow_graph.add_link('1_2', '1', '2')
         mmgraph.flow_graph.add_link('3_4', '3', '4')
 
-        serv1 = BaseMobilityService('SERV1', 10)
+        serv1 = PersonalCar('SERV1', 10)
         serv1.add_node('S10', '0')
         serv1.add_node('S11', '1')
         serv1.add_node('S12', '2')
@@ -187,7 +187,7 @@ class TestAlgorithms(unittest.TestCase):
         serv1.add_link('0_1', 'S10', 'S11', {'time': 1}, '0_1', [0])
         serv1.add_link('1_2', 'S11', 'S12', {'time': 1}, '1_2', [0])
 
-        serv2 = BaseMobilityService('SERV2', 10)
+        serv2 = PersonalCar('SERV2', 10)
         serv2.add_node('S23', '3')
         serv2.add_node('S24', '4')
 

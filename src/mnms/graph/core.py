@@ -225,15 +225,15 @@ class MultiModalGraph(object):
         self.zones = dict()
 
         self._connection_services = dict()
-        self._mobility_services:Dict[str, "BaseMobilityService"] = dict()
+        self._mobility_services:Dict[str, "PersonalCar"] = dict()
 
         [self.flow_graph.add_node(nid, pos) for nid, pos in nodes.items()]
         [self.flow_graph.add_link(lid, unid, dnid) for lid, (unid, dnid) in  links.items()]
         [serv.connect_graph(self) for serv in mobility_services]
 
-    def add_mobility_service(self, service: "BaseMobilityService"):
+    def add_mobility_service(self, service: "AbstractMobilityService"):
         self._mobility_services[service.id] = service
-        self.mobility_graph.add_topo_graph(service)
+        self.mobility_graph.add_topo_graph(service._graph)
 
     def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, costs:Dict[str, float]):
         upstream_service = self.mobility_graph.nodes[upstream_node].mobility_service

@@ -1,7 +1,7 @@
 import unittest
 
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.base import BaseMobilityService
+from mnms.mobility_service.personal_car import PersonalCar
 
 
 class TestCreate(unittest.TestCase):
@@ -28,7 +28,7 @@ class TestCreate(unittest.TestCase):
 
     def test_mobility_graph(self):
         mmgraph = MultiModalGraph()
-        service = BaseMobilityService('dummy', 10)
+        service = PersonalCar('dummy', 10)
 
         service.add_node('dummy_0')
         service.add_node('dummy_1')

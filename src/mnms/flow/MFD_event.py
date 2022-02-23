@@ -102,7 +102,7 @@ class MFDFlowEvent(AbstractFlowMotor):
         self.initialize()'''
 
 
-    def step(self, dt:Dt, new_users:List[User]): # compute events during time step
+    def step(self, dt: Dt): # compute events during time step
         time = self._tcurrent.to_seconds() - dt.to_seconds() #  time at the start of the step
         time_cur = time #  current time
 

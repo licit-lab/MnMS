@@ -71,7 +71,7 @@ class CSVUserObserver(Observer):
 
 class CSVVehicleObserver(TimeDependentObserver):
     def __init__(self, filename: str):
-        self._header = ["TIME", "ID", "LINK", "REMAINING LENGTH", "PASSENGERS"]
+        self._header = ["TIME", "ID", "TYPE", "LINK", "REMAINING_LENGTH", "PASSENGERS"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -83,7 +83,8 @@ class CSVVehicleObserver(TimeDependentObserver):
     def update(self, subject: 'Vehicle', time:Time):
         row = [str(time),
                subject.id,
-               subject.current_link,
+               subject.type,
+               f"{subject.current_link[0]} {subject.current_link[1]}",
                subject.remaining_link_length,
                ' '.join(p for p in subject._passenger)]
         self._csvhandler.writerow(row)

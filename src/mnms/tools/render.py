@@ -84,7 +84,7 @@ def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True,
         defo_app = lambda x: deformation_matrix.dot(x) + [0, yshift]
         lines = list()
         nodes = set()
-        for (unode, dnode) in service.links:
+        for (unode, dnode) in service._graph.links:
             link = mmgraph.mobility_graph.links[(unode, dnode)]
             nodes.add(unode)
             nodes.add(dnode)

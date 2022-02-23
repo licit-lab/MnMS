@@ -1,5 +1,6 @@
 from typing import List
 from typing import Callable, Dict
+from collections import defaultdict
 
 import numpy as np
 
@@ -111,13 +112,9 @@ class Reservoir(object):
         self.id = id
         self.modes = modes
         self.compute_MFD_speed = fct_MFD_speed
-        dict_accumulations = {}
-        for mode in modes:
-            dict_accumulations[mode] = 0
-        self.dict_accumulations = dict_accumulations
-        self.dict_speeds = {}
+        self.dict_accumulations = defaultdict(lambda: 0)
+        self.dict_speeds = defaultdict(lambda: 0)
         self.update_speeds()
-
 
     def update_accumulations(self, dict_accumulations):
         for mode in dict_accumulations.keys():
@@ -134,8 +131,9 @@ class Reservoir(object):
         modes = set()
         for lid in mmgraph.zones[zid].links:
             nodes = mmgraph.flow_graph._map_lid_nodes[lid]
-            for mobility_node in mmgraph.mobility_graph.get_node_references(nodes[0])+ mmgraph.mobility_graph.get_node_references(nodes[1]):
-                modes.add(mmgraph.mobility_graph.nodes[mobility_node].mobility_service)
+            for mobility_node in mmgraph.mobility_graph.get_node_references(nodes[0]) + mmgraph.mobility_graph.get_node_references(nodes[1]):
+                mservice_id = mmgraph.mobility_graph.nodes[mobility_node].mobility_service
+                modes.add(mmgraph._mobility_services[mservice_id].fleet.vehicle_type().upper())
 
         new_res = Reservoir(zid, modes, fct_MFD_speed)
         return new_res
@@ -185,8 +183,7 @@ class MFDFlow(AbstractFlowMotor):
     def add_reservoir(self, res: Reservoir):
         self.reservoirs.append(res)
 
-    # TODO: del User that finish their path
-    def step(self, dt: Dt):#, veh_manager:VehicleManager):# new_users:List[User]):
+    def step(self, dt: Dt):
         veh_manager = VehicleManager()
         log.info(f'MFD step {self._tcurrent}')
 
@@ -219,7 +216,7 @@ class MFDFlow(AbstractFlowMotor):
             res_id = flow_link.zone
             veh_type = veh.type.upper()
             speed = self.dict_speeds[res_id][veh_type]
-            dist = dt * speed
+            dist = dt.to_seconds() * speed
             veh.move(dist)
             veh.notify(self._tcurrent)
             if veh.is_arrived:
@@ -312,7 +309,6 @@ class MFDFlow(AbstractFlowMotor):
             self.nb_user -= 1
         '''
 
-
     def update_graph(self):
         mobility_graph = self._graph.mobility_graph
         flow_graph = self._graph.flow_graph
@@ -331,7 +327,7 @@ class MFDFlow(AbstractFlowMotor):
                     for resid, reslinks in res_links.items():
                         res = res_dict[resid]
                         if l in reslinks:
-                            mspeed = res.dict_speeds[link_service]
+                            mspeed = res.dict_speeds[link_service.upper()]
                             topolink_lenghts[topolink.id]['speeds'][l] = mspeed
                             break
 

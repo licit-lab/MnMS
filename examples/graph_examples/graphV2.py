@@ -1,6 +1,6 @@
 from mnms.graph.core import MultiModalGraph
 from mnms.tools.time import TimeTable, Time, Dt
-from mnms.mobility_service import BaseMobilityService, PublicTransport
+from mnms.mobility_service import PersonalCar, PublicTransport
 from mnms.log import rootlogger, LOGLEVEL
 from mnms.graph.shortest_path import compute_shortest_path
 from mnms.demand.user import User
@@ -57,7 +57,7 @@ flow_graph.add_link('3_10', '3', '10')
 # plt.show()
 
 
-tram = BaseMobilityService('TRAM', 10)
+tram = PersonalCar('TRAM', 10)
 tram.add_node('0', '0')
 tram.add_node('1', '1')
 tram.add_node('5', '5')

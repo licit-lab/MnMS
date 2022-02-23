@@ -105,7 +105,7 @@ def astar(G: TopoGraph, user: User, cost: str, heuristic: Callable[[str, str], f
     origin = user.origin
     destination = user.destination
     discovered_nodes = {origin}
-    prev = dict()
+    prev = defaultdict(lambda : None)
 
     gscore = defaultdict(lambda : float('inf'))
     gscore[origin] = 0
@@ -116,7 +116,7 @@ def astar(G: TopoGraph, user: User, cost: str, heuristic: Callable[[str, str], f
     while len(discovered_nodes) > 0:
         d = {v: fscore[v] for v in discovered_nodes}
         current = min(d, key=d.get)
-
+        log.info(f"{dict(prev)}, current: {current}")
         if current == destination:
             path = deque()
             if prev[current] is not None or current == origin:
@@ -195,6 +195,9 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         The cost of the path
 
     """
+
+    if 'WALK' not in user.available_mobility_service:
+        log.warning(f"{user} does not have 'WALK' in its available_mobility_service")
 
     if algorithm == "dijkstra":
         sh_algo = dijkstra
@@ -379,6 +382,9 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
     paths = []
     penalized_costs = []
     topograph_links = mmgraph.mobility_graph.links
+
+    if 'WALK' not in user.available_mobility_service:
+        log.warning(f"{user} does not have 'WALK' in its available_mobility_service")
 
     if algorithm == "dijkstra":
         sh_algo = dijkstra

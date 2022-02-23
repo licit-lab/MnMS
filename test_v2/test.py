@@ -1,6 +1,6 @@
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.shortest_path import compute_shortest_path
-from mnms.mobility_service.base import BaseMobilityService
+from mnms.mobility_service.personal_car import PersonalCar
 from mnms.demand.user import User
 from mnms.tools.time import Time, Dt
 from mnms.demand.manager import BaseDemandManager
@@ -26,7 +26,7 @@ fgraph.add_link('1_2', '1', '2')
 fgraph.add_link('2_3', '2', '3')
 
 
-car = BaseMobilityService('CAR', 10)
+car = PersonalCar('CAR', 10)
 car.add_node('C0', '0')
 car.add_node('C1', '1')
 car.add_node('C2', '2')

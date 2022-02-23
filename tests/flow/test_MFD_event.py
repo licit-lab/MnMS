@@ -6,7 +6,7 @@ from mnms.flow.MFD_event import MFDFlowEvent
 from mnms.tools.time import Time, Dt
 
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.base import BaseMobilityService
+from mnms.mobility_service.personal_car import PersonalCar
 from mnms.demand.user import User
 from mnms.graph.shortest_path import compute_shortest_path
 from mnms.flow.MFD import log
@@ -38,7 +38,7 @@ class TestAlgorithms(unittest.TestCase):
         mmgraph.add_zone('res1', ['0_1', '0_2', '2_3'])
         mmgraph.add_zone('res2', ['3_4'])
 
-        car = BaseMobilityService('car', 10)
+        car = PersonalCar('car', 10)
         car.add_node('C0', '0')
         car.add_node('C1', '1')
         car.add_node('C2', '2')
@@ -46,7 +46,7 @@ class TestAlgorithms(unittest.TestCase):
         car.add_link('C0_C1', 'C0', 'C1', costs={'length': 40000}, reference_links=['0_1'])
         car.add_link('C0_C2', 'C0', 'C2', costs={'length': 1200}, reference_links=['0_2'])
 
-        bus = BaseMobilityService('bus', 10)
+        bus = PersonalCar('bus', 10)
         bus.add_node('B2', '2')
         bus.add_node('B3', '3')
         bus.add_node('B4', '4')
@@ -99,11 +99,11 @@ class TestAlgorithms(unittest.TestCase):
         dt = Dt(seconds=30)
         for step in range(100):
             if self.mfd_flow._tcurrent < Time.fromSeconds(100) < self.mfd_flow._tcurrent.add_time(dt):
-                self.mfd_flow.step(dt, [self.user1])
+                self.mfd_flow.step(dt)
             elif self.mfd_flow._tcurrent < Time.fromSeconds(2000) < self.mfd_flow._tcurrent.add_time(dt):
-                self.mfd_flow.step(dt, [self.user2])
+                self.mfd_flow.step(dt)
             else:
-                self.mfd_flow.step(dt, [])
+                self.mfd_flow.step(dt)
             self.mfd_flow.update_time(dt)
             self.mfd_flow.write_result(step_affectation=0, step_flow=step)
 

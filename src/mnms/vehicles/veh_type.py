@@ -27,6 +27,7 @@ class Vehicle(TimeDependentSubject):
         self.destination = destination
 
         self.is_arrived = False
+        self.started = False
 
     def __repr__(self):
         return f"{self.__class__.__name__}('{self._global_id}', '{self.origin}' -> '{self.destination}')"
@@ -47,7 +48,6 @@ class Vehicle(TimeDependentSubject):
     def current_link(self):
         return self._current_link
 
-
     @property
     def remaining_link_length(self):
         return self._remaining_link_length
@@ -67,6 +67,7 @@ class Vehicle(TimeDependentSubject):
             del self._passenger[u]
 
     def move(self, dist: float):
+        self.started = True
         dist_travelled = self._remaining_link_length - dist
         if dist_travelled < 0:
             try:
@@ -91,9 +92,9 @@ class Bus(Vehicle):
         super(Bus, self).__init__(origin, destination, path, capacity)
 
 
-class Subway(Vehicle):
+class Metro(Vehicle):
     def __init__(self, origin:str, destination:str, path: List[Tuple[Tuple[str, str], float]], capacity:int=500,):
-        super(Subway, self).__init__(origin, destination, path, capacity)
+        super(Metro, self).__init__(origin, destination, path, capacity)
 
 
 if __name__ == "__main__":

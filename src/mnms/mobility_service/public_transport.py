@@ -1,14 +1,20 @@
+import sys
 from collections import defaultdict
 from copy import deepcopy
+from typing import Type, Tuple
 
-from mnms.mobility_service.shared import SharedMoblityService
-from mnms.tools.time import TimeTable, Time
+from mnms.log import create_logger
+from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.tools.time import TimeTable, Time, Dt
+from mnms.vehicles.veh_type import Vehicle, Bus, Metro
 
+log = create_logger(__name__)
 
 def _NoneDefault():
     return None
 
 
+# TODO: When a Line is created ensure that nodes are ordered
 class Line(object):
     """Represent a line of a PublicTransport mobility service
 
@@ -30,26 +36,35 @@ class Line(object):
         self.mobility_service = mobility_service
         self.service_id = mobility_service.id
 
+        self._service_graph = self.mobility_service._graph
         self._adjacency = defaultdict(_NoneDefault)
+        self._rev_adjacency = defaultdict(_NoneDefault)
+        self._timetable_iter = iter(self.timetable.table)
+        self._current_time_table = next(self._timetable_iter)
+        self._next_time_table = next(self._timetable_iter)
+
+        self._next_veh_departure = None
 
     def add_stop(self, sid:str, ref_node:str=None) -> None:
-        self.mobility_service.add_node(self._prefix(sid), ref_node)
-        self.stops.append(sid)
+        self._service_graph.add_node(self._prefix(sid), self.mobility_service.id, ref_node)
+        self.stops.append(self._prefix(sid))
 
     def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, costs=None, reference_links=None,
                       reference_lane_ids=None) -> None:
-        assert up_sid in self.stops
-        assert down_sid in self.stops
+        assert self._prefix(up_sid) in self.stops
+        assert self._prefix(down_sid) in self.stops
         costs = {} if costs is None else costs
         costs.update({'length': length})
-        self.mobility_service.add_link(self._prefix(lid),
-                                       self._prefix(up_sid),
-                                       self._prefix(down_sid),
-                                       costs=costs,
-                                       reference_links=reference_links,
-                                       reference_lane_ids=reference_lane_ids)
+        self._service_graph.add_link(self._prefix(lid),
+                                     self._prefix(up_sid),
+                                     self._prefix(down_sid),
+                                     costs=costs,
+                                     reference_links=reference_links,
+                                     reference_lane_ids=reference_lane_ids,
+                                     mobility_service=self.mobility_service.id)
         self.links.add(lid)
         self._adjacency[up_sid] = down_sid
+        self._rev_adjacency[down_sid] = up_sid
 
 
     @property
@@ -67,11 +82,53 @@ class Line(object):
         stops = deepcopy(self.stops)
         return {"ID": self.id,
                 "TIMETABLE": [time.time for time in self.timetable.table],
-                "STOPS": [self.mobility_service.nodes[self._prefix(s)].__dump__() for s in stops],
-                "LINKS":[self.mobility_service.links[self.mobility_service._map_lid_nodes[self._prefix(l)]].__dump__() for l in self.links]}
+                "STOPS": [self._service_graph.nodes[self._prefix(s)].__dump__() for s in stops],
+                "LINKS":[self._service_graph.links[self._service_graph._map_lid_nodes[self._prefix(l)]].__dump__() for l in self.links]}
+
+    def construct_veh_path(self):
+        veh_path = list()
+        path = self.stops
+        for i in range(len(path) - 1):
+            unode = path[i]
+            dnode = path[i+1]
+            key = (unode, dnode)
+            veh_path.append((key, self.mobility_service._graph.links[key].costs['length']))
+        return veh_path
+
+    def new_departures(self, time, dt, all_departures=None):
+        # log.info(f"{time}, {dt}, {self._current_time_table}")
+        veh_path = self.construct_veh_path()
+
+        if all_departures is None:
+            if self._next_veh_departure is None:
+                new_veh = self.mobility_service.fleet.create_waiting_vehicle(self.stops[0], self.stops[-1], veh_path)
+                self._next_veh_departure = (self._current_time_table, new_veh)
+            all_departures = list()
+
+        if time > self._current_time_table:
+            self._current_time_table = self._next_time_table
+            try:
+                self._next_time_table = next(self._timetable_iter)
+            except StopIteration:
+                return all_departures
+            self.new_departures(time, dt, all_departures)
+
+        next_time = time.add_time(dt)
+        if time <= self._current_time_table < next_time:
+            all_departures.append(self._next_veh_departure[1])
+            self._current_time_table = self._next_time_table
+            try:
+                self._next_time_table = next(self._timetable_iter)
+                new_veh = self.mobility_service.fleet.create_waiting_vehicle(self.stops[0], self.stops[-1], veh_path)
+                self._next_veh_departure = (self._current_time_table, new_veh)
+            except StopIteration:
+                return all_departures
+            self.new_departures(time, dt, all_departures)
+
+        return all_departures
 
 
-class PublicTransport(SharedMoblityService):
+class PublicTransport(AbstractMobilityService):
     """Public transport class, manage its lines
 
     Parameters
@@ -82,8 +139,8 @@ class PublicTransport(SharedMoblityService):
         Default speed of the public transport
 
     """
-    def __init__(self, id:str, default_speed:float):
-        super(PublicTransport, self).__init__(id, default_speed)
+    def __init__(self, id:str, veh_type:Type[Vehicle], default_speed:float):
+        super(PublicTransport, self).__init__(id, veh_type, default_speed)
         self.lines = dict()
         self.line_connexions = set()
 
@@ -102,7 +159,7 @@ class PublicTransport(SharedMoblityService):
         if costs is not None:
             c.update(costs)
 
-        self.add_link('_'.join([ulineid, dlineid, nid]),
+        self._graph.add_link('_'.join([ulineid, dlineid, nid]),
                       ulineid + '_' + nid,
                       dlineid + '_' + nid,
                       c)
@@ -111,7 +168,7 @@ class PublicTransport(SharedMoblityService):
             c = {'time': self.lines[ulineid].timetable.get_freq() / 2, "length": 0}
             if costs is not None:
                 c.update(costs)
-            self.add_link('_'.join([dlineid, ulineid, nid]),
+            self._graph.add_link('_'.join([dlineid, ulineid, nid]),
                           dlineid + '_' + nid,
                           ulineid + '_' + nid,
                           c)
@@ -119,7 +176,7 @@ class PublicTransport(SharedMoblityService):
 
     def connect_to_service(self, nid) -> dict:
         for line in self.lines.values():
-            if nid in {line._prefix(s) for s in line.stops}:
+            if nid in line.stops:
                 return {"time": line.timetable.get_freq()/2}
 
     def __dump__(self) -> dict:
@@ -127,10 +184,10 @@ class PublicTransport(SharedMoblityService):
                 "ID": self.id,
                 "DEFAULT_SPEED": self.default_speed,
                 "LINES": [l.__dump__() for l in self.lines.values()],
-                "CONNECTIONS": [self.links[self._map_lid_nodes[l]].__dump__() for l in self.line_connexions]}
+                "CONNECTIONS": [self._graph.get_link(l).__dump__() for l in self.line_connexions]}
 
     @classmethod
-    def __load__(cls, data:dict) -> "BaseMobilityService":
+    def __load__(cls, data:dict) -> "PublicTransport":
         new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
         for ldata in data['LINES']:
             tt = []
@@ -140,6 +197,7 @@ class PublicTransport(SharedMoblityService):
             new_line = new_obj.add_line(ldata['ID'], TimeTable(tt))
             [new_line.add_stop(s['ID'], s['REF_NODE']) for s in ldata['STOPS']]
             [new_line.connect_stops(l['ID'],
+
                                     l['UPSTREAM'],
                                     l['DOWNSTREAM'],
                                     l['COSTS']['length'],
@@ -161,12 +219,62 @@ class PublicTransport(SharedMoblityService):
             curr_stop = start_stop
             next_stop = line._adjacency[curr_stop]
             while next_stop is not None:
-                curr_link = self.links[(line._prefix(curr_stop), line._prefix(next_stop))]
+                curr_link = self._graph.links[(line._prefix(curr_stop), line._prefix(next_stop))]
                 curr_link.costs['time'] = curr_link.costs['speed'] * curr_link.costs['length']
                 curr_stop = next_stop
                 next_stop = line._adjacency[curr_stop]
 
+    def update(self, dt: Dt):
+        log.info(f'Update mobility service {self.id}')
+        for lid, line in self.lines.items():
+            for new_veh in line.new_departures(self._tcurrent, dt):
+                self.fleet.start_waiting_vehicle(new_veh.id)
+                if self._observer is not None:
+                    new_veh.attach(self._observer)
+                    new_veh.notify(self._tcurrent)
+        log.info(f"Number of VEH in fleet: {len(self.fleet.vehicles)}")
 
+    def construct_veh_path(self, lid: str):
+        veh_path = list()
+        path = self.lines[lid].stops
+        for i in range(len(path) - 1):
+            unode = path[i]
+            dnode = path[i+1]
+            if self._graph.nodes[dnode].mobility_service == self.id:
+                key = (unode, dnode)
+                veh_path.append((key, self._graph.links[key].costs['length']))
+            else:
+                break
+        return veh_path
+
+    def request_vehicle(self, user: "User") -> Tuple[Dt, str, Vehicle]:
+        start = user.path[0]
+        user_line = None
+
+        for line in self.lines.values():
+            if start in line.stops:
+                user_line = line
+                break
+        else:
+            log.error(f'{user} start is not in the PublicTransport mobility service {self.id}')
+            sys.exit(-1)
+
+        prev_line_node = user_line._rev_adjacency[start]
+        if prev_line_node is None:
+            departure_time, waiting_veh = user_line._next_veh_departure
+            log.info(f"{departure_time}, {waiting_veh}")
+            dt = departure_time - self._tcurrent
+            return dt, start, waiting_veh
+
+
+class BusMobilityService(PublicTransport):
+    def __init__(self, id:str, default_speed:float):
+        super(BusMobilityService, self).__init__(id, Bus, default_speed)
+
+
+class MetroMobilityService(PublicTransport):
+    def __init__(self, id:str, default_speed:float):
+        super(MetroMobilityService, self).__init__(id, Metro, default_speed)
 
 
 

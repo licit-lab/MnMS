@@ -20,7 +20,7 @@ def nearest_mobility_service(pos:List[float], mmgraph: 'MultiModalGraph', servic
         Node id
 
     """
-    service_nodes = [mmgraph.mobility_graph.nodes[n].reference_node for n in mmgraph._mobility_services[service].nodes]
+    service_nodes = [mmgraph.mobility_graph.nodes[n].reference_node for n in mmgraph._mobility_services[service]._graph.nodes]
     service_pos = np.array([mmgraph.flow_graph.nodes[n].pos for n in service_nodes])
     return service_nodes[np.argmin(np.linalg.norm(service_pos-pos, axis=1))]
 
