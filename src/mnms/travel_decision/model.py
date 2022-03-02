@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Literal, List, Tuple
 import csv
@@ -6,6 +7,9 @@ from mnms.demand.user import User
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.elements import TransitLink
 from mnms.graph.shortest_path import compute_n_best_shortest_path
+from mnms.log import create_logger
+
+log = create_logger(__name__)
 
 
 def compute_path_length(mmgraph: MultiModalGraph, path:List[str]) -> float:
@@ -101,7 +105,12 @@ class DecisionModel(ABC):
                                                        growth_rate_radius=self._radius_growth_sp,
                                                        walk_speed=self._walk_speed)
 
-        user.path, user.path_cost = self.path_choice(paths, costs)
+        path, path_cost = self.path_choice(paths, costs)
+        user.set_path(path, path_cost)
+        user._current_link = (path[0], path[1])
+        user._remaining_link_length = self._mmgraph.mobility_graph.links[(path[0], path[1])].costs['length']
+
+        log.info(f"Computed path {user.id}: {user.path}")
 
         if self._verbose_file:
             for p, c in zip(paths, costs):

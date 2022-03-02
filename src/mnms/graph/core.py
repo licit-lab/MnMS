@@ -235,7 +235,7 @@ class MultiModalGraph(object):
         self._mobility_services[service.id] = service
         self.mobility_graph.add_topo_graph(service._graph)
 
-    def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, costs:Dict[str, float]):
+    def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, length:float, costs:Dict[str, float]):
         upstream_service = self.mobility_graph.nodes[upstream_node].mobility_service
         downstream_service = self.mobility_graph.nodes[downstream_node].mobility_service
         assert upstream_service != downstream_service, f"Upstream service must be different from downstream service ({upstream_service})"
@@ -245,6 +245,7 @@ class MultiModalGraph(object):
             dserv = self._mobility_services[downstream_service]
             connect_cost = dserv.connect_to_service(downstream_node)
             costs = dict(list(costs.items()) + list(connect_cost.items()) + [(k, costs[k] + connect_cost[k]) for k in set(costs) & set(connect_cost)])
+        costs.update({'length': length})
         link = TransitLink(lid, upstream_node, downstream_node, costs)
         self.mobility_graph._add_link(link)
         self._connection_services[(upstream_node, downstream_node)] = lid

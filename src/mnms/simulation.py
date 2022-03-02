@@ -132,7 +132,7 @@ class Supervisor(object):
                         mservice.update(flow_dt)
                         mservice.update_time(flow_dt)
                     self._user_flow.update_time(flow_dt)
-                    self._user_flow.step(flow_dt, users_step)
+                    self._user_flow.step(flow_dt, [])
                     self._flow_motor.update_time(flow_dt)
                     self._flow_motor.step(flow_dt)
                     if self._flow_motor._write:

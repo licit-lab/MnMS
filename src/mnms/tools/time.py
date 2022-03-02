@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 from typing import List
 
@@ -8,7 +9,7 @@ from mnms import log as rootlogger
 
 class Dt(object):
     def __init__(self, hours:int=0, minutes:int=0, seconds:float=0):
-        assert hours >= 0
+        assert hours >= 0, f"{hours}"
         assert minutes >= 0
         assert seconds >= 0
         new_seconds = Decimal(seconds)%60
@@ -43,6 +44,9 @@ class Dt(object):
         if minutes < 0:
             minutes = 60 + seconds
             hours -= 1
+        # print(self._hours, self._minutes, self._seconds)
+        # print(other._hours, other._minutes, other._seconds)
+
         return Dt(hours, minutes, seconds)
 
     def __repr__(self):

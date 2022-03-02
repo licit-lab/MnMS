@@ -1,12 +1,12 @@
-from typing import Union, List
+from typing import Union, List, Tuple
 
 from mnms.tools.time import Time
-from mnms.tools.observer import Subject
+from mnms.tools.observer import TimeDependentSubject
 
 import numpy as np
 
 
-class User(Subject):
+class User(TimeDependentSubject):
     """User data class
 
     Parameters
@@ -37,13 +37,20 @@ class User(Subject):
         self.destination = destination
         self.departure_time = departure_time
         self.arrival_time = None
-        self.path = path
         self.path_cost = None
         self.available_mobility_service = available_mobility_services if available_mobility_services is None else set(available_mobility_services)
         self.scale_factor = scale_factor
 
+        self._current_link = None
+        self._remaining_link_length = None
+
         self._vehicle = None
+        self._waiting_vehicle = False
         self._current_node = None
+        if path is None:
+            self.path = None
+        else:
+            self.set_path(path)
 
     def __repr__(self):
         return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"
@@ -58,4 +65,13 @@ class User(Subject):
 
     def finish_trip(self, arrival_time:Time):
         self.arrival_time = arrival_time
-        self.notify()
+        # self.notify()
+
+    def set_path(self, path, cost):
+        self.path = path
+        self._current_node = path[0]
+        self.path_cost = cost
+
+    def set_position(self, current_link:Tuple[str, str], remaining_length:float):
+        self._current_link = current_link
+        self._remaining_link_length = remaining_length

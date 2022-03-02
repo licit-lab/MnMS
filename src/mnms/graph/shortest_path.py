@@ -196,7 +196,7 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
 
     """
 
-    if 'WALK' not in user.available_mobility_service:
+    if user.available_mobility_service is not None and 'WALK' not in user.available_mobility_service:
         log.warning(f"{user} does not have 'WALK' in its available_mobility_service")
 
     if algorithm == "dijkstra":
@@ -296,11 +296,11 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         virtual_cost = {cost: 0}
         virtual_cost.update({'time': 0})
         for n in start_nodes:
-            mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, virtual_cost)
+            mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0, virtual_cost)
 
         log.debug(f"Create end artificial links with: {end_nodes}")
         for n in end_nodes:
-            mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, virtual_cost)
+            mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0, virtual_cost)
 
         user.origin = start_node
         user.destination = end_node
@@ -383,7 +383,7 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
     penalized_costs = []
     topograph_links = mmgraph.mobility_graph.links
 
-    if 'WALK' not in user.available_mobility_service:
+    if user.available_mobility_service is not None and 'WALK' not in user.available_mobility_service:
         log.warning(f"{user} does not have 'WALK' in its available_mobility_service")
 
     if algorithm == "dijkstra":

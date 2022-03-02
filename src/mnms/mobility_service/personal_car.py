@@ -50,16 +50,22 @@ class PersonalCar(AbstractMobilityService):
     def connect_to_service(self, nid) -> dict:
         return {"time": 0}
 
-    def request_vehicle(self, user: "User") -> Tuple[Dt, str, Vehicle]:
-        veh_path = self._construct_veh_path(user)
-        new_veh = self.fleet.create_vehicle(user.origin, user.destination, veh_path, capacity=1)
+    def request_vehicle(self, user: "User", drop_node:str) -> Tuple[Dt, str, Vehicle]:
+        upath = user.path[user.path.index(user._current_node):user.path.index(drop_node)+1]
+        veh_path = self._construct_veh_path(upath)
+        new_veh = self.fleet.create_vehicle(upath[0], upath[-1], veh_path, capacity=1)
+        new_veh.take_next_user(user, drop_node)
+        new_veh.start_user_trip(user.id, user.path[0])
         if self._observer is not None:
             new_veh.attach(self._observer)
             new_veh.notify(self._tcurrent)
         return Dt(), user.path[0], new_veh
 
     def update(self, dt:Dt):
-        print(f"Update Personal Car {self._tcurrent}")
+        for veh in list(self.fleet.vehicles.values()):
+            if veh.is_arrived:
+                self.fleet.delete_vehicle(veh.id)
+
 
 
 if __name__ == "__main__":

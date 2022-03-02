@@ -5,6 +5,7 @@ from typing import Type, Tuple
 
 from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.tools.exceptions import VehicleNotFoundError
 from mnms.tools.time import TimeTable, Time, Dt
 from mnms.vehicles.veh_type import Vehicle, Bus, Metro
 
@@ -264,9 +265,8 @@ class PublicTransport(AbstractMobilityService):
                 break
         return veh_path
 
-    def request_vehicle(self, user: "User") -> Tuple[Dt, str, Vehicle]:
+    def request_vehicle(self, user: "User", drop_node:str) -> Tuple[Dt, str, Vehicle]:
         start = user.path[0]
-        user_line = None
 
         for line in self.lines.values():
             if start in line.stops:
@@ -279,9 +279,41 @@ class PublicTransport(AbstractMobilityService):
         prev_line_node = user_line._rev_adjacency[start]
         if prev_line_node is None:
             departure_time, waiting_veh = user_line._next_veh_departure
-            log.info(f"{departure_time}, {waiting_veh}")
-            dt = departure_time - self._tcurrent
-            return dt, start, waiting_veh
+            waiting_veh.take_next_user(user, drop_node)
+            return
+        else:
+            curr_veh = None
+            next_veh = None
+            it_veh = iter(user_line.vehicles)
+            ind_start = user_line.stops.index(start)
+            try:
+                curr_veh = next(it_veh)
+                next_veh = next(it_veh)
+            except StopIteration:
+                if curr_veh is not None:
+                    curr_veh.take_next_user(user, drop_node)
+                    return
+                else:
+                    raise VehicleNotFoundError(user, self)
+
+            while True:
+                ind_curr_veh = user_line.stops.index(curr_veh.current_link[1])
+                ind_next_veh = user_line.stops.index(next_veh.current_link[1])
+                if ind_curr_veh <= ind_start < ind_next_veh:
+                    curr_veh.take_next_user(user, drop_node)
+                    return
+                try:
+                    curr_veh = next_veh
+                    next_veh = next(it_veh)
+                except StopIteration:
+                    ind_curr_veh = user_line.stops.index(curr_veh.current_link[1])
+                    if ind_curr_veh <= ind_start:
+                        curr_veh.take_next_user(user, drop_node)
+                        return
+                    else:
+                        log.info(f"{user}, {user._current_node}")
+                        log.info(f"{curr_veh.current_link}")
+                        raise VehicleNotFoundError(user, self)
 
 
 class BusMobilityService(PublicTransport):

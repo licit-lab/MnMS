@@ -22,8 +22,7 @@ class VehicleManager(object):
     def remove_vehicle(self, veh:Vehicle) -> None:
         log.info(f"Deleting {veh}")
         del VehicleManager._vehicles[veh._global_id]
-        for veh_set in VehicleManager._type_vehicles.values():
-            veh_set.remove(veh._global_id)
+        VehicleManager._type_vehicles[veh.type].remove(veh._global_id)
 
 
 if __name__ == "__main__":

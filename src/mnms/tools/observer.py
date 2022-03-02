@@ -3,7 +3,9 @@ import csv
 from typing import List
 
 from mnms.tools.time import Time
+from mnms.log import create_logger
 
+log = create_logger(__name__)
 
 class Observer(ABC):
     @abstractmethod
@@ -47,9 +49,9 @@ class TimeDependentSubject(ABC):
             obs.update(self, time)
 
 
-class CSVUserObserver(Observer):
+class CSVUserObserver(TimeDependentObserver):
     def __init__(self, filename: str):
-        self._header = ["ID", "ORIGIN", "DESTINATION", "DEPARTURE_TIME", "ARRIVAL_TIME", "PATH", "COST_PATH"]
+        self._header = ["TIME", "ID", "LINK", "REMAINING_LENGTH", "VEHICLE"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -58,20 +60,19 @@ class CSVUserObserver(Observer):
     def __del__(self):
         self._file.close()
 
-    def update(self, subject: 'User'):
-        row = [subject.id,
-               subject.origin,
-               subject.destination,
-               subject.departure_time,
-               subject.arrival_time,
-               ' '.join(subject.path) if subject.path is not None else None,
-               subject.path_cost]
+    def update(self, subject: 'User', time: Time):
+        log.info(f"OBS {time}")
+        row = [str(time),
+               subject.id,
+               f"{subject._current_link[0]} {subject._current_link[1]}",
+               subject._remaining_link_length,
+               subject._vehicle]
         self._csvhandler.writerow(row)
 
 
 class CSVVehicleObserver(TimeDependentObserver):
     def __init__(self, filename: str):
-        self._header = ["TIME", "ID", "TYPE", "LINK", "REMAINING_LENGTH", "PASSENGERS"]
+        self._header = ["TIME", "ID", "TYPE", "LINK", "REMAINING_LENGTH", "SPEED", "PASSENGERS"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -86,5 +87,6 @@ class CSVVehicleObserver(TimeDependentObserver):
                subject.type,
                f"{subject.current_link[0]} {subject.current_link[1]}",
                subject.remaining_link_length,
+               f"{subject.speed:.3f}" if subject.speed is not None else None,
                ' '.join(p for p in subject._passenger)]
         self._csvhandler.writerow(row)

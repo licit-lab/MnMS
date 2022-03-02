@@ -1,7 +1,8 @@
 from typing import Dict, List
 
-from mnms.graph.core import MultiModalGraph
+from mnms.graph.core import MultiModalGraph, TransitLink
 from mnms.demand.user import User
+from mnms.graph.elements import ConnectionLink
 from mnms.tools.time import Dt, Time
 from mnms.log import create_logger
 
@@ -12,9 +13,9 @@ class UserFlow(object):
     def __init__(self, walk_speed=1.42):
         self._graph: MultiModalGraph = None
         self.users:Dict[str, User] = dict()
-        self._waiting = dict()
+        self._transiting = dict()
         self._walking = dict()
-        self._walk_speed = 1.42
+        self._walk_speed = walk_speed
         self._tcurrent = None
 
     def set_graph(self, mmgraph:MultiModalGraph):
@@ -29,44 +30,79 @@ class UserFlow(object):
     def initialize(self):
         self._mobility_graph = self._graph.mobility_graph
 
-    def _make_user_wait(self, dt:Dt):
-        uwait_to_del = list()
-        for uid, (uwait, veh) in self._waiting.items():
-            if uwait.to_seconds() - dt.to_seconds() <= 0:
-                uwait_to_del.append(uid)
-                veh.take_user(self.users[uid])
+    def _user_walking(self, dt:Dt):
+        finish_walk = list()
+        for uid, remaining_length in self._walking.items():
+            remaining_length -= dt.to_seconds() * self._walk_speed
+            if remaining_length <= 0:
+                finish_walk.append(self.users[uid])
             else:
-                self._waiting[uid] = (uwait - dt, veh)
+                self._walking[uid] = remaining_length
 
-        for u in uwait_to_del:
-            del self._waiting[u]
+        for user in finish_walk:
+            cnode = user._current_node
+            cnode_ind = user.path.index(cnode)
+            user._current_node = self._graph.mobility_graph.nodes[user.path[cnode_ind+1]].id
+            user._current_link = (user._current_node, user.path[user.path.index(user._current_node)+1])
+            user._remaining_link_length = 0
+            del self._walking[user.id]
+            self._transiting[user.id] = user
 
-    def _process_new_users(self, new_users:List[User]):
-        zero_dt = Dt()
+        self._request_user_vehicles(finish_walk)
+
+    def _process_user(self):
+        to_del = list()
+        arrived_user = list()
+        for uid, user in self._transiting.items():
+            if user._current_node == user.path[-1]:
+                log.info(f"{user} arrived to its destination")
+                user.finish_trip(self._tcurrent)
+                arrived_user.append(uid)
+                to_del.append(uid)
+            elif not user.is_in_vehicle and not user._waiting_vehicle:
+                cnode = user._current_node
+                cnode_ind = user.path.index(cnode)
+                next_link = self._graph.mobility_graph.links[(cnode, user.path[cnode_ind+1])]
+                if isinstance(next_link, TransitLink):
+                    log.info(f"{user} enter connection on {next_link}")
+                    self._walking[uid] = next_link.costs['length']
+                    to_del.append(uid)
+                elif isinstance(next_link, ConnectionLink):
+                    self._request_user_vehicles([user])
+
+        for uid in to_del:
+            del self._transiting[uid]
+
+        for uid in arrived_user:
+            del self.users[uid]
+
+    def _request_user_vehicles(self, new_users:List[User]):
         for nu in new_users:
+            nu.notify(nu.departure_time)
+            upath = nu.path
             self.users[nu.id] = nu
-            start_node = self._mobility_graph.nodes[nu.path[0]]
-            mservice = self._graph._mobility_services[start_node.mobility_service]
-            waiting_time, node, veh = mservice.request_vehicle(nu)
-            log.info(f"{nu} picking up by {veh} in {waiting_time} at {node}")
-
-            if waiting_time == zero_dt:
-                if node == nu.path[0]:
-                    veh.take_user(nu)
-                else:
-                    self._waiting[nu.id] = (waiting_time, veh)
-                    self.users[nu.id] = nu
-            else:
-                self._waiting[nu.id] = (waiting_time, veh)
+            self._transiting[nu.id] = nu
+            start_node = self._mobility_graph.nodes[nu._current_node]
+            mservice_id = start_node.mobility_service
+            mservice = self._graph._mobility_services[mservice_id]
+            prev_service_id = mservice_id
+            for i in range(upath.index(start_node.id)+1, len(upath)):
+                current_service_id = self._mobility_graph.nodes[upath[i]].mobility_service
+                if prev_service_id != current_service_id:
+                    log.info(f"Request VEH for {nu} at {nu._current_node}")
+                    mservice.request_vehicle(nu, upath[i - 1])
+                    break
+                elif i == len(upath) - 1:
+                    log.info(f"Request VEH for {nu} at {nu._current_node}")
+                    mservice.request_vehicle(nu, upath[i])
+                    break
 
     def step(self, dt:Dt, new_users:List[User]):
         log.info(f"Step User Flow {self._tcurrent}")
 
-        self._make_user_wait(dt)
-        self._process_new_users(new_users)
-
-        log.info(f"Waiting User: {len(self._waiting)}")
-        log.info(f"Walking User: {len(self._walking)}")
+        self._process_user()
+        self._user_walking(dt)
+        self._request_user_vehicles(new_users)
 
     def update_graph(self):
         pass
