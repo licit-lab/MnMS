@@ -1,7 +1,10 @@
 import unittest
 
-from mnms import MultiModalGraph, PersonalCar, PublicTransport
+from mnms.graph.core import MultiModalGraph
+from mnms.mobility_service.personal_car import PersonalCar
+from mnms.mobility_service.public_transport import PublicTransport
 from mnms.tools.time import TimeTable, Dt
+from mnms.vehicles.veh_type import Bus
 
 
 class TestHub(unittest.TestCase):
@@ -48,7 +51,7 @@ class TestHub(unittest.TestCase):
         tram.add_link('0_1', '0', '1', {'time': 1}, ['0_1'], [0])
         tram.add_link('1_5', '1', '5', {'time': 1}, ['1_5'], [0])
 
-        bus = PublicTransport('BUS', 8.3)
+        bus = PublicTransport('BUS', Bus, 8.3)
 
         l0 = bus.add_line('L0', TimeTable.create_table_freq("07:00:00", "18:00:00", Dt(minutes=15)))
         l0.add_stop('8', '8')

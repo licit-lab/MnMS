@@ -1,6 +1,6 @@
 import unittest
 
-from mnms import User
+from mnms.demand.user import User
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.shortest_path import compute_shortest_path
 from mnms.flow.MFD import construct_leg
@@ -42,7 +42,7 @@ class TestPath(unittest.TestCase):
         self.mmgraph.add_mobility_service(m1)
         self.mmgraph.add_mobility_service(m2)
 
-        self.mmgraph.connect_mobility_service('M1_M2_1', 'M1_1', 'M2_1', {"time": 0})
+        self.mmgraph.connect_mobility_service('M1_M2_1', 'M1_1', 'M2_1', 0, {"time": 0})
         user = User('test', '0', '3', None)
         compute_shortest_path(self.mmgraph, user, cost='time')
         self.path = user.path

@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from collections import deque, defaultdict
+from dataclasses import dataclass, field
 from typing import Callable, Tuple, List, Literal
 from functools import partial
 
@@ -13,6 +16,13 @@ from mnms.demand.user import User
 
 
 log = create_logger(__name__)
+
+
+@dataclass
+class Path:
+    cost: float | None = None
+    mobility_services: List[str] = field(default_factory=list)
+    path: List[str] = field(default_factory=list)
 
 
 def dijkstra(G: TopoGraph, user: User, cost: str) -> float:
@@ -231,13 +241,13 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                 log.debug(f"Create start artificial links with: {service_nodes_origin}")
                 # print(dist_origin[0]/walk_speed)
                 for ind, n in enumerate(service_nodes_origin):
-                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n,
+                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0,
                                                      {'time': dist_origin[ind] / walk_speed,
                                                       'length': dist_origin[ind]})
 
                 log.debug(f"Create end artificial links with: {service_nodes_destination}")
                 for ind, n in enumerate(service_nodes_destination):
-                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node,
+                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0,
                                                      {'time': dist_destination[ind] / walk_speed,
                                                       'length': dist_destination[ind]})
 
@@ -424,13 +434,13 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                 log.debug(f"Create start artificial links with: {service_nodes_origin}")
                 # print(dist_origin[0]/walk_speed)
                 for ind, n in enumerate(service_nodes_origin):
-                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n,
+                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0,
                                                      {'time': dist_origin[ind] / walk_speed,
                                                       'length': dist_origin[ind]})
 
                 log.debug(f"Create end artificial links with: {service_nodes_destination}")
                 for ind, n in enumerate(service_nodes_destination):
-                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node,
+                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0,
                                                      {'time': dist_destination[ind] / walk_speed,
                                                       'length': dist_destination[ind]})
 

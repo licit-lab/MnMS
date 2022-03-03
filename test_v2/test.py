@@ -5,7 +5,7 @@ from mnms.demand.user import User
 from mnms.tools.time import Time, Dt
 from mnms.demand.manager import BaseDemandManager
 from mnms.simulation import Supervisor
-from mnms.travel_decision.model import SimpleDecisionModel
+from mnms.travel_decision.model import BaseDecisionModel
 from mnms.tools.observer import CSVUserObserver
 from mnms.flow.MFD import MFDFlow, Reservoir
 from mnms.tools.observer import CSVVehicleObserver
@@ -53,7 +53,7 @@ for u in users:
 
 demand = BaseDemandManager(users)
 
-decision = SimpleDecisionModel(mmgraph, cost='length')
+decision = BaseDecisionModel(mmgraph, cost='length')
 
 
 def res_fct(dict_accumulations):

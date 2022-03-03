@@ -235,7 +235,8 @@ class MultiModalGraph(object):
         self._mobility_services[service.id] = service
         self.mobility_graph.add_topo_graph(service._graph)
 
-    def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, length:float, costs:Dict[str, float]):
+    def connect_mobility_service(self, lid: str, upstream_node: str, downstream_node: str, length: float,
+                                 costs: Dict[str, float]) -> None:
         upstream_service = self.mobility_graph.nodes[upstream_node].mobility_service
         downstream_service = self.mobility_graph.nodes[downstream_node].mobility_service
         assert upstream_service != downstream_service, f"Upstream service must be different from downstream service ({upstream_service})"
@@ -280,9 +281,9 @@ class MultiModalGraph(object):
                 exclusion_nj = exclusion_matrix.get(node_nj.mobility_service, set())
                 dist = np.linalg.norm(flow_graph_nodes[node_nj.reference_node].pos - flow_graph_nodes[node_ni.reference_node].pos)
                 if node_nj.mobility_service not in exclusion_ni:
-                    c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
-                    self.connect_mobility_service(f'_WALK_{ni}_{nj}', ni, nj, c)
+                    c = {'time': dist / walk_speed, 'speed': walk_speed}
+                    self.connect_mobility_service(f'_WALK_{ni}_{nj}', ni, nj, dist, c)
 
                 if node_ni.mobility_service not in exclusion_nj:
-                    c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
-                    self.connect_mobility_service(f'_WALK_{nj}_{ni}', nj, ni, c)
+                    c = {'time': dist / walk_speed, 'speed': walk_speed}
+                    self.connect_mobility_service(f'_WALK_{nj}_{ni}', nj, ni, dist, c)

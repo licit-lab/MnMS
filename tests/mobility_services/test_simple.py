@@ -13,8 +13,8 @@ class TestSimpleMobilityService(unittest.TestCase):
     def test_create(self):
         service = PersonalCar("TEST", 1)
         self.assertEqual(service.id, "TEST")
-        self.assertDictEqual({}, service.links)
-        self.assertDictEqual({}, service.nodes)
+        self.assertDictEqual({}, service._graph.links)
+        self.assertDictEqual({}, service._graph.nodes)
 
     def test_fill(self):
         service = PersonalCar("TEST", 1)
@@ -24,13 +24,13 @@ class TestSimpleMobilityService(unittest.TestCase):
 
         service.add_link('0_1', '0', '1', {'test': 32, '_default': 1}, ['0_2', '2_3'], [0, 2])
 
-        self.assertListEqual(['0', '1'], [n.id for n in service.nodes.values()])
-        self.assertListEqual(['00', '11'], [n.reference_node for n in service.nodes.values()])
+        self.assertListEqual(['0', '1'], [n.id for n in service._graph.nodes.values()])
+        self.assertListEqual(['00', '11'], [n.reference_node for n in service._graph.nodes.values()])
 
-        self.assertListEqual(['0_1'], [l.id for l in service.links.values()])
-        self.assertDictEqual({'test': 32, '_default': 1, 'time': 0}, service.links[('0', '1')].costs)
-        self.assertListEqual(['0_2', '2_3'], service.links[('0', '1')].reference_links)
-        self.assertListEqual([0, 2], service.links[('0', '1')].reference_lane_ids)
+        self.assertListEqual(['0_1'], [l.id for l in service._graph.links.values()])
+        self.assertDictEqual({'test': 32, '_default': 1, 'time': 0}, service._graph.links[('0', '1')].costs)
+        self.assertListEqual(['0_2', '2_3'], service._graph.links[('0', '1')].reference_links)
+        self.assertListEqual([0, 2], service._graph.links[('0', '1')].reference_lane_ids)
 
     def test_dump_JSON(self):
         service = PersonalCar("TEST", 1)
@@ -38,7 +38,7 @@ class TestSimpleMobilityService(unittest.TestCase):
         service.add_node('1', '11')
         service.add_link('0_1', '0', '1', {'test': 32, '_default': 1}, ['0_2', '2_3'], [0, 2])
         expected_dict = {'ID': 'TEST',
-                         'TYPE': 'mnms.mobility_service.base.PersonalCar',
+                         'TYPE': 'mnms.mobility_service.personal_car.PersonalCar',
                          'DEFAULT_SPEED': 1,
                          'NODES': [{'ID': '0', 'REF_NODE': '00', 'MOBILITY_SERVICE': 'TEST'},
                                    {'ID': '1', 'REF_NODE': '11', 'MOBILITY_SERVICE': 'TEST'}],
@@ -70,8 +70,8 @@ class TestSimpleMobilityService(unittest.TestCase):
         service = PersonalCar.__load__(data)
 
         self.assertEqual('TEST', service.id)
-        self.assertEqual('1', service.nodes['1'].id)
-        self.assertEqual('11', service.nodes['1'].reference_node)
-        self.assertDictEqual({'test': 32, '_default': 1, 'time': 0}, service.links[('0', '1')].costs)
-        self.assertListEqual(['0_2', '2_3'], service.links[('0', '1')].reference_links)
-        self.assertListEqual([0, 2], service.links[('0', '1')].reference_lane_ids)
+        self.assertEqual('1', service._graph.nodes['1'].id)
+        self.assertEqual('11', service._graph.nodes['1'].reference_node)
+        self.assertDictEqual({'test': 32, '_default': 1, 'time': 0}, service._graph.links[('0', '1')].costs)
+        self.assertListEqual(['0_2', '2_3'], service._graph.links[('0', '1')].reference_links)
+        self.assertListEqual([0, 2], service._graph.links[('0', '1')].reference_lane_ids)

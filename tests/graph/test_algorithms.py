@@ -68,22 +68,22 @@ class TestAlgorithms(unittest.TestCase):
         self.mmgraph.add_mobility_service(uber_service)
         self.mmgraph.add_mobility_service(car_service)
 
-        self.mmgraph.connect_mobility_service('Bus_Car_0', 'B0', 'C0', {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Bus_0', 'C0', 'B0', {'time': 2})
-        self.mmgraph.connect_mobility_service('Bus_Uber_0', 'B0', 'U0', {'time': 4})
-        self.mmgraph.connect_mobility_service('Uber_Bus_0', 'U0', 'B0', {'time': 2})
-        self.mmgraph.connect_mobility_service('Uber_Car_0', 'U0', 'C0', {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Uber_0', 'C0', 'U0', {'time': 2})
+        self.mmgraph.connect_mobility_service('Bus_Car_0', 'B0', 'C0', 0, {'time': 2})
+        self.mmgraph.connect_mobility_service('Car_Bus_0', 'C0', 'B0', 0, {'time': 2})
+        self.mmgraph.connect_mobility_service('Bus_Uber_0', 'B0', 'U0', 0, {'time': 4})
+        self.mmgraph.connect_mobility_service('Uber_Bus_0', 'U0', 'B0', 0, {'time': 2})
+        self.mmgraph.connect_mobility_service('Uber_Car_0', 'U0', 'C0', 0, {'time': 2})
+        self.mmgraph.connect_mobility_service('Car_Uber_0', 'C0', 'U0', 0, {'time': 2})
 
-        self.mmgraph.connect_mobility_service('Bus_Car_1', 'B1', 'C1', {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Bus_1', 'C1', 'B1', {'time': 2})
-        self.mmgraph.connect_mobility_service('Bus_Uber_1', 'B1', 'U1', {'time': 4})
-        self.mmgraph.connect_mobility_service('Uber_Bus_1', 'U1', 'B1', {'time': 2})
-        self.mmgraph.connect_mobility_service('Uber_Car_1', 'U1', 'C1', {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Uber_1', 'C1', 'U1', {'time': 2})
+        self.mmgraph.connect_mobility_service('Bus_Car_1', 'B1', 'C1', 0, {'time': 2})
+        self.mmgraph.connect_mobility_service('Car_Bus_1', 'C1', 'B1', 0, {'time': 2})
+        self.mmgraph.connect_mobility_service('Bus_Uber_1', 'B1', 'U1', 0, {'time': 4})
+        self.mmgraph.connect_mobility_service('Uber_Bus_1', 'U1', 'B1', 0, {'time': 2})
+        self.mmgraph.connect_mobility_service('Uber_Car_1', 'U1', 'C1', 0, {'time': 2})
+        self.mmgraph.connect_mobility_service('Car_Uber_1', 'C1', 'U1', 0, {'time': 2})
 
-        self.mmgraph.connect_mobility_service('Bus_Car_2', 'B2', 'C2', {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Bus_2', 'C2', 'B2', {'time': 2})
+        self.mmgraph.connect_mobility_service('Bus_Car_2', 'B2', 'C2', 0, {'time': 2})
+        self.mmgraph.connect_mobility_service('Car_Bus_2', 'C2', 'B2', 0, {'time': 2})
 
 
     def tearDown(self):

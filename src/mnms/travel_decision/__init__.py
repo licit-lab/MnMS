@@ -1,4 +1,4 @@
-from .model import SimpleDecisionModel
+from .model import BaseDecisionModel
 from .logit import LogitDecisionModel
 
 from mnms.log import create_logger

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Dict
 
 from mnms.graph.elements import TopoNode, ConnectionLink
 from mnms.mobility_service.abstract import AbstractMobilityService
@@ -47,7 +47,7 @@ class PersonalCar(AbstractMobilityService):
     def update_costs(self, time: "Time"):
         pass
 
-    def connect_to_service(self, nid) -> dict:
+    def connect_to_service(self, nid) -> Dict[str, float]:
         return {"time": 0}
 
     def request_vehicle(self, user: "User", drop_node:str) -> Tuple[Dt, str, Vehicle]:
@@ -59,7 +59,6 @@ class PersonalCar(AbstractMobilityService):
         if self._observer is not None:
             new_veh.attach(self._observer)
             new_veh.notify(self._tcurrent)
-        return Dt(), user.path[0], new_veh
 
     def update(self, dt:Dt):
         for veh in list(self.fleet.vehicles.values()):

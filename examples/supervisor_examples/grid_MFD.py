@@ -6,7 +6,7 @@ from mnms.flow.MFD import Reservoir, MFDFlow
 from mnms.mobility_service import PersonalCar
 from mnms.log import rootlogger, LOGLEVEL
 from mnms.tools.time import Time, Dt
-from mnms.travel_decision.model import SimpleDecisionModel
+from mnms.travel_decision.model import BaseDecisionModel
 from mnms.travel_decision.logit import LogitDecisionModel
 
 import os

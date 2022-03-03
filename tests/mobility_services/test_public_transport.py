@@ -2,6 +2,7 @@ import unittest
 
 from mnms.mobility_service import PublicTransport
 from mnms.tools.time import TimeTable, Dt
+from mnms.vehicles.veh_type import Bus
 
 
 class TestPublicTransport(unittest.TestCase):
@@ -12,14 +13,14 @@ class TestPublicTransport(unittest.TestCase):
         """Concludes and closes the test.
         """
     def test_create(self):
-        service = PublicTransport("TEST", 1)
+        service = PublicTransport("TEST", Bus, 1)
         self.assertEqual(service.id, "TEST")
         self.assertEqual(1, service.default_speed)
         self.assertDictEqual({}, service._graph.links)
         self.assertDictEqual({}, service._graph.nodes)
 
     def test_fill(self):
-        service = PublicTransport("TEST", 10)
+        service = PublicTransport("TEST", Bus, 10)
 
         line = service.add_line('L0', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
         line.add_stop("0", "00")
@@ -35,12 +36,12 @@ class TestPublicTransport(unittest.TestCase):
 
         self.assertListEqual([('L0_0', 'L0_1')], list(service._graph.links.keys()))
 
-        self.assertDictEqual({'_default': 1, 'length': 10, 'test': 32, 'time': 0}, service._graphlinks[('L0_0', 'L0_1')].costs)
+        self.assertDictEqual({'_default': 1, 'length': 10, 'test': 32, 'time': 0}, service._graph.links[('L0_0', 'L0_1')].costs)
         self.assertListEqual(["0_1"], service._graph.links[('L0_0', 'L0_1')].reference_links)
         self.assertListEqual([2], service._graph.links[('L0_0', 'L0_1')].reference_lane_ids)
 
     def test_two_lines(self):
-        service = PublicTransport("TEST", 1)
+        service = PublicTransport("TEST", Bus, 1)
 
         line0 = service.add_line('L0', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
         line0.add_stop("0", "00")
@@ -63,7 +64,7 @@ class TestPublicTransport(unittest.TestCase):
 
     def test_dump_JSON(self):
         self.maxDiff = None
-        service = PublicTransport("TEST", 1)
+        service = PublicTransport("TEST", Bus, 1)
 
         line0 = service.add_line('L0', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
         line0.add_stop("0", "00")

@@ -88,7 +88,7 @@ class Line(object):
         stops = deepcopy(self.stops)
         return {"ID": self.id,
                 "TIMETABLE": [time.time for time in self.timetable.table],
-                "STOPS": [self._service_graph.nodes[self._prefix(s)].__dump__() for s in stops],
+                "STOPS": [self._service_graph.nodes[s].__dump__() for s in stops],
                 "LINKS":[self._service_graph.links[self._service_graph._map_lid_nodes[self._prefix(l)]].__dump__() for l in self.links]}
 
     def construct_veh_path(self):
@@ -169,25 +169,27 @@ class PublicTransport(AbstractMobilityService):
         print(self.lines)
 
     def connect_lines(self, ulineid: str, dlineid: str, nid: str, costs:dict=None, two_ways=True) -> None:
-        assert nid in self.lines[ulineid].stops
-        assert nid in self.lines[dlineid].stops
+        assert self.lines[ulineid]._prefix(nid) in self.lines[ulineid].stops
+        assert self.lines[dlineid]._prefix(nid) in self.lines[dlineid].stops
         c = {'time': self.lines[dlineid].timetable.get_freq() / 2, "length": 0}
         if costs is not None:
             c.update(costs)
 
         self._graph.add_link('_'.join([ulineid, dlineid, nid]),
-                      ulineid + '_' + nid,
-                      dlineid + '_' + nid,
-                      c)
+                             ulineid + '_' + nid,
+                             dlineid + '_' + nid,
+                             c,
+                             mobility_service=self.id)
 
         if two_ways:
             c = {'time': self.lines[ulineid].timetable.get_freq() / 2, "length": 0}
             if costs is not None:
                 c.update(costs)
             self._graph.add_link('_'.join([dlineid, ulineid, nid]),
-                          dlineid + '_' + nid,
-                          ulineid + '_' + nid,
-                          c)
+                                 dlineid + '_' + nid,
+                                 ulineid + '_' + nid,
+                                 c,
+                                 mobility_service=self.id)
             self.line_connexions.add('_'.join([dlineid, ulineid, nid]))
 
     def connect_to_service(self, nid) -> dict:
@@ -213,7 +215,6 @@ class PublicTransport(AbstractMobilityService):
             new_line = new_obj.add_line(ldata['ID'], TimeTable(tt))
             [new_line.add_stop(s['ID'], s['REF_NODE']) for s in ldata['STOPS']]
             [new_line.connect_stops(l['ID'],
-
                                     l['UPSTREAM'],
                                     l['DOWNSTREAM'],
                                     l['COSTS']['length'],

@@ -37,7 +37,7 @@ class TestGeneration(unittest.TestCase):
 
         self.mmgraph.add_mobility_service(serv1)
         self.mmgraph.add_mobility_service(serv2)
-        self.mmgraph.connect_mobility_service('S1_S2_1', 'S1_1', 'S2_1', serv2.connect_to_service('S2_1'))
+        self.mmgraph.connect_mobility_service('S1_S2_1', 'S1_1', 'S2_1', 0, {'time':0})
 
     def tearDown(self):
         """Concludes and closes the test.

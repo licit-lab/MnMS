@@ -7,11 +7,10 @@ from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.personal_car import PersonalCar
 from mnms.demand.user import User
 from mnms.graph.shortest_path import compute_shortest_path
-from mnms.flow.MFD import log
+from mnms.simulation import Supervisor
+from mnms.demand import BaseDemandManager
+from mnms.travel_decision import BaseDecisionModel
 from mnms.log import LOGLEVEL
-
-
-log.setLevel(LOGLEVEL.WARNING)
 
 
 class TestMFD(unittest.TestCase):
@@ -57,7 +56,7 @@ class TestMFD(unittest.TestCase):
         mmgraph.add_mobility_service(bus)
         mmgraph.add_mobility_service(car)
 
-        mmgraph.connect_mobility_service('CAR_BUS', 'C2', 'B2', costs={'length':0, 'time':0})
+        mmgraph.connect_mobility_service('CAR_BUS', 'C2', 'B2', 0, {'time':0})
 
         def res_fct1(dict_accumulations):
             v_car = 10 * (1 - (dict_accumulations['car'] + 2*dict_accumulations['bus']) / 80)
@@ -79,32 +78,36 @@ class TestMFD(unittest.TestCase):
         self.mfd_flow = MFDFlow(outfile=self.pathdir + 'test.csv')
         self.mfd_flow.add_reservoir(res1)
         self.mfd_flow.add_reservoir(res2)
-        self.mfd_flow.set_graph(mmgraph)
 
-        # self.mfd_flow._demand = [[Time.fromSeconds(100), [{'length': 1200, 'mode': 'car', 'reservoir': "res1"},
-        #                                                {'length': 200, 'mode': 'bus', 'reservoir': "res1"},
-        #                                                {'length': 2000, 'mode': 'bus', 'reservoir': "res2"}]],
-        #                       [Time.fromSeconds(2000), [{'length': 40000, 'mode': 'car', 'reservoir': "res1"}]]]
+        users = [User('1', '0', '4', Time.fromSeconds(100), scale_factor=2),
+                 User('2', '0', '1', Time.fromSeconds(2000), scale_factor=4)]
 
-        self.user1 = User('1', '0', '4', Time.fromSeconds(100), scale_factor=2)
-        self.user2 = User('2', '0', '1', Time.fromSeconds(2000), scale_factor=4)
+        demand = BaseDemandManager(users)
 
-        compute_shortest_path(mmgraph, self.user1, cost='length')
-        compute_shortest_path(mmgraph, self.user2, cost='length')
+        self.supervisor = Supervisor(graph=mmgraph,
+                                     demand=demand,
+                                     flow_motor=self.mfd_flow,
+                                     decision_model=BaseDecisionModel(mmgraph, cost='length'))
 
-        self.mfd_flow.nb_user = 2
-        self.mfd_flow.initialize()
-        self.mfd_flow._tcurrent = Time.fromSeconds(0)
-        dt = Dt(seconds=30)
-        for step in range(100):
-            if self.mfd_flow._tcurrent < Time.fromSeconds(100) < self.mfd_flow._tcurrent.add_time(dt):
-                self.mfd_flow.step(dt.to_seconds())
-            elif self.mfd_flow._tcurrent < Time.fromSeconds(2000) < self.mfd_flow._tcurrent.add_time(dt):
-                self.mfd_flow.step(dt.to_seconds())
-            else:
-                self.mfd_flow.step(dt.to_seconds())
-            self.mfd_flow.update_time(dt)
-            self.mfd_flow.write_result(step_affectation=0, step_flow=step)
+        self.supervisor.run(Time(), Time.fromSeconds(3000), Dt(seconds=30), 10)
+
+        # compute_shortest_path(mmgraph, self.user1, cost='length')
+        # compute_shortest_path(mmgraph, self.user2, cost='length')
+
+        # self.mfd_flow.nb_user = 2
+        # self.mfd_flow.initialize()
+        # self.mfd_flow._tcurrent = Time.fromSeconds(0)
+        # dt = Dt(seconds=30)
+        # for step in range(100):
+        #     if self.mfd_flow._tcurrent < Time.fromSeconds(100) < self.mfd_flow._tcurrent.add_time(dt):
+        #         car.request_vehicle()
+        #         self.mfd_flow.step(dt)
+        #     elif self.mfd_flow._tcurrent < Time.fromSeconds(2000) < self.mfd_flow._tcurrent.add_time(dt):
+        #         self.mfd_flow.step(dt)
+        #     else:
+        #         self.mfd_flow.step(dt)
+        #     self.mfd_flow.update_time(dt)
+        #     self.mfd_flow.write_result(step_affectation=0, step_flow=step)
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -114,17 +117,13 @@ class TestMFD(unittest.TestCase):
     def test_mfd(self):
         self.assertEqual(self.mfd_flow.dict_accumulations, {'res1': {'car': 4.0, 'bus': 0}, 'res2': {'car': 0, 'bus': 0}, None: {None:0, 'car': 0, 'bus': 0}})
         self.assertEqual(self.mfd_flow.dict_speeds, {'res1': {'car': 9.5, 'bus': 4.75}, 'res2': {'car': 12.0, 'bus': 4.0}, None: {None:0, 'car': 0, 'bus': 0}})
-        # self.assertTrue(self.mfd_flow.remaining_length['1'] <= 0)
         self.assertAlmostEqual(self.mfd_flow.remaining_length['2']/3e4, 1, places=1)
         self.assertTrue(self.mfd_flow.started_trips)
         self.assertTrue(not self.mfd_flow.completed_trips['2'])
         self.assertEqual(self.mfd_flow.current_reservoir, {'2': 'res1'})
-        # self.assertAlmostEqual(self.mfd_flow.time_completion_legs['1'][2] / 770, 1, places=1)
         self.assertAlmostEqual(self.user1.arrival_time.to_seconds() / 770, 1, places=1)
         self.assertEqual(self.mfd_flow.time_completion_legs['2'][0], -1)
-        # self.assertEqual(self.mfd_flow.current_leg['1'], 2)
         self.assertEqual(self.mfd_flow.current_leg['2'], 0)
-        # self.assertEqual(self.mfd_flow.current_mode['1'], 'bus')
 
 
 class TestPath(unittest.TestCase):
@@ -165,7 +164,7 @@ class TestPath(unittest.TestCase):
         mmgraph.add_mobility_service(bus)
         mmgraph.add_mobility_service(car)
 
-        mmgraph.connect_mobility_service('CAR_BUS', 'C2', 'B2', costs={'length':0, 'time':0})
+        mmgraph.connect_mobility_service('CAR_BUS', 'C2', 'B2', 0, {'time':0})
 
         self.legs = [{'length': 1200, 'mode': 'car', 'reservoir': "res1"},
                      {'length': 200, 'mode': 'bus', 'reservoir': "res1"},

@@ -128,9 +128,9 @@ class DecisionModel(ABC):
                                        ' '.join(compute_path_modes(self._mmgraph, user.path))])
 
 
-class SimpleDecisionModel(DecisionModel):
+class BaseDecisionModel(DecisionModel):
     def __init__(self, mmgraph: MultiModalGraph, outfile:str=None, cost='time', verbose_file=False):
-        super(SimpleDecisionModel, self).__init__(mmgraph, n_shortest_path=1, outfile=outfile, cost=cost, verbose_file=verbose_file)
+        super(BaseDecisionModel, self).__init__(mmgraph, n_shortest_path=1, outfile=outfile, cost=cost, verbose_file=verbose_file)
 
     def path_choice(self, paths:List[List[str]], costs:List[float]) -> Tuple[List[str], float]:
         return paths[0], costs[0]
