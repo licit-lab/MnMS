@@ -11,6 +11,7 @@ from mnms.vehicles.veh_type import Vehicle, Bus, Metro
 
 log = create_logger(__name__)
 
+
 def _NoneDefault():
     return None
 
@@ -205,7 +206,7 @@ class PublicTransport(AbstractMobilityService):
                 "CONNECTIONS": [self._graph.get_link(l).__dump__() for l in self.line_connexions]}
 
     @classmethod
-    def __load__(cls, data:dict) -> "PublicTransport":
+    def __load__(cls, data: dict) -> "PublicTransport":
         new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
         for ldata in data['LINES']:
             tt = []
@@ -267,7 +268,7 @@ class PublicTransport(AbstractMobilityService):
         return veh_path
 
     def request_vehicle(self, user: "User", drop_node:str) -> Tuple[Dt, str, Vehicle]:
-        start = user.path[0]
+        start = user.path.nodes[0]
 
         for line in self.lines.values():
             if start in line.stops:
@@ -325,49 +326,4 @@ class BusMobilityService(PublicTransport):
 class MetroMobilityService(PublicTransport):
     def __init__(self, id:str, default_speed:float):
         super(MetroMobilityService, self).__init__(id, Metro, default_speed)
-
-
-
-if __name__ == "__main__":
-
-    from mnms.graph.core import MultiModalGraph
-    import json
-
-    nodes = {'0': [0, 0],
-             '1': [1, 0],
-             '2': [1, 1],
-             '3': [0, 1]}
-
-    links = {'0_1': ('0', '1'),
-             '1_2': ('1', '2'),
-             '2_3': ('2', '3'),
-             '3_0': ('3', '0')}
-
-    service = PublicTransport("TEST", 23)
-
-    line0 = service.add_line('L0', TimeTable.create_table_freq("07:00:00", "14:00:00", delta_min=30))
-    line0.add_stop("0", "00")
-    line0.add_stop("1", "11")
-
-    line0.connect_stops('0_1', '0', '1', 23, {'test': 32}, ['0_1'], [2])
-
-    line1 = service.add_line('TEST2', TimeTable.create_table_freq("07:00:00", "14:00:00", delta_min=15))
-    line1.add_stop("1", "11")
-    line1.add_stop("33", "5")
-    line1.connect_stops('32_33', '1', '33', 110, {'test': 2}, ['0_99'], [0])
-
-    service.connect_lines('L0', 'TEST2', '1', {'test': 0})
-
-    # print(json.dumps(service.__dump__(), indent=1))
-    from pprint import pprint
-    pprint(service.__dump__())
-
-    # tram = PublicTransport('Tram')
-    # l0 = tram.add_line('L0')
-    # l0.add_stop('0')
-    #
-    #
-    # mmgraph = MultiModalGraph(nodes=nodes,
-    #                           links=links,
-    #                           mobility_services=[bus])
 

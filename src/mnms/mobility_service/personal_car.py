@@ -51,11 +51,12 @@ class PersonalCar(AbstractMobilityService):
         return {"time": 0}
 
     def request_vehicle(self, user: "User", drop_node:str) -> Tuple[Dt, str, Vehicle]:
-        upath = user.path[user.path.index(user._current_node):user.path.index(drop_node)+1]
+        upath = list(user.path.nodes)
+        upath = upath[upath.index(user._current_node):upath.index(drop_node)+1]
         veh_path = self._construct_veh_path(upath)
         new_veh = self.fleet.create_vehicle(upath[0], upath[-1], veh_path, capacity=1)
         new_veh.take_next_user(user, drop_node)
-        new_veh.start_user_trip(user.id, user.path[0])
+        new_veh.start_user_trip(user.id, user.path.nodes[0])
         if self._observer is not None:
             new_veh.attach(self._observer)
             new_veh.notify(self._tcurrent)

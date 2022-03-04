@@ -57,7 +57,7 @@ class AbstractMobilityService(ABC):
 
     @classmethod
     @abstractmethod
-    def __load__(self, data:dict):
+    def __load__(cls, data:dict):
         pass
 
     @abstractmethod

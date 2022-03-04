@@ -92,72 +92,72 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_dijkstra(self):
         user = User(id='TEST', departure_time=None, origin='B0', destination='B2')
-        cost = dijkstra(self.mmgraph.mobility_graph, user, cost='time')
-        self.assertListEqual(list(user.path), ['B0', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], cost)
+        path = dijkstra(self.mmgraph.mobility_graph, user, cost='time')
+        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
+        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], path.cost)
 
         self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'] = 1e10
-        cost = dijkstra(self.mmgraph.mobility_graph, user, cost='time')
+        path = dijkstra(self.mmgraph.mobility_graph, user, cost='time')
 
-        self.assertListEqual(list(user.path), ['B0', 'B1', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time']+self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], cost)
+        self.assertListEqual(list(path.nodes), ['B0', 'B1', 'B2'])
+        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time']+self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], path.cost)
 
     def test_astar(self):
         user = User(id='TEST', departure_time=None, origin='B0', destination='B2')
         heuristic = lambda o, d, mmgraph=self.mmgraph: _euclidian_dist(o, d, mmgraph)
-        cost = astar(self.mmgraph.mobility_graph, user, 'time', heuristic)
-        self.assertListEqual(list(user.path), ['B0', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], cost)
+        path = astar(self.mmgraph.mobility_graph, user, 'time', heuristic)
+        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
+        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], path.cost)
 
         self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'] = 1e10
-        cost = astar(self.mmgraph.mobility_graph, user, 'time', heuristic)
+        path = astar(self.mmgraph.mobility_graph, user, 'time', heuristic)
 
-        self.assertListEqual(list(user.path), ['B0', 'B1', 'B2'])
+        self.assertListEqual(list(path.nodes), ['B0', 'B1', 'B2'])
         self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time'] +
-                         self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], cost)
+                         self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], path.cost)
 
     def test_compute_shortest_path_node(self):
         user = User(id='TEST', departure_time=None, origin='0', destination='2')
-        cost = compute_shortest_path(self.mmgraph, user, cost='time')
-        self.assertListEqual(list(user.path), ['B0', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], cost)
+        path = compute_shortest_path(self.mmgraph, user, cost='time')
+        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
+        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], path.cost)
         self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'] = 1e10
-        cost = compute_shortest_path(self.mmgraph, user, cost='time', algorithm='astar')
+        path = compute_shortest_path(self.mmgraph, user, cost='time', algorithm='astar')
 
-        self.assertListEqual(list(user.path), ['B0', 'B1', 'B2'])
+        self.assertListEqual(list(path.nodes), ['B0', 'B1', 'B2'])
         self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time'] +
-                         self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], cost)
+                         self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], path.cost)
 
     def test_compute_nbest_shortest_path_node(self):
         user = User(id='TEST', departure_time=None, origin='0', destination='2')
-        paths, real_costs, penalized_costs = compute_n_best_shortest_path(self.mmgraph, user, 2, cost='time')
-        self.assertAlmostEqual(real_costs[0], 1.3)
-        self.assertListEqual(paths[0], ['B0', 'B2'])
+        paths, penalized_costs = compute_n_best_shortest_path(self.mmgraph, user, 2, cost='time')
+        self.assertAlmostEqual(paths[0].cost, 1.3)
+        self.assertListEqual(list(paths[0].nodes), ['B0', 'B2'])
 
-        self.assertAlmostEqual(real_costs[1], 7)
-        self.assertListEqual(paths[1], ['B0', 'B1', 'B2'])
+        self.assertAlmostEqual(paths[1].cost, 7)
+        self.assertListEqual(list(paths[1].nodes), ['B0', 'B1', 'B2'])
 
     def test_compute_nbest_shortest_path_coordinates(self):
         user = User(id='TEST', departure_time=None, origin=np.array([0, 0]), destination=np.array([1, 1]))
-        paths, real_costs, penalized_costs = compute_n_best_shortest_path(self.mmgraph, user, 5, cost='time',
+        paths, penalized_costs = compute_n_best_shortest_path(self.mmgraph, user, 5, cost='time',
                                                                           radius=0.1, growth_rate_radius=1e-5)
-        self.assertAlmostEqual(real_costs[0], 1.3)
-        self.assertListEqual(paths[0], ['B0', 'B2'])
+        self.assertAlmostEqual(paths[0].cost, 1.3)
+        self.assertListEqual(list(paths[0].nodes), ['B0', 'B2'])
 
-        self.assertAlmostEqual(real_costs[1], 7)
-        self.assertListEqual(paths[1], ['B0', 'B1', 'B2'])
+        self.assertAlmostEqual(paths[1].cost, 7)
+        self.assertListEqual(list(paths[1].nodes), ['B0', 'B1', 'B2'])
 
     def test_compute_shortest_path_coords(self):
         user = User(id='TEST', departure_time=None, origin=np.array([0, 0]), destination=np.array([1, 1]))
-        cost = compute_shortest_path(self.mmgraph, user, cost='time', radius=0.1, growth_rate_radius=1e-5)
+        path = compute_shortest_path(self.mmgraph, user, cost='time', radius=0.1, growth_rate_radius=1e-5)
 
-        self.assertAlmostEqual(cost, 1.3)
-        self.assertListEqual(list(user.path), ['B0', 'B2'])
+        self.assertAlmostEqual(path.cost, 1.3)
+        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
 
         user = User(id='TEST', departure_time=None, origin=np.array([-1, 0]), destination=np.array([1, 1]))
-        cost = compute_shortest_path(self.mmgraph, user, cost='time', radius=0.1, growth_rate_radius=0.1)
-        self.assertAlmostEqual(cost, 1.3+1/1.4)
-        self.assertListEqual(list(user.path), ['B0', 'B2'])
+        path = compute_shortest_path(self.mmgraph, user, cost='time', radius=0.1, growth_rate_radius=0.1)
+        self.assertAlmostEqual(path.cost, 1.3+1/1.4)
+        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
 
     def test_nearest_mobility(self):
         pos = [10, 10]

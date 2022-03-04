@@ -66,7 +66,7 @@ class Vehicle(TimeDependentSubject):
     def drop_user(self, tcurrent:Time, user:'User'):
         log.info(f"{user} is dropped at {self._current_link[0]}")
         user._vehicle = None
-        upath = user.path
+        upath = user.path.nodes
         unode = self._current_link[0]
         user._current_node = unode
         next_node_ind = upath.index(unode)+1

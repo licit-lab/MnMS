@@ -6,7 +6,7 @@ import csv
 from mnms.demand.user import User
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.elements import TransitLink
-from mnms.graph.shortest_path import compute_n_best_shortest_path
+from mnms.graph.shortest_path import compute_n_best_shortest_path, Path
 from mnms.log import create_logger
 
 log = create_logger(__name__)
@@ -95,34 +95,33 @@ class DecisionModel(ABC):
 
 
     @abstractmethod
-    def path_choice(self, paths:List[List[str]], costs:List[float]) -> Tuple[List[str], float]:
+    def path_choice(self, paths:List[Path]) -> Tuple[List[str], float]:
         pass
 
     def __call__(self, user:User):
-        paths, costs, _ = compute_n_best_shortest_path(self._mmgraph, user, self._n_shortest_path, cost=self._cost,
+        paths, _ = compute_n_best_shortest_path(self._mmgraph, user, self._n_shortest_path, cost=self._cost,
                                                        algorithm=self._algorithm, heuristic=self._heuristic,
                                                        scale_factor=self._scale_factor, radius=self._radius_sp,
                                                        growth_rate_radius=self._radius_growth_sp,
                                                        walk_speed=self._walk_speed)
 
-        path, path_cost = self.path_choice(paths, costs)
-        user.set_path(path, path_cost)
-        user._current_link = (path[0], path[1])
-        user._remaining_link_length = self._mmgraph.mobility_graph.links[(path[0], path[1])].costs['length']
+        path = self.path_choice(paths)
+        user.set_path(path)
+        user._remaining_link_length = self._mmgraph.mobility_graph.links[(path.nodes[0], path.nodes[1])].costs['length']
 
         log.info(f"Computed path {user.id}: {user.path}")
 
         if self._verbose_file:
-            for p, c in zip(paths, costs):
+            for p in paths:
                 self._csvhandler.writerow([user.id,
-                                           str(c),
+                                           str(path.cost),
                                            ' '.join(p),
                                            compute_path_length(self._mmgraph, p),
                                            ' '.join(compute_path_modes(self._mmgraph, p))])
 
         elif self._write:
             self._csvhandler.writerow([user.id,
-                                       str(user.path_cost),
+                                       str(user.path.cost),
                                        ' '.join(user.path),
                                        compute_path_length(self._mmgraph, user.path),
                                        ' '.join(compute_path_modes(self._mmgraph, user.path))])
@@ -132,5 +131,5 @@ class BaseDecisionModel(DecisionModel):
     def __init__(self, mmgraph: MultiModalGraph, outfile:str=None, cost='time', verbose_file=False):
         super(BaseDecisionModel, self).__init__(mmgraph, n_shortest_path=1, outfile=outfile, cost=cost, verbose_file=verbose_file)
 
-    def path_choice(self, paths:List[List[str]], costs:List[float]) -> Tuple[List[str], float]:
-        return paths[0], costs[0]
+    def path_choice(self, paths:List[Path]) -> Path:
+        return paths[0]

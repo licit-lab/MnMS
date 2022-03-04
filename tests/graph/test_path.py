@@ -44,8 +44,8 @@ class TestPath(unittest.TestCase):
 
         self.mmgraph.connect_mobility_service('M1_M2_1', 'M1_1', 'M2_1', 0, {"time": 0})
         user = User('test', '0', '3', None)
-        compute_shortest_path(self.mmgraph, user, cost='time')
-        self.path = user.path
+        path = compute_shortest_path(self.mmgraph, user, cost='time')
+        self.path = path.nodes
 
     def tearDown(self):
         """Concludes and closes the test.

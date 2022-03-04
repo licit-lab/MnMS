@@ -40,10 +40,11 @@ class UserFlow(object):
                 self._walking[uid] = remaining_length
 
         for user in finish_walk:
+            upath = user.path.nodes
             cnode = user._current_node
-            cnode_ind = user.path.index(cnode)
-            user._current_node = self._graph.mobility_graph.nodes[user.path[cnode_ind+1]].id
-            user._current_link = (user._current_node, user.path[user.path.index(user._current_node)+1])
+            cnode_ind = upath.index(cnode)
+            user._current_node = self._graph.mobility_graph.nodes[upath[cnode_ind+1]].id
+            user._current_link = (user._current_node, upath[upath.index(user._current_node)+1])
             user._remaining_link_length = 0
             del self._walking[user.id]
             self._transiting[user.id] = user
@@ -54,15 +55,16 @@ class UserFlow(object):
         to_del = list()
         arrived_user = list()
         for uid, user in self._transiting.items():
-            if user._current_node == user.path[-1]:
+            upath = user.path.nodes
+            if user._current_node == upath[-1]:
                 log.info(f"{user} arrived to its destination")
                 user.finish_trip(self._tcurrent)
                 arrived_user.append(uid)
                 to_del.append(uid)
             elif not user.is_in_vehicle and not user._waiting_vehicle:
                 cnode = user._current_node
-                cnode_ind = user.path.index(cnode)
-                next_link = self._graph.mobility_graph.links[(cnode, user.path[cnode_ind+1])]
+                cnode_ind = upath.index(cnode)
+                next_link = self._graph.mobility_graph.links[(cnode, upath[cnode_ind+1])]
                 if isinstance(next_link, TransitLink):
                     log.info(f"{user} enter connection on {next_link}")
                     self._walking[uid] = next_link.costs['length']
@@ -79,7 +81,7 @@ class UserFlow(object):
     def _request_user_vehicles(self, new_users:List[User]):
         for nu in new_users:
             nu.notify(nu.departure_time)
-            upath = nu.path
+            upath = nu.path.nodes
             self.users[nu.id] = nu
             self._transiting[nu.id] = nu
             start_node = self._mobility_graph.nodes[nu._current_node]

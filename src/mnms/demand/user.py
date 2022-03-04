@@ -37,7 +37,6 @@ class User(TimeDependentSubject):
         self.destination = destination
         self.departure_time = departure_time
         self.arrival_time = None
-        self.path_cost = None
         self.available_mobility_service = available_mobility_services if available_mobility_services is None else set(available_mobility_services)
         self.scale_factor = scale_factor
 
@@ -67,10 +66,10 @@ class User(TimeDependentSubject):
         self.arrival_time = arrival_time
         # self.notify()
 
-    def set_path(self, path, cost):
+    def set_path(self, path:"Path"):
         self.path = path
-        self._current_node = path[0]
-        self.path_cost = cost
+        self._current_node = path.nodes[0]
+        self._current_link = (path.nodes[0], path.nodes[1])
 
     def set_position(self, current_link:Tuple[str, str], remaining_length:float):
         self._current_link = current_link
