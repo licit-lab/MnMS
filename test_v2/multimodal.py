@@ -42,7 +42,7 @@ fgraph.add_link('2_4', '2', '4')
 
 
 bus = BusMobilityService('Bus', 10)
-line = bus.add_line('L1', TimeTable.create_table_freq('07:00:00', '20:00:00', Dt(seconds=2)))
+line = bus.add_line('L1', TimeTable.create_table_freq('07:00:00', '20:00:00', Dt(minutes=2)))
 # print(line.timetable.table)
 # print(line.new_departures(Time("07:00:01"), Dt(seconds=2)))
 
@@ -76,8 +76,7 @@ mmgraph.add_zone('ZONE', ['0_1', '1_2', '2_3', '2_4'])
 #          User('U3', '0', '3', Time("07:21:00"), available_mobility_services=['Bus', 'WALK'])]
 
 
-users = [User('U0', '0', '3', Time("07:01:00"), available_mobility_services=['Bus', 'Car',  'WALK'])]
-
+users = [User('U0', '1', '3', Time("07:00:00"), available_mobility_services=['Bus', 'Car',  'WALK'])]
 obs = CSVUserObserver(dir_path+'/user.csv')
 for u in users:
     u.attach(obs)

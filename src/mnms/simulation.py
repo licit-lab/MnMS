@@ -26,11 +26,12 @@ class Supervisor(object):
         self._graph: MultiModalGraph = graph
         self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
+        self._flow_motor.set_graph(graph)
         self._decision_model:DecisionModel = decision_model
         self._user_flow = UserFlow()
-
-        flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)
+        
+        self.tcurrent = None
 
         if outfile is None:
             self._write = False
@@ -53,9 +54,9 @@ class Supervisor(object):
     def add_decision_model(self, model: DecisionModel):
         self._decision_model = model
 
-    def get_new_users(self, tcurrent, principal_dt):
-        log.info(f'Getting next departures {tcurrent}->{tcurrent.add_time(principal_dt)} ..')
-        new_users = self._demand.get_next_departures(tcurrent, tcurrent.add_time(principal_dt))
+    def get_new_users(self, principal_dt):
+        log.info(f'Getting next departures {self.tcurrent}->{self.tcurrent.add_time(principal_dt)} ..')
+        new_users = self._demand.get_next_departures(self.tcurrent, self.tcurrent.add_time(principal_dt))
         log.info(f'Done, {len(new_users)} new departure')
 
         return new_users
@@ -72,73 +73,81 @@ class Supervisor(object):
 
         end = time()
         log.info(f'Done [{end - start:.5} s]')
+        
+    def initialize(self, tstart:Time):
+        for mservice in self._graph._mobility_services.values():
+            mservice.set_time(tstart)
+        
+        self._flow_motor.set_time(tstart)
+        self._flow_motor.initialize()
+
+        self._user_flow.set_time(tstart)
+        self._user_flow.initialize()
+        
+    def update_mobility_services(self, flow_dt:Dt):
+        for mservice in self._graph._mobility_services.values():
+            mservice.update(flow_dt)
+            mservice.update_time(flow_dt)
+            
+    def step_flow(self, flow_dt, users_step):
+        self._user_flow.update_time(flow_dt)
+        self._user_flow.step(flow_dt, users_step)
+        self._flow_motor.update_time(flow_dt)
+        self._flow_motor.step(flow_dt)
+
+    def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
+        if len(new_users) > 0:
+            iter_new_users = iter(new_users)
+            u = next(iter_new_users)
+            for _ in range(affectation_factor):
+                next_time = self.tcurrent.add_time(flow_dt)
+                users_step = list()
+                try:
+                    while self.tcurrent <= u.departure_time < next_time:
+                        users_step.append(u)
+                        u = next(iter_new_users)
+                except StopIteration:
+                    pass
+
+                self.update_mobility_services(flow_dt)
+
+                self.step_flow(flow_dt, users_step)
+                if self._flow_motor._write:
+                    self._flow_motor.write_result(affectation_step, flow_step)
+                self.tcurrent = next_time
+                flow_step += 1
+
+        else:
+            for _ in range(affectation_factor):
+                next_time = self.tcurrent.add_time(flow_dt)
+                self.update_mobility_services(flow_dt)
+                self.step_flow(flow_dt, [])
+                if self._flow_motor._write:
+                    self._flow_motor.write_result(affectation_step, flow_step)
+                self.tcurrent = next_time
+                flow_step += 1
 
     def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
         log.info(f'Start run from {tstart} to {tend}')
-        tcurrent = tstart
-        for mservice in self._graph._mobility_services.values():
-            mservice.set_time(tcurrent)
+        
+        self.initialize(tstart)
 
         affectation_step = 0
         flow_step = 0
         principal_dt = flow_dt * affectation_factor
 
-        self._flow_motor.set_time(tcurrent)
-        self._flow_motor.initialize()
+        self.tcurrent = tstart
 
-        self._user_flow.set_time(tcurrent)
-        self._user_flow.initialize()
+        while self.tcurrent < tend:
+            log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
-        while tcurrent < tend:
-            log.info(f'Current time: {tcurrent}, affectation step: {affectation_step}')
-
-            new_users = self.get_new_users(tcurrent, principal_dt)
-            iter_new_users = iter(new_users)
+            new_users = self.get_new_users(principal_dt)
 
             self.compute_user_paths(new_users)
 
             log.info(f'Launching {affectation_factor} step of flow ...')
             start = time()
-            if len(new_users) > 0:
-                u = next(iter_new_users)
-                for _ in range(affectation_factor):
-                    next_time = tcurrent.add_time(flow_dt)
-                    users_step = list()
-                    try:
-                        while tcurrent <= u.departure_time < next_time:
-                            users_step.append(u)
-                            u = next(iter_new_users)
-                    except StopIteration:
-                        pass
-
-                    for mservice in self._graph._mobility_services.values():
-                        mservice.update(flow_dt)
-                        mservice.update_time(flow_dt)
-
-                    self._user_flow.update_time(flow_dt)
-                    self._user_flow.step(flow_dt, users_step)
-                    self._flow_motor.update_time(flow_dt)
-                    self._flow_motor.step(flow_dt)
-                    if self._flow_motor._write:
-                        self._flow_motor.write_result(affectation_step, flow_step)
-                    tcurrent = next_time
-                    flow_step += 1
-
-            else:
-                for _ in range(affectation_factor):
-                    next_time = tcurrent.add_time(flow_dt)
-
-                    for mservice in self._graph._mobility_services.values():
-                        mservice.update(flow_dt)
-                        mservice.update_time(flow_dt)
-                    self._user_flow.update_time(flow_dt)
-                    self._user_flow.step(flow_dt, [])
-                    self._flow_motor.update_time(flow_dt)
-                    self._flow_motor.step(flow_dt)
-                    if self._flow_motor._write:
-                        self._flow_motor.write_result(affectation_step, flow_step)
-                    tcurrent = next_time
-                    flow_step += 1
+            self.step(affectation_factor, affectation_step, flow_dt, flow_step, new_users)
             end = time()
             log.info(f'Done [{end-start:.5} s]')
 
@@ -167,3 +176,5 @@ class Supervisor(object):
 
         if self._write:
             self._outfile.close()
+
+

@@ -67,7 +67,7 @@ class UserFlow(object):
                 next_link = self._graph.mobility_graph.links[(cnode, upath[cnode_ind+1])]
                 if isinstance(next_link, TransitLink):
                     log.info(f"{user} enter connection on {next_link}")
-                    self._walking[uid] = next_link.costs['length']
+                    self._walking[uid] = next_link.costs['time']
                     to_del.append(uid)
                 elif isinstance(next_link, ConnectionLink):
                     self._request_user_vehicles([user])
@@ -80,7 +80,7 @@ class UserFlow(object):
 
     def _request_user_vehicles(self, new_users:List[User]):
         for nu in new_users:
-            nu.notify(nu.departure_time)
+            # nu.notify(nu.departure_time)
             upath = nu.path.nodes
             self.users[nu.id] = nu
             self._transiting[nu.id] = nu
