@@ -36,7 +36,7 @@ def compute_path_modes(mmgraph: MultiModalGraph, path:List[str]) -> List[str]:
             yield mgraph_nodes[path[j]].mobility_service
 
 
-class DecisionModel(ABC):
+class AbstractDecisionModel(ABC):
     """Base class for a travel decision model
 
     Parameters
@@ -93,17 +93,32 @@ class DecisionModel(ABC):
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
             self._csvhandler.writerow(['ID', 'COST', 'PATH', 'LENGTH', 'SERVICE'])
 
-
     @abstractmethod
     def path_choice(self, paths:List[Path]) -> Tuple[List[str], float]:
         pass
 
     def __call__(self, user:User):
         paths, _ = compute_n_best_shortest_path(self._mmgraph, user, self._n_shortest_path, cost=self._cost,
-                                                       algorithm=self._algorithm, heuristic=self._heuristic,
-                                                       scale_factor=self._scale_factor, radius=self._radius_sp,
-                                                       growth_rate_radius=self._radius_growth_sp,
-                                                       walk_speed=self._walk_speed)
+                                                algorithm=self._algorithm, heuristic=self._heuristic,
+                                                scale_factor=self._scale_factor, radius=self._radius_sp,
+                                                growth_rate_radius=self._radius_growth_sp,
+                                                walk_speed=self._walk_speed)
+
+        user_paths = {frozenset([mservice]): [] for mservice in user.available_mobility_service}
+        # print(user_paths)
+
+        for p in paths:
+            try:
+                user_paths[frozenset(p.mobility_services)].append(p)
+            except KeyError:
+                log.debug(f"Ignoring path {' '.join(p.mobility_services)}")
+
+        for mservice, upaths in user_paths.items():
+            if len(mservice) == 1 and len(paths) == 0:
+                log.info(f"Missing path for {mservice[0]} in first computed paths, recompute it ...")
+                p = self._mmgraph._mobility_services[mservice[0]].compute_shortest_path(user, self._cost, self._heuristic)
+                paths.append(p)
+                log.info(f"Done")
 
         path = self.path_choice(paths)
         user.set_path(path)
@@ -127,7 +142,7 @@ class DecisionModel(ABC):
                                        ' '.join(compute_path_modes(self._mmgraph, user.path))])
 
 
-class BaseDecisionModel(DecisionModel):
+class BaseDecisionModel(AbstractDecisionModel):
     def __init__(self, mmgraph: MultiModalGraph, outfile:str=None, cost='time', verbose_file=False):
         super(BaseDecisionModel, self).__init__(mmgraph, n_shortest_path=1, outfile=outfile, cost=cost, verbose_file=verbose_file)
 

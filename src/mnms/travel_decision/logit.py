@@ -3,10 +3,10 @@ from typing import List, Tuple
 
 from numpy.random import choice as _choice
 
-from mnms.travel_decision.model import DecisionModel
+from mnms.travel_decision.model import AbstractDecisionModel
 from mnms.graph.core import MultiModalGraph
 
-class LogitDecisionModel(DecisionModel):
+class LogitDecisionModel(AbstractDecisionModel):
     def __init__(self, mmgraph: MultiModalGraph, theta=0.01, n_shortest_path=3, outfile:str=None, verbose_file=False):
         """Logit decision model for the path of a user
 

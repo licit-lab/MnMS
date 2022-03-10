@@ -249,7 +249,6 @@ class PublicTransport(AbstractMobilityService):
                 self.fleet.start_waiting_vehicle(new_veh.id)
                 if self._observer is not None:
                     new_veh.attach(self._observer)
-                    new_veh.notify(self._tcurrent)
 
             line.clean_arrived_vehicles()
         log.info(f"Number of VEH in fleet: {len(self.fleet.vehicles)}")

@@ -6,7 +6,7 @@ from mnms.graph.core import MultiModalGraph
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
-from mnms.travel_decision.model import DecisionModel
+from mnms.travel_decision.model import AbstractDecisionModel
 from mnms.tools.time import Time, Dt
 from mnms.log import create_logger
 from mnms.tools.exceptions import PathNotFound
@@ -20,14 +20,14 @@ class Supervisor(object):
                  graph: MultiModalGraph,
                  demand: AbstractDemandManager,
                  flow_motor: AbstractFlowMotor,
-                 decision_model: DecisionModel,
+                 decision_model: AbstractDecisionModel,
                  outfile: str = None):
 
         self._graph: MultiModalGraph = graph
         self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
         self._flow_motor.set_graph(graph)
-        self._decision_model:DecisionModel = decision_model
+        self._decision_model:AbstractDecisionModel = decision_model
         self._user_flow = UserFlow()
         self._user_flow.set_graph(graph)
         
@@ -51,7 +51,7 @@ class Supervisor(object):
     def add_demand(self, demand: AbstractDemandManager):
         self._demand = demand
 
-    def add_decision_model(self, model: DecisionModel):
+    def add_decision_model(self, model: AbstractDecisionModel):
         self._decision_model = model
 
     def get_new_users(self, principal_dt):

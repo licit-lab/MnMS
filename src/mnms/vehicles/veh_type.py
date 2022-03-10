@@ -1,10 +1,13 @@
 from typing import List, Dict, Tuple
 
+import numpy as np
+
 from mnms.tools.observer import TimeDependentSubject
 from mnms.log import create_logger
 from mnms.tools.time import Time, Dt
 
 log = create_logger(__name__)
+
 
 class Vehicle(TimeDependentSubject):
     _counter = 0
@@ -23,8 +26,13 @@ class Vehicle(TimeDependentSubject):
         self._passenger = dict()
         self._next_passenger = dict()
 
-        self._iter_path = iter(path)
-        self._current_link, self._remaining_link_length = next(self._iter_path)
+        self._iter_path = None
+        self._current_link = None
+        self._remaining_link_length = None
+        self._position = None
+
+        if len(path) > 0:
+            self.set_path(path)
 
         self.path = path
         self.origin = origin
@@ -57,32 +65,45 @@ class Vehicle(TimeDependentSubject):
     def remaining_link_length(self):
         return self._remaining_link_length
 
+    @property
+    def position(self):
+        return self._position
+
+    def set_path(self, path: List[Tuple[Tuple[str, str], float]]):
+        self._iter_path = iter(path)
+        self._current_link, self._remaining_link_length = next(self._iter_path)
+
+    def set_position(self, position:np.ndarray):
+        self._position = position
+
     def take_next_user(self, user:'User', drop_node:str):
         # user._vehicle = self.id
         log.info(f"{user} will be taken by {self} at {user._current_node} and will be drop at {drop_node}")
         self._next_passenger[user.id] = (drop_node, user)
         user._waiting_vehicle = True
 
-    def drop_user(self, tcurrent:Time, user:'User'):
+    def drop_user(self, tcurrent:Time, user:'User', drop_pos:np.ndarray):
         log.info(f"{user} is dropped at {self._current_link[0]}")
         user._remaining_link_length = 0
-        user._vehicle = None
-        user.notify(tcurrent)
         upath = user.path.nodes
         unode = self._current_link[0]
         user._current_node = unode
         next_node_ind = upath.index(unode)+1
-        user.set_position((unode, upath[next_node_ind]), 0)
+        user.set_position((unode, upath[next_node_ind]), 0, drop_pos)
+        user._vehicle = None
+        user.notify(tcurrent)
+
         del self._passenger[user.id]
 
     def drop_all_passengers(self, tcurrent:Time):
         for _, user in self._passenger.values():
             log.info(f"{user} is dropped at {self._current_link[1]}")
-            user._vehicle = None
             unode = self._current_link[1]
             user._current_node = unode
             user._remaining_link_length = 0
+            user._position = self._position
             user.notify(tcurrent)
+            user._vehicle = None
 
         self._passenger = dict()
 
@@ -92,46 +113,6 @@ class Vehicle(TimeDependentSubject):
         user._vehicle = self.id
         user._waiting_vehicle = False
         self._passenger[userid] = (take_time, user)
-
-    def move(self, tcurrent: Time, dt:Dt, speed:float):
-        self.started = True
-        dist_travelled = dt.to_seconds()*speed
-        for next_pass in list(self._next_passenger):
-            log.info(self._next_passenger)
-            take_node = self._next_passenger[next_pass][1]._current_node
-            if take_node == self._current_link[0]:
-                self.start_user_trip(next_pass, take_node)
-                _, user = self._passenger[next_pass]
-                user.notify(tcurrent)
-
-        if dist_travelled > self._remaining_link_length:
-            elapsed_time = Dt(seconds=self._remaining_link_length / speed)
-            try:
-                self._current_link, self._remaining_link_length = next(self._iter_path)
-                new_dt = dt - elapsed_time
-                self.move(tcurrent.add_time(elapsed_time), new_dt, speed)
-            except StopIteration:
-                log.info(f"{self} is arrived")
-                self._remaining_link_length = 0
-                self.is_arrived = True
-                self.drop_all_passengers(tcurrent.add_time(elapsed_time))
-                self.notify(tcurrent.add_time(elapsed_time))
-                return
-        else:
-            elapsed_time = dt
-            self._remaining_link_length -= dist_travelled
-
-            user_to_drop = list()
-            for passenger_id, (drop_node, passenger) in self._passenger.items():
-                if drop_node == self._current_link[0]:
-                    user_to_drop.append(passenger)
-                else:
-                    passenger.set_position(self._current_link, self._remaining_link_length)
-                    passenger.notify(tcurrent.add_time(elapsed_time))
-            [self.drop_user(tcurrent.add_time(elapsed_time), passenger) for passenger in user_to_drop]
-            self.notify(tcurrent.add_time(elapsed_time))
-
-        return self._current_link
 
 
 class Car(Vehicle):

@@ -1,4 +1,4 @@
-from typing import Dict, Set
+from typing import Dict, Set, List
 from collections import defaultdict
 
 from mnms.vehicles.veh_type import Vehicle
@@ -10,14 +10,19 @@ log = create_logger(__name__)
 class VehicleManager(object):
     _vehicles:Dict[str, Vehicle] = dict()
     _type_vehicles: Dict[str, Set[str]] = defaultdict(set)
+    _new_vehicles: List[Vehicle] = list()
 
     @property
     def number(self):
         return len(self._vehicles)
 
     def add_vehicle(self, veh:Vehicle) -> None:
+        self.add_new_vehicle(veh)
         VehicleManager._vehicles[veh._global_id] = veh
         VehicleManager._type_vehicles[veh.__class__.__name__].add(veh._global_id)
+
+    def add_new_vehicle(self, veh):
+        VehicleManager._new_vehicles.append(veh)
 
     def remove_vehicle(self, veh:Vehicle) -> None:
         log.info(f"Deleting {veh}")

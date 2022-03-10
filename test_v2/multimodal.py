@@ -55,9 +55,11 @@ line.connect_stops('C0_C1', 'C0', 'C1', 1000, reference_links=['0_1'])
 line.connect_stops('C1_C2', 'C1', 'C2', 1000, reference_links=['1_2'])
 line.connect_stops('C2_C4', 'C2', 'C4', 1000, reference_links=['2_4'])
 
-bus.attach_vehicle_observer(CSVVehicleObserver(dir_path+"/veh.csv"))
+veh_observer = CSVVehicleObserver(dir_path+"/veh.csv")
+bus.attach_vehicle_observer(veh_observer)
 
 car = PersonalCar('Car', 10)
+car.attach_vehicle_observer(veh_observer)
 
 car.add_node('A2', '2')
 car.add_node('A3', '3')
@@ -66,7 +68,7 @@ car.add_link('A2_A3', 'A2', 'A3', {'length': 1000}, reference_links=['2_3'])
 
 mmgraph.add_mobility_service(car)
 mmgraph.add_mobility_service(bus)
-mmgraph.connect_mobility_service('C2_A2', 'L1_C2', 'A2', 10, {'time':10})
+mmgraph.connect_mobility_service('C2_A2', 'L1_C2', 'A2', 0, {'time':0})
 mmgraph.add_zone('ZONE', ['0_1', '1_2', '2_3', '2_4'])
 
 

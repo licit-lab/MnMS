@@ -42,6 +42,7 @@ class User(TimeDependentSubject):
 
         self._current_link = None
         self._remaining_link_length = None
+        self._position = None
 
         self._vehicle = None
         self._waiting_vehicle = False
@@ -55,8 +56,16 @@ class User(TimeDependentSubject):
         return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"
 
     @property
+    def position(self):
+        return self._position
+
+    @property
     def vehicle(self):
         return self._vehicle
+
+    @property
+    def current_node(self):
+        return self._current_node
 
     @property
     def is_in_vehicle(self):
@@ -71,6 +80,7 @@ class User(TimeDependentSubject):
         self._current_node = path.nodes[0]
         self._current_link = (path.nodes[0], path.nodes[1])
 
-    def set_position(self, current_link:Tuple[str, str], remaining_length:float):
+    def set_position(self, current_link:Tuple[str, str], remaining_length:float, position:np.ndarray):
         self._current_link = current_link
         self._remaining_link_length = remaining_length
+        self._position = position

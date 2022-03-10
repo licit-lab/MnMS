@@ -50,12 +50,13 @@ class TimeDependentSubject(ABC):
 
 
 class CSVUserObserver(TimeDependentObserver):
-    def __init__(self, filename: str):
-        self._header = ["TIME", "ID", "LINK", "REMAINING_LENGTH", "VEHICLE"]
+    def __init__(self, filename: str, prec:int=3):
+        self._header = ["TIME", "ID", "LINK", "POSITION", "VEHICLE"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
         self._csvhandler.writerow(self._header)
+        self._prec = prec
 
     def __del__(self):
         self._file.close()
@@ -65,18 +66,19 @@ class CSVUserObserver(TimeDependentObserver):
         row = [str(time),
                subject.id,
                f"{subject._current_link[0]} {subject._current_link[1]}",
-               subject._remaining_link_length,
+               f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
                subject._vehicle]
         self._csvhandler.writerow(row)
 
 
 class CSVVehicleObserver(TimeDependentObserver):
-    def __init__(self, filename: str):
-        self._header = ["TIME", "ID", "TYPE", "LINK", "REMAINING_LENGTH", "SPEED", "PASSENGERS"]
+    def __init__(self, filename: str, prec:int=3):
+        self._header = ["TIME", "ID", "TYPE", "LINK", "POSITION", "SPEED", "PASSENGERS"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
         self._csvhandler.writerow(self._header)
+        self._prec = prec
 
     def __del__(self):
         self._file.close()
@@ -86,7 +88,7 @@ class CSVVehicleObserver(TimeDependentObserver):
                subject.id,
                subject.type,
                f"{subject.current_link[0]} {subject.current_link[1]}",
-               subject.remaining_link_length,
-               f"{subject.speed:.3f}" if subject.speed is not None else None,
+               f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
+               f"{subject.speed:.{self._prec}f}" if subject.speed is not None else None,
                ' '.join(p for p in subject._passenger)]
         self._csvhandler.writerow(row)

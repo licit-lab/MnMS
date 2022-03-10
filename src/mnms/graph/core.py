@@ -60,6 +60,7 @@ class TopoGraph(OrientedGraph):
     def __init__(self):
         super(TopoGraph, self).__init__()
         self.node_referencing = defaultdict(list)
+        self._rev_adjacency:Dict[str, Set[str]] = defaultdict(set)
 
     def add_node(self, nid: str, mobility_service:str, ref_node=None) -> None:
         assert nid not in self.nodes, f"Node '{nid}' already in graph"
@@ -84,6 +85,10 @@ class TopoGraph(OrientedGraph):
         self.links[(link.upstream_node, link.downstream_node)] = link
         self._map_lid_nodes[link.id] = (link.upstream_node, link.downstream_node)
         self._adjacency[link.upstream_node].add(link.downstream_node)
+        self._rev_adjacency[link.downstream_node].add(link.upstream_node)
+
+    def get_node_downstream(self, node: str):
+        return self._rev_adjacency[node]
 
 
 class GeoGraph(OrientedGraph):
@@ -121,9 +126,11 @@ class GeoGraph(OrientedGraph):
 
 class ComposedTopoGraph(TopoGraph):
     def __init__(self):
+        super(ComposedTopoGraph, self).__init__()
         self.nodes = ChainMap()
         self.links = ChainMap()
         self._adjacency = ChainMap()
+        self._rev_adjacency = ChainMap()
         self._map_lid_nodes = ChainMap()
         self._node_referencing = []
 
@@ -134,6 +141,7 @@ class ComposedTopoGraph(TopoGraph):
         self.nodes.maps.append(graph.nodes)
         self.links.maps.append(graph.links)
         self._adjacency.maps.append(graph._adjacency)
+        self._rev_adjacency.maps.append(graph._rev_adjacency)
         self._map_lid_nodes.maps.append(graph._map_lid_nodes)
         self._node_referencing.append(graph.node_referencing)
 
@@ -200,10 +208,7 @@ class ComposedTopoGraph(TopoGraph):
         self.check_unicity_links()
 
     def compute_cost_path(self, path:List[str], cost):
-        res = 0
-        for i in range(len(path)-1):
-            res += self.links[(path[i],path[i+1])].costs[cost]
-        return res
+        return sum(self.links[(path[i],path[i+1])].costs[cost] for i in range(len(path)-1))
 
 
 class MultiModalGraph(object):
@@ -233,7 +238,8 @@ class MultiModalGraph(object):
 
     def add_mobility_service(self, service: "AbstractMobilityService"):
         self._mobility_services[service.id] = service
-        self.mobility_graph.add_topo_graph(service._graph)
+        if not service.graph_is_shared:
+            self.mobility_graph.add_topo_graph(service._graph)
 
     def connect_mobility_service(self, lid: str, upstream_node: str, downstream_node: str, length: float,
                                  costs: Dict[str, float]) -> None:

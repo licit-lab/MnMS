@@ -59,7 +59,6 @@ class PersonalCar(AbstractMobilityService):
         new_veh.start_user_trip(user.id, user.path.nodes[0])
         if self._observer is not None:
             new_veh.attach(self._observer)
-            new_veh.notify(self._tcurrent)
 
     def update(self, dt:Dt):
         for veh in list(self.fleet.vehicles.values()):
@@ -67,8 +66,6 @@ class PersonalCar(AbstractMobilityService):
                 self.fleet.delete_vehicle(veh.id)
 
 
-
 if __name__ == "__main__":
-
     serv = PersonalCar('test')
     print(serv.__dump__())

@@ -18,6 +18,9 @@ class AbstractFlowMotor(ABC):
     """
     def __init__(self, outfile:str=None):
         self._graph: MultiModalGraph = None
+        self._mobility_nodes = None
+        self._flow_nodes = None
+
         self._demand = dict()
         self._tcurrent: Time = Time()
 
@@ -30,6 +33,8 @@ class AbstractFlowMotor(ABC):
 
     def set_graph(self, mmgraph: "MultiModalGraph"):
         self._graph = mmgraph
+        self._mobility_nodes = self._graph.mobility_graph.nodes
+        self._flow_nodes = self._graph.flow_graph.nodes
 
     def set_initial_demand(self, demand:List[List]):
         self._demand = demand

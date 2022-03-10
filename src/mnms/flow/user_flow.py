@@ -85,17 +85,17 @@ class UserFlow(object):
             self.users[nu.id] = nu
             self._transiting[nu.id] = nu
             start_node = self._mobility_graph.nodes[nu._current_node]
+            start_node_pos = self._graph.flow_graph.nodes[start_node.reference_node].pos
             mservice_id = start_node.mobility_service
             mservice = self._graph._mobility_services[mservice_id]
             prev_service_id = mservice_id
+            log.info(f"Request VEH for {nu} at {nu._current_node}")
             for i in range(upath.index(start_node.id)+1, len(upath)):
                 current_service_id = self._mobility_graph.nodes[upath[i]].mobility_service
                 if prev_service_id != current_service_id:
-                    log.info(f"Request VEH for {nu} at {nu._current_node}")
                     mservice.request_vehicle(nu, upath[i - 1])
                     break
                 elif i == len(upath) - 1:
-                    log.info(f"Request VEH for {nu} at {nu._current_node}")
                     mservice.request_vehicle(nu, upath[i])
                     break
 

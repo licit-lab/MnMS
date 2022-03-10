@@ -11,6 +11,7 @@ from mnms.log import create_logger
 from mnms.demand.user import User
 from mnms.tools.time import Dt, Time
 from mnms.vehicles.manager import VehicleManager
+from mnms.vehicles.veh_type import Vehicle
 
 log = create_logger(__name__)
 
@@ -185,6 +186,66 @@ class MFDFlow(AbstractFlowMotor):
     def add_reservoir(self, res: Reservoir):
         self.reservoirs.append(res)
 
+    def set_vehicle_position(self, veh:Vehicle):
+        unode, dnode = veh.current_link
+        remaining_length = veh.remaining_link_length
+
+        unode_ref = self._mobility_nodes[unode].reference_node
+        unode_pos = self._flow_nodes[unode_ref].pos
+        dnode_ref = self._mobility_nodes[dnode].reference_node
+        dnode_pos = self._flow_nodes[dnode_ref].pos
+
+        direction = dnode_pos - unode_pos
+        norm_direction = np.linalg.norm(direction)
+        normalized_direction = direction / norm_direction
+        travelled = norm_direction - remaining_length
+        veh.set_position(unode_pos+normalized_direction*travelled)
+
+    def move_veh(self, veh:Vehicle, tcurrent: Time, dt:Dt, speed:float):
+        veh.started = True
+        dist_travelled = dt.to_seconds()*speed
+        for next_pass in list(veh._next_passenger):
+            log.info(veh._next_passenger)
+            take_node = veh._next_passenger[next_pass][1]._current_node
+            ref_node = self._mobility_nodes[take_node].reference_node
+            ref_node_pos = self._flow_nodes[ref_node].pos
+            if take_node == veh._current_link[0]:
+                veh.start_user_trip(next_pass, take_node)
+                _, user = veh._passenger[next_pass]
+                user._position = ref_node_pos
+                user.notify(tcurrent)
+
+        if dist_travelled > veh._remaining_link_length:
+            elapsed_time = Dt(seconds=veh._remaining_link_length / speed)
+            try:
+                veh._current_link, veh._remaining_link_length = next(veh._iter_path)
+                new_dt = dt - elapsed_time
+                self.move_veh(veh, tcurrent.add_time(elapsed_time), new_dt, speed)
+            except StopIteration:
+                log.info(f"{veh} is arrived")
+                veh._remaining_link_length = 0
+                veh.is_arrived = True
+                self.set_vehicle_position(veh)
+                veh.notify(tcurrent.add_time(elapsed_time))
+                veh.drop_all_passengers(tcurrent.add_time(elapsed_time))
+                return
+        else:
+            elapsed_time = dt
+            veh._remaining_link_length -= dist_travelled
+            self.set_vehicle_position(veh)
+
+            user_to_drop = list()
+            for passenger_id, (drop_node, passenger) in veh._passenger.items():
+                if drop_node == veh._current_link[0]:
+                    ref_node = self._mobility_nodes[drop_node].reference_node
+                    ref_node_pos = self._flow_nodes[ref_node].pos
+                    user_to_drop.append((passenger, ref_node_pos))
+                else:
+                    passenger.set_position(veh._current_link, veh._remaining_link_length, veh.position)
+                    passenger.notify(tcurrent.add_time(elapsed_time))
+            [veh.drop_user(tcurrent, passenger, pos) for passenger, pos in user_to_drop]
+            veh.notify(tcurrent.add_time(elapsed_time))
+
     def step(self, dt: Dt):
         
         log.info(f'MFD step {self._tcurrent}')
@@ -193,6 +254,13 @@ class MFDFlow(AbstractFlowMotor):
         for res in self.reservoirs:
             for mode in res.modes:
                 res.dict_accumulations[mode] = 0
+
+        while len(self.veh_manager._new_vehicles) > 0:
+            new_veh = self.veh_manager._new_vehicles.pop()
+            origin_ref = self._mobility_nodes[new_veh.origin].reference_node
+            origin_pos =  self._flow_nodes[origin_ref].pos
+            new_veh.set_position(origin_pos)
+            new_veh.notify(self._tcurrent.remove_time(dt))
 
         # Calculate accumulations
         for veh_id in self.veh_manager._vehicles:
@@ -219,8 +287,7 @@ class MFDFlow(AbstractFlowMotor):
             veh_type = veh.type.upper()
             speed = self.dict_speeds[res_id][veh_type]
             veh.speed = speed
-            veh.move(self._tcurrent.remove_time(dt), dt, speed)
-
+            self.move_veh(veh, self._tcurrent.remove_time(dt), dt, speed)
 
     def update_graph(self):
         mobility_graph = self._graph.mobility_graph
