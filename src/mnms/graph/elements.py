@@ -5,6 +5,14 @@ import numpy as np
 
 
 class GraphElement(ABC):
+    """Base class for the creation of a graph element
+
+    Parameters
+    ----------
+    id: str
+        Id of the element
+
+    """
     def __init__(self, id: str):
         self.id = id
 
@@ -72,8 +80,9 @@ class GeoNode(GraphElement):
         return {'ID': self.id,
                 'POSITION': self.pos.tolist()}
 
+
 class ConnectionLink(GraphElement):
-    """Link between two Mobility Service.
+    """Link between two Mobility Service of the same kind.
 
     Parameters
     ----------
@@ -128,6 +137,19 @@ class ConnectionLink(GraphElement):
 
 
 class TransitLink(GraphElement):
+    """ Link between two different mobility service
+
+    Parameters
+    ----------
+    lid: str
+        id of the link
+    upstream_node: str
+        id of upstream node
+    downstream_node: str
+        id of downstream node
+    costs: dict
+        dictionary of costs
+    """
     def __init__(self, lid, upstream_node, downstream_node, costs=None):
         super(TransitLink, self).__init__(lid)
         self.upstream_node = upstream_node
@@ -135,7 +157,6 @@ class TransitLink(GraphElement):
         self.costs = {'time': 0, '_default': 1}
         if costs is not None:
             self.costs.update(costs)
-
 
     def __repr__(self):
         return f"TransitLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
@@ -191,6 +212,17 @@ class GeoLink(GraphElement):
 
 
 class Zone(GraphElement):
+    """Set of links that define a geographic zone
+
+    Parameters
+    ----------
+    resid: str
+        id of the zone
+    links: list
+        list of links id
+    mobility_services:
+        list of mobility services present in the zone
+    """
     def __init__(self, resid: str, links:List[str]=[], mobility_services:List[str]=[]):
         super(Zone, self).__init__(resid)
         self.mobility_services = frozenset(mobility_services)

@@ -5,17 +5,16 @@ Implement a xml parser of symuflow input to get a MultiModdalGraph
 from lxml import etree
 from collections import defaultdict
 import numpy as np
-import matplotlib.pyplot as plt
 
 from mnms.graph import MultiModalGraph
-from mnms.tools.io import save_graph
+from mnms.graph.io import save_graph
 from mnms.tools.time import Time, TimeTable, Dt
 from mnms.mobility_service import BaseMobilityService, PublicTransport
-from mnms.tools.render import draw_flow_graph, draw_mobility_service
-from mnms.log import rootlogger, LOGLEVEL
+from mnms import log as rootlogger
+from mnms.log import LOGLEVEL
 
 
-def convert_symuflow_to_mmgraph(file, speed_car=25):
+def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None, ban_mobility_services=[]):
     tree = etree.parse(file)
     root = tree.getroot()
 
@@ -33,7 +32,8 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
         down_nid = tr.attrib['id_eltaval']
         up_coord = np.fromstring(tr.attrib['extremite_amont'], sep=" ")
         down_coord = np.fromstring(tr.attrib['extremite_aval'], sep=" ")
-
+        nb_lane = float(tr.attrib.get('nb_voie', '1'))
+        # vit_reg = tr.attrib['vit_reg']
         nodes[up_nid].append(up_coord)
         nodes[down_nid].append(down_coord)
 
@@ -42,12 +42,20 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
                 link_car.add(lid)
                 node_car.add(up_nid)
                 node_car.add(down_nid)
+
+        elif tr.find('VOIES_RESERVEES') is not None:
+            print("RESERVED LANE", lid)
+            nb_reserved_lane = sum(1 for _ in tr.iter("VOIE_RESERVEE"))
+            if nb_reserved_lane != nb_lane:
+                link_car.add(lid)
+                node_car.add(up_nid)
+                node_car.add(down_nid)
         else:
             link_car.add(lid)
             node_car.add(up_nid)
             node_car.add(down_nid)
 
-        if tr.find('POINTS_INTERNES'):
+        if tr.find('POINTS_INTERNES') is not None:
             length = 0
             last_coords = up_coord
             for pi_elem in tr.iter('POINT_INTERNE'):
@@ -55,9 +63,14 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
                 length += np.linalg.norm(curr_coords-last_coords)
                 last_coords = curr_coords
             length += np.linalg.norm(down_coord-last_coords)
-            links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': length}
+            links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': length, "NB_LANE":nb_lane}
         else:
-            links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': None}
+            links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': None, "NB_LANE":nb_lane}
+
+        if 'vit_reg' in tr.attrib:
+            links[lid]['VIT_REG'] = float(tr.attrib['vit_reg'])
+
+
     nodes = {n: np.mean(pos, axis=0) for n, pos in nodes.items()}
 
     arret_elem = root.xpath('/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/ARRETS')[0]
@@ -80,14 +93,14 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
 
         up_new_lid = f"{upstream}_{stop_id}"
         down_new_lid = f"{stop_id}_{downstream}"
-        links[up_new_lid] =  {'UPSTREAM': upstream, 'DOWNSTREAM': stop_id, 'ID': up_new_lid, 'LENGTH': None}
-        links[down_new_lid] = {'UPSTREAM': stop_id, 'DOWNSTREAM': downstream, 'ID': down_new_lid, 'LENGTH': None}
+        links[up_new_lid] =  {'UPSTREAM': upstream, 'DOWNSTREAM': stop_id, 'ID': up_new_lid, 'LENGTH': None, "NB_LANE": 1}
+        links[down_new_lid] = {'UPSTREAM': stop_id, 'DOWNSTREAM': downstream, 'ID': down_new_lid, 'LENGTH': None, "NB_LANE": 1}
         link_to_del[tr_id] = (up_new_lid, down_new_lid)
 
-        if tr_id in link_car:
-            link_car.add(up_new_lid)
-            link_car.add(down_new_lid)
-            node_car.add(stop_id)
+        # if tr_id in link_car:
+        #     link_car.add(up_new_lid)
+        #     link_car.add(down_new_lid)
+        #     node_car.add(stop_id)
 
     for lid in link_to_del:
         del links[lid]
@@ -101,7 +114,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
     already_present_link = dict()
     for l in links.values():
         try:
-            flow_graph.add_link(l['ID'], l['UPSTREAM'], l['DOWNSTREAM'], length=l['LENGTH'])
+            flow_graph.add_link(l['ID'], l['UPSTREAM'], l['DOWNSTREAM'], length=l['LENGTH'], nb_lane=l['NB_LANE'])
         except AssertionError:
             rootlogger.warning(f"Skipping troncon: {l['ID']}, nodes {(l['UPSTREAM'], l['DOWNSTREAM'])} already connected")
             already_present_link[l['ID']] = flow_graph.links[(l['UPSTREAM'], l['DOWNSTREAM'])].id
@@ -115,7 +128,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
             upstream = links[l]['UPSTREAM']
             downstream = links[l]['DOWNSTREAM']
             length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-            car.add_link(l, upstream, downstream, {'time': length/speed_car, 'length': length}, reference_links=[l])
+            car.add_link(l, upstream, downstream, {'time': length/min(links[l].get('VIT_REG', speed_car), speed_car), 'length': length}, reference_links=[l])
 
     G.add_mobility_service(car)
 
@@ -161,6 +174,10 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
                 for time_elem in cal_elem.iter("HORAIRE"):
                     # print(time_elem.attrib['heuredepart'])
                     line_timetable.table.append(Time(time_elem.attrib['heuredepart']))
+
+            if len(line_timetable.table) == 0:
+                rootlogger.warning(f'There is an empty TimeTable for {service.id}')
+
             new_line = service.add_line(line_elem.attrib['id'], line_timetable)
             # print('-'*50)
             for tr_elem in troncons_elem.iter('TRONCON'):
@@ -196,12 +213,13 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
                 up = links[l]['UPSTREAM']
                 down = links[l]['DOWNSTREAM']
                 length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-                costs = {'time': length/service.default_speed}
+                costs = {'time': length/min(links[l].get('VIT_REG', service.default_speed), service.default_speed)}
                 new_line.connect_stops(l, up, down, length, costs=costs, reference_links=[l])
             print('----------')
 
-    for service in mobility_services.values():
-        G.add_mobility_service(service)
+    for sid, service in mobility_services.items():
+        if sid not in ban_mobility_services:
+            G.add_mobility_service(service)
 
     G.mobility_graph.check()
     rootlogger.info("Flow Graph:")
@@ -210,14 +228,28 @@ def convert_symuflow_to_mmgraph(file, speed_car=25):
     rootlogger.info("Mobility Graph:")
     rootlogger.info(f"Number of nodes: {G.mobility_graph.nb_nodes}")
     rootlogger.info(f"Number of links: {G.mobility_graph.nb_links}")
+    rootlogger.info(f"Mobility services: {list(G._mobility_services.keys())}")
 
-    # fig, ax = plt.subplots()
-    # draw_flow_graph(ax, G.flow_graph, node_label=False, show_length=True, linkwidth=3)
-    # plt.show()
+    if zone_file is not None:
+        zone_dict = defaultdict(set)
+        with open(zone_file, 'r') as reader:
+            reader.readline()
+            line = reader.readline()
+            while line:
+                link, zone = line.split(';')
+                zone_dict[zone.upper().removesuffix('\n')].add(link)
+
+                line = reader.readline()
+
+        for zone, links in sorted(zone_dict.items()):
+            print(zone)
+            links = [l for l in links if l in G.flow_graph._map_lid_nodes]
+            G.add_zone(zone, links)
 
     save_graph(G, file.replace('.xml', '.json'), indent=1)
 
 
 if __name__ == "__main__":
     rootlogger.setLevel(LOGLEVEL.INFO)
-    convert_symuflow_to_mmgraph("/Users/florian.gacon/Work/MnMS/script/Lyon_symuviainput_1.xml")
+    convert_symuflow_to_mmgraph(r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/Lyon_symuviainput_1.xml",
+                                zone_file=r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/fichier_liens_Without_RES0.csv")

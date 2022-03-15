@@ -24,6 +24,10 @@ python -m pip install -e .
 ````
 
 
+## Tutorials
+
+Tutorials can be found in the doc/tutorials folder as jupyter notebook.
+
 ## Tests
 
 To launch tests run the following command at the root of the project:
@@ -36,10 +40,16 @@ pytest tests --cov=mnms -v
 
 ### Build
 
-To build the documentation using sphinx:
+To build the documentation using sphinx, first update your conda environment with the doc dependencies:
 
 ```bash
 conda activate mnms
+conda env update --file conda/doc.yaml
+```
+
+Then build the doc:
+
+```bash
 cd doc
 make clean && make html
 ```

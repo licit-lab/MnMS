@@ -1,26 +1,40 @@
-import json
 from collections import defaultdict
 from copy import deepcopy
 
 from mnms.mobility_service.shared import SharedMoblityService
-from mnms.graph.core import TopoNode, ConnectionLink, TransitLink
 from mnms.tools.time import TimeTable, Time
 
 
+def _NoneDefault():
+    return None
+
+
 class Line(object):
+    """Represent a line of a PublicTransport mobility service
+
+    Parameters
+    ----------
+    id: str
+        Id of the line
+    mobility_service: PublicTransport
+        The PublicTransport class in which the line is
+    timetable: TimeTable
+        The time table of departure
+
+    """
     def __init__(self, id: str, mobility_service: "PublicTransport", timetable: "TimeTable"):
         self.id = id
         self.timetable = timetable
-        self.stops = set()
+        self.stops = list()
         self.links = set()
         self.mobility_service = mobility_service
         self.service_id = mobility_service.id
 
-        self._adjacency = defaultdict(lambda: None)
+        self._adjacency = defaultdict(_NoneDefault)
 
     def add_stop(self, sid:str, ref_node:str=None) -> None:
         self.mobility_service.add_node(self._prefix(sid), ref_node)
-        self.stops.add(sid)
+        self.stops.append(sid)
 
     def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, costs=None, reference_links=None,
                       reference_lane_ids=None) -> None:
@@ -37,6 +51,15 @@ class Line(object):
         self.links.add(lid)
         self._adjacency[up_sid] = down_sid
 
+
+    @property
+    def start(self):
+        return self.stops[0]
+
+    @property
+    def end(self):
+        return self.stops[-1]
+
     def _prefix(self, name):
         return self.id+'_'+name
 
@@ -49,6 +72,16 @@ class Line(object):
 
 
 class PublicTransport(SharedMoblityService):
+    """Public transport class, manage its lines
+
+    Parameters
+    ----------
+    id: str
+        Id of the public transport class
+    default_speed: float
+        Default speed of the public transport
+
+    """
     def __init__(self, id:str, default_speed:float):
         super(PublicTransport, self).__init__(id, default_speed)
         self.lines = dict()
@@ -76,7 +109,8 @@ class PublicTransport(SharedMoblityService):
 
         if two_ways:
             c = {'time': self.lines[ulineid].timetable.get_freq() / 2, "length": 0}
-            c.update(costs)
+            if costs is not None:
+                c.update(costs)
             self.add_link('_'.join([dlineid, ulineid, nid]),
                           dlineid + '_' + nid,
                           ulineid + '_' + nid,

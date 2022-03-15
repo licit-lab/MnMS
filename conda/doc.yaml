@@ -1,0 +1,9 @@
+channels:
+  - conda-forge
+  - anaconda
+dependencies:
+  - sphinx
+  - sphinx-book-theme
+  - nbsphinx
+  - pandoc
+  - notebook

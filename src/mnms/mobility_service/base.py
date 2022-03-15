@@ -2,11 +2,18 @@ from mnms.graph.core import TopoGraph, TopoNode, ConnectionLink
 
 
 class BaseMobilityService(TopoGraph):
-    '''
-    Base class to define new mobility services. Make sure that each
+    """Base class to define new mobility services. Make sure that each
     new mobility service is imported at the __init__.py level (see SimpleMobilityService
     as an example)
-    '''
+
+    Parameters
+    ----------
+    id: str
+        Id of the mobility service
+    default_speed: float
+        Its default speed
+
+    """
     def __init__(self, id:str, default_speed:float):
         super(BaseMobilityService, self).__init__()
         self.id: str = id
@@ -30,7 +37,6 @@ class BaseMobilityService(TopoGraph):
         super(BaseMobilityService, self).add_node(nid, self.id, ref_node)
 
     def add_link(self, lid: str, unid: str, dnid:str, costs:dict={}, reference_links=None, reference_lane_ids=None) -> None:
-        costs.update({'speed': self.default_speed})
         super(BaseMobilityService, self).add_link(lid, unid, dnid, costs, reference_links, reference_lane_ids, self.id)
 
     def update_costs(self, time:"Time"):

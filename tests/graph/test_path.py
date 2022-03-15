@@ -1,8 +1,9 @@
 import unittest
 
+from mnms import User
 from mnms.graph.core import MultiModalGraph
-from mnms.graph.algorithms import compute_shortest_path
-from mnms.graph.path import reconstruct_path
+from mnms.graph.shortest_path import compute_shortest_path
+from mnms.flow.MFD import construct_leg
 from mnms.mobility_service import BaseMobilityService
 
 
@@ -13,7 +14,6 @@ class TestPath(unittest.TestCase):
 
         self.mmgraph = MultiModalGraph()
         flow = self.mmgraph.flow_graph
-        mobility = self.mmgraph.mobility_graph
 
         flow.add_node('0', [0, 0])
         flow.add_node('1', [1, 0])
@@ -43,16 +43,16 @@ class TestPath(unittest.TestCase):
         self.mmgraph.add_mobility_service(m2)
 
         self.mmgraph.connect_mobility_service('M1_M2_1', 'M1_1', 'M2_1', {"time": 0})
-
-        cost, self.path = compute_shortest_path(self.mmgraph, '0', '3', cost='time')
-        print(self.path)
+        user = User('test', '0', '3', None)
+        compute_shortest_path(self.mmgraph, user, cost='time')
+        self.path = user.path
 
     def tearDown(self):
         """Concludes and closes the test.
         """
 
     def test_reconstruct(self):
-        reconstructed = reconstruct_path(self.mmgraph, self.path)
-        self.assertDictEqual(reconstructed[0], {'sensor': 'Res1', 'mode': 'M1', 'length': 1.0})
-        self.assertDictEqual(reconstructed[1], {'sensor': 'Res1', 'mode': 'M2', 'length': 1.0})
-        self.assertDictEqual(reconstructed[2], {'sensor': 'Res2', 'mode': 'M2', 'length': 1.0})
+        reconstructed = construct_leg(self.mmgraph, self.path)
+        self.assertDictEqual(reconstructed[0], {'reservoir': 'Res1', 'mode': 'M1', 'length': 1.0})
+        self.assertDictEqual(reconstructed[1], {'reservoir': 'Res1', 'mode': 'M2', 'length': 1.0})
+        self.assertDictEqual(reconstructed[2], {'reservoir': 'Res2', 'mode': 'M2', 'length': 1.0})

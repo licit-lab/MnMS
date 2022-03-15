@@ -1,28 +1,26 @@
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 
 # Unimodal MFD of Lyon with 10 reservoirs, see Mariotte et al. 2020
 data_MFD = pd.read_csv('MFD_10_201802.csv')
 
-def V_MFD_res(n, i_res): # Mean car speed a function of car accumulation
+
+def V_MFD_res(n, i_res):  # Mean car speed a function of car accumulation
     Pc = data_MFD["Pc"][i_res]
     nc = data_MFD["nc"][i_res]
     njam = data_MFD["njam"][i_res]
-    p = 0 # production
-    if n<=nc:
-        p = Pc*(2*nc-n)/nc**2
-    elif n>nc and n<njam:
-        p = Pc * (njam-n) * (njam+n-2*nc) / (njam-nc)**2 / n
-    return p
+    v = 0  # speed in m/s
+    if n <= nc:
+        v = Pc * (2 * nc - n) / nc ** 2
+    elif nc < n < njam:
+        v = Pc * (njam - n) * (njam + n - 2 * nc) / (njam - nc) ** 2 / n
+    return v
+
 
 def res_fct(dict_accumulations, i_res):
-    V_car = V_MFD_res(dict_accumulations['car'], i_res)
-    V_car = max(V_car, 0.001) # avoid gridlock
-    V_bus = 4 # dummy
-    dict_speeds = {'car': V_car, 'bus': V_bus}
+    v_car = V_MFD_res(dict_accumulations['car'], i_res)
+    v_car = max(v_car, 0.001)  # avoid gridlock
+    v_bus = 0.15 * v_car + 10 / 3.6  # from Loder et al. 2017 (Empirics of multi-modal traffic networks)
+    v_metro = 6 #dummy
+    v_tram = 5 #dummy
+    dict_speeds = {'car': v_car, 'bus': v_bus, 'metro': v_metro, 'tram': v_tram}
     return dict_speeds
-
-list_MFD_fct = []
-for i in range(10):
-    list_MFD_fct.append(lambda dict_acc : res_fct(dict_acc, i))

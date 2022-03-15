@@ -6,7 +6,10 @@ from mnms.flow.MFD import Reservoir, MFDFlow
 from mnms.mobility_service import BaseMobilityService
 from mnms.log import rootlogger, LOGLEVEL
 from mnms.tools.time import Time, Dt
+from mnms.travel_decision.model import SimpleDecisionModel
+from mnms.travel_decision.logit import LogitDecisionModel
 
+import os
 
 rootlogger.setLevel(LOGLEVEL.INFO)
 
@@ -27,8 +30,8 @@ def create_simple_grid_multimodal():
     for l in mmgraph.flow_graph.links.values():
         uid = l.upstream_node
         did = l.downstream_node
-        car.add_link('CAR_'+uid+'_'+did, 'CAR_'+uid, 'CAR_'+did, {'length': DIST}, [l.id])
-        bus.add_link('BUS_' + uid + '_' + did, 'BUS_' + uid, 'BUS_' + did, {'length': DIST}, [l.id])
+        car.add_link('CAR_'+uid+'_'+did, 'CAR_'+uid, 'CAR_'+did, {'length': DIST, 'time':DIST/car.default_speed}, [l.id])
+        bus.add_link('BUS_' + uid + '_' + did, 'BUS_' + uid, 'BUS_' + did, {'length': DIST, 'time':DIST/bus.default_speed}, [l.id])
 
     mmgraph.add_mobility_service(car)
     mmgraph.add_mobility_service(bus)
@@ -43,6 +46,8 @@ if __name__ == '__main__':
     mmgraph = create_simple_grid_multimodal()
     demand = create_random_demand(mmgraph, "07:00:00", "10:00:00", cost_path='length', min_cost=5000, seed=42)
 
+    fdir = os.path.dirname(os.path.abspath(__file__))
+
     def res_fct(dict_accumulations):
         V_car = 11.5 * (1 - (dict_accumulations['car'] + dict_accumulations['bus']) / 80000)
         V_car = max(V_car, 0.001)
@@ -53,14 +58,16 @@ if __name__ == '__main__':
 
     reservoir = Reservoir.fromZone(mmgraph, 'ZONE', res_fct)
 
-    flow_motor = MFDFlow()
+    flow_motor = MFDFlow(outfile=fdir+"/flow.csv")
     flow_motor.add_reservoir(reservoir)
 
-    supervisor = Supervisor()
-    supervisor.add_graph(mmgraph)
-    supervisor.add_flow_motor(flow_motor)
-    supervisor.add_demand(demand)
+    travel_decision = LogitDecisionModel(mmgraph, outfile=fdir+"/path.csv")
 
-    supervisor.update_graph_cost(3)
+    supervisor = Supervisor(graph=mmgraph,
+                            flow_motor=flow_motor,
+                            demand=demand,
+                            decision_model=travel_decision,
+                            outfile=fdir + "/travel_time_link.csv")
 
     supervisor.run(Time('07:00:00'), Time('10:00:00'), Dt(minutes=1), 10)
+

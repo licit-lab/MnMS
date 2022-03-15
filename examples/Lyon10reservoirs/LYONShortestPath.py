@@ -2,10 +2,10 @@ import os
 
 import matplotlib.pyplot as plt
 
-from mnms.tools.io import load_graph
+from mnms.graph.io import load_graph
 from mnms.tools.render import draw_flow_graph, draw_path
 from mnms.mobility_service import BaseMobilityService
-from mnms.graph.algorithms import compute_shortest_path
+from mnms.graph.algorithms import compute_shortest_path_nodes
 from mnms.log import rootlogger, LOGLEVEL
 from mnms.demand.user import User
 from mnms.tools.time import Time
@@ -34,7 +34,7 @@ mmgraph.add_mobility_service(car)
 
 
 user = User('0', "E_82610778_T_58239512_FRef", "C_TRAM_535", Time("07:00:00"))
-cost = compute_shortest_path(mmgraph, user, algorithm="astar")
+cost = compute_shortest_path_nodes(mmgraph, user, algorithm="astar")
 
 
 fig, ax = plt.subplots()

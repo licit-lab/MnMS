@@ -46,7 +46,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
-
+    'nbsphinx'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -67,7 +67,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_book_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -89,5 +89,7 @@ destdir = os.path.abspath(os.path.join(project_root, "doc", "_dvlpt"))
 
 if not os.path.isdir(destdir):
     os.makedirs(destdir)
+
+nbsphinx_execute = 'always'
 
 main(['-e', '-o', destdir, '-d', '4', '-s', source_suffix[1:], '--force', src_dir])

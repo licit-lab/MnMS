@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 
 from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.base import BaseMobilityService
-from mnms.tools.io import save_graph, load_graph
+from mnms.graph.io import save_graph, load_graph
 
 
 class TestIO(unittest.TestCase):
