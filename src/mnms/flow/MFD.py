@@ -309,7 +309,8 @@ class MFDFlow(AbstractFlowMotor):
                     new_speed = self._graph._mobility_services[link.mobility_service].default_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
-            mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] =  total_len/new_speed
+            if new_speed != 0:
+                mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] = total_len/new_speed
 
     def write_result(self, step_affectation:int, step_flow:int):
         tcurrent = self._tcurrent.time
