@@ -1,10 +1,10 @@
 import unittest
 
-from mnms import User
+from mnms.demand.user import User
 from mnms.graph.core import MultiModalGraph
 from mnms.graph.shortest_path import compute_shortest_path
 from mnms.flow.MFD import construct_leg
-from mnms.mobility_service import BaseMobilityService
+from mnms.mobility_service import PersonalCar
 
 
 class TestPath(unittest.TestCase):
@@ -27,12 +27,12 @@ class TestPath(unittest.TestCase):
         self.mmgraph.add_zone('Res1', ['0_1', '1_2'])
         self.mmgraph.add_zone('Res2', ['2_3'])
 
-        m1 = BaseMobilityService('M1', 10)
+        m1 = PersonalCar('M1', 10)
         m1.add_node('M1_0', '0')
         m1.add_node('M1_1', '1')
         m1.add_link('M1_0_1', 'M1_0', 'M1_1', {'time': 1}, ['0_1'])
 
-        m2 = BaseMobilityService('M2', 10)
+        m2 = PersonalCar('M2', 10)
         m2.add_node('M2_0', '0')
         m2.add_node('M2_1', '1')
         m2.add_node('M2_3', '3')
@@ -42,10 +42,10 @@ class TestPath(unittest.TestCase):
         self.mmgraph.add_mobility_service(m1)
         self.mmgraph.add_mobility_service(m2)
 
-        self.mmgraph.connect_mobility_service('M1_M2_1', 'M1_1', 'M2_1', {"time": 0})
+        self.mmgraph.connect_mobility_service('M1_M2_1', 'M1_1', 'M2_1', 0, {"time": 0})
         user = User('test', '0', '3', None)
-        compute_shortest_path(self.mmgraph, user, cost='time')
-        self.path = user.path
+        path = compute_shortest_path(self.mmgraph, user, cost='time')
+        self.path = path.nodes
 
     def tearDown(self):
         """Concludes and closes the test.

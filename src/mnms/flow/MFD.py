@@ -1,6 +1,6 @@
 from typing import List
-from copy import deepcopy
 from typing import Callable, Dict
+from collections import defaultdict
 
 import numpy as np
 
@@ -10,7 +10,8 @@ from mnms.graph.elements import ConnectionLink, TransitLink
 from mnms.log import create_logger
 from mnms.demand.user import User
 from mnms.tools.time import Dt, Time
-
+from mnms.vehicles.manager import VehicleManager
+from mnms.vehicles.veh_type import Vehicle
 
 log = create_logger(__name__)
 
@@ -26,7 +27,7 @@ def construct_leg(mmgraph: MultiModalGraph, path:List[str]):
         link = mmgraph.mobility_graph.links[(path[ni], path[nj])]
         if isinstance(link, ConnectionLink):
             for lid in link.reference_links:
-                flow_link = mmgraph.flow_graph.links[mmgraph.flow_graph._map_lid_nodes[lid]]
+                flow_link = mmgraph.flow_graph.get_link(lid)
                 curr_res = flow_link.zone
                 curr_mob = link.mobility_service
                 if curr_res != last_res or curr_mob != last_mob:
@@ -104,8 +105,6 @@ def get_user_position(mmgraph: MultiModalGraph, user:User, legs:List[Dict], rema
     return upos
 
 
-
-
 class Reservoir(object):
     # id to identify the sensor, is not used for now, could be a string
     # modes are the transportation modes available for the sensor
@@ -114,13 +113,9 @@ class Reservoir(object):
         self.id = id
         self.modes = modes
         self.compute_MFD_speed = fct_MFD_speed
-        dict_accumulations = {}
-        for mode in modes:
-            dict_accumulations[mode] = 0
-        self.dict_accumulations = dict_accumulations
-        self.dict_speeds = {}
+        self.dict_accumulations = defaultdict(lambda: 0)
+        self.dict_speeds = defaultdict(lambda: 0)
         self.update_speeds()
-
 
     def update_accumulations(self, dict_accumulations):
         for mode in dict_accumulations.keys():
@@ -129,7 +124,7 @@ class Reservoir(object):
         return
 
     def update_speeds(self):
-        self.dict_speeds = self.compute_MFD_speed(self.dict_accumulations)
+        self.dict_speeds.update(self.compute_MFD_speed(self.dict_accumulations))
         return self.dict_speeds
 
     @classmethod
@@ -137,8 +132,9 @@ class Reservoir(object):
         modes = set()
         for lid in mmgraph.zones[zid].links:
             nodes = mmgraph.flow_graph._map_lid_nodes[lid]
-            for mobility_node in mmgraph.mobility_graph.get_node_references(nodes[0])+ mmgraph.mobility_graph.get_node_references(nodes[1]):
-                modes.add(mmgraph.mobility_graph.nodes[mobility_node].mobility_service)
+            for mobility_node in mmgraph.mobility_graph.get_node_references(nodes[0]) + mmgraph.mobility_graph.get_node_references(nodes[1]):
+                mservice_id = mmgraph.mobility_graph.nodes[mobility_node].mobility_service
+                modes.add(mmgraph._mobility_services[mservice_id].fleet.vehicle_type().upper())
 
         new_res = Reservoir(zid, modes, fct_MFD_speed)
         return new_res
@@ -165,6 +161,8 @@ class MFDFlow(AbstractFlowMotor):
         self.nb_user = 0
         self.departure_times = None
 
+        self.vehicles = VehicleManager()
+
     def initialize(self):
         self.dict_accumulations = {}
         self.dict_speeds = {}
@@ -182,96 +180,114 @@ class MFDFlow(AbstractFlowMotor):
         self.completed_trips = dict()
         self.nb_user = 0
         self.departure_times = dict()
+        
+        self.veh_manager = VehicleManager()
 
     def add_reservoir(self, res: Reservoir):
         self.reservoirs.append(res)
 
-    # TODO: del User that finish their path
-    def step(self, dt: Dt, new_users:List[User]):
-        time = self._tcurrent.to_seconds()
+    def set_vehicle_position(self, veh:Vehicle):
+        unode, dnode = veh.current_link
+        remaining_length = veh.remaining_link_length
+
+        unode_ref = self._mobility_nodes[unode].reference_node
+        unode_pos = self._flow_nodes[unode_ref].pos
+        dnode_ref = self._mobility_nodes[dnode].reference_node
+        dnode_pos = self._flow_nodes[dnode_ref].pos
+
+        direction = dnode_pos - unode_pos
+        norm_direction = np.linalg.norm(direction)
+        normalized_direction = direction / norm_direction
+        travelled = norm_direction - remaining_length
+        veh.set_position(unode_pos+normalized_direction*travelled)
+
+    def move_veh(self, veh:Vehicle, tcurrent: Time, dt:Dt, speed:float):
+        veh.started = True
+        dist_travelled = dt.to_seconds()*speed
+        for next_pass in list(veh._next_passenger):
+            # log.info(veh._next_passenger)
+            take_node = veh._next_passenger[next_pass][1]._current_node
+            ref_node = self._mobility_nodes[take_node].reference_node
+            ref_node_pos = self._flow_nodes[ref_node].pos
+            if take_node == veh._current_link[0]:
+                veh.start_user_trip(next_pass, take_node)
+                _, user = veh._passenger[next_pass]
+                user._position = ref_node_pos
+                user.notify(tcurrent)
+
+        if dist_travelled > veh._remaining_link_length:
+            elapsed_time = Dt(seconds=veh._remaining_link_length / speed)
+            try:
+                veh._current_link, veh._remaining_link_length = next(veh._iter_path)
+                new_dt = dt - elapsed_time
+                self.move_veh(veh, tcurrent.add_time(elapsed_time), new_dt, speed)
+            except StopIteration:
+                log.info(f"{veh} is arrived")
+                veh._remaining_link_length = 0
+                veh.is_arrived = True
+                self.set_vehicle_position(veh)
+                veh.notify(tcurrent.add_time(elapsed_time))
+                veh.drop_all_passengers(tcurrent.add_time(elapsed_time))
+                return
+        else:
+            elapsed_time = dt
+            veh._remaining_link_length -= dist_travelled
+            self.set_vehicle_position(veh)
+
+            user_to_drop = list()
+            for passenger_id, (drop_node, passenger) in veh._passenger.items():
+                if drop_node == veh._current_link[0]:
+                    ref_node = self._mobility_nodes[drop_node].reference_node
+                    ref_node_pos = self._flow_nodes[ref_node].pos
+                    user_to_drop.append((passenger, ref_node_pos))
+                else:
+                    passenger.set_position(veh._current_link, veh._remaining_link_length, veh.position)
+                    passenger.notify(tcurrent.add_time(elapsed_time))
+            [veh.drop_user(tcurrent, passenger, pos) for passenger, pos in user_to_drop]
+            veh.notify(tcurrent.add_time(elapsed_time))
+
+    def step(self, dt: Dt):
+        
         log.info(f'MFD step {self._tcurrent}')
-        user_to_del = set()
+        log.info(f"Moving {len(self.veh_manager._vehicles)} vehicles")
+
+        for res in self.reservoirs:
+            for mode in res.modes:
+                res.dict_accumulations[mode] = 0
+
+        while len(self.veh_manager._new_vehicles) > 0:
+            new_veh = self.veh_manager._new_vehicles.pop()
+            origin_ref = self._mobility_nodes[new_veh.origin].reference_node
+            origin_pos =  self._flow_nodes[origin_ref].pos
+            new_veh.set_position(origin_pos)
+            new_veh.notify(self._tcurrent.remove_time(dt))
+
+        # Calculate accumulations
+        for veh_id in self.veh_manager._vehicles:
+            veh = self.veh_manager._vehicles[veh_id]
+            curr_link = self._graph.mobility_graph.links[(veh.current_link)]
+            lid = curr_link.reference_links[0] # take reservoir of first part of trip
+            flow_link = self._graph.flow_graph.get_link(lid)
+            res_id = flow_link.zone
+            veh_type = veh.type.upper() # dirty
+            self.dict_accumulations[res_id][veh_type] += 1
+
         # Update the traffic conditions
         for i_res, res in enumerate(self.reservoirs):
             res.update_accumulations(self.dict_accumulations[res.id])
             self.dict_speeds[res.id] = res.update_speeds()
 
-        # Update data structure for new users
-        for nu in new_users:
-            path = construct_leg(self._graph, nu.path)
-            self._demand[nu.id] = path
-            self.remaining_length[nu.id] = path[0]['length']
-            self.current_mode[nu.id] = path[0]['mode']
-            self.current_reservoir[nu.id] = path[0]['reservoir']
-            self.current_leg[nu.id] = 0
-            self.time_completion_legs[nu.id] = [-1] * len(path)
-
-            self.departure_times[nu.id] = nu.departure_time
-            self.started_trips[nu.id] = False
-            self.completed_trips[nu.id] = False
-            self.users[nu.id] = nu
-
-        self.nb_user += len(new_users)
-        # Move the agents
-        for i_user, user in self.users.items():
-            remaining_time = dt
-            # Agent enters the network
-            # log.debug(f"USER {self.departure_times[i_user].to_seconds()}")
-            # log.info(f"{user}, {self.started_trips[i_user]}, {self.departure_times[i_user].to_seconds()}, {time}")
-            if (not self.started_trips[i_user]) and (self.departure_times[i_user].to_seconds() <= time):
-                # log.info(f'New user entering the Network: {user}')
-                self.started_trips[i_user] = True
-                self.dict_accumulations[self.current_reservoir[i_user]][self.current_mode[i_user]] += user.scale_factor
-                remaining_time = time - self.departure_times[i_user].to_seconds()
-
-            # Agent is on the network
-            if self.started_trips[i_user]:
-                # Complete current trip leg
-                remaining_length = self.remaining_length[i_user]
-                curr_res = self.current_reservoir[i_user]
-                curr_mode = self.current_mode[i_user]
-                curr_leg = self.current_leg[i_user]
-                while remaining_length <= remaining_time * self.dict_speeds[curr_res][
-                    curr_mode] and curr_leg < len(self._demand[i_user]) - 1:
-                    remaining_time -= remaining_length / self.dict_speeds[curr_res][curr_mode]
-                    self.dict_accumulations[curr_res][curr_mode] -= user.scale_factor
-                    # TODO discuss saving completion time of legs
-                    self.time_completion_legs[i_user][curr_leg] = time - remaining_time
-                    self.current_leg[i_user] += 1
-
-                    path = self._demand[i_user]
-                    curr_leg = self.current_leg[i_user]
-                    self.remaining_length[i_user] = path[curr_leg]['length']
-                    self.current_mode[i_user] = path[curr_leg]['mode']
-                    self.current_reservoir[i_user] = path[curr_leg]['reservoir']
-                    curr_mode = self.current_mode[i_user]
-                    curr_res = self.current_reservoir[i_user]
-                    self.dict_accumulations[curr_res][curr_mode] += user.scale_factor
-                # Remove agent who reached destinations
-                if remaining_length < remaining_time * self.dict_speeds[curr_res][curr_mode]:
-                    self.dict_accumulations[curr_res][curr_mode] -= user.scale_factor
-                    user_to_del.add(i_user)
-                    arrival_time = Time.fromSeconds(time - remaining_length/self.dict_speeds[curr_res][curr_mode])
-                    user.finish_trip(arrival_time)
-                    # remaining_time -= self.remaining_length[i_user] / self.dict_speeds[curr_res][curr_mode]
-                    # self.time_completion_legs[i_user][curr_leg] = time - remaining_time
-                    # self.completed_trips[i_user] = True
-                    # self.remaining_length[i_user] = 0
-                else:
-                    # Remove accomplished distance when staying in on the network
-                    self.remaining_length[i_user] -= remaining_time * self.dict_speeds[curr_res][curr_mode]
-
-        # log.info(f"{self.completed_trips}")
-        for iu in user_to_del:
-            del self.users[iu]
-            del self.completed_trips[iu]
-            del self.started_trips[iu]
-            del self.remaining_length[iu]
-            del self.current_mode[iu]
-            del self.current_leg[iu]
-            del self.current_reservoir[iu]
-            del self.time_completion_legs[iu]
-            self.nb_user -= 1
+        # Move the vehicles
+        for veh_id in self.veh_manager._vehicles:
+            veh = self.veh_manager._vehicles[veh_id]
+            curr_link = self._graph.mobility_graph.links[veh.current_link]
+            lid = curr_link.reference_links[0]
+            flow_link = self._graph.flow_graph.get_link(lid)
+            res_id = flow_link.zone
+            veh_type = veh.type.upper()
+            speed = self.dict_speeds[res_id][veh_type]
+            veh.speed = speed
+            self.move_veh(veh, self._tcurrent.remove_time(dt), dt, speed)
 
     def update_graph(self):
         mobility_graph = self._graph.mobility_graph
@@ -291,7 +307,7 @@ class MFDFlow(AbstractFlowMotor):
                     for resid, reslinks in res_links.items():
                         res = res_dict[resid]
                         if l in reslinks:
-                            mspeed = res.dict_speeds[link_service]
+                            mspeed = res.dict_speeds[link_service.upper()]
                             topolink_lenghts[topolink.id]['speeds'][l] = mspeed
                             break
 

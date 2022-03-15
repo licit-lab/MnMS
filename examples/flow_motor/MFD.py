@@ -1,5 +1,5 @@
 from mnms.graph import MultiModalGraph
-from mnms.mobility_service.base import BaseMobilityService
+from mnms.mobility_service.abstract import PersonalCar
 from mnms.demand.generation import create_random_demand
 from mnms.tools.time import Time
 from mnms.flow.MFD import Reservoir, MFDFlow
@@ -27,7 +27,7 @@ flow.add_link('3_2', '3', '2')
 mmgraph.add_zone('SEN1', ['0_1', '1_0', '1_2', '2_1'])
 mmgraph.add_zone('SEN2', ['2_3', '3_2'])
 
-m1 = BaseMobilityService('car', 10)
+m1 = PersonalCar('car', 10)
 m1.add_node('0', '0')
 m1.add_node('1', '1')
 m1.add_node('3', '3')
@@ -37,7 +37,7 @@ m1._add_link('M1_1_0')
 m1.add_link('M1_1_3', '1', '3')
 m1._add_link('M1_3_1')
 
-m2 = BaseMobilityService('bus', 5)
+m2 = PersonalCar('bus', 5)
 m2.add_node('0', '0')
 m2.add_node('1', '1')
 m2.add_node('3', '3')

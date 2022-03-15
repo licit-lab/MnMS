@@ -75,6 +75,6 @@ def load_graph(filename:str) -> MultiModalGraph:
         mmgraph.add_mobility_service(new_service)
 
     for cdata in data['MOBILITY_GRAPH']['CONNECTIONS']:
-        mmgraph.connect_mobility_service(cdata['ID'], cdata['UPSTREAM'], cdata['DOWNSTREAM'], cdata['COSTS'])
+        mmgraph.connect_mobility_service(cdata['ID'], cdata['UPSTREAM'], cdata['DOWNSTREAM'], cdata['COSTS']['length'], cdata['COSTS'])
 
     return mmgraph

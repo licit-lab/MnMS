@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 from collections import deque, defaultdict
-from typing import Callable, Tuple, List, Literal
+from dataclasses import dataclass, field
+from typing import Callable, Tuple, List, Literal, Deque, FrozenSet, Union
 from functools import partial
+from queue import PriorityQueue
+from itertools import count
 
 import numpy as np
 
@@ -15,13 +20,20 @@ from mnms.demand.user import User
 log = create_logger(__name__)
 
 
-def dijkstra(G: TopoGraph, user: User, cost: str) -> float:
+@dataclass
+class Path:
+    cost: float | None = None
+    mobility_services: FrozenSet[str] = field(default_factory=set)
+    nodes: Deque[str] = field(default_factory=deque)
+
+
+def dijkstra(graph: TopoGraph, origin:str, destination:str, cost: str, available_mobility_services:Union[List[str], None]) -> Path:
     """Simple dijkstra shortest path algorithm, it set the `path` attribute of the User with the computed shortest
     path
 
     Parameters
     ----------
-    G: TopoGraph
+    topograph: TopoGraph
         Topological graph used to compute the shortest path
     user: User
         The user with an origin/destination
@@ -34,13 +46,12 @@ def dijkstra(G: TopoGraph, user: User, cost: str) -> float:
 
 
     """
-    origin = user.origin
-    destination = user.destination
+
     vertices = set()
     dist = dict()
     prev = dict()
 
-    for v in G.nodes:
+    for v in graph.nodes:
         dist[v] = float('inf')
         prev[v] = None
         vertices.add(v)
@@ -57,38 +68,113 @@ def dijkstra(G: TopoGraph, user: User, cost: str) -> float:
 
         if u == destination:
             log.debug(f"Found destination {u}")
-            path = deque()
+            path = Path()
             if prev[u] is not None or u == origin:
                 while u is not None:
-                    path.appendleft(u)
+                    path.nodes.appendleft(u)
+                    path.mobility_services.add(graph.nodes[u].mobility_service)
                     u = prev[u]
-            user.path = list(path)
-            return dist[destination]
+            path.cost = dist[destination]
+            return path
 
-        for neighbor in G.get_node_neighbors(u):
+        for neighbor in graph.get_node_neighbors(u):
             log.debug(f"Neighbor Node {neighbor}")
             if neighbor in vertices:
 
                 # Check if next node mobility service is available for the user
-                link = G.links[(u, neighbor)]
-                alt = dist[u] + G.links[(u, neighbor)].costs[cost]
+                link = graph.links[(u, neighbor)]
+                alt = dist[u] + graph.links[(u, neighbor)].costs[cost]
                 if isinstance(link, TransitLink):
-                    if user.available_mobility_service is not None:
-                        if G.nodes[link.downstream_node].mobility_service not in user.available_mobility_service:
+                    if available_mobility_services is not None:
+                        dnode_mobility_service = graph.nodes[link.downstream_node].mobility_service
+                        if dnode_mobility_service is not None and dnode_mobility_service not in available_mobility_services:
                             alt = float('inf')
 
                 if alt < dist[neighbor]:
                     dist[neighbor] = alt
                     prev[neighbor] = u
 
+    return Path(float('inf'))
 
-def astar(G: TopoGraph, user: User, cost: str, heuristic: Callable[[str, str], float]) -> float:
+
+def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: str, available_mobility_services:Union[List[str], None]) -> Path:
+    """
+    Bidirectional dijkstra algorithm (inspired from NetworkX implementation: https://github.com/networkx/networkx/blob/networkx-2.7.1/networkx/algorithms/shortest_paths/weighted.py#L2229)
+
+    Parameters
+    ----------
+    graph
+    origin
+    destination
+    cost
+    available_mobility_services
+
+    Returns
+    -------
+
+    """
+    dists = [{}, {}]
+    seen = [{origin: 0}, {destination: 0}]
+
+    paths = [{origin: [origin]}, {destination: [destination]}]
+
+    queue = [PriorityQueue(), PriorityQueue()]
+    queue[0].put((0, origin))
+    queue[1].put((0, destination))
+
+    neighbors = [graph._adjacency, graph._rev_adjacency]
+
+    finaldist = float('inf')
+    finalpath = []
+
+    dir = 1
+    while not queue[0].empty() and not queue[1].empty():
+        dir = 1 - dir
+        du, u = queue[dir].get()
+
+        if u in dists[dir]:
+            continue
+
+        dists[dir][u] = du
+
+        if u in dists[1-dir]:
+            return Path(cost=finaldist,
+                        mobility_services=frozenset([graph.nodes[n].mobility_service for n in finalpath]),
+                        nodes=deque(finalpath))
+
+        for v in neighbors[dir][u]:
+            nodes = [(u, v), (v, u)]
+            link = graph.links[nodes[dir]]
+            alt = du + link.costs[cost]
+            if isinstance(link, TransitLink):
+                if available_mobility_services is not None:
+                    dnode_mobility_service = graph.nodes[link.downstream_node].mobility_service
+                    if dnode_mobility_service is not None and dnode_mobility_service not in available_mobility_services:
+                        alt = float('inf')
+
+            if v not in seen[dir] or alt < seen[dir][v]:
+                seen[dir][v] = alt
+                queue[dir].put((alt, v))
+                paths[dir][v] = paths[dir][u] + [v]
+
+                if v in seen[0] and v in seen[1]:
+                    totaldist = seen[0][v] + seen[1][v]
+                    if finalpath == [] or finaldist > totaldist:
+                        finaldist = totaldist
+                        revpath = paths[1][v][:]
+                        revpath.reverse()
+                        finalpath = paths[0][v] + revpath[1:]
+
+    return Path(float('inf'))
+
+
+def astar(graph: TopoGraph, origin:str, destination:str, cost: str, available_mobility_services:Union[List[str], None], heuristic: Callable[[str, str], float]) -> Path:
     """A* shortest path algorithm, it set the `path` attribute of the User with the computed shortest
     path
 
     Parameters
     ----------
-    G: TopoGraph
+    graph: TopoGraph
         Topological graph used to compute the shortest path
     user: User
         The user with an origin/destination
@@ -102,10 +188,8 @@ def astar(G: TopoGraph, user: User, cost: str, heuristic: Callable[[str, str], f
         The cost of the path
 
     """
-    origin = user.origin
-    destination = user.destination
     discovered_nodes = {origin}
-    prev = dict()
+    prev = defaultdict(lambda : None)
 
     gscore = defaultdict(lambda : float('inf'))
     gscore[origin] = 0
@@ -116,27 +200,30 @@ def astar(G: TopoGraph, user: User, cost: str, heuristic: Callable[[str, str], f
     while len(discovered_nodes) > 0:
         d = {v: fscore[v] for v in discovered_nodes}
         current = min(d, key=d.get)
-
+        log.debug(f"{dict(prev)}, current: {current}")
         if current == destination:
-            path = deque()
+            path = Path()
             if prev[current] is not None or current == origin:
                 while current in prev.keys():
-                    path.appendleft(current)
+                    path.nodes.appendleft(current)
+                    path.mobility_services.add(graph.nodes[current].mobility_service)
                     current = prev[current]
-                path.appendleft(current)
-            user.path = list(path)
-            return fscore[destination]
+                path.nodes.appendleft(current)
+                path.mobility_services.add(graph.nodes[current].mobility_service)
+            path.cost = fscore[destination]
+            return path
 
         discovered_nodes.remove(current)
 
-        for neighbor in G.get_node_neighbors(current):
+        for neighbor in graph.get_node_neighbors(current):
 
             # Check if next node mobility service is available for the user
-            link = G.links[(current, neighbor)]
-            tentative_gscore = gscore[current] + G.links[(current, neighbor)].costs[cost]
+            link = graph.links[(current, neighbor)]
+            tentative_gscore = gscore[current] + graph.links[(current, neighbor)].costs[cost]
             if isinstance(link, TransitLink):
-                if user.available_mobility_service is not None:
-                    if G.nodes[link.downstream_node].mobility_service not in user.available_mobility_service:
+                if available_mobility_services is not None:
+                    dnode_mobility_service = graph.nodes[link.downstream_node].mobility_service
+                    if dnode_mobility_service is not None and dnode_mobility_service not in available_mobility_services:
                         tentative_gscore = float('inf')
                         discovered_nodes.add(neighbor)
 
@@ -147,7 +234,7 @@ def astar(G: TopoGraph, user: User, cost: str, heuristic: Callable[[str, str], f
                 if neighbor not in discovered_nodes:
                     discovered_nodes.add(neighbor)
 
-    return float('inf')
+    return Path(float('inf'))
 
 
 def _euclidian_dist(origin:str, dest:str, mmgraph:MultiModalGraph):
@@ -163,11 +250,11 @@ def _euclidian_dist(origin:str, dest:str, mmgraph:MultiModalGraph):
 def compute_shortest_path(mmgraph: MultiModalGraph,
                           user: User,
                           cost: str = 'length',
-                          algorithm: Literal['dijkstra', 'astar'] = "dijkstra",
+                          algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar'] = "dijkstra",
                           heuristic: Callable[[str, str], float] = None,
                           radius: float = 500,
                           growth_rate_radius: float = 10,
-                          walk_speed: float = 1.4) -> float:
+                          walk_speed: float = 1.4) -> Path:
     """Compute shortest path from a User origin/destination and a multimodal graph
 
     Parameters
@@ -196,8 +283,13 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
 
     """
 
+    if user.available_mobility_service is not None and 'WALK' not in user.available_mobility_service:
+        log.warning(f"{user} does not have 'WALK' in its available_mobility_service")
+
     if algorithm == "dijkstra":
         sh_algo = dijkstra
+    elif algorithm == "bidirectional_dijkstra":
+        sh_algo = bidirectional_dijkstra
     elif algorithm == "astar":
         if heuristic is None:
             heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
@@ -206,15 +298,18 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
 
     # If user has coordinates as origin/destination
-    if isinstance(user.origin, np.ndarray):
-        user_pos_origin = user.origin
-        user_pos_destination = user.destination
+    if isinstance(user.origin, np.ndarray) and isinstance(user.destination, np.ndarray):
 
         current_radius = radius
         while True:
-            service_nodes_origin, dist_origin = mobility_nodes_in_radius(user_pos_origin, mmgraph, current_radius)
-            service_nodes_destination, dist_destination = mobility_nodes_in_radius(user_pos_destination, mmgraph,
-                                                                                   current_radius)
+            service_nodes_origin, dist_origin = mobility_nodes_in_radius(user.origin,
+                                                                         mmgraph,
+                                                                         current_radius,
+                                                                         user.available_mobility_service)
+            service_nodes_destination, dist_destination = mobility_nodes_in_radius(user.destination,
+                                                                                   mmgraph,
+                                                                                   current_radius,
+                                                                                   user.available_mobility_service)
 
             if len(service_nodes_destination) == 0 or len(service_nodes_destination) == 0:
                 current_radius += growth_rate_radius
@@ -222,26 +317,23 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                 start_node = f"_{user.id}_START"
                 end_node = f"_{user.id}_END"
 
-                mmgraph.mobility_graph.add_node(start_node, 'WALK')
-                mmgraph.mobility_graph.add_node(end_node, 'WALK')
+                mmgraph.mobility_graph.add_node(start_node, None)
+                mmgraph.mobility_graph.add_node(end_node, None)
 
                 log.debug(f"Create start artificial links with: {service_nodes_origin}")
                 # print(dist_origin[0]/walk_speed)
                 for ind, n in enumerate(service_nodes_origin):
-                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n,
+                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0,
                                                      {'time': dist_origin[ind] / walk_speed,
                                                       'length': dist_origin[ind]})
 
                 log.debug(f"Create end artificial links with: {service_nodes_destination}")
                 for ind, n in enumerate(service_nodes_destination):
-                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node,
+                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0,
                                                      {'time': dist_destination[ind] / walk_speed,
                                                       'length': dist_destination[ind]})
 
-                user.origin = start_node
-                user.destination = end_node
-
-                cost_path = sh_algo(mmgraph.mobility_graph, user, cost)
+                path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
 
                 # Clean the graph from artificial nodes
 
@@ -254,36 +346,31 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                 for n in service_nodes_destination:
                     del mmgraph._connection_services[(n, end_node)]
 
-                user.origin = user_pos_origin
-                user.destination = user_pos_destination
-
-                if cost_path != float('inf'):
+                if path.cost != float('inf'):
                     break
 
                 current_radius += growth_rate_radius
 
-        del user.path[0]
-        del user.path[-1]
+        del path.nodes[0]
+        del path.nodes[-1]
 
-        return cost_path
+        return path
 
     else:
 
-        origin = user.origin
-        destination = user.destination
-        start_nodes = [n for n in mmgraph.mobility_graph.get_node_references(origin)]
-        end_nodes = [n for n in mmgraph.mobility_graph.get_node_references(destination)]
+        start_nodes = [n for n in mmgraph.mobility_graph.get_node_references(user.origin)]
+        end_nodes = [n for n in mmgraph.mobility_graph.get_node_references(user.destination)]
 
         if len(start_nodes) == 0:
-            log.warning(f"There is no mobility service connected to origin node {origin}")
-            raise PathNotFound(origin, destination)
+            log.warning(f"There is no mobility service connected to origin node {user.origin}")
+            raise PathNotFound(user.origin, user.destination)
 
         if len(end_nodes) == 0:
-            log.warning(f"There is no mobility service connected to destination node {destination}")
-            raise PathNotFound(origin, destination)
+            log.warning(f"There is no mobility service connected to destination node {user.destination}")
+            raise PathNotFound(user.origin, user.destination)
 
-        start_node = f"START_{origin}_{destination}"
-        end_node = f"END_{origin}_{destination}"
+        start_node = f"START_{user.origin}_{user.destination}"
+        end_node = f"END_{user.origin}_{user.destination}"
         log.debug(f"Create artitificial nodes: {start_node}, {end_node}")
 
         mmgraph.mobility_graph.add_node(start_node, 'WALK')
@@ -293,20 +380,17 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         virtual_cost = {cost: 0}
         virtual_cost.update({'time': 0})
         for n in start_nodes:
-            mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, virtual_cost)
+            mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0, virtual_cost)
 
         log.debug(f"Create end artificial links with: {end_nodes}")
         for n in end_nodes:
-            mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, virtual_cost)
-
-        user.origin = start_node
-        user.destination = end_node
+            mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0, virtual_cost)
 
         # Compute paths
 
         log.debug(f"Compute path")
 
-        cost_path = sh_algo(mmgraph.mobility_graph, user, cost)
+        path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
 
         # Clean the graph from artificial nodes
 
@@ -319,29 +403,26 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         for n in end_nodes:
             del mmgraph._connection_services[(n, end_node)]
 
-        user.origin = origin
-        user.destination = destination
-
-        if cost_path == float('inf'):
+        if path.cost == float('inf'):
             log.warning(f"Path not found for {user}")
-            raise PathNotFound(origin, destination)
+            raise PathNotFound(user.origin, user.destination)
 
-        del user.path[0]
-        del user.path[-1]
+        del path.nodes[0]
+        del path.nodes[-1]
 
-        return cost_path
+        return path
 
 
 def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                                  user: User,
                                  npath: int,
                                  cost: str='length',
-                                 algorithm: Literal['astar', 'dijkstra']='astar',
+                                 algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar']='astar',
                                  heuristic: Callable[[str, str], float]=None,
                                  scale_factor: float = 10,
                                  radius:float = 500,
                                  growth_rate_radius: float = 50,
-                                 walk_speed: float = 1.4) -> Tuple[List[List[str]], List[float], List[float]]:
+                                 walk_speed: float = 1.4) -> Tuple[List[Path], List[float]]:
     """Compute n best shortest path by increasing the costs of the links previously found as shortest path.
 
     Parameters
@@ -380,8 +461,13 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
     penalized_costs = []
     topograph_links = mmgraph.mobility_graph.links
 
+    if user.available_mobility_service is not None and 'WALK' not in user.available_mobility_service:
+        log.warning(f"{user} does not have 'WALK' in its available_mobility_service")
+
     if algorithm == "dijkstra":
         sh_algo = dijkstra
+    elif algorithm == "bidirectional_dijkstra":
+        sh_algo = bidirectional_dijkstra
     elif algorithm == "astar":
         if heuristic is None:
             heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
@@ -391,85 +477,81 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
 
     log.debug(f"Compute shortest path User {user.id}")
 
-    if heuristic is None:
-        heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
-
     if isinstance(user.origin, np.ndarray):
-
-        user_pos_origin = user.origin
-        user_pos_destination = user.destination
 
         current_radius = radius
         while True:
-            service_nodes_origin, dist_origin = mobility_nodes_in_radius(user_pos_origin, mmgraph, current_radius)
-            service_nodes_destination, dist_destination = mobility_nodes_in_radius(user_pos_destination, mmgraph,
-                                                                                   current_radius)
+            service_nodes_origin, dist_origin = mobility_nodes_in_radius(user.origin,
+                                                                         mmgraph,
+                                                                         current_radius,
+                                                                         user.available_mobility_service)
+            service_nodes_destination, dist_destination = mobility_nodes_in_radius(user.destination,
+                                                                                   mmgraph,
+                                                                                   current_radius,
+                                                                                   user.available_mobility_service)
 
-            if len(service_nodes_destination) == 0 or len(service_nodes_destination) == 0:
+            if len(service_nodes_origin) == 0 or len(service_nodes_destination) == 0:
                 current_radius += growth_rate_radius
                 log.info(f"No service found, increase radius of search: {current_radius}")
             else:
                 start_node = f"_{user.id}_START"
                 end_node = f"_{user.id}_END"
 
-                mmgraph.mobility_graph.add_node(start_node, 'WALK')
-                mmgraph.mobility_graph.add_node(end_node, 'WALK')
+                mmgraph.mobility_graph.add_node(start_node, None)
+                mmgraph.mobility_graph.add_node(end_node, None)
 
                 log.debug(f"Create start artificial links with: {service_nodes_origin}")
                 # print(dist_origin[0]/walk_speed)
                 for ind, n in enumerate(service_nodes_origin):
-                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n,
+                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0,
                                                      {'time': dist_origin[ind] / walk_speed,
                                                       'length': dist_origin[ind]})
 
                 log.debug(f"Create end artificial links with: {service_nodes_destination}")
                 for ind, n in enumerate(service_nodes_destination):
-                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node,
+                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0,
                                                      {'time': dist_destination[ind] / walk_speed,
                                                       'length': dist_destination[ind]})
 
-                user.origin = start_node
-                user.destination = end_node
+                path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
 
-                cost_path = sh_algo(mmgraph.mobility_graph, user, cost)
-
-                if cost_path != float('inf'):
+                if path.cost != float('inf'):
                     counter = 0
                     similar_path = 0
                     while counter < npath:
-                        c = sh_algo(mmgraph.mobility_graph, user, cost)
+                        path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
 
-                        del user.path[0]
-                        del user.path[-1]
+                        del path.nodes[0]
+                        del path.nodes[-1]
 
                         # Only one possible path
-                        if len(user.path) == 1:
-                            paths.append(user.path[:])
-                            penalized_costs.append(c)
+                        if len(path.nodes) == 1:
+                            paths.append(path)
+                            penalized_costs.append(path.cost)
                             break
 
-                        for ni in range(len(user.path) - 1):
+                        for ni in range(len(path.nodes) - 1):
                             nj = ni + 1
-                            link = topograph_links[(user.path[ni], user.path[nj])]
-                            if (user.path[ni], user.path[nj]) not in modified_link_cost:
-                                modified_link_cost[(user.path[ni], user.path[nj])] = link.costs[cost]
+                            link = topograph_links[(path.nodes[ni], path.nodes[nj])]
+                            if (path.nodes[ni], path.nodes[nj]) not in modified_link_cost:
+                                modified_link_cost[(path.nodes[ni], path.nodes[nj])] = link.costs[cost]
                             link.costs[cost] = link.costs[cost] * scale_factor
 
                         if len(paths) > 0:
-                            current_path = set(user.path)
+                            current_path = set(path.nodes)
                             for p in paths:
-                                p = set(p)
+                                p = set(p.nodes)
                                 if p == current_path:
                                     similar_path += 1
                                     break
                             else:
                                 counter += 1
-                                paths.append(user.path[:])
-                                penalized_costs.append(c)
+                                paths.append(path)
+                                penalized_costs.append(path.cost)
                         else:
                             counter += 1
-                            paths.append(user.path[:])
-                            penalized_costs.append(c)
+                            paths.append(path)
+                            penalized_costs.append(path.cost)
 
                         if similar_path > 3:
                             log.warning(f'Cant find different paths user {user}')
@@ -486,10 +568,6 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                         del mmgraph._connection_services[(start_node, n)]
                     for n in service_nodes_destination:
                         del mmgraph._connection_services[(n, end_node)]
-
-                    user.origin = user_pos_origin
-                    user.destination = user_pos_destination
-
                     break
 
                 else:
@@ -505,46 +583,37 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                     for n in service_nodes_destination:
                         del mmgraph._connection_services[(n, end_node)]
 
-                    user.origin = user_pos_origin
-                    user.destination = user_pos_destination
-
     else:
 
         counter = 0
         while counter < npath:
-            c = compute_shortest_path(mmgraph, user, cost, algorithm, heuristic)
-            for ni in range(len(user.path) - 1):
+            path = compute_shortest_path(mmgraph, user, cost, algorithm, heuristic)
+            for ni in range(len(path.nodes) - 1):
                 nj = ni + 1
-                link = topograph_links[(user.path[ni], user.path[nj])]
-                if (user.path[ni], user.path[nj]) not in modified_link_cost:
-                    modified_link_cost[(user.path[ni], user.path[nj])] = link.costs[cost]
+                link = topograph_links[(path.nodes[ni], path.nodes[nj])]
+                if (path.nodes[ni], path.nodes[nj]) not in modified_link_cost:
+                    modified_link_cost[(path.nodes[ni], path.nodes[nj])] = link.costs[cost]
                 link.costs[cost] = link.costs[cost] * scale_factor
 
             if len(paths) > 0:
-                current_path = set(user.path)
+                current_path = set(path.nodes)
                 for p in paths:
-                    p = set(p)
+                    p = set(p.nodes)
                     if p == current_path:
                         break
                 else:
                     counter += 1
-                    paths.append(user.path[:])
-                    penalized_costs.append(c)
+                    paths.append(path)
+                    penalized_costs.append(path.cost)
             else:
                 counter += 1
-                paths.append(user.path[:])
-                penalized_costs.append(c)
+                paths.append(path)
+                penalized_costs.append(path.cost)
 
         for lnodes, saved_cost in modified_link_cost.items():
             mmgraph.mobility_graph.links[lnodes].costs[cost] = saved_cost
 
-    user.path = None
+    for p in paths:
+        p.cost = sum(topograph_links[(p.nodes[n], p.nodes[n+1])].costs[cost] for n in range(len(p.nodes)-1))
 
-    real_costs = [sum(topograph_links[(p[n], p[n+1])].costs[cost] for n in range(len(p)-1)) for p in paths]
-
-    return paths, real_costs, penalized_costs
-
-
-
-
-
+    return paths, penalized_costs

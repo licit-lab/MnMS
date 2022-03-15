@@ -2,7 +2,7 @@ from mnms.graph.generation import create_grid_graph
 from mnms.graph.algorithms.walk import walk_connect
 from mnms.demand.generation import create_random_demand
 from mnms.flow.MFD import Reservoir, MFDFlow
-from mnms.mobility_service import BaseMobilityService
+from mnms.mobility_service import PersonalCar
 from mnms.log import rootlogger, LOGLEVEL
 
 
@@ -13,8 +13,8 @@ DIST = 1000
 mmgraph = create_grid_graph(10, 5, DIST)
 mmgraph.add_zone('ZONE', [l.id for l in mmgraph.flow_graph.links.values()])
 
-car = BaseMobilityService('car', 10)
-bus = BaseMobilityService('bus', 10)
+car = PersonalCar('car', 10)
+bus = PersonalCar('bus', 10)
 
 for n in mmgraph.flow_graph.nodes.keys():
     car.add_node('CAR_'+n, n)

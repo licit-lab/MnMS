@@ -20,6 +20,9 @@ class OrientedGraph(object):
         Dict of links, key is the tuple of nodes, value is either a GeoLink or a TopoLink
 
     """
+
+    __slots__ = ('nodes', 'links', '_adjacency', '_map_lid_nodes')
+
     def __init__(self):
         self.nodes: Dict[str, Union[GeoNode, TopoNode]] = dict()
         self.links: Dict[Tuple[str, str], Union[TransitLink, ConnectionLink, GeoLink]] = dict()
@@ -57,9 +60,12 @@ class OrientedGraph(object):
 class TopoGraph(OrientedGraph):
     """Class implementing a purely topological oriented graph
     """
+    __slots__ = ('node_referencing', '_rev_adjacency')
+
     def __init__(self):
         super(TopoGraph, self).__init__()
         self.node_referencing = defaultdict(list)
+        self._rev_adjacency:Dict[str, Set[str]] = defaultdict(set)
 
     def add_node(self, nid: str, mobility_service:str, ref_node=None) -> None:
         assert nid not in self.nodes, f"Node '{nid}' already in graph"
@@ -84,6 +90,10 @@ class TopoGraph(OrientedGraph):
         self.links[(link.upstream_node, link.downstream_node)] = link
         self._map_lid_nodes[link.id] = (link.upstream_node, link.downstream_node)
         self._adjacency[link.upstream_node].add(link.downstream_node)
+        self._rev_adjacency[link.downstream_node].add(link.upstream_node)
+
+    def get_node_downstream(self, node: str):
+        return self._rev_adjacency[node]
 
 
 class GeoGraph(OrientedGraph):
@@ -121,11 +131,13 @@ class GeoGraph(OrientedGraph):
 
 class ComposedTopoGraph(TopoGraph):
     def __init__(self):
+        super(ComposedTopoGraph, self).__init__()
         self.nodes = ChainMap()
         self.links = ChainMap()
         self._adjacency = ChainMap()
+        self._rev_adjacency = ChainMap()
         self._map_lid_nodes = ChainMap()
-        self._node_referencing = []
+        self.node_referencing = []
 
         # self.graphs = dict()
         # self._nb_subgraph = 0
@@ -134,8 +146,9 @@ class ComposedTopoGraph(TopoGraph):
         self.nodes.maps.append(graph.nodes)
         self.links.maps.append(graph.links)
         self._adjacency.maps.append(graph._adjacency)
+        self._rev_adjacency.maps.append(graph._rev_adjacency)
         self._map_lid_nodes.maps.append(graph._map_lid_nodes)
-        self._node_referencing.append(graph.node_referencing)
+        self.node_referencing.append(graph.node_referencing)
 
         # self.graphs[gid] = self._nb_subgraph
         # self._nb_subgraph += 1
@@ -144,7 +157,7 @@ class ComposedTopoGraph(TopoGraph):
 
     def get_node_references(self, nid: str):
         node_refs = []
-        for ref in self._node_referencing:
+        for ref in self.node_referencing:
             node_refs.extend(ref[nid])
         return node_refs
 
@@ -200,10 +213,7 @@ class ComposedTopoGraph(TopoGraph):
         self.check_unicity_links()
 
     def compute_cost_path(self, path:List[str], cost):
-        res = 0
-        for i in range(len(path)-1):
-            res += self.links[(path[i],path[i+1])].costs[cost]
-        return res
+        return sum(self.links[(path[i],path[i+1])].costs[cost] for i in range(len(path)-1))
 
 
 class MultiModalGraph(object):
@@ -219,23 +229,26 @@ class MultiModalGraph(object):
     zones: dict
         Dict of reservoirs define on flow_graph
     """
+    __slots__ = ('flow_graph', 'mobility_graph', 'zones', '_connection_services', '_mobility_services')
+
     def __init__(self, nodes:Dict[str, Tuple[float]]={}, links:Dict[str, Tuple[float]]= {}, mobility_services=[]):
         self.flow_graph = GeoGraph()
         self.mobility_graph = ComposedTopoGraph()
         self.zones = dict()
 
         self._connection_services = dict()
-        self._mobility_services = dict()
+        self._mobility_services:Dict[str, "PersonalCar"] = dict()
 
         [self.flow_graph.add_node(nid, pos) for nid, pos in nodes.items()]
         [self.flow_graph.add_link(lid, unid, dnid) for lid, (unid, dnid) in  links.items()]
         [serv.connect_graph(self) for serv in mobility_services]
 
-    def add_mobility_service(self, service: "BaseMobilityService"):
+    def add_mobility_service(self, service: "AbstractMobilityService"):
         self._mobility_services[service.id] = service
-        self.mobility_graph.add_topo_graph(service)
+        self.mobility_graph.add_topo_graph(service._graph)
 
-    def connect_mobility_service(self, lid: str,  upstream_node: str, downstream_node:str, costs:Dict[str, float]):
+    def connect_mobility_service(self, lid: str, upstream_node: str, downstream_node: str, length: float,
+                                 costs: Dict[str, float]) -> None:
         upstream_service = self.mobility_graph.nodes[upstream_node].mobility_service
         downstream_service = self.mobility_graph.nodes[downstream_node].mobility_service
         assert upstream_service != downstream_service, f"Upstream service must be different from downstream service ({upstream_service})"
@@ -245,6 +258,7 @@ class MultiModalGraph(object):
             dserv = self._mobility_services[downstream_service]
             connect_cost = dserv.connect_to_service(downstream_node)
             costs = dict(list(costs.items()) + list(connect_cost.items()) + [(k, costs[k] + connect_cost[k]) for k in set(costs) & set(connect_cost)])
+        costs.update({'length': length})
         link = TransitLink(lid, upstream_node, downstream_node, costs)
         self.mobility_graph._add_link(link)
         self._connection_services[(upstream_node, downstream_node)] = lid
@@ -279,9 +293,9 @@ class MultiModalGraph(object):
                 exclusion_nj = exclusion_matrix.get(node_nj.mobility_service, set())
                 dist = np.linalg.norm(flow_graph_nodes[node_nj.reference_node].pos - flow_graph_nodes[node_ni.reference_node].pos)
                 if node_nj.mobility_service not in exclusion_ni:
-                    c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
-                    self.connect_mobility_service(f'_WALK_{ni}_{nj}', ni, nj, c)
+                    c = {'time': dist / walk_speed, 'speed': walk_speed}
+                    self.connect_mobility_service(f'_WALK_{ni}_{nj}', ni, nj, dist, c)
 
                 if node_ni.mobility_service not in exclusion_nj:
-                    c = {'length': dist, 'time': dist / walk_speed, 'speed': walk_speed}
-                    self.connect_mobility_service(f'_WALK_{nj}_{ni}', nj, ni, c)
+                    c = {'time': dist / walk_speed, 'speed': walk_speed}
+                    self.connect_mobility_service(f'_WALK_{nj}_{ni}', nj, ni, dist, c)

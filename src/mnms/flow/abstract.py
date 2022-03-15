@@ -4,6 +4,7 @@ import csv
 
 from mnms.tools.time import Time, Dt
 from mnms.demand.user import User
+from mnms.graph.core import MultiModalGraph
 
 
 class AbstractFlowMotor(ABC):
@@ -16,7 +17,10 @@ class AbstractFlowMotor(ABC):
         If not `None` store the `User` position at each `step`
     """
     def __init__(self, outfile:str=None):
-        self._graph = None
+        self._graph: MultiModalGraph = None
+        self._mobility_nodes = None
+        self._flow_nodes = None
+
         self._demand = dict()
         self._tcurrent: Time = Time()
 
@@ -29,6 +33,8 @@ class AbstractFlowMotor(ABC):
 
     def set_graph(self, mmgraph: "MultiModalGraph"):
         self._graph = mmgraph
+        self._mobility_nodes = self._graph.mobility_graph.nodes
+        self._flow_nodes = self._graph.flow_graph.nodes
 
     def set_initial_demand(self, demand:List[List]):
         self._demand = demand
@@ -47,7 +53,7 @@ class AbstractFlowMotor(ABC):
         self.finalize()
 
     def set_time(self, time:Time):
-        self._tcurrent = time
+        self._tcurrent = time.copy()
 
     @property
     def time(self):
@@ -57,7 +63,7 @@ class AbstractFlowMotor(ABC):
         self._tcurrent = self._tcurrent.add_time(dt)
 
     @abstractmethod
-    def step(self, dt:float, new_users:List[User]):
+    def step(self, dt:float):
         pass
 
     @abstractmethod

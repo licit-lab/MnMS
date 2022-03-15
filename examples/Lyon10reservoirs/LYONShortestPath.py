@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from mnms.graph.io import load_graph
 from mnms.tools.render import draw_flow_graph, draw_path
-from mnms.mobility_service import BaseMobilityService
+from mnms.mobility_service import PersonalCar
 from mnms.graph.algorithms import compute_shortest_path_nodes
 from mnms.log import rootlogger, LOGLEVEL
 from mnms.demand.user import User
@@ -17,7 +17,7 @@ mmgraph = load_graph(input_graph)
 rootlogger.info(f"Nodes: {len(mmgraph.flow_graph.nodes)}")
 rootlogger.info(f"Links: {len(mmgraph.flow_graph.links)}")
 
-car = BaseMobilityService('Car', 10)
+car = PersonalCar('Car', 10)
 
 for node in mmgraph.flow_graph.nodes.values():
     car.add_node(node.id, node.id)

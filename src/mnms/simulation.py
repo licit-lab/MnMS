@@ -4,8 +4,9 @@ import csv
 
 from mnms.graph.core import MultiModalGraph
 from mnms.flow.abstract import AbstractFlowMotor
+from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
-from mnms.travel_decision.model import DecisionModel
+from mnms.travel_decision.model import AbstractDecisionModel
 from mnms.tools.time import Time, Dt
 from mnms.log import create_logger
 from mnms.tools.exceptions import PathNotFound
@@ -16,19 +17,21 @@ log = create_logger(__name__)
 
 class Supervisor(object):
     def __init__(self,
-                 graph:MultiModalGraph=None,
-                 demand:AbstractDemandManager=None,
-                 flow_motor:AbstractFlowMotor=None,
-                 decision_model:DecisionModel=None,
-                 outfile:str=None):
+                 graph: MultiModalGraph,
+                 demand: AbstractDemandManager,
+                 flow_motor: AbstractFlowMotor,
+                 decision_model: AbstractDecisionModel,
+                 outfile: str = None):
 
         self._graph: MultiModalGraph = graph
         self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
-        self._decision_model:DecisionModel = decision_model
-
-        if flow_motor is not None:
-            flow_motor.set_graph(graph)
+        self._flow_motor.set_graph(graph)
+        self._decision_model:AbstractDecisionModel = decision_model
+        self._user_flow = UserFlow()
+        self._user_flow.set_graph(graph)
+        
+        self.tcurrent = None
 
         if outfile is None:
             self._write = False
@@ -48,69 +51,106 @@ class Supervisor(object):
     def add_demand(self, demand: AbstractDemandManager):
         self._demand = demand
 
-    def add_decision_model(self, model: DecisionModel):
+    def add_decision_model(self, model: AbstractDecisionModel):
         self._decision_model = model
+
+    def get_new_users(self, principal_dt):
+        log.info(f'Getting next departures {self.tcurrent}->{self.tcurrent.add_time(principal_dt)} ..')
+        new_users = self._demand.get_next_departures(self.tcurrent, self.tcurrent.add_time(principal_dt))
+        log.info(f'Done, {len(new_users)} new departure')
+
+        return new_users
+
+    def compute_user_paths(self, new_users):
+        log.info('Computing paths for new users ..')
+        start = time()
+        # for nu in ProgressBar(new_users, "Compute paths"):
+        for nu in new_users:
+            try:
+                self._decision_model(nu)
+            except PathNotFound:
+                pass
+
+        end = time()
+        log.info(f'Done [{end - start:.5} s]')
+        
+    def initialize(self, tstart:Time):
+        for mservice in self._graph._mobility_services.values():
+            mservice.set_time(tstart)
+        
+        self._flow_motor.set_time(tstart)
+        self._flow_motor.initialize()
+
+        self._user_flow.set_time(tstart)
+        self._user_flow.initialize()
+        
+    def update_mobility_services(self, flow_dt:Dt):
+        for mservice in self._graph._mobility_services.values():
+            log.info(f'Update mobility service {mservice.id}')
+            mservice.update_time(flow_dt)
+            mservice.update(flow_dt)
+
+            
+    def step_flow(self, flow_dt, users_step):
+        self._flow_motor.update_time(flow_dt)
+        self._flow_motor.step(flow_dt)
+        self._user_flow.update_time(flow_dt)
+        self._user_flow.step(flow_dt, users_step)
+
+
+    def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
+        if len(new_users) > 0:
+            iter_new_users = iter(new_users)
+            u = next(iter_new_users)
+            for _ in range(affectation_factor):
+                next_time = self.tcurrent.add_time(flow_dt)
+                users_step = list()
+                try:
+                    while self.tcurrent <= u.departure_time < next_time:
+                        users_step.append(u)
+                        u = next(iter_new_users)
+                except StopIteration:
+                    pass
+
+                self.update_mobility_services(flow_dt)
+
+                self.step_flow(flow_dt, users_step)
+                if self._flow_motor._write:
+                    self._flow_motor.write_result(affectation_step, flow_step)
+                self.tcurrent = next_time
+                flow_step += 1
+
+        else:
+            for _ in range(affectation_factor):
+                next_time = self.tcurrent.add_time(flow_dt)
+                self.update_mobility_services(flow_dt)
+                self.step_flow(flow_dt, [])
+                if self._flow_motor._write:
+                    self._flow_motor.write_result(affectation_step, flow_step)
+                self.tcurrent = next_time
+                flow_step += 1
 
     def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
         log.info(f'Start run from {tstart} to {tend}')
-        tcurrent = tstart
+        
+        self.initialize(tstart)
+
         affectation_step = 0
         flow_step = 0
         principal_dt = flow_dt * affectation_factor
 
-        self._flow_motor.set_time(tcurrent)
-        self._flow_motor.initialize()
+        self.tcurrent = tstart
 
-        while tcurrent < tend:
-            log.info(f'Current time: {tcurrent}, affectation step: {affectation_step}')
+        while self.tcurrent < tend:
+            log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
-            log.info(f'Getting next departures {tcurrent}->{tcurrent.add_time(principal_dt)} ..')
-            new_users = self._demand.get_next_departures(tcurrent, tcurrent.add_time(principal_dt))
-            iter_new_users = iter(new_users)
-            log.info(f'Done, {len(new_users)} new departure')
+            new_users = self.get_new_users(principal_dt)
 
-            log.info('Computing paths for new users ..')
+            self.compute_user_paths(new_users)
+
+            log.info(f'Launching {affectation_factor} step of flow ...')
             start = time()
-
-            # for nu in ProgressBar(new_users, "Compute paths"):
-            for nu in new_users:
-                try:
-                    self._decision_model(nu)
-                except PathNotFound:
-                    pass
-
-            end = time()
-            log.info(f'Done [{end-start:.5} s]')
-
-            log.info(f'Launching {affectation_factor} step of {self._flow_motor.__class__.__name__} ...')
-            start = time()
-            if len(new_users) > 0:
-                u = next(iter_new_users)
-                for _ in range(affectation_factor):
-                    next_time = tcurrent.add_time(flow_dt)
-                    users_step = list()
-                    try:
-                        while tcurrent <= u.departure_time < next_time:
-                            users_step.append(u)
-                            u = next(iter_new_users)
-                    except StopIteration:
-                        pass
-                    self._flow_motor.update_time(flow_dt)
-                    self._flow_motor.step(flow_dt.to_seconds(), users_step)
-                    if self._flow_motor._write:
-                        self._flow_motor.write_result(affectation_step, flow_step)
-                    tcurrent = next_time
-                    flow_step += 1
-
-            else:
-                for _ in range(affectation_factor):
-                    next_time = tcurrent.add_time(flow_dt)
-                    self._flow_motor.update_time(flow_dt)
-                    self._flow_motor.step(flow_dt.to_seconds(), [])
-                    if self._flow_motor._write:
-                        self._flow_motor.write_result(affectation_step, flow_step)
-                    tcurrent = next_time
-                    flow_step += 1
+            self.step(affectation_factor, affectation_step, flow_dt, flow_step, new_users)
             end = time()
             log.info(f'Done [{end-start:.5} s]')
 
@@ -139,3 +179,5 @@ class Supervisor(object):
 
         if self._write:
             self._outfile.close()
+
+

@@ -34,8 +34,13 @@ def get_logger(logger_name):
     return logging.getLogger(logger_name)
 
 
+def set_mnms_logger_level(level, loggers=[]):
+    [logging.getLogger(logger).setLevel(level) if isinstance(logger, str) else logger.setLevel(level) for logger in loggers]
+
+
 def set_all_mnms_logger_level(level):
-    [logger.setLevel(level) for logger in get_all_mnms_logger()]
+    set_mnms_logger_level(level, get_all_mnms_logger())
+
 
 def attach_log_file(filename:str, file_level=LOGLEVEL.INFO):
     loggers = get_all_mnms_logger()
