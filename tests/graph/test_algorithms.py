@@ -10,6 +10,7 @@ from mnms.demand.user import User
 
 import numpy as np
 
+
 class TestAlgorithms(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
@@ -85,7 +86,6 @@ class TestAlgorithms(unittest.TestCase):
         self.mmgraph.connect_mobility_service('Bus_Car_2', 'B2', 'C2', 0, {'time': 2})
         self.mmgraph.connect_mobility_service('Car_Bus_2', 'C2', 'B2', 0, {'time': 2})
 
-
     def tearDown(self):
         """Concludes and closes the test.
         """
@@ -103,13 +103,16 @@ class TestAlgorithms(unittest.TestCase):
         self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time']+self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], path.cost)
 
     def test_bidirectional_dijsktra(self):
-        origin = 'B0'
-        destination = 'B2'
+        user = User(id='TEST', departure_time=None, origin='B0', destination='B2')
+        path = bidirectional_dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'time', user.available_mobility_service)
+        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
+        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], path.cost)
+
         self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'] = 1e10
-        path = bidirectional_dijkstra(self.mmgraph.mobility_graph, origin, destination, 'time', None)
+        path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'time', user.available_mobility_service)
 
-
-
+        self.assertListEqual(list(path.nodes), ['B0', 'B1', 'B2'])
+        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time']+self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], path.cost)
 
     def test_astar(self):
         user = User(id='TEST', departure_time=None, origin='B0', destination='B2')

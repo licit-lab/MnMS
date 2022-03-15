@@ -86,14 +86,17 @@ class Supervisor(object):
         
     def update_mobility_services(self, flow_dt:Dt):
         for mservice in self._graph._mobility_services.values():
-            mservice.update(flow_dt)
+            log.info(f'Update mobility service {mservice.id}')
             mservice.update_time(flow_dt)
+            mservice.update(flow_dt)
+
             
     def step_flow(self, flow_dt, users_step):
-        self._user_flow.update_time(flow_dt)
-        self._user_flow.step(flow_dt, users_step)
         self._flow_motor.update_time(flow_dt)
         self._flow_motor.step(flow_dt)
+        self._user_flow.update_time(flow_dt)
+        self._user_flow.step(flow_dt, users_step)
+
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:

@@ -1,11 +1,14 @@
+from copy import deepcopy
 from random import sample
 
 import numpy as np
 
 from mnms.demand import User
-from mnms.graph.shortest_path import dijkstra
+from mnms.graph.elements import TopoNode, ConnectionLink
+from mnms.graph.shortest_path import bidirectional_dijkstra, dijkstra
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.log import create_logger
+from mnms.tools.exceptions import PathNotFound
 from mnms.tools.time import Time, Dt
 from mnms.vehicles.veh_type import Car
 
@@ -15,18 +18,40 @@ log = create_logger(__name__)
 class OnDemandService(AbstractMobilityService):
     def __init__(self, id:str, default_speed:float, attached_service: AbstractMobilityService, veh_type=Car):
         super(OnDemandService, self).__init__(id, veh_type, default_speed)
+        self._is_duplicate = True
         self.depots = []
-        self.share_graph(attached_service)
+
+        for node in attached_service._graph.nodes.values():
+            new_node = TopoNode(self._prefix(node.id),
+                                self.id,
+                                node.reference_node)
+            self._graph._add_node(new_node)
+
+        for link in attached_service._graph.links.values():
+            new_link = ConnectionLink(self._prefix(link.id),
+                                      self._prefix(link.upstream_node),
+                                      self._prefix(link.downstream_node),
+                                      deepcopy(link.costs),
+                                      deepcopy(link.reference_links),
+                                      deepcopy(link.reference_lane_ids),
+                                      self.id)
+            self._graph._add_link(new_link)
 
         self._waiting_vehicle = dict()
 
+    def _prefix(self, id:str):
+        return f"{self.id}_{id}"
+
     def random_distribution_vehicles(self, n_veh:int):
         for n in sample(list(self._graph.nodes), n_veh):
-            self.create_waiting_vehicule(n)
+            veh = self.fleet.create_waiting_vehicle(n, None, [])
+            self._waiting_vehicle[veh.id] = veh
 
-    def create_waiting_vehicule(self, node: str):
-        assert node in self._graph.nodes
-        veh = self.fleet.create_waiting_vehicle(node, None, [])
+    def create_waiting_vehicle(self, node: str):
+        assert self._prefix(node) in self._graph.nodes
+        veh = self.fleet.create_waiting_vehicle(self._prefix(node), None, [])
+        if self._observer is not None:
+            veh.attach(self._observer)
         self._waiting_vehicle[veh.id] = veh
 
     def update_costs(self, time: Time):
@@ -36,33 +61,51 @@ class OnDemandService(AbstractMobilityService):
         return {}
 
     def __dump__(self) -> dict:
-        pass
+        return {"TYPE": ".".join([PersonalCar.__module__, PersonalCar.__name__]),
+                "ID": self.id,
+                "DEFAULT_SPEED": self.default_speed,
+                "NODES": [n.__dump__() for n in self._graph.nodes.values()],
+                "LINKS": [l.__dump__() for l in self._graph.links.values()]}
 
     @classmethod
-    def __load__(cls, data: dict):
-        pass
+    def __load__(cls, data: dict) -> "PersonalCar":
+        new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
+        [new_obj._graph._add_node(TopoNode.__load__(ndata)) for ndata in data['NODES']]
+        [new_obj._graph._add_link(ConnectionLink.__load__(ldata)) for ldata in data['LINKS']]
+        return new_obj
 
     def update(self, dt:Dt):
-        log.info(f'Update mobility service {self.id}')
+        for veh in list(self.fleet.vehicles.values()):
+            if veh.is_arrived:
+                log.info(f'Make vehicle {veh.id} waits at {veh.current_link[1]}')
+                veh.origin = veh.current_link[1]
+                veh.is_arrived = False
+                self.fleet.make_vehicle_wait(veh)
 
     def request_vehicle(self, user: User, drop_node:str) -> None:
+        user.available_mobility_service = frozenset([self.id])
+
         upos = user.position
         upath = list(user.path.nodes)
-        vehicles = list(self._waiting_vehicle.values())
-        veh_pos = np.array([v.position for v in vehicles])
-        dist_vector = np.linalg.norm(veh_pos-upos, axis=1)
+        if self.fleet.nb_waiting_vehicles > 0:
+            vehicles = list(self.fleet._waiting.values())
+            veh_pos = np.array([v.position for v in vehicles])
+            dist_vector = np.linalg.norm(veh_pos-upos, axis=1)
 
-        nearest_veh_index = np.argmin(dist_vector)
-        nearest_veh = vehicles[nearest_veh_index]
-        nearest_veh.destination = user.current_node
-        veh_path = dijkstra(self._graph, nearest_veh.origin, user.current_node, 'time', None)
-        veh_path = self._construct_veh_path(list(veh_path.nodes)[:-1]+upath[upath.index(user._current_node):upath.index(drop_node)+1])
-        nearest_veh.set_path(veh_path)
+            nearest_veh_index = np.argmin(dist_vector)
+            nearest_veh = vehicles[nearest_veh_index]
+            nearest_veh.destination = user.current_node
+            log.info(f"Compute veh path to user {nearest_veh.origin} -> {user.current_node}")
+            veh_path = bidirectional_dijkstra(self._graph, nearest_veh.origin, user.current_node, 'time', None)
+            if veh_path.cost == float('inf'):
+                raise PathNotFound(nearest_veh.origin, user.current_node)
+            log.info(f"{self.id} set VEH path: {veh_path}")
+            veh_path = self._construct_veh_path(list(veh_path.nodes)[:-1]+upath[upath.index(user._current_node):upath.index(drop_node)+1])
+            log.info(f"{self.id} set VEH path: {veh_path}")
+            nearest_veh.set_path(veh_path)
+            nearest_veh.take_next_user(user, drop_node)
 
-        self.fleet.start_waiting_vehicle(nearest_veh.id)
-
-    # def get_closest_vehicle(self, unode:str):
-    #     upos = self.
+            self.fleet.start_waiting_vehicle(nearest_veh.id)
 
 
 if __name__ == "__main__":
@@ -103,13 +146,15 @@ if __name__ == "__main__":
     car.add_link('C4_C5', 'C4', 'C5', {'time': 5, 'length': 100}, reference_links=['4_5'])
 
     uber = OnDemandService('Uber', 10, car)
-    uber.create_waiting_vehicule('C0')
+    uber.attach_vehicle_observer()
+    uber.create_waiting_vehicle('C0')
 
-    mmgraph.add_mobility_service(uber)
+    # mmgraph.add_mobility_service(uber)
     mmgraph.add_mobility_service(car)
 
     demand = BaseDemandManager([User('U0', '3', '5', Time('00:00:01'), available_mobility_services=['WALK', 'Uber'])])
     travel = BaseDecisionModel(mmgraph, cost='length')
+    travel._radius_sp = 10
 
     supervisor = Supervisor(graph=mmgraph,
                             flow_motor=MFDFlow(),

@@ -205,7 +205,7 @@ class MFDFlow(AbstractFlowMotor):
         veh.started = True
         dist_travelled = dt.to_seconds()*speed
         for next_pass in list(veh._next_passenger):
-            log.info(veh._next_passenger)
+            # log.info(veh._next_passenger)
             take_node = veh._next_passenger[next_pass][1]._current_node
             ref_node = self._mobility_nodes[take_node].reference_node
             ref_node_pos = self._flow_nodes[ref_node].pos
@@ -325,7 +325,8 @@ class MFDFlow(AbstractFlowMotor):
                     new_speed = self._graph._mobility_services[link.mobility_service].default_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
-            mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] =  total_len/new_speed
+            if new_speed != 0:
+                mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] =  total_len/new_speed
 
     def write_result(self, step_affectation:int, step_flow:int):
         tcurrent = self._tcurrent.time

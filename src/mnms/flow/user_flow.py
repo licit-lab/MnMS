@@ -86,6 +86,7 @@ class UserFlow(object):
             self._transiting[nu.id] = nu
             start_node = self._mobility_graph.nodes[nu._current_node]
             start_node_pos = self._graph.flow_graph.nodes[start_node.reference_node].pos
+            nu._position = start_node_pos
             mservice_id = start_node.mobility_service
             mservice = self._graph._mobility_services[mservice_id]
             prev_service_id = mservice_id

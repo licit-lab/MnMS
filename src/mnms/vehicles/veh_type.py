@@ -27,7 +27,7 @@ class Vehicle(TimeDependentSubject):
         self._next_passenger = dict()
 
         self._iter_path = None
-        self._current_link = None
+        self._current_link = [None, None]
         self._remaining_link_length = None
         self._position = None
 

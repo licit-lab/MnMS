@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from typing import List, FrozenSet
+from itertools import chain
 
 import numpy as np
 
@@ -13,6 +15,8 @@ class GraphElement(ABC):
         Id of the element
 
     """
+    __slots__ = ('id')
+
     def __init__(self, id: str):
         self.id = id
 
@@ -22,6 +26,10 @@ class GraphElement(ABC):
 
     @abstractmethod
     def __dump__(self) -> dict:
+        pass
+
+    @abstractmethod
+    def __deepcopy__(self, memodict={}):
         pass
 
 
@@ -36,6 +44,8 @@ class TopoNode(GraphElement):
         A reference to GeoNode (default is None)
 
     """
+    __slots__ = ('reference_node', 'mobility_service')
+
     def __init__(self, id: str, mobility_service, ref_node:str=None):
         super(TopoNode, self).__init__(id)
         self.reference_node = ref_node
@@ -53,6 +63,11 @@ class TopoNode(GraphElement):
                 'REF_NODE': self.reference_node,
                 'MOBILITY_SERVICE': self.mobility_service}
 
+    def __deepcopy__(self, memodict={}):
+        cls = self.__class__
+        result = cls(self.id, self.mobility_service, self.reference_node)
+        return result
+
 
 class GeoNode(GraphElement):
     """Class representing a geometric node
@@ -65,6 +80,8 @@ class GeoNode(GraphElement):
         A list of float of size 2 representing the node position
 
     """
+    __slots__ = ('pos')
+
     def __init__(self, id: str, pos: List[float]):
         super(GeoNode, self).__init__(id)
         self.pos: np.ndarray = np.array(pos)
@@ -79,6 +96,11 @@ class GeoNode(GraphElement):
     def __dump__(self) -> dict:
         return {'ID': self.id,
                 'POSITION': self.pos.tolist()}
+
+    def __deepcopy__(self, memodict={}):
+        cls = self.__class__
+        result = cls(self.id, self.pos)
+        return result
 
 
 class ConnectionLink(GraphElement):
@@ -101,6 +123,8 @@ class ConnectionLink(GraphElement):
     mobility_service: str
         Identifier of the mobility service that use this TopoLink
     """
+    __slots__ = ('upstream_node', 'downstream_node', 'costs', 'reference_links', 'reference_lane_ids', 'mobility_service')
+
     def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None, reference_lane_ids=None,
                  mobility_service=None):
         super(ConnectionLink, self).__init__(lid)
@@ -135,6 +159,17 @@ class ConnectionLink(GraphElement):
                 'REF_LANE_IDS': self.reference_lane_ids,
                 'MOBILITY_SERVICE': self.mobility_service}
 
+    def __deepcopy__(self, memodict={}):
+        cls = self.__class__
+        result = cls(self.id,
+                     self.upstream_node,
+                     self.downstream_node,
+                     deepcopy(self.costs),
+                     deepcopy(self.reference_links),
+                     deepcopy(self.reference_lane_ids),
+                     self.mobility_service)
+        return result
+
 
 class TransitLink(GraphElement):
     """ Link between two different mobility service
@@ -150,6 +185,8 @@ class TransitLink(GraphElement):
     costs: dict
         dictionary of costs
     """
+    __slots__ = ('upstream_node', 'downstream_node', 'costs')
+
     def __init__(self, lid, upstream_node, downstream_node, costs=None):
         super(TransitLink, self).__init__(lid)
         self.upstream_node = upstream_node
@@ -171,6 +208,14 @@ class TransitLink(GraphElement):
                 'DOWNSTREAM': self.downstream_node,
                 'COSTS': {key: val for key, val in self.costs.items() if key != "_default"}}
 
+    def __deepcopy__(self, memodict={}):
+        cls = self.__class__
+        result = cls(self.id,
+                     self.upstream_node,
+                     self.downstream_node,
+                     deepcopy(self.costs))
+        return result
+
 
 class GeoLink(GraphElement):
     """Link between two GeoNode, define a physical road link
@@ -188,6 +233,8 @@ class GeoLink(GraphElement):
     nb_lane: int
         Number of lane on this link (default 1)
     """
+    __slots__ = ('upstream_node', 'downstream_node', 'nb_lane', 'zone', 'length')
+
     def __init__(self, lid, upstream_node, downstream_node, length, nb_lane=1):
         super(GeoLink, self).__init__(lid)
         self.upstream_node = upstream_node
@@ -210,6 +257,15 @@ class GeoLink(GraphElement):
                 'LENGTH': self.length,
                 'NB_LANES': self.nb_lane}
 
+    def __deepcopy__(self, memodict={}):
+        cls = self.__class__
+        result = cls(self.id,
+                     self.upstream_node,
+                     self.downstream_node,
+                     self.length,
+                     self.nb_lane)
+        return result
+
 
 class Zone(GraphElement):
     """Set of links that define a geographic zone
@@ -223,6 +279,8 @@ class Zone(GraphElement):
     mobility_services:
         list of mobility services present in the zone
     """
+    __slots__ = ('mobility_services', 'links')
+
     def __init__(self, resid: str, links:List[str]=[], mobility_services:List[str]=[]):
         super(Zone, self).__init__(resid)
         self.mobility_services = frozenset(mobility_services)
@@ -234,3 +292,9 @@ class Zone(GraphElement):
     @classmethod
     def __load__(cls, data: dict):
         return Zone(data['ID'], data['LINKS'], data['MOBILITY_SERVICES'])
+
+    def __deepcopy__(self, memodict={}):
+        cls = self.__class__
+        result = cls(self.id,
+                     deepcopy(self.links))
+        return result

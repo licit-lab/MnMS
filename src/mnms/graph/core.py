@@ -20,6 +20,9 @@ class OrientedGraph(object):
         Dict of links, key is the tuple of nodes, value is either a GeoLink or a TopoLink
 
     """
+
+    __slots__ = ('nodes', 'links', '_adjacency', '_map_lid_nodes')
+
     def __init__(self):
         self.nodes: Dict[str, Union[GeoNode, TopoNode]] = dict()
         self.links: Dict[Tuple[str, str], Union[TransitLink, ConnectionLink, GeoLink]] = dict()
@@ -57,6 +60,8 @@ class OrientedGraph(object):
 class TopoGraph(OrientedGraph):
     """Class implementing a purely topological oriented graph
     """
+    __slots__ = ('node_referencing', '_rev_adjacency')
+
     def __init__(self):
         super(TopoGraph, self).__init__()
         self.node_referencing = defaultdict(list)
@@ -132,7 +137,7 @@ class ComposedTopoGraph(TopoGraph):
         self._adjacency = ChainMap()
         self._rev_adjacency = ChainMap()
         self._map_lid_nodes = ChainMap()
-        self._node_referencing = []
+        self.node_referencing = []
 
         # self.graphs = dict()
         # self._nb_subgraph = 0
@@ -143,7 +148,7 @@ class ComposedTopoGraph(TopoGraph):
         self._adjacency.maps.append(graph._adjacency)
         self._rev_adjacency.maps.append(graph._rev_adjacency)
         self._map_lid_nodes.maps.append(graph._map_lid_nodes)
-        self._node_referencing.append(graph.node_referencing)
+        self.node_referencing.append(graph.node_referencing)
 
         # self.graphs[gid] = self._nb_subgraph
         # self._nb_subgraph += 1
@@ -152,7 +157,7 @@ class ComposedTopoGraph(TopoGraph):
 
     def get_node_references(self, nid: str):
         node_refs = []
-        for ref in self._node_referencing:
+        for ref in self.node_referencing:
             node_refs.extend(ref[nid])
         return node_refs
 
@@ -224,6 +229,8 @@ class MultiModalGraph(object):
     zones: dict
         Dict of reservoirs define on flow_graph
     """
+    __slots__ = ('flow_graph', 'mobility_graph', 'zones', '_connection_services', '_mobility_services')
+
     def __init__(self, nodes:Dict[str, Tuple[float]]={}, links:Dict[str, Tuple[float]]= {}, mobility_services=[]):
         self.flow_graph = GeoGraph()
         self.mobility_graph = ComposedTopoGraph()
@@ -238,8 +245,7 @@ class MultiModalGraph(object):
 
     def add_mobility_service(self, service: "AbstractMobilityService"):
         self._mobility_services[service.id] = service
-        if not service.graph_is_shared:
-            self.mobility_graph.add_topo_graph(service._graph)
+        self.mobility_graph.add_topo_graph(service._graph)
 
     def connect_mobility_service(self, lid: str, upstream_node: str, downstream_node: str, length: float,
                                  costs: Dict[str, float]) -> None:

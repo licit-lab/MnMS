@@ -3,7 +3,7 @@ from typing import Type, Tuple, List
 
 from mnms.demand.user import User
 from mnms.graph.core import TopoGraph
-from mnms.graph.shortest_path import Path, astar
+from mnms.graph.shortest_path import Path, compute_shortest_path, astar
 from mnms.tools.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle
@@ -20,7 +20,7 @@ class AbstractMobilityService(ABC):
         self._observer = None
         self._tcurrent = None
         self._veh_type = veh_type
-        self._graph_is_shared = False
+        self._is_duplicate = False
 
     def set_time(self, time:Time):
         self._tcurrent = time.copy()
@@ -40,16 +40,13 @@ class AbstractMobilityService(ABC):
             veh_path.append((key, self._graph.links[key].costs['length']))
         return veh_path
 
-    def share_graph(self, service:"AbstractMobilityService"):
-        self._graph = service._graph
-        self._graph_is_shared = True
-
     def compute_shortest_path(self, user:User, cost:str, heuristic) -> Path:
-        return astar(self._graph, user, cost, heuristic)
-
-    @property
-    def graph_is_shared(self):
-        return self._graph_is_shared
+        return astar(self._graph,
+                     user.origin,
+                     user.destination,
+                     cost,
+                     None,
+                     heuristic)
 
     @abstractmethod
     def update_costs(self, time: Time):

@@ -1,13 +1,20 @@
 import logging
 from abc import ABC, abstractmethod
+from functools import partial
 from typing import Literal, List, Tuple
 import csv
 
+import numpy as np
+
 from mnms.demand.user import User
 from mnms.graph.core import MultiModalGraph
+from mnms.graph.edition import delete_node_downstream_links, delete_node_upstream_links
 from mnms.graph.elements import TransitLink
-from mnms.graph.shortest_path import compute_n_best_shortest_path, Path
+from mnms.graph.search import mobility_nodes_in_radius
+from mnms.graph.shortest_path import compute_n_best_shortest_path, Path, _euclidian_dist, dijkstra, \
+    bidirectional_dijkstra, astar, compute_shortest_path
 from mnms.log import create_logger
+from mnms.tools.exceptions import PathNotFound
 
 log = create_logger(__name__)
 
@@ -84,6 +91,7 @@ class AbstractDecisionModel(ABC):
         self._heuristic = heuristic
         self._cost = cost
         self._verbose_file = verbose_file
+        self._mandatory_mobility_services = []
         if outfile is None:
             self._write = False
             self._verbose_file = False
@@ -97,6 +105,134 @@ class AbstractDecisionModel(ABC):
     def path_choice(self, paths:List[Path]) -> Tuple[List[str], float]:
         pass
 
+    def set_mandatory_mobility_services(self, services:List[str]):
+        self._mandatory_mobility_services = services
+
+    def request_path_mobility_service(self, service, user) -> Path:
+        if self._algorithm == "dijkstra":
+            sh_algo = dijkstra
+        elif self._algorithm == "bidirectional_dijkstra":
+            sh_algo = bidirectional_dijkstra
+        elif self._algorithm == "astar":
+            if self._heuristic is None:
+                heuristic = partial(_euclidian_dist, mmgraph=self._mmgraph)
+            else:
+                heuristic = self._heuristic
+            sh_algo = partial(astar, heuristic=heuristic)
+        else:
+            raise NotImplementedError(f"Algorithm '{self._algorithm}' is not implemented")
+
+        service_graph = self._mmgraph._mobility_services[service]._graph
+
+        if isinstance(user.origin, np.ndarray) and isinstance(user.destination, np.ndarray):
+            current_radius = self._radius_sp
+            while True:
+                service_nodes_origin, dist_origin = mobility_nodes_in_radius(user.origin, self._mmgraph, current_radius, {service})
+                service_nodes_destination, dist_destination = mobility_nodes_in_radius(user.destination, self._mmgraph,
+                                                                                       current_radius, {service})
+
+                if len(service_nodes_destination) == 0 or len(service_nodes_destination) == 0:
+                    current_radius += self._radius_growth_sp
+                else:
+                    start_node = f"_{user.id}_START"
+                    end_node = f"_{user.id}_END"
+
+                    self._mmgraph.mobility_graph.add_node(start_node, None)
+                    self._mmgraph.mobility_graph.add_node(end_node, None)
+
+
+                    log.debug(f"Create start artificial links with: {service_nodes_origin}")
+                    # print(dist_origin[0]/walk_speed)
+                    for ind, n in enumerate(service_nodes_origin):
+                        self._mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0,
+                                                         {'time': dist_origin[ind] / self._walk_speed,
+                                                          'length': dist_origin[ind]})
+
+                    log.debug(f"Create end artificial links with: {service_nodes_destination}")
+                    for ind, n in enumerate(service_nodes_destination):
+                        self._mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0,
+                                                         {'time': dist_destination[ind] / self._walk_speed,
+                                                          'length': dist_destination[ind]})
+
+                    path = sh_algo(self._mmgraph._mobility_services[service]._graph, start_node, end_node, self._cost, user.available_mobility_service)
+
+                    # Clean the graph from artificial nodes
+
+                    log.debug(f"Clean graph")
+
+                    delete_node_downstream_links(self._mmgraph.mobility_graph, start_node)
+                    delete_node_upstream_links(self._mmgraph.mobility_graph, end_node, service_nodes_destination)
+                    for n in service_nodes_origin:
+                        del self._mmgraph._connection_services[(start_node, n)]
+                    for n in service_nodes_destination:
+                        del self._mmgraph._connection_services[(n, end_node)]
+
+                    if path.cost != float('inf'):
+                        break
+
+                    current_radius += self._radius_growth_sp
+
+            del path.nodes[0]
+            del path.nodes[-1]
+
+            return path
+
+        else:
+
+            start_nodes = [n for n in self._mmgraph.mobility_graph.get_node_references(user.origin)]
+            end_nodes = [n for n in self._mmgraph.mobility_graph.get_node_references(user.destination)]
+
+            if len(start_nodes) == 0:
+                log.warning(f"There is no mobility service connected to origin node {user.origin}")
+                raise PathNotFound(user.origin, user.destination)
+
+            if len(end_nodes) == 0:
+                log.warning(f"There is no mobility service connected to destination node {user.destination}")
+                raise PathNotFound(user.origin, user.destination)
+
+            start_node = f"START_{user.origin}_{user.destination}"
+            end_node = f"END_{user.origin}_{user.destination}"
+            log.debug(f"Create artitificial nodes: {start_node}, {end_node}")
+
+            service_graph.add_node(start_node, 'WALK')
+            service_graph.add_node(end_node, 'WALK')
+
+            log.debug(f"Create start artificial links with: {start_nodes}")
+            virtual_cost = {self._cost: 0}
+            virtual_cost.update({'time': 0})
+            for n in start_nodes:
+                self._mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0, virtual_cost)
+
+            log.debug(f"Create end artificial links with: {end_nodes}")
+            for n in end_nodes:
+                self._mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0, virtual_cost)
+
+            # Compute paths
+
+            log.debug(f"Compute path")
+
+            path = sh_algo(self._mmgraph._mobility_services[service]._graph, start_node, end_node, self._cost, user.available_mobility_service)
+
+            # Clean the graph from artificial nodes
+
+            log.debug(f"Clean graph")
+
+            delete_node_downstream_links(self._mmgraph.mobility_graph, start_node)
+            delete_node_upstream_links(self._mmgraph.mobility_graph, end_node, end_nodes)
+            for n in start_nodes:
+                del self._mmgraph._connection_services[(start_node, n)]
+            for n in end_nodes:
+                del self._mmgraph._connection_services[(n, end_node)]
+
+            if path.cost == float('inf'):
+                log.warning(f"Path not found for {user}")
+                raise PathNotFound(user.origin, user.destination)
+
+            del path.nodes[0]
+            del path.nodes[-1]
+
+            return path
+
     def __call__(self, user:User):
         paths, _ = compute_n_best_shortest_path(self._mmgraph, user, self._n_shortest_path, cost=self._cost,
                                                 algorithm=self._algorithm, heuristic=self._heuristic,
@@ -104,19 +240,29 @@ class AbstractDecisionModel(ABC):
                                                 growth_rate_radius=self._radius_growth_sp,
                                                 walk_speed=self._walk_speed)
 
-        user_paths = {frozenset([mservice]): [] for mservice in user.available_mobility_service}
-        # print(user_paths)
-
+        computed_path_services = set()
         for p in paths:
-            try:
-                user_paths[frozenset(p.mobility_services)].append(p)
-            except KeyError:
-                log.debug(f"Ignoring path {' '.join(p.mobility_services)}")
+            computed_path_services.update(p.mobility_services)
 
-        for mservice, upaths in user_paths.items():
-            if len(mservice) == 1 and len(paths) == 0:
-                log.info(f"Missing path for {mservice[0]} in first computed paths, recompute it ...")
-                p = self._mmgraph._mobility_services[mservice[0]].compute_shortest_path(user, self._cost, self._heuristic)
+        log.info(f'{user} mobility service in paths: {computed_path_services}')
+        # log.info(f'{paths}')
+
+        for service in self._mandatory_mobility_services:
+            if service in user.available_mobility_service and service not in computed_path_services:
+                log.info(f"Missing path for {service} in first computed paths, recompute it ...")
+                # p = self.request_path_mobility_service(service, user)
+                backup_services = user.available_mobility_service
+                user.available_mobility_service = {service, 'WALK'}
+                p = compute_shortest_path(self._mmgraph,
+                                          user,
+                                          self._cost,
+                                          self._algorithm,
+                                          self._heuristic,
+                                          self._radius_sp,
+                                          self._radius_growth_sp,
+                                          self._walk_speed)
+                log.info(p)
+                user.available_mobility_service = backup_services
                 paths.append(p)
                 log.info(f"Done")
 

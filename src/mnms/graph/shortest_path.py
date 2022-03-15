@@ -200,7 +200,7 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: str, available_mo
     while len(discovered_nodes) > 0:
         d = {v: fscore[v] for v in discovered_nodes}
         current = min(d, key=d.get)
-        log.info(f"{dict(prev)}, current: {current}")
+        log.debug(f"{dict(prev)}, current: {current}")
         if current == destination:
             path = Path()
             if prev[current] is not None or current == origin:
@@ -250,7 +250,7 @@ def _euclidian_dist(origin:str, dest:str, mmgraph:MultiModalGraph):
 def compute_shortest_path(mmgraph: MultiModalGraph,
                           user: User,
                           cost: str = 'length',
-                          algorithm: Literal['dijkstra', 'astar'] = "dijkstra",
+                          algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar'] = "dijkstra",
                           heuristic: Callable[[str, str], float] = None,
                           radius: float = 500,
                           growth_rate_radius: float = 10,
@@ -288,6 +288,8 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
 
     if algorithm == "dijkstra":
         sh_algo = dijkstra
+    elif algorithm == "bidirectional_dijkstra":
+        sh_algo = bidirectional_dijkstra
     elif algorithm == "astar":
         if heuristic is None:
             heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
@@ -296,13 +298,18 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
 
     # If user has coordinates as origin/destination
-    if isinstance(user.origin, np.ndarray):
+    if isinstance(user.origin, np.ndarray) and isinstance(user.destination, np.ndarray):
 
         current_radius = radius
         while True:
-            service_nodes_origin, dist_origin = mobility_nodes_in_radius(user.origin, mmgraph, current_radius)
-            service_nodes_destination, dist_destination = mobility_nodes_in_radius(user.destination, mmgraph,
-                                                                                   current_radius)
+            service_nodes_origin, dist_origin = mobility_nodes_in_radius(user.origin,
+                                                                         mmgraph,
+                                                                         current_radius,
+                                                                         user.available_mobility_service)
+            service_nodes_destination, dist_destination = mobility_nodes_in_radius(user.destination,
+                                                                                   mmgraph,
+                                                                                   current_radius,
+                                                                                   user.available_mobility_service)
 
             if len(service_nodes_destination) == 0 or len(service_nodes_destination) == 0:
                 current_radius += growth_rate_radius
@@ -410,7 +417,7 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                                  user: User,
                                  npath: int,
                                  cost: str='length',
-                                 algorithm: Literal['astar', 'dijkstra']='astar',
+                                 algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar']='astar',
                                  heuristic: Callable[[str, str], float]=None,
                                  scale_factor: float = 10,
                                  radius:float = 500,
@@ -459,6 +466,8 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
 
     if algorithm == "dijkstra":
         sh_algo = dijkstra
+    elif algorithm == "bidirectional_dijkstra":
+        sh_algo = bidirectional_dijkstra
     elif algorithm == "astar":
         if heuristic is None:
             heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
@@ -468,16 +477,18 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
 
     log.debug(f"Compute shortest path User {user.id}")
 
-    if heuristic is None:
-        heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
-
     if isinstance(user.origin, np.ndarray):
 
         current_radius = radius
         while True:
-            service_nodes_origin, dist_origin = mobility_nodes_in_radius(user.origin, mmgraph, current_radius)
-            service_nodes_destination, dist_destination = mobility_nodes_in_radius(user.destination, mmgraph,
-                                                                                   current_radius)
+            service_nodes_origin, dist_origin = mobility_nodes_in_radius(user.origin,
+                                                                         mmgraph,
+                                                                         current_radius,
+                                                                         user.available_mobility_service)
+            service_nodes_destination, dist_destination = mobility_nodes_in_radius(user.destination,
+                                                                                   mmgraph,
+                                                                                   current_radius,
+                                                                                   user.available_mobility_service)
 
             if len(service_nodes_origin) == 0 or len(service_nodes_destination) == 0:
                 current_radius += growth_rate_radius
@@ -606,35 +617,3 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
         p.cost = sum(topograph_links[(p.nodes[n], p.nodes[n+1])].costs[cost] for n in range(len(p.nodes)-1))
 
     return paths, penalized_costs
-
-
-if __name__ == "__main__":
-    from mnms.mobility_service.personal_car import PersonalCar
-
-
-
-    car = PersonalCar('Car')
-
-    car.add_node('C0', '0')
-    car.add_node('C1', '1')
-    car.add_node('C2', '2')
-    car.add_node('C3', '3')
-    car.add_node('C4', '0')
-    car.add_node('C5', '1')
-    car.add_node('C6', '2')
-    car.add_node('C7', '3')
-
-    car.add_link('C0_C1', 'C0', 'C1', {"time": 10})
-    car.add_link('C1_C2', 'C1', 'C2', {"time": 10})
-    car.add_link('C2_C3', 'C2', 'C3', {"time": 10})
-    car.add_link('C3_C4', 'C3', 'C4', {"time": 1})
-    car.add_link('C0_C7', 'C0', 'C7', {"time": 10})
-    car.add_link('C7_C6', 'C7', 'C6', {"time": 10})
-    car.add_link('C6_C5', 'C6', 'C5', {"time": 10})
-    car.add_link('C5_C4', 'C5', 'C4', {"time": 10})
-
-
-    print(bidirectional_dijkstra(car._graph, 'C0', 'C4', 'time', None))
-
-
-

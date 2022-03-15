@@ -1,3 +1,5 @@
+import logging
+
 from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Vehicle
 
@@ -40,3 +42,7 @@ class FleetManager(object):
 
     def vehicle_type(self):
         return self._constructor.__name__ if self._constructor is not None else None
+
+    @property
+    def nb_waiting_vehicles(self):
+        return len(self._waiting)
