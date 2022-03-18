@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 from mnms.flow.MFD import Reservoir, MFDFlow, construct_leg, get_user_position
 from mnms.tools.time import Time, Dt
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.personal_car import PersonalCar
+from mnms.mobility_service.car import PersonalCar
 from mnms.demand.user import User
 from mnms.graph.shortest_path import compute_shortest_path
 from mnms.simulation import Supervisor
@@ -37,7 +37,7 @@ class TestMFD(unittest.TestCase):
         mmgraph.add_zone('res1', ['0_1', '0_2', '2_3'])
         mmgraph.add_zone('res2', ['3_4'])
 
-        car = PersonalCar('car', 10)
+        car = PersonalCar('car_layer', 10)
         car.add_node('C0', '0')
         car.add_node('C1', '1')
         car.add_node('C2', '2')
@@ -59,21 +59,21 @@ class TestMFD(unittest.TestCase):
         mmgraph.connect_mobility_service('CAR_BUS', 'C2', 'B2', 0, {'time':0})
 
         def res_fct1(dict_accumulations):
-            v_car = 10 * (1 - (dict_accumulations['car'] + 2*dict_accumulations['bus']) / 80)
+            v_car = 10 * (1 - (dict_accumulations['car_layer'] + 2*dict_accumulations['bus']) / 80)
             v_car = max(v_car, 0.001)
             v_bus = v_car / 2
-            dict_speeds = {'car': v_car, 'bus': v_bus}
+            dict_speeds = {'car_layer': v_car, 'bus': v_bus}
             return dict_speeds
 
         def res_fct2(dict_accumulations):
-            v_car = 12 * (1 - (dict_accumulations['car'] + dict_accumulations['bus']) / 50)
+            v_car = 12 * (1 - (dict_accumulations['car_layer'] + dict_accumulations['bus']) / 50)
             v_car = max(v_car, 0.001)
             v_bus = v_car / 3
-            dict_speeds = {'car': v_car, 'bus': v_bus}
+            dict_speeds = {'car_layer': v_car, 'bus': v_bus}
             return dict_speeds
 
-        res1 = Reservoir('res1', ['car', 'bus'], res_fct1)
-        res2 = Reservoir('res2', ['car', 'bus'], res_fct2)
+        res1 = Reservoir('res1', ['car_layer', 'bus'], res_fct1)
+        res2 = Reservoir('res2', ['car_layer', 'bus'], res_fct2)
 
         self.mfd_flow = MFDFlow(outfile=self.pathdir + 'test.csv')
         self.mfd_flow.add_reservoir(res1)
@@ -100,7 +100,7 @@ class TestMFD(unittest.TestCase):
         # dt = Dt(seconds=30)
         # for step in range(100):
         #     if self.mfd_flow._tcurrent < Time.fromSeconds(100) < self.mfd_flow._tcurrent.add_time(dt):
-        #         car.request_vehicle()
+        #         car_layer.request_vehicle()
         #         self.mfd_flow.step(dt)
         #     elif self.mfd_flow._tcurrent < Time.fromSeconds(2000) < self.mfd_flow._tcurrent.add_time(dt):
         #         self.mfd_flow.step(dt)
@@ -115,8 +115,8 @@ class TestMFD(unittest.TestCase):
         self.tempfile.cleanup()
 
     def test_mfd(self):
-        self.assertEqual(self.mfd_flow.dict_accumulations, {'res1': {'car': 4.0, 'bus': 0}, 'res2': {'car': 0, 'bus': 0}, None: {None:0, 'car': 0, 'bus': 0}})
-        self.assertEqual(self.mfd_flow.dict_speeds, {'res1': {'car': 9.5, 'bus': 4.75}, 'res2': {'car': 12.0, 'bus': 4.0}, None: {None:0, 'car': 0, 'bus': 0}})
+        self.assertEqual(self.mfd_flow.dict_accumulations, {'res1': {'car_layer': 4.0, 'bus': 0}, 'res2': {'car_layer': 0, 'bus': 0}, None: {None:0, 'car_layer': 0, 'bus': 0}})
+        self.assertEqual(self.mfd_flow.dict_speeds, {'res1': {'car_layer': 9.5, 'bus': 4.75}, 'res2': {'car_layer': 12.0, 'bus': 4.0}, None: {None:0, 'car_layer': 0, 'bus': 0}})
         self.assertAlmostEqual(self.mfd_flow.remaining_length['2']/3e4, 1, places=1)
         self.assertTrue(self.mfd_flow.started_trips)
         self.assertTrue(not self.mfd_flow.completed_trips['2'])
@@ -145,7 +145,7 @@ class TestPath(unittest.TestCase):
         mmgraph.add_zone('res1', ['0_1', '0_2', '2_3'])
         mmgraph.add_zone('res2', ['3_4'])
 
-        car = PersonalCar('car', 10)
+        car = PersonalCar('car_layer', 10)
         car.add_node('C0', '0')
         car.add_node('C1', '1')
         car.add_node('C2', '2')
@@ -166,7 +166,7 @@ class TestPath(unittest.TestCase):
 
         mmgraph.connect_mobility_service('CAR_BUS', 'C2', 'B2', 0, {'time':0})
 
-        self.legs = [{'length': 1200, 'mode': 'car', 'reservoir': "res1"},
+        self.legs = [{'length': 1200, 'mode': 'car_layer', 'reservoir': "res1"},
                      {'length': 200, 'mode': 'bus', 'reservoir': "res1"},
                      {'length': 2000, 'mode': 'bus', 'reservoir': "res2"}]
 

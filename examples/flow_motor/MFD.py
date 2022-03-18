@@ -27,7 +27,7 @@ flow.add_link('3_2', '3', '2')
 mmgraph.add_zone('SEN1', ['0_1', '1_0', '1_2', '2_1'])
 mmgraph.add_zone('SEN2', ['2_3', '3_2'])
 
-m1 = PersonalCar('car', 10)
+m1 = PersonalCar('car_layer', 10)
 m1.add_node('0', '0')
 m1.add_node('1', '1')
 m1.add_node('3', '3')
@@ -51,23 +51,23 @@ mmgraph.connect_mobility_service('M1', 'M2', '1', {"time": 0})
 
 def res_fct1(dict_accumulations):
     V_car = 0
-    if dict_accumulations['car'] < 18000:
-        V_car = 11.5 - dict_accumulations['car'] * 6 / 18000
-    elif dict_accumulations['car'] < 55000:
-        V_car = 11.5 - 6 - (dict_accumulations['car'] - 18000) * 4.5 / (55000 - 18000)
-    elif dict_accumulations['car'] < 80000:
-        V_car = 11.5 - 6 - 4.5 - (dict_accumulations['car'] - 55000) * 1 / (80000 - 55000)
+    if dict_accumulations['car_layer'] < 18000:
+        V_car = 11.5 - dict_accumulations['car_layer'] * 6 / 18000
+    elif dict_accumulations['car_layer'] < 55000:
+        V_car = 11.5 - 6 - (dict_accumulations['car_layer'] - 18000) * 4.5 / (55000 - 18000)
+    elif dict_accumulations['car_layer'] < 80000:
+        V_car = 11.5 - 6 - 4.5 - (dict_accumulations['car_layer'] - 55000) * 1 / (80000 - 55000)
     V_car = max(V_car, 0.001)
     V_bus = 4
-    dict_speeds = {'car': V_car, 'bus': V_bus}
+    dict_speeds = {'car_layer': V_car, 'bus': V_bus}
     return dict_speeds
 
 
 def res_fct2(dict_accumulations):
-    V_car = 11.5 * (1 - (dict_accumulations['car'] + dict_accumulations['bus']) / 80000)
+    V_car = 11.5 * (1 - (dict_accumulations['car_layer'] + dict_accumulations['bus']) / 80000)
     V_car = max(V_car, 0.001)
     V_bus = V_car / 2
-    dict_speeds = {'car': V_car, 'bus': V_bus}
+    dict_speeds = {'car_layer': V_car, 'bus': V_bus}
     return dict_speeds
 
 
@@ -87,10 +87,10 @@ flow_motor.set_inital_demand(demand)
 print(flow_motor._demand)
 
 flow_motor._tcurrent = Time.fromSeconds(0)
-flow_motor._demand = [[Time.fromSeconds(700), [{'length': 1200, 'mode': 'car', 'reservoir': "SEN1"},
+flow_motor._demand = [[Time.fromSeconds(700), [{'length': 1200, 'mode': 'car_layer', 'reservoir': "SEN1"},
                                                {'length': 200, 'mode': 'bus', 'reservoir': "SEN1"},
                                                {'length': 2000, 'mode': 'bus', 'reservoir': "SEN2"}]],
-                      [Time.fromSeconds(78), [{'length': 2000, 'mode': 'car', 'reservoir': "SEN1"}]]]
+                      [Time.fromSeconds(78), [{'length': 2000, 'mode': 'car_layer', 'reservoir': "SEN1"}]]]
 
 flow_motor.nb_user = 2
 flow_motor.accumulation_number = np.ones(flow_motor.nb_user)

@@ -20,7 +20,7 @@ def create_simple_grid_multimodal():
     mmgraph = create_grid_graph(10, 5, DIST)
     mmgraph.add_zone('ZONE', [l.id for l in mmgraph.flow_graph.links.values()])
 
-    car = PersonalCar('car', 10)
+    car = PersonalCar('car_layer', 10)
     bus = PersonalCar('bus', 10)
 
     for n in mmgraph.flow_graph.nodes.keys():
@@ -49,10 +49,10 @@ if __name__ == '__main__':
     fdir = os.path.dirname(os.path.abspath(__file__))
 
     def res_fct(dict_accumulations):
-        V_car = 11.5 * (1 - (dict_accumulations['car'] + dict_accumulations['bus']) / 80000)
+        V_car = 11.5 * (1 - (dict_accumulations['car_layer'] + dict_accumulations['bus']) / 80000)
         V_car = max(V_car, 0.001)
         V_bus = V_car / 2
-        dict_speeds = {'car': V_car, 'bus': V_bus}
+        dict_speeds = {'car_layer': V_car, 'bus': V_bus}
         return dict_speeds
 
 

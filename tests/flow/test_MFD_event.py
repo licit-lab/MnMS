@@ -6,7 +6,7 @@ from mnms.flow.MFD_event import MFDFlowEvent
 from mnms.tools.time import Time, Dt
 
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.personal_car import PersonalCar
+from mnms.mobility_service.car import PersonalCar
 from mnms.demand.user import User
 from mnms.graph.shortest_path import compute_shortest_path
 from mnms.flow.MFD import log
@@ -38,7 +38,7 @@ class TestAlgorithms(unittest.TestCase):
         mmgraph.add_zone('res1', ['0_1', '0_2', '2_3'])
         mmgraph.add_zone('res2', ['3_4'])
 
-        car = PersonalCar('car', 10)
+        car = PersonalCar('car_layer', 10)
         car.add_node('C0', '0')
         car.add_node('C1', '1')
         car.add_node('C2', '2')
@@ -60,31 +60,31 @@ class TestAlgorithms(unittest.TestCase):
         mmgraph.connect_mobility_service('CAR_BUS', 'C2', 'B2', costs={'length': 0, 'time': 0})
 
         def res_fct1(dict_accumulations):
-            v_car = 10 * (1 - (dict_accumulations['car'] + 2 * dict_accumulations['bus']) / 80)
+            v_car = 10 * (1 - (dict_accumulations['car_layer'] + 2 * dict_accumulations['bus']) / 80)
             v_car = max(v_car, 0.001)
             v_bus = v_car / 2
-            dict_speeds = {'car': v_car, 'bus': v_bus}
+            dict_speeds = {'car_layer': v_car, 'bus': v_bus}
             return dict_speeds
 
         def res_fct2(dict_accumulations):
-            v_car = 12 * (1 - (dict_accumulations['car'] + dict_accumulations['bus']) / 50)
+            v_car = 12 * (1 - (dict_accumulations['car_layer'] + dict_accumulations['bus']) / 50)
             v_car = max(v_car, 0.001)
             v_bus = v_car / 3
-            dict_speeds = {'car': v_car, 'bus': v_bus}
+            dict_speeds = {'car_layer': v_car, 'bus': v_bus}
             return dict_speeds
 
-        res1 = Reservoir('res1', ['car', 'bus'], res_fct1)
-        res2 = Reservoir('res2', ['car', 'bus'], res_fct2)
+        res1 = Reservoir('res1', ['car_layer', 'bus'], res_fct1)
+        res2 = Reservoir('res2', ['car_layer', 'bus'], res_fct2)
 
         self.mfd_flow = MFDFlowEvent(outfile=self.pathdir + 'test.csv')
         self.mfd_flow.add_reservoir(res1)
         self.mfd_flow.add_reservoir(res2)
         self.mfd_flow.set_graph(mmgraph)
 
-        '''self.mfd_flow._demand = [[Time.fromSeconds(100), [{'length': 1200, 'mode': 'car', 'reservoir': "res1"},
+        '''self.mfd_flow._demand = [[Time.fromSeconds(100), [{'length': 1200, 'mode': 'car_layer', 'reservoir': "res1"},
                                                        {'length': 200, 'mode': 'bus', 'reservoir': "res1"},
                                                        {'length': 2000, 'mode': 'bus', 'reservoir': "res2"}]],
-                              [Time.fromSeconds(2000), [{'length': 40000, 'mode': 'car', 'reservoir': "res1"}]]]'''
+                              [Time.fromSeconds(2000), [{'length': 40000, 'mode': 'car_layer', 'reservoir': "res1"}]]]'''
 
         self.user1 = User('1', '0', '4', Time.fromSeconds(100), scale_factor=2)
         self.user2 = User('2', '0', '1', Time.fromSeconds(2000), scale_factor=4)
@@ -119,9 +119,9 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_mfd(self):
         print(self.mfd_flow.dict_accumulations)
-        self.assertEqual(self.mfd_flow.dict_accumulations, {'res1': {'car': 4.0, 'bus': 0.0},
-                                                                 'res2': {'car': 0, 'bus': 0.0}, None: {None:0, 'car': 0, 'bus': 0}})
-        self.assertEqual(self.mfd_flow.dict_speeds, {'res1': {'car': 9.5, 'bus': 4.75}, 'res2': {'car': 12.0, 'bus': 4.0}, None: {None:0, 'car': 0, 'bus': 0}})
+        self.assertEqual(self.mfd_flow.dict_accumulations, {'res1': {'car_layer': 4.0, 'bus': 0.0},
+                                                                 'res2': {'car_layer': 0, 'bus': 0.0}, None: {None:0, 'car_layer': 0, 'bus': 0}})
+        self.assertEqual(self.mfd_flow.dict_speeds, {'res1': {'car_layer': 9.5, 'bus': 4.75}, 'res2': {'car_layer': 12.0, 'bus': 4.0}, None: {None:0, 'car_layer': 0, 'bus': 0}})
         #self.assertAlmostEqual(self.mfd_flow.remaining_length['1'], 0, places=7)
         self.assertAlmostEqual(self.mfd_flow.remaining_length['2']/3e4, 1, places=1)
         self.assertTrue(self.mfd_flow.started_trips)
@@ -131,7 +131,7 @@ class TestAlgorithms(unittest.TestCase):
         self.assertEqual(self.mfd_flow.time_completion_legs['2'][0], -1)
         #self.assertEqual(self.mfd_flow.current_leg[0], 2)
         self.assertEqual(self.mfd_flow.current_leg['2'], 0)
-        self.assertEqual(self.mfd_flow.current_mode['2'], 'car')
+        self.assertEqual(self.mfd_flow.current_mode['2'], 'car_layer')
         self.assertEqual(self.mfd_flow._tcurrent.to_seconds(), 3000)
         # Tests specific to event based resolution
         #self.assertEqual(self.mfd_flow.exit_user_per_event, [-1, -1, 0, 0, 0, -1])

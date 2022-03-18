@@ -259,7 +259,7 @@ class PublicTransport(AbstractMobilityService):
         for i in range(len(path) - 1):
             unode = path[i]
             dnode = path[i+1]
-            if self._graph.nodes[dnode].mobility_service == self.id:
+            if self._graph.nodes[dnode].layer == self.id:
                 key = (unode, dnode)
                 veh_path.append((key, self._graph.links[key].costs['length']))
             else:

@@ -77,7 +77,7 @@ def get_info_toponode(graph):
     if node_input in graph.nodes:
         node = graph.nodes[node_input]
         print("Reference node   :", node.reference_node)
-        print("Mobility service :", node.mobility_service, end='\n\n')
+        print("Mobility service :", node.layer, end='\n\n')
         print("Downstream nodes :", graph._adjacency[node.id])
         print("Downstream links :", {graph.links[(node_input, dnode)].id for dnode in graph._adjacency[node.id]})
         unodes = {up for up, down in graph._adjacency.items() if node_input in down}
@@ -98,7 +98,7 @@ def get_info_topolink(graph):
         print("Type             :", link.__class__.__name__)
         print("Upstream         :", link.upstream_node)
         print("Downstream       :", link.downstream_node)
-        print("Mobility service :", link.mobility_service)
+        print("Mobility service :", link.layer)
         print("Reference links  :", link.reference_links)
         print("Reference lanes  :", link.reference_lane_ids)
         print("Costs:")

@@ -80,7 +80,7 @@ class TestPublicTransport(unittest.TestCase):
         service.connect_lines('L0', 'TEST2', '1', {'test': 0})
 
         data = service.__dump__()
-        expected_dict = {'TYPE': 'mnms.mobility_service.public_transport.PublicTransport',
+        expected_dict = {'TYPE': 'mnms.layer.public_transport.PublicTransport',
                          'ID': 'TEST',
                          'DEFAULT_SPEED': 1,
                          'LINES': [{'ID': 'L0',

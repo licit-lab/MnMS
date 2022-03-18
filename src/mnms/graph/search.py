@@ -48,7 +48,7 @@ def mobility_nodes_in_radius(pos:Iterable[float], mmgraph:'MultiModalGraph', rad
     if services is None:
         nodes = [n for n in mmgraph.mobility_graph.nodes.values()]
     else:
-        nodes = [n for n in mmgraph.mobility_graph.nodes.values() if n.mobility_service in services]
+        nodes = [n for n in mmgraph.mobility_graph.nodes.values() if n.layer in services]
     service_nodes = np.array([n.id for n in nodes], dtype=str)
     service_pos = np.array([mmgraph.flow_graph.nodes[n.reference_node].pos for n in nodes])
 

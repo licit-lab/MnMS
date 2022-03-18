@@ -1,8 +1,9 @@
-import logging
 from abc import ABC, abstractmethod
-from functools import partial
+from copy import deepcopy
+from functools import partial, reduce
 from typing import Literal, List, Tuple
 import csv
+from itertools import product
 
 import numpy as np
 
@@ -34,13 +35,13 @@ def compute_path_length(mmgraph: MultiModalGraph, path:List[str]) -> float:
 def compute_path_modes(mmgraph: MultiModalGraph, path:List[str]) -> List[str]:
     mgraph_links = mmgraph.mobility_graph.links
     mgraph_nodes = mmgraph.mobility_graph.nodes
-    yield mgraph_nodes[path[0]].mobility_service
+    yield mgraph_nodes[path[0]].layer
     for i in range(len(path) - 1):
         j = i + 1
         c_link = mgraph_links[(path[i], path[j])]
         if isinstance(c_link, TransitLink):
             yield c_link.id
-            yield mgraph_nodes[path[j]].mobility_service
+            yield mgraph_nodes[path[j]].layer
 
 
 class AbstractDecisionModel(ABC):
@@ -233,38 +234,67 @@ class AbstractDecisionModel(ABC):
 
             return path
 
+    # TODO: restrict combination of paths (ex: we dont want Uber->Bus)
     def __call__(self, user:User):
-        paths, _ = compute_n_best_shortest_path(self._mmgraph, user, self._n_shortest_path, cost=self._cost,
-                                                algorithm=self._algorithm, heuristic=self._heuristic,
-                                                scale_factor=self._scale_factor, radius=self._radius_sp,
-                                                growth_rate_radius=self._radius_growth_sp,
-                                                walk_speed=self._walk_speed)
+        layer_paths, _ = compute_n_best_shortest_path(self._mmgraph,
+                                                      user,
+                                                      self._n_shortest_path,
+                                                      cost=self._cost,
+                                                      algorithm=self._algorithm,
+                                                      heuristic=self._heuristic,
+                                                      scale_factor=self._scale_factor,
+                                                      radius=self._radius_sp,
+                                                      growth_rate_radius=self._radius_growth_sp,
+                                                      walk_speed=self._walk_speed)
 
-        computed_path_services = set()
-        for p in paths:
-            computed_path_services.update(p.mobility_services)
+        paths = []
+        for p in layer_paths:
+            path_services = []
+            p.construct_layers(self._mmgraph.mobility_graph)
 
-        log.info(f'{user} mobility service in paths: {computed_path_services}')
-        # log.info(f'{paths}')
+            for layer, node_inds in p.layers:
+                layer_services = []
+                path_services.append(layer_services)
+                for service in self._mmgraph.layers[layer].mobility_services:
+                    if user.available_mobility_service is None or service in user.available_mobility_service:
+                        layer_services.append(service)
 
-        for service in self._mandatory_mobility_services:
-            if service in user.available_mobility_service and service not in computed_path_services:
-                log.info(f"Missing path for {service} in first computed paths, recompute it ...")
-                # p = self.request_path_mobility_service(service, user)
-                backup_services = user.available_mobility_service
-                user.available_mobility_service = {service, 'WALK'}
-                p = compute_shortest_path(self._mmgraph,
-                                          user,
-                                          self._cost,
-                                          self._algorithm,
-                                          self._heuristic,
-                                          self._radius_sp,
-                                          self._radius_growth_sp,
-                                          self._walk_speed)
-                log.info(p)
-                user.available_mobility_service = backup_services
-                paths.append(p)
-                log.info(f"Done")
+            for ls in product(path_services):
+                new_path = deepcopy(p)
+                services = ls if len(ls) > 1 else ls[0]
+                new_path.mobility_services = services
+                service_costs = reduce(lambda x, y: x+y,
+                                       [self._mmgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services)])
+                new_path.service_costs = service_costs
+                paths.append(new_path)
+
+
+
+        # computed_path_services = set()
+        # for p in paths:
+        #     computed_path_services.update(p.layers)
+        #
+        # log.info(f'{user} mobility service in paths: {computed_path_services}')
+        # # log.info(f'{paths}')
+        #
+        # for service in self._mandatory_mobility_services:
+        #     if service in user.available_mobility_service and service not in computed_path_services:
+        #         log.info(f"Missing path for {service} in first computed paths, recompute it ...")
+        #         # p = self.request_path_mobility_service(service, user)
+        #         backup_services = user.available_mobility_service
+        #         user.available_mobility_service = {service, 'WALK'}
+        #         p = compute_shortest_path(self._mmgraph,
+        #                                   user,
+        #                                   self._cost,
+        #                                   self._algorithm,
+        #                                   self._heuristic,
+        #                                   self._radius_sp,
+        #                                   self._radius_growth_sp,
+        #                                   self._walk_speed)
+        #         log.info(p)
+        #         user.available_mobility_service = backup_services
+        #         paths.append(p)
+        #         log.info(f"Done")
 
         path = self.path_choice(paths)
         user.set_path(path)

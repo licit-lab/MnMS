@@ -3,7 +3,7 @@ import unittest
 import matplotlib.pyplot as plt
 
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.personal_car import PersonalCar
+from mnms.mobility_service.car import PersonalCar
 from mnms.tools.render import draw_flow_graph, draw_multimodal_graph, draw_path
 
 

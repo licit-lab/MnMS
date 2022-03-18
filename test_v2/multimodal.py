@@ -1,6 +1,6 @@
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.public_transport import BusMobilityService
-from mnms.mobility_service.personal_car import PersonalCar
+from mnms.mobility_service.public_transport import BusMobilityService, PublicTransport
+from mnms.mobility_service.car import PersonalCarMobilityService, CarMobilityGraphLayer
 from mnms.demand.user import User
 from mnms.tools.time import Time, Dt, TimeTable
 from mnms.demand.manager import BaseDemandManager
@@ -17,7 +17,7 @@ set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation',
                                       'mnms.vehicles.veh_type',
                                       'mnms.flow.user_flow',
                                       'mnms.flow.MFD',
-                                      'mnms.mobility_service.public_transport',
+                                      'mnms.layer.public_transport',
                                       'mnms.travel_decision.model',
                                       'mnms.tools.observer'])
 
