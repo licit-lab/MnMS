@@ -1,10 +1,12 @@
 import csv
 from typing import List, Literal, Union
 from abc import ABC, abstractmethod
+import re
 
 import numpy as np
 
 from mnms.demand.user import User
+from mnms.tools.exceptions import CSVDemandParseError
 from mnms.tools.time import Time
 from mnms.tools.observer import Observer
 
@@ -90,13 +92,28 @@ class CSVDemandManager(AbstractDemandManager):
     """
     def __init__(self, csvfile, demand_type:Literal['node', 'coordinate']='node', delimiter=';'):
         super(CSVDemandManager, self).__init__()
+        assert demand_type == 'coordinate' or demand_type == 'node', f"demand_type must be 'node' or 'coordinate' not '{demand_type}'"
+
         self._filename = csvfile
         self._file = open(self._filename, 'r')
         self._reader = csv.reader(self._file, delimiter=delimiter, quotechar='|')
         self._demand_type = demand_type
 
         next(self._reader)
-        self._current_user = self.construct_user(next(self._reader))
+
+        first_line = next(self._reader)
+        if demand_type == "coordinate":
+            match_x = re.match(r'^[-+]?[0-9]+\.[0-9]+\d[-+]?[0-9]+\.[0-9]+$', first_line[2])
+            match_y = re.match(r'^[-+]?[0-9]+\.[0-9]+\d[-+]?[0-9]+\.[0-9]+$', first_line[2])
+            if match_x is None or match_y is None:
+                raise CSVDemandParseError(csvfile, demand_type)
+        elif demand_type == "node":
+            match_x = re.match(r'^\w+$', first_line[2].strip())
+            match_y = re.match(r'^\w+$', first_line[2].strip())
+            if match_x is None or match_y is None:
+                raise CSVDemandParseError(csvfile, demand_type)
+
+        self._current_user = self.construct_user(first_line)
 
     def get_next_departures(self, tstart:Time, tend:Time) -> List[User]:
         departure = list()
@@ -104,7 +121,10 @@ class CSVDemandManager(AbstractDemandManager):
         # If the lower bound of next departures is after the fist departure in the demand, we skip the first users until
         # reaching the  lower bound of next departures
         while self._current_user.departure_time < tstart:
-            self._current_user = self.construct_user(next(self._reader))
+            try:
+                self._current_user = self.construct_user(next(self._reader))
+            except StopIteration:
+                return departure
 
         while tstart <= self._current_user.departure_time < tend:
             # Attaching observers to Users

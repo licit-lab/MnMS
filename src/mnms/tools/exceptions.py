@@ -20,3 +20,9 @@ class VehicleNotFoundError(Exception):
     def __init__(self, user, mobility_service):
         msg = f"{mobility_service.id} did not found any vehicle for {user}"
         super().__init__(msg)
+
+
+class CSVDemandParseError(Exception):
+    def __init__(self, file, demand_type):
+        msg = f"Cannot parse the origin or destination for demand_type '{demand_type}' for the file {file}"
+        super(CSVDemandParseError, self).__init__(msg)
