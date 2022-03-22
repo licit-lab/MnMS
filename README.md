@@ -8,7 +8,7 @@
 
 Using [conda](https://docs.conda.io/en/latest/miniconda.html), create a new environment:
 
-````bash
+````bash 
 conda env create -f conda/env.yaml
 ````
 
