@@ -29,7 +29,7 @@ def construct_leg(mmgraph: MultiModalGraph, path:List[str]):
             for lid in link.reference_links:
                 flow_link = mmgraph.flow_graph.get_link(lid)
                 curr_res = flow_link.zone
-                curr_mob = link.mobility_service
+                curr_mob = link.layer
                 if curr_res != last_res or curr_mob != last_mob:
                     if last_mob is not None:
                         res.append({"reservoir": last_res, "mode": last_mob, "length": length})
@@ -133,8 +133,8 @@ class Reservoir(object):
         for lid in mmgraph.zones[zid].links:
             nodes = mmgraph.flow_graph._map_lid_nodes[lid]
             for mobility_node in mmgraph.mobility_graph.get_node_references(nodes[0]) + mmgraph.mobility_graph.get_node_references(nodes[1]):
-                mservice_id = mmgraph.mobility_graph.nodes[mobility_node].mobility_service
-                modes.add(mmgraph._mobility_services[mservice_id].fleet.vehicle_type().upper())
+                mservice_id = mmgraph.mobility_graph.nodes[mobility_node].layer
+                modes.add(mmgraph.layers[mservice_id]._veh_type.__name__.upper())
 
         new_res = Reservoir(zid, modes, fct_MFD_speed)
         return new_res
@@ -265,6 +265,7 @@ class MFDFlow(AbstractFlowMotor):
         # Calculate accumulations
         for veh_id in self.veh_manager._vehicles:
             veh = self.veh_manager._vehicles[veh_id]
+            log.info(f"{veh.current_link}, {veh}")
             curr_link = self._graph.mobility_graph.links[(veh.current_link)]
             lid = curr_link.reference_links[0] # take reservoir of first part of trip
             flow_link = self._graph.flow_graph.get_link(lid)
@@ -298,7 +299,7 @@ class MFDFlow(AbstractFlowMotor):
 
         for tid, topolink in mobility_graph.links.items():
             if isinstance(topolink, ConnectionLink):
-                link_service = topolink.mobility_service
+                link_service = topolink.layer
                 topolink_lenghts[topolink.id] = {'lengths': {},
                                                  'speeds': {}}
                 for l in topolink.reference_links:
@@ -322,11 +323,11 @@ class MFDFlow(AbstractFlowMotor):
                 else:
                     link_node = mobility_graph._map_lid_nodes[tid]
                     link = mobility_graph.links[link_node]
-                    new_speed = self._graph._mobility_services[link.mobility_service].default_speed
+                    new_speed = self._graph._mobility_services[link.layer].default_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
-            mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
             if new_speed != 0:
                 mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] = total_len/new_speed
+                mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
 
     def write_result(self, step_affectation:int, step_flow:int):
         tcurrent = self._tcurrent.time

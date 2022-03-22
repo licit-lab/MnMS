@@ -5,6 +5,8 @@ from itertools import chain
 
 import numpy as np
 
+from mnms.tools.containers import CostDict
+
 
 class GraphElement(ABC):
     """Base class for the creation of a graph element
@@ -44,28 +46,28 @@ class TopoNode(GraphElement):
         A reference to GeoNode (default is None)
 
     """
-    __slots__ = ('reference_node', 'mobility_service')
+    __slots__ = ('reference_node', 'layer')
 
-    def __init__(self, id: str, mobility_service, ref_node:str=None):
+    def __init__(self, id: str, layer, ref_node:str=None):
         super(TopoNode, self).__init__(id)
         self.reference_node = ref_node
-        self.mobility_service = mobility_service
+        self.layer = layer
 
     def __repr__(self):
         return f"TopoNode(id={self.id}, ref_node={self.reference_node})"
 
     @classmethod
     def __load__(cls, data: dict) -> "TopoNode":
-        return cls(data['ID'], data['MOBILITY_SERVICE'], data['REF_NODE'])
+        return cls(data['ID'], data['LAYER'], data['REF_NODE'])
 
     def __dump__(self) -> dict:
         return {'ID': self.id,
                 'REF_NODE': self.reference_node,
-                'MOBILITY_SERVICE': self.mobility_service}
+                'LAYER': self.layer}
 
     def __deepcopy__(self, memodict={}):
         cls = self.__class__
-        result = cls(self.id, self.mobility_service, self.reference_node)
+        result = cls(self.id, self.layer, self.reference_node)
         return result
 
 
@@ -123,19 +125,22 @@ class ConnectionLink(GraphElement):
     mobility_service: str
         Identifier of the mobility service that use this TopoLink
     """
-    __slots__ = ('upstream_node', 'downstream_node', 'costs', 'reference_links', 'reference_lane_ids', 'mobility_service')
+    __slots__ = ('upstream_node', 'downstream_node', 'costs', 'reference_links', 'reference_lane_ids', 'layer')
 
     def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None, reference_lane_ids=None,
-                 mobility_service=None):
+                 layer=None):
         super(ConnectionLink, self).__init__(lid)
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
-        self.costs = {'time': 0, '_default': 1}
+        self.costs: CostDict = CostDict(travel_time= 0,
+                                        waiting_time=0,
+                                        length=0,
+                                        _default=1)
         if costs is not None:
-            self.costs.update(costs)
+            self.costs.update_from_dict(costs)
         self.reference_links = reference_links if reference_links is not None else []
         self.reference_lane_ids = []
-        self.mobility_service = mobility_service
+        self.layer = layer
 
         if reference_links is not None:
             if reference_lane_ids is None:
@@ -148,7 +153,7 @@ class ConnectionLink(GraphElement):
 
     @classmethod
     def __load__(cls, data: dict) -> "ConnectionLink":
-        return cls(data['ID'], data['UPSTREAM'], data['DOWNSTREAM'], data['COSTS'], data['REF_LINKS'], data['REF_LANE_IDS'], data['MOBILITY_SERVICE'])
+        return cls(data['ID'], data['UPSTREAM'], data['DOWNSTREAM'], data['COSTS'], data['REF_LINKS'], data['REF_LANE_IDS'], data['LAYER'])
 
     def __dump__(self) -> dict:
         return {'ID': self.id,
@@ -157,7 +162,7 @@ class ConnectionLink(GraphElement):
                 'COSTS': {key: val for key, val in self.costs.items() if key != "_default"},
                 'REF_LINKS': self.reference_links,
                 'REF_LANE_IDS': self.reference_lane_ids,
-                'MOBILITY_SERVICE': self.mobility_service}
+                'LAYER': self.layer}
 
     def __deepcopy__(self, memodict={}):
         cls = self.__class__
@@ -167,7 +172,7 @@ class ConnectionLink(GraphElement):
                      deepcopy(self.costs),
                      deepcopy(self.reference_links),
                      deepcopy(self.reference_lane_ids),
-                     self.mobility_service)
+                     self.layer)
         return result
 
 
@@ -191,9 +196,12 @@ class TransitLink(GraphElement):
         super(TransitLink, self).__init__(lid)
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
-        self.costs = {'time': 0, '_default': 1}
+        self.costs: CostDict = CostDict(travel_time= 0,
+                                        waiting_time=0,
+                                        length=0,
+                                        _default=1)
         if costs is not None:
-            self.costs.update(costs)
+            self.costs.update_from_dict(costs)
 
     def __repr__(self):
         return f"TransitLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"

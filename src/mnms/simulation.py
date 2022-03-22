@@ -75,8 +75,9 @@ class Supervisor(object):
         log.info(f'Done [{end - start:.5} s]')
         
     def initialize(self, tstart:Time):
-        for mservice in self._graph._mobility_services.values():
-            mservice.set_time(tstart)
+        for layer in self._graph.layers.values():
+            for service in layer.mobility_services.values():
+                service.set_time(tstart)
         
         self._flow_motor.set_time(tstart)
         self._flow_motor.initialize()
@@ -85,18 +86,17 @@ class Supervisor(object):
         self._user_flow.initialize()
         
     def update_mobility_services(self, flow_dt:Dt):
-        for mservice in self._graph._mobility_services.values():
-            log.info(f'Update mobility service {mservice.id}')
-            mservice.update_time(flow_dt)
-            mservice.update(flow_dt)
-
+        for layer in self._graph.layers.values():
+            for mservice in layer.mobility_services.values():
+                log.info(f'Update mobility service {mservice.id}')
+                mservice.update(flow_dt)
+                mservice.update_time(flow_dt)
             
     def step_flow(self, flow_dt, users_step):
         self._flow_motor.update_time(flow_dt)
         self._flow_motor.step(flow_dt)
         self._user_flow.update_time(flow_dt)
         self._user_flow.step(flow_dt, users_step)
-
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:

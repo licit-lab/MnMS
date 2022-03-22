@@ -1,7 +1,7 @@
 import unittest
 
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.personal_car import PersonalCar
+from mnms.mobility_service.car import PersonalCar
 
 
 class TestCreate(unittest.TestCase):

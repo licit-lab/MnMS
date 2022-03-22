@@ -4,9 +4,13 @@ from itertools import combinations
 
 import numpy as np
 
+from mnms import create_logger
 from mnms.graph.search import mobility_nodes_in_radius
 from mnms.tools.exceptions import DuplicateNodesError, DuplicateLinksError
 from mnms.graph.elements import GeoNode, TopoNode, GeoLink, ConnectionLink, TransitLink, Zone
+
+
+log = create_logger(__name__)
 
 
 class OrientedGraph(object):
@@ -229,7 +233,7 @@ class MultiModalGraph(object):
     zones: dict
         Dict of reservoirs define on flow_graph
     """
-    __slots__ = ('flow_graph', 'mobility_graph', 'zones', '_connection_services', '_mobility_services')
+    __slots__ = ('flow_graph', 'mobility_graph', 'zones', '_connection_services', 'layers', 'mapping_layer_services')
 
     def __init__(self, nodes:Dict[str, Tuple[float]]={}, links:Dict[str, Tuple[float]]= {}, mobility_services=[]):
         self.flow_graph = GeoGraph()
@@ -237,26 +241,34 @@ class MultiModalGraph(object):
         self.zones = dict()
 
         self._connection_services = dict()
-        self._mobility_services:Dict[str, "PersonalCar"] = dict()
+        self.layers:Dict[str, "AbstractMobilityGraphLayer"] = dict()
+        self.mapping_layer_services = dict()
 
         [self.flow_graph.add_node(nid, pos) for nid, pos in nodes.items()]
         [self.flow_graph.add_link(lid, unid, dnid) for lid, (unid, dnid) in  links.items()]
         [serv.connect_graph(self) for serv in mobility_services]
 
-    def add_mobility_service(self, service: "AbstractMobilityService"):
-        self._mobility_services[service.id] = service
-        self.mobility_graph.add_topo_graph(service._graph)
+    def add_layer(self, layer: "AbstractMobilityGraphLayer"):
+        self.layers[layer.id] = layer
+        self.mobility_graph.add_topo_graph(layer.graph)
 
-    def connect_mobility_service(self, lid: str, upstream_node: str, downstream_node: str, length: float,
+        if len(layer.mobility_services) == 0:
+            log.warning(f"Layer with id '{layer.id}' does not have any mobility services in it, add mobility services "
+                        f"before adding the layer to the MultiModalGraph")
+
+        for service in layer.mobility_services:
+            self.mapping_layer_services[service] = layer
+
+    def connect_layers(self, lid: str, upstream_node: str, downstream_node: str, length: float,
                                  costs: Dict[str, float]) -> None:
-        upstream_service = self.mobility_graph.nodes[upstream_node].mobility_service
-        downstream_service = self.mobility_graph.nodes[downstream_node].mobility_service
+        upstream_service = self.mobility_graph.nodes[upstream_node].layer
+        downstream_service = self.mobility_graph.nodes[downstream_node].layer
         assert upstream_service != downstream_service, f"Upstream service must be different from downstream service ({upstream_service})"
         assert "time" in costs, "time must pe present in the cost dictionnay"
         # If service in the mobility services of MultiModalGraph, we compute the cost of connection
-        if downstream_service in self._mobility_services:
-            dserv = self._mobility_services[downstream_service]
-            connect_cost = dserv.connect_to_service(downstream_node)
+        if downstream_service in self.layers:
+            dserv = self.layers[downstream_service]
+            connect_cost = dserv.connect_to_layer(downstream_node)
             costs = dict(list(costs.items()) + list(connect_cost.items()) + [(k, costs[k] + connect_cost[k]) for k in set(costs) & set(connect_cost)])
         costs.update({'length': length})
         link = TransitLink(lid, upstream_node, downstream_node, costs)
@@ -285,17 +297,17 @@ class MultiModalGraph(object):
             node_ni = self.mobility_graph.nodes[ni]
             node_nj = self.mobility_graph.nodes[nj]
 
-            mservice_ni = self._mobility_services[node_ni.mobility_service]
-            mservice_nj = self._mobility_services[node_nj.mobility_service]
+            mservice_ni = self.layers[node_ni.layer]
+            mservice_nj = self.layers[node_nj.layer]
 
             if type(mservice_ni) != type(mservice_nj):
-                exclusion_ni = exclusion_matrix.get(node_ni.mobility_service, set())
-                exclusion_nj = exclusion_matrix.get(node_nj.mobility_service, set())
+                exclusion_ni = exclusion_matrix.get(node_ni.layer, set())
+                exclusion_nj = exclusion_matrix.get(node_nj.layer, set())
                 dist = np.linalg.norm(flow_graph_nodes[node_nj.reference_node].pos - flow_graph_nodes[node_ni.reference_node].pos)
-                if node_nj.mobility_service not in exclusion_ni:
+                if node_nj.layer not in exclusion_ni:
                     c = {'time': dist / walk_speed, 'speed': walk_speed}
                     self.connect_mobility_service(f'_WALK_{ni}_{nj}', ni, nj, dist, c)
 
-                if node_ni.mobility_service not in exclusion_nj:
+                if node_ni.layer not in exclusion_nj:
                     c = {'time': dist / walk_speed, 'speed': walk_speed}
                     self.connect_mobility_service(f'_WALK_{nj}_{ni}', nj, ni, dist, c)
