@@ -11,25 +11,28 @@ from mnms.vehicles.veh_type import Vehicle
 
 
 class AbstractMobilityGraphLayer(ABC):
-    def __init__(self, id:str, veh_type:Type[Vehicle], default_speed:float):
+    def __init__(self,
+                 id:str,
+                 veh_type:Type[Vehicle],
+                 default_speed:float,
+                 services:List["AbstractMobilityService"]=None,
+                 observer=None):
         self.id = id
         self.default_speed = default_speed
         self.mobility_services = dict()
         self.graph = TopoGraph()
-
-        self._observer = None
-
         self._veh_type = veh_type
+
+        if services is not None:
+            for s in services:
+                self.add_mobility_service(s)
+                if observer is not None:
+                    s.attach_vehicle_observer(observer)
 
     def add_mobility_service(self, service:"AbstractMobilityService"):
         service.layer = self
         service.fleet = FleetManager(self._veh_type)
         self.mobility_services[service.id] = service
-
-    def attach_vehicle_observer(self, observer):
-        self._observer = observer
-        for service in self.mobility_services.values():
-            service._observer = observer
 
     def compute_shortest_path(self, user:User, cost:str, heuristic) -> Path:
         return astar(self.graph,
@@ -78,6 +81,9 @@ class AbstractMobilityService(ABC):
     @property
     def graph(self):
         return self.layer.graph
+
+    def attach_vehicle_observer(self, observer):
+        self._observer = observer
 
     @abstractmethod
     def request_vehicle(self, user: "User", drop_node:str) -> None:

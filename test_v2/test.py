@@ -40,8 +40,9 @@ fgraph.add_link('0_1', '0', '1')
 fgraph.add_link('1_2', '1', '2')
 fgraph.add_link('2_3', '2', '3')
 
-
-car_layer = CarMobilityGraphLayer()
+personal_car = PersonalCarMobilityService()
+personal_car.attach_vehicle_observer(CSVVehicleObserver(dir_path + "/veh.csv"))
+car_layer = CarMobilityGraphLayer(services=[personal_car])
 car_layer.add_node('C0', '0')
 car_layer.add_node('C1', '1')
 car_layer.add_node('C2', '2')
@@ -50,9 +51,6 @@ car_layer.add_node('C3', '3')
 car_layer.add_link('C0_C1', 'C0', 'C1', {'length':1000}, ['0_1'])
 car_layer.add_link('C1_C2', 'C1', 'C2', {'length':1000}, ['1_2'])
 car_layer.add_link('C2_C3', 'C2', 'C3', {'length':1000}, ['2_3'])
-
-car_layer.attach_vehicle_observer(CSVVehicleObserver(dir_path + "/veh.csv"))
-car_layer.add_mobility_service(PersonalCarMobilityService())
 
 mmgraph.add_layer(car_layer)
 mmgraph.add_zone('ZONE', ['0_1', '1_2', '2_3'])

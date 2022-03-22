@@ -33,12 +33,14 @@ class Path(object):
         layer = graph.nodes[self.nodes[0]].layer
         start = 0
         nodes_number = len(self.nodes)
-        for i in range(1, nodes_number):
+        for i in range(1, nodes_number-1):
             ilayer = graph.nodes[self.nodes[i]].layer
-            if ilayer != layer or i == nodes_number-1:
-                self.layers.append((layer, slice(start, i+1, 1)))
+            if ilayer != layer:
+                self.layers.append((layer, slice(start, i, 1)))
                 layer = ilayer
-                start = i+1
+                start = i
+        self.layers.append((layer, slice(start, nodes_number, 1)))
+
 
     def __repr__(self):
         return f"Path(path_cost={self.path_cost}, nodes={self.nodes}, layers={self.layers}, services={self.mobility_services})"

@@ -196,12 +196,12 @@ class TransitLink(GraphElement):
         super(TransitLink, self).__init__(lid)
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
-        self.costs = {'travel_time': 0,
-                      'waiting_time': 0,
-                      'length': 0,
-                      '_default': 1}
+        self.costs: CostDict = CostDict(travel_time= 0,
+                                        waiting_time=0,
+                                        length=0,
+                                        _default=1)
         if costs is not None:
-            self.costs.update(costs)
+            self.costs.update_from_dict(costs)
 
     def __repr__(self):
         return f"TransitLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"

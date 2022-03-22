@@ -247,6 +247,8 @@ class AbstractDecisionModel(ABC):
                                                       growth_rate_radius=self._radius_growth_sp,
                                                       walk_speed=self._walk_speed)
 
+
+
         paths = []
         for p in layer_paths:
             path_services = []
@@ -259,7 +261,7 @@ class AbstractDecisionModel(ABC):
                     if user.available_mobility_service is None or service in user.available_mobility_service:
                         layer_services.append(service)
 
-            for ls in product(path_services):
+            for ls in product(*path_services):
                 new_path = deepcopy(p)
                 services = ls if len(ls) > 1 else ls[0]
                 new_path.mobility_services = services
@@ -267,8 +269,6 @@ class AbstractDecisionModel(ABC):
                                        [self._mmgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services)])
                 new_path.service_costs = service_costs
                 paths.append(new_path)
-
-
 
         # computed_path_services = set()
         # for p in paths:

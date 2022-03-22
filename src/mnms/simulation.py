@@ -89,8 +89,8 @@ class Supervisor(object):
         for layer in self._graph.layers.values():
             for mservice in layer.mobility_services.values():
                 log.info(f'Update mobility service {mservice.id}')
-                mservice.update_time(flow_dt)
                 mservice.update(flow_dt)
+                mservice.update_time(flow_dt)
             
     def step_flow(self, flow_dt, users_step):
         self._flow_motor.update_time(flow_dt)

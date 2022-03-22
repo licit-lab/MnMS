@@ -1,4 +1,5 @@
 from random import sample
+from typing import List
 
 import numpy as np
 
@@ -16,8 +17,8 @@ log = create_logger(__name__)
 
 
 class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
-    def __init__(self, default_speed=13.8):
-        super(CarMobilityGraphLayer, self).__init__('Car', Car, default_speed)
+    def __init__(self, id='Car', default_speed=13.8, services:List[AbstractMobilityService]=None, observer=None):
+        super(CarMobilityGraphLayer, self).__init__(id, Car, default_speed, services, observer)
 
     def add_node(self, nid: str, ref_node=None) -> None:
         self.graph.add_node(nid, self.id, ref_node)
