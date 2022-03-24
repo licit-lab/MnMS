@@ -1,6 +1,6 @@
 import unittest
 
-from mnms.mobility_service import PublicTransport
+from mnms.mobility_service.public_transport import PublicTransportMobilityService, BusMobilityGraphLayer
 from mnms.tools.time import TimeTable, Dt
 from mnms.vehicles.veh_type import Bus
 
@@ -13,32 +13,36 @@ class TestPublicTransport(unittest.TestCase):
         """Concludes and closes the test.
         """
     def test_create(self):
-        service = PublicTransport("TEST", Bus, 1)
+        service = BusMobilityGraphLayer("TEST", 1)
         self.assertEqual(service.id, "TEST")
         self.assertEqual(1, service.default_speed)
-        self.assertDictEqual({}, service._graph.links)
-        self.assertDictEqual({}, service._graph.nodes)
+        self.assertDictEqual({}, service.graph.links)
+        self.assertDictEqual({}, service.graph.nodes)
 
     def test_fill(self):
-        service = PublicTransport("TEST", Bus, 10)
+        service = BusMobilityGraphLayer("TEST", 10)
 
         line = service.add_line('L0', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
         line.add_stop("0", "00")
         line.add_stop("1", "11")
 
-        line.connect_stops('0_1', '0', '1', 10, {'test': 32}, ['0_1'], [2])
+        line.connect_stops('0_1', '0', '1', 10, ['0_1'], {'test': 32}, [2])
 
         self.assertTrue('L0' in service.lines)
 
-        self.assertListEqual(['L0_0', 'L0_1'], list(service._graph.nodes.keys()))
-        self.assertEqual('00', service._graph.nodes['L0_0'].reference_node)
-        self.assertEqual('11', service._graph.nodes['L0_1'].reference_node)
+        self.assertListEqual(['0', '1'], list(service.graph.nodes.keys()))
+        self.assertEqual('00', service.graph.nodes['0'].reference_node)
+        self.assertEqual('11', service.graph.nodes['1'].reference_node)
 
-        self.assertListEqual([('L0_0', 'L0_1')], list(service._graph.links.keys()))
+        self.assertListEqual([('0', '1')], list(service.graph.links.keys()))
 
-        self.assertDictEqual({'_default': 1, 'length': 10, 'test': 32, 'time': 0}, service._graph.links[('L0_0', 'L0_1')].costs)
-        self.assertListEqual(["0_1"], service._graph.links[('L0_0', 'L0_1')].reference_links)
-        self.assertListEqual([2], service._graph.links[('L0_0', 'L0_1')].reference_lane_ids)
+        self.assertEqual(1, service.graph.links[('0', '1')].costs['_default'])
+        self.assertEqual(10, service.graph.links[('0', '1')].costs['length'])
+        self.assertEqual(32, service.graph.links[('0', '1')].costs['test'])
+        self.assertEqual(0, service.graph.links[('0', '1')].costs['waiting_time'])
+        self.assertEqual(0, service.graph.links[('0', '1')].costs['travel_time'])
+        self.assertListEqual(["0_1"], service.graph.links[('0', '1')].reference_links)
+        self.assertListEqual([2], service.graph.links[('0', '1')].reference_lane_ids)
 
     def test_two_lines(self):
         service = PublicTransport("TEST", Bus, 1)
