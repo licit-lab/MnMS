@@ -1,175 +1,182 @@
 import unittest
 
+import numpy as np
+
 from mnms.graph import MultiModalGraph
 from mnms.graph.search import nearest_mobility_service
 from mnms.graph.shortest_path import (astar, dijkstra, _euclidian_dist, compute_shortest_path,
                                       compute_n_best_shortest_path, bidirectional_dijkstra)
 from mnms.graph.edition import walk_connect
-from mnms.mobility_service import PersonalCar
+from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService, OnDemandCarMobilityService
 from mnms.demand.user import User
-
-import numpy as np
+from mnms.mobility_service.public_transport import BusMobilityGraphLayer, PublicTransportMobilityService
+from mnms.tools.time import TimeTable, Dt
 
 
 class TestAlgorithms(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
-        self.mmgraph = MultiModalGraph()
+        mmgraph = MultiModalGraph()
 
-        self.mmgraph.flow_graph.add_node('0', [0, 0])
-        self.mmgraph.flow_graph.add_node('1', [1, 0])
-        self.mmgraph.flow_graph.add_node('2', [1, 1])
-        self.mmgraph.flow_graph.add_node('3', [0, 1])
+        flow_graph = mmgraph.flow_graph
 
-        self.mmgraph.flow_graph.add_link('0_1', '0', '1')
-        self.mmgraph.flow_graph.add_link('1_0', '1', '0')
+        flow_graph.add_node('0', [0, 0])
+        flow_graph.add_node('1', [1, 0])
+        flow_graph.add_node('2', [3, 0])
+        flow_graph.add_node('3', [1, 1])
+        flow_graph.add_node('4', [0, 1])
 
-        self.mmgraph.flow_graph.add_link('1_2', '1', '2')
-        self.mmgraph.flow_graph.add_link('2_1', '2', '1')
+        flow_graph.add_link('0_1', '0', '1')
+        flow_graph.add_link('1_2', '1', '2')
+        flow_graph.add_link('1_3', '1', '3')
+        flow_graph.add_link('3_2', '3', '2')
+        flow_graph.add_link('4_3', '4', '3')
+        flow_graph.add_link('0_4', '0', '4')
 
-        self.mmgraph.flow_graph.add_link('2_3', '2', '3')
-        self.mmgraph.flow_graph.add_link('3_2', '3', '2')
+        car_layer = CarMobilityGraphLayer('Car',
+                                          services=[PersonalCarMobilityService(),
+                                                    OnDemandCarMobilityService('Uber')])
 
-        self.mmgraph.flow_graph.add_link('3_1', '3', '1')
-        self.mmgraph.flow_graph.add_link('1_3', '1', '3')
+        car_layer.add_node('C0', '0')
+        car_layer.add_node('C1', '1')
+        car_layer.add_node('C2', '2')
+        car_layer.add_node('C3', '3')
+        car_layer.add_node('C4', '4')
 
-        bus_service = PersonalCar('Bus', 10)
-        car_service = PersonalCar('Car', 10)
-        uber_service = PersonalCar('Uber', 10)
+        car_layer.add_link('C0_1', 'C0', 'C1', ['0_1'], {'travel_time':1})
+        car_layer.add_link('C1_2', 'C1', 'C2', ['1_2'], {'travel_time':1})
+        car_layer.add_link('C1_3', 'C1', 'C3', ['1_3'], {'travel_time':1})
+        car_layer.add_link('C3_2', 'C3', 'C2', ['3_2'], {'travel_time':1})
+        car_layer.add_link('C4_3', 'C4', 'C3', ['4_3'], {'travel_time':1})
+        car_layer.add_link('C0_4', 'C0', 'C4', ['0_4'], {'travel_time':1})
 
-        bus_service.add_node('B0', '0')
-        bus_service.add_node('B1', '1')
-        bus_service.add_node('B2', '2')
+        mmgraph.add_layer(car_layer)
 
-        bus_service.add_link('BUS_0_1', 'B0', 'B1', {'time': 1.5}, reference_links=['0_1'])
-        bus_service.add_link('BUS_1_2', 'B1', 'B2', {'time': 5.5}, reference_links=['1_2'])
-        bus_service.add_link('BUS_0_2', 'B0', 'B2', {'time': 1.3}, reference_links=[])
+        bus_layer = BusMobilityGraphLayer('Bus',
+                                          7,
+                                          services=[PublicTransportMobilityService('Bus')])
 
-        car_service.add_node('C0', '0')
-        car_service.add_node('C1', '1')
-        car_service.add_node('C2', '2')
-        car_service.add_node('C3', '3')
+        bline = bus_layer.add_line('L1', TimeTable.create_table_freq('07:00:00', '09:00:00', Dt(minutes=10)))
+        bline.add_stop('B0', '0')
+        bline.add_stop('B1', '1')
+        bline.add_stop('B2', '2')
 
-        car_service.add_link('CAR_0_1', 'C0', 'C1', {'time': 15.1}, reference_links=['0_1'])
-        car_service.add_link('CAR_1_0', 'C1', 'C0', {'time': 5.1}, reference_links=['1_0'])
-        car_service.add_link('CAR_1_2', 'C1', 'C2', {'time': 7.1}, reference_links=['1_2'])
-        car_service.add_link('CAR_2_1', 'C2', 'C1', {'time': 5.1}, reference_links=['2_1'])
-        car_service.add_link('CAR_2_3', 'C2', 'C3', {'time': 5.1}, reference_links=['2_3'])
-        car_service.add_link('CAR_3_2', 'C3', 'C2', {'time': 5.1}, reference_links=['3_2'])
-        car_service.add_link('CAR_3_1', 'C3', 'C1', {'time': 5.1}, reference_links=['3_1'])
-        car_service.add_link('CAR_1_3', 'C1', 'C3', {'time': 5.1}, reference_links=['1_3'])
+        bline.connect_stops('B0_B1', 'B0', 'B1', 1, ['0_1'], {'travel_time':1.7})
+        bline.connect_stops('B1_B2', 'B1', 'B2', 1, ['1_2'], {'travel_time':1.5})
 
-        uber_service.add_node('U0', '0')
-        uber_service.add_node('U1', '1')
+        mmgraph.add_layer(bus_layer)
 
-        uber_service.add_link('UBER_0_1', 'U0', 'U1', {'time': 100}, reference_links=['0_1'])
+        mmgraph.connect_layers('C0_B0', 'C0', 'L1_B0', 0, {'travel_time': 0})
 
-        self.mmgraph.add_mobility_service(bus_service)
-        self.mmgraph.add_mobility_service(uber_service)
-        self.mmgraph.add_mobility_service(car_service)
-
-        self.mmgraph.connect_mobility_service('Bus_Car_0', 'B0', 'C0', 0, {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Bus_0', 'C0', 'B0', 0, {'time': 2})
-        self.mmgraph.connect_mobility_service('Bus_Uber_0', 'B0', 'U0', 0, {'time': 4})
-        self.mmgraph.connect_mobility_service('Uber_Bus_0', 'U0', 'B0', 0, {'time': 2})
-        self.mmgraph.connect_mobility_service('Uber_Car_0', 'U0', 'C0', 0, {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Uber_0', 'C0', 'U0', 0, {'time': 2})
-
-        self.mmgraph.connect_mobility_service('Bus_Car_1', 'B1', 'C1', 0, {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Bus_1', 'C1', 'B1', 0, {'time': 2})
-        self.mmgraph.connect_mobility_service('Bus_Uber_1', 'B1', 'U1', 0, {'time': 4})
-        self.mmgraph.connect_mobility_service('Uber_Bus_1', 'U1', 'B1', 0, {'time': 2})
-        self.mmgraph.connect_mobility_service('Uber_Car_1', 'U1', 'C1', 0, {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Uber_1', 'C1', 'U1', 0, {'time': 2})
-
-        self.mmgraph.connect_mobility_service('Bus_Car_2', 'B2', 'C2', 0, {'time': 2})
-        self.mmgraph.connect_mobility_service('Car_Bus_2', 'C2', 'B2', 0, {'time': 2})
+        self.mmgraph = mmgraph
 
     def tearDown(self):
         """Concludes and closes the test.
         """
 
     def test_dijkstra(self):
-        user = User(id='TEST', departure_time=None, origin='B0', destination='B2')
-        path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'time', user.available_mobility_service)
-        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], path.cost)
+        user = User(id='TEST', departure_time=None, origin='C0', destination='C2')
+        path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time', user.available_mobility_service)
+        self.assertListEqual(list(path.nodes), ['C0', 'C1', 'C2'])
+        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.links[('C1', 'C2')].costs['travel_time']
+        self.assertEqual(expected_cost, path.path_cost)
 
-        self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'] = 1e10
-        path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'time', user.available_mobility_service)
+        self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] = 1e10
+        path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time',
+                        user.available_mobility_service)
 
-        self.assertListEqual(list(path.nodes), ['B0', 'B1', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time']+self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], path.cost)
+        self.assertListEqual(list(path.nodes), ['C0', 'C4', 'C3', 'C2'])
+
+        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C4')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.links[('C4', 'C3')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.links[('C3', 'C2')].costs['travel_time']
+
+        self.assertEqual(expected_cost, path.path_cost)
 
     def test_bidirectional_dijsktra(self):
-        user = User(id='TEST', departure_time=None, origin='B0', destination='B2')
-        path = bidirectional_dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'time', user.available_mobility_service)
-        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], path.cost)
+        user = User(id='TEST', departure_time=None, origin='C0', destination='C2')
+        path = bidirectional_dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time', user.available_mobility_service)
+        self.assertListEqual(list(path.nodes), ['C0', 'C1', 'C2'])
+        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.links[('C1', 'C2')].costs['travel_time']
+        self.assertEqual(expected_cost, path.path_cost)
 
-        self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'] = 1e10
-        path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'time', user.available_mobility_service)
+        self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] = 1e10
+        path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time',
+                        user.available_mobility_service)
 
-        self.assertListEqual(list(path.nodes), ['B0', 'B1', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time']+self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], path.cost)
+        self.assertListEqual(list(path.nodes), ['C0', 'C4', 'C3', 'C2'])
+
+        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C4')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.links[('C4', 'C3')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.links[('C3', 'C2')].costs['travel_time']
+
+        self.assertEqual(expected_cost, path.path_cost)
 
     def test_astar(self):
-        user = User(id='TEST', departure_time=None, origin='B0', destination='B2')
+        user = User(id='TEST', departure_time=None, origin='C0', destination='C2')
         heuristic = lambda o, d, mmgraph=self.mmgraph: _euclidian_dist(o, d, mmgraph)
-        path = astar(self.mmgraph.mobility_graph, user.origin, user.destination, 'time', user.available_mobility_service, heuristic)
-        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], path.cost)
+        path = astar(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time',
+                        user.available_mobility_service, heuristic)
+        self.assertListEqual(list(path.nodes), ['C0', 'C1', 'C2'])
+        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.links[('C1', 'C2')].costs['travel_time']
+        self.assertEqual(expected_cost, path.path_cost)
 
-        self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'] = 1e10
-        path = astar(self.mmgraph.mobility_graph, user.origin, user.destination, 'time', user.available_mobility_service, heuristic)
+        self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] = 1e10
+        path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time',
+                        user.available_mobility_service)
 
-        self.assertListEqual(list(path.nodes), ['B0', 'B1', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time'] +
-                         self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], path.cost)
+        self.assertListEqual(list(path.nodes), ['C0', 'C4', 'C3', 'C2'])
+
+        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C4')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.links[('C4', 'C3')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.links[('C3', 'C2')].costs['travel_time']
+
+        self.assertEqual(expected_cost, path.path_cost)
 
     def test_compute_shortest_path_node(self):
         user = User(id='TEST', departure_time=None, origin='0', destination='2')
-        path = compute_shortest_path(self.mmgraph, user, cost='time')
-        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'], path.cost)
-        self.mmgraph.mobility_graph.links[('B0', 'B2')].costs['time'] = 1e10
-        path = compute_shortest_path(self.mmgraph, user, cost='time', algorithm='astar')
+        path = compute_shortest_path(self.mmgraph, user, cost='travel_time')
+        self.assertListEqual(list(path.nodes), ['C0', 'C1', 'C2'])
+        self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] = 1e10
+        path = compute_shortest_path(self.mmgraph, user, cost='travel_time', algorithm='astar')
 
-        self.assertListEqual(list(path.nodes), ['B0', 'B1', 'B2'])
-        self.assertEqual(self.mmgraph.mobility_graph.links[('B0', 'B1')].costs['time'] +
-                         self.mmgraph.mobility_graph.links[('B1', 'B2')].costs['time'], path.cost)
+        self.assertListEqual(list(path.nodes), ['C0', 'C4', 'C3', 'C2'])
 
     def test_compute_nbest_shortest_path_node(self):
         user = User(id='TEST', departure_time=None, origin='0', destination='2')
-        paths, penalized_costs = compute_n_best_shortest_path(self.mmgraph, user, 2, cost='time')
-        self.assertAlmostEqual(paths[0].cost, 1.3)
-        self.assertListEqual(list(paths[0].nodes), ['B0', 'B2'])
+        paths, costs = compute_n_best_shortest_path(self.mmgraph, user, 2, cost='travel_time')
 
-        self.assertAlmostEqual(paths[1].cost, 7)
-        self.assertListEqual(list(paths[1].nodes), ['B0', 'B1', 'B2'])
+        self.assertAlmostEqual(paths[0].path_cost, 2)
+        self.assertListEqual(list(paths[0].nodes), ['C0', 'C1', 'C2'])
+
+        self.assertAlmostEqual(paths[1].path_cost, 3)
+        self.assertListEqual(list(paths[1].nodes), ['C0', 'C4', 'C3', 'C2'])
 
     def test_compute_nbest_shortest_path_coordinates(self):
-        user = User(id='TEST', departure_time=None, origin=np.array([0, 0]), destination=np.array([1, 1]))
-        paths, penalized_costs = compute_n_best_shortest_path(self.mmgraph, user, 5, cost='time',
-                                                                          radius=0.1, growth_rate_radius=1e-5)
-        self.assertAlmostEqual(paths[0].cost, 1.3)
-        self.assertListEqual(list(paths[0].nodes), ['B0', 'B2'])
+        user = User(id='TEST', departure_time=None, origin=np.array([0, 0]), destination=np.array([3, 0]))
+        paths, penalized_costs = compute_n_best_shortest_path(self.mmgraph,
+                                                              user,
+                                                              5,
+                                                              cost='travel_time',
+                                                              radius=0.1,
+                                                              growth_rate_radius=1e-5)
 
-        self.assertAlmostEqual(paths[1].cost, 7)
-        self.assertListEqual(list(paths[1].nodes), ['B0', 'B1', 'B2'])
+        self.assertAlmostEqual(paths[0].path_cost, 2)
+        self.assertListEqual(list(paths[0].nodes), ['C0', 'C1', 'C2'])
+
+        self.assertAlmostEqual(paths[1].path_cost, 3)
+        self.assertListEqual(list(paths[1].nodes), ['C0', 'C4', 'C3', 'C2'])
 
     def test_compute_shortest_path_coords(self):
-        user = User(id='TEST', departure_time=None, origin=np.array([0, 0]), destination=np.array([1, 1]))
-        path = compute_shortest_path(self.mmgraph, user, cost='time', radius=0.1, growth_rate_radius=1e-5)
+        user = User(id='TEST', departure_time=None, origin=np.array([0, 0]), destination=np.array([3, 0]))
+        path = compute_shortest_path(self.mmgraph, user, cost='travel_time', radius=0.1, growth_rate_radius=1e-5)
 
-        self.assertAlmostEqual(path.cost, 1.3)
-        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
-
-        user = User(id='TEST', departure_time=None, origin=np.array([-1, 0]), destination=np.array([1, 1]))
-        path = compute_shortest_path(self.mmgraph, user, cost='time', radius=0.1, growth_rate_radius=0.1)
-        self.assertAlmostEqual(path.cost, 1.3+1/1.4)
-        self.assertListEqual(list(path.nodes), ['B0', 'B2'])
+        self.assertAlmostEqual(path.path_cost, 2)
+        self.assertListEqual(list(path.nodes), ['C0', 'C1', 'C2'])
 
     def test_nearest_mobility(self):
         pos = [10, 10]
@@ -177,45 +184,4 @@ class TestAlgorithms(unittest.TestCase):
         self.assertEqual(node, '2')
 
         node = nearest_mobility_service(pos, self.mmgraph, 'Uber')
-        self.assertEqual(node, '1')
-
-    def test_walk(self):
-        mmgraph = MultiModalGraph()
-
-        mmgraph.flow_graph.add_node('0', [-1, 0])
-        mmgraph.flow_graph.add_node('1', [0, 0])
-        mmgraph.flow_graph.add_node('2', [1, 0])
-        mmgraph.flow_graph.add_node('3', [-0.8, -0.5])
-        mmgraph.flow_graph.add_node('4', [0.99, -0.5])
-        mmgraph.flow_graph.add_link('0_1', '0', '1')
-        mmgraph.flow_graph.add_link('1_2', '1', '2')
-        mmgraph.flow_graph.add_link('3_4', '3', '4')
-
-        serv1 = PersonalCar('SERV1', 10)
-        serv1.add_node('S10', '0')
-        serv1.add_node('S11', '1')
-        serv1.add_node('S12', '2')
-
-        serv1.add_link('0_1', 'S10', 'S11', {'time': 1}, '0_1', [0])
-        serv1.add_link('1_2', 'S11', 'S12', {'time': 1}, '1_2', [0])
-
-        serv2 = PersonalCar('SERV2', 10)
-        serv2.add_node('S23', '3')
-        serv2.add_node('S24', '4')
-
-        serv2.add_link('3_4', 'S23', 'S24', {'time': 1}, '3_4', [0])
-
-        mmgraph.add_mobility_service(serv1)
-        mmgraph.add_mobility_service(serv2)
-
-        mmgraph.mobility_graph.check()
-
-        walk_connect(mmgraph, radius=0.71, walk_speed=1.4)
-
-        self.assertTrue(("S10", "S23") in mmgraph.mobility_graph.links)
-        self.assertTrue(("S23", "S10") in mmgraph.mobility_graph.links)
-        self.assertTrue(("S24", "S12") in mmgraph.mobility_graph.links)
-        self.assertTrue(("S12", "S24") in mmgraph.mobility_graph.links)
-
-        self.assertAlmostEqual(0.7001399860027991, mmgraph.mobility_graph.links[("S24", "S12")].costs['time'])
-        self.assertAlmostEqual(0.7539230729988307, mmgraph.mobility_graph.links[("S10", "S23")].costs['time'])
+        self.assertEqual(node, '2')

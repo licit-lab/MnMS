@@ -78,13 +78,13 @@ def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True,
 
     service_shift = dict()
     custom_legend = []
-    for sid, service in mmgraph._mobility_services.items():
+    for sid, service in mmgraph.layers.items():
         c = next(colors)
         custom_legend.append(Line2D([0], [0], color=c, lw=2))
         defo_app = lambda x: deformation_matrix.dot(x) + [0, yshift]
         lines = list()
         nodes = set()
-        for (unode, dnode) in service._graph.links:
+        for (unode, dnode) in service.graph.links:
             link = mmgraph.mobility_graph.links[(unode, dnode)]
             nodes.add(unode)
             nodes.add(dnode)
@@ -106,5 +106,5 @@ def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True,
         yshift += dy
 
     ax.add_collection(line_segment)
-    ax.legend(custom_legend, list(mmgraph._mobility_services.keys()))
+    ax.legend(custom_legend, list(mmgraph.layers.keys()))
     plt.tight_layout()

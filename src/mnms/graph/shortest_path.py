@@ -257,7 +257,7 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE
                     current = prev[current]
                 nodes.append(current)
                 nodes.reverse()
-            return Path(fscore[destination], nodes)
+            return Path(gscore[destination], nodes)
 
         discovered_nodes.remove(current)
 
@@ -369,15 +369,15 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                 log.debug(f"Create start artificial links with: {service_nodes_origin}")
                 # print(dist_origin[0]/walk_speed)
                 for ind, n in enumerate(service_nodes_origin):
-                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0,
-                                                     {'time': dist_origin[ind] / walk_speed,
-                                                      'length': dist_origin[ind]})
+                    mmgraph.connect_layers(start_node + '_' + n, start_node, n, 0,
+                                           {'travel_time': dist_origin[ind] / walk_speed,
+                                            'length': dist_origin[ind]})
 
                 log.debug(f"Create end artificial links with: {service_nodes_destination}")
                 for ind, n in enumerate(service_nodes_destination):
-                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0,
-                                                     {'time': dist_destination[ind] / walk_speed,
-                                                      'length': dist_destination[ind]})
+                    mmgraph.connect_layers(n + '_' + end_node, n, end_node, 0,
+                                           {'travel_time': dist_destination[ind] / walk_speed,
+                                            'length': dist_destination[ind]})
 
                 path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
 
@@ -388,9 +388,9 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                 delete_node_downstream_links(mmgraph.mobility_graph, start_node)
                 delete_node_upstream_links(mmgraph.mobility_graph, end_node, service_nodes_destination)
                 for n in service_nodes_origin:
-                    del mmgraph._connection_services[(start_node, n)]
+                    del mmgraph.connection_layers[(start_node, n)]
                 for n in service_nodes_destination:
-                    del mmgraph._connection_services[(n, end_node)]
+                    del mmgraph.connection_layers[(n, end_node)]
 
                 if path.path_cost != float('inf'):
                     break
@@ -423,7 +423,7 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         mmgraph.mobility_graph.add_node(end_node, 'WALK')
 
         log.debug(f"Create start artificial links with: {start_nodes}")
-        virtual_cost = {cost: 0}
+        virtual_cost = {cost: 0} if isinstance(cost, str) else {}
         virtual_cost.update({'time': 0})
         for n in start_nodes:
             mmgraph.connect_layers(start_node + '_' + n, start_node, n, 0, virtual_cost)
@@ -445,9 +445,9 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         delete_node_downstream_links(mmgraph.mobility_graph, start_node)
         delete_node_upstream_links(mmgraph.mobility_graph, end_node, end_nodes)
         for n in start_nodes:
-            del mmgraph._connection_services[(start_node, n)]
+            del mmgraph.connection_layers[(start_node, n)]
         for n in end_nodes:
-            del mmgraph._connection_services[(n, end_node)]
+            del mmgraph.connection_layers[(n, end_node)]
 
         if path.path_cost == float('inf'):
             log.warning(f"Path not found for {user}")
@@ -549,15 +549,15 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                 log.debug(f"Create start artificial links with: {service_nodes_origin}")
                 # print(dist_origin[0]/walk_speed)
                 for ind, n in enumerate(service_nodes_origin):
-                    mmgraph.connect_mobility_service(start_node + '_' + n, start_node, n, 0,
-                                                     {'time': dist_origin[ind] / walk_speed,
-                                                      'length': dist_origin[ind]})
+                    mmgraph.connect_layers(start_node + '_' + n, start_node, n, 0,
+                                           {'travel_time': dist_origin[ind] / walk_speed,
+                                            'length': dist_origin[ind]})
 
                 log.debug(f"Create end artificial links with: {service_nodes_destination}")
                 for ind, n in enumerate(service_nodes_destination):
-                    mmgraph.connect_mobility_service(n + '_' + end_node, n, end_node, 0,
-                                                     {'time': dist_destination[ind] / walk_speed,
-                                                      'length': dist_destination[ind]})
+                    mmgraph.connect_layers(n + '_' + end_node, n, end_node, 0,
+                                           {'travel_time': dist_destination[ind] / walk_speed,
+                                            'length': dist_destination[ind]})
 
                 path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
 
@@ -611,9 +611,9 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                     delete_node_downstream_links(mmgraph.mobility_graph, start_node)
                     delete_node_upstream_links(mmgraph.mobility_graph, end_node, service_nodes_destination)
                     for n in service_nodes_origin:
-                        del mmgraph._connection_services[(start_node, n)]
+                        del mmgraph.connection_layers[(start_node, n)]
                     for n in service_nodes_destination:
-                        del mmgraph._connection_services[(n, end_node)]
+                        del mmgraph.connection_layers[(n, end_node)]
                     break
 
                 else:
@@ -625,9 +625,9 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                     delete_node_downstream_links(mmgraph.mobility_graph, start_node)
                     delete_node_upstream_links(mmgraph.mobility_graph, end_node, service_nodes_destination)
                     for n in service_nodes_origin:
-                        del mmgraph._connection_services[(start_node, n)]
+                        del mmgraph.connection_layers[(start_node, n)]
                     for n in service_nodes_destination:
-                        del mmgraph._connection_services[(n, end_node)]
+                        del mmgraph.connection_layers[(n, end_node)]
 
     else:
 

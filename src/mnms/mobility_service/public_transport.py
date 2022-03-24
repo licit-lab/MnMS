@@ -1,7 +1,8 @@
 import sys
 from collections import defaultdict, deque
 from copy import deepcopy
-from typing import Type, Tuple, List
+from importlib import import_module
+from typing import Type, List
 
 from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService, AbstractMobilityGraphLayer
@@ -45,28 +46,25 @@ class Line(object):
         self._timetable = timetable
 
     def add_stop(self, sid:str, ref_node:str=None) -> None:
-        self._service_graph.add_node(self._prefix(sid), self.graph_layer.id, ref_node)
-        self.stops.append(self._prefix(sid))
+        self._service_graph.add_node(sid, self.graph_layer.id, ref_node)
+        self.stops.append(sid)
 
-    def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, costs=None, reference_links=None,
+    def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, reference_links, costs=None,
                       reference_lane_ids=None) -> None:
-        assert self._prefix(up_sid) in self.stops
-        assert self._prefix(down_sid) in self.stops
+        assert up_sid in self.stops
+        assert down_sid in self.stops
         costs = {} if costs is None else costs
         costs.update({'length': length})
-        self._service_graph.add_link(self._prefix(lid),
-                                     self._prefix(up_sid),
-                                     self._prefix(down_sid),
-                                     costs=costs,
-                                     reference_links=reference_links,
+        self._service_graph.add_link(lid,
+                                     up_sid,
+                                     down_sid,
+                                     costs,
+                                     reference_links,
                                      reference_lane_ids=reference_lane_ids,
                                      mobility_service=self.graph_layer.id)
         self.links.add(lid)
-
-        p_up_dis = self._prefix(up_sid)
-        p_down_dis = self._prefix(down_sid)
-        self._adjacency[p_up_dis] = p_down_dis
-        self._rev_adjacency[p_down_dis] = p_up_dis
+        self._adjacency[up_sid] = down_sid
+        self._rev_adjacency[down_sid] = up_sid
 
 
     @property
@@ -77,15 +75,12 @@ class Line(object):
     def end(self):
         return self.stops[-1]
 
-    def _prefix(self, name):
-        return self.id+'_'+name
-
     def __dump__(self) -> dict:
         stops = deepcopy(self.stops)
         return {"ID": self.id,
-                "TIMETABLE": [time.time for time in self.timetable.table],
+                "TIMETABLE": [time.time for time in self._timetable.table],
                 "STOPS": [self._service_graph.nodes[s].__dump__() for s in stops],
-                "LINKS":[self._service_graph.links[self._service_graph._map_lid_nodes[self._prefix(l)]].__dump__() for l in self.links]}
+                "LINKS":[self._service_graph.links[self._service_graph._map_lid_nodes[l]].__dump__() for l in self.links]}
 
     def construct_veh_path(self):
         veh_path = list()
@@ -103,9 +98,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         super(PublicTransportMobilityService, self).__init__(id)
         self._next_veh_departure = dict()
         self.vehicles = defaultdict(deque)
-        # self._timetable_iter = iter(self.timetable.table)
-        # self._current_time_table = next(self._timetable_iter)
-        # self._next_time_table = next(self._timetable_iter)
+
         self._timetable_iter = dict()
         self._current_time_table = dict()
         self._next_time_table = dict()
@@ -125,7 +118,6 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 self.clean_arrived_vehicles(lid)
 
     def new_departures(self, time, dt, line:Line, all_departures=None):
-        # log.info(f"{time}, {dt}, {self._current_time_table}")
         veh_path = line.construct_veh_path()
 
         if all_departures is None:
@@ -230,6 +222,15 @@ class PublicTransportMobilityService(AbstractMobilityService):
                         environmental=0,
                         currency=0)
 
+    def __dump__(self):
+        return {"TYPE": ".".join([PublicTransportMobilityService.__module__, PublicTransportMobilityService.__name__]),
+                "ID": self.id}
+
+    @classmethod
+    def __load__(cls, data):
+        new_obj = cls(data['ID'])
+        return new_obj
+
 
 class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
     """Public transport class, manage its lines
@@ -297,13 +298,20 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
     def __dump__(self) -> dict:
         return {"TYPE": ".".join([PublicTransportGraphLayer.__module__, PublicTransportGraphLayer.__name__]),
                 "ID": self.id,
+                "VEH_TYPE":  ".".join([self._veh_type.__module__, self._veh_type.__name__]),
                 "DEFAULT_SPEED": self.default_speed,
                 "LINES": [l.__dump__() for l in self.lines.values()],
-                "CONNECTIONS": [self._graph.get_link(l).__dump__() for l in self.line_connexions]}
+                "CONNECTIONS": [self.graph.get_link(l).__dump__() for l in self.line_connexions],
+                "SERVICES": [s.__dump__() for s in self.mobility_services.values()]}
 
     @classmethod
     def __load__(cls, data: dict) -> "PublicTransport":
-        new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
+        veh_class_name = data['VEH_TYPE'].split('.')[-1]
+        veh_module_name = data['VEH_TYPE'].removesuffix('.'+veh_class_name)
+        veh_module = import_module(veh_module_name)
+        veh_class = getattr(veh_module, veh_class_name)
+
+        new_obj = cls(data['ID'], veh_class, data["DEFAULT_SPEED"])
         for ldata in data['LINES']:
             tt = []
             for time in ldata['TIMETABLE']:
@@ -315,8 +323,8 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
                                     l['UPSTREAM'],
                                     l['DOWNSTREAM'],
                                     l['COSTS']['length'],
-                                    l['COSTS'],
                                     l['REF_LINKS'],
+                                    l['COSTS'],
                                     l['REF_LANE_IDS']) for l in ldata['LINKS']]
         return new_obj
 

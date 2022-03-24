@@ -85,26 +85,6 @@ class AbstractMobilityService(ABC):
     def attach_vehicle_observer(self, observer):
         self._observer = observer
 
-    @abstractmethod
-    def request_vehicle(self, user: "User", drop_node:str) -> None:
-        """This method must be implemented by any subclass of AbstractMobilityService.
-        It must found a vehicle and call the take_next_user of the vehicle on the user.
-
-        Parameters
-        ----------
-        user: User
-
-        Returns
-        -------
-        None
-
-        """
-        pass
-
-    @abstractmethod
-    def update(self, dt:Dt):
-        pass
-
     def _construct_veh_path(self, upath: List[str]):
         veh_path = list()
         for i in range(len(upath)-1):
@@ -128,4 +108,36 @@ class AbstractMobilityService(ABC):
         return CostDict(waiting_time=0,
                         environmental=0,
                         currency=0)
+
+
+    @abstractmethod
+    def request_vehicle(self, user: "User", drop_node:str) -> None:
+        """This method must be implemented by any subclass of AbstractMobilityService.
+        It must found a vehicle and call the take_next_user of the vehicle on the user.
+
+        Parameters
+        ----------
+        user: User
+
+        Returns
+        -------
+        None
+
+        """
+        pass
+
+    @abstractmethod
+    def update(self, dt:Dt):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def __load__(cls, data):
+        pass
+
+    @abstractmethod
+    def __dump__(self) -> dict:
+        pass
+
+
 

@@ -1,6 +1,12 @@
-import configparser
+import json
+import os
+import sys
 from time import time
 import csv
+import traceback
+import random
+
+import numpy as np
 
 from mnms.graph.core import MultiModalGraph
 from mnms.flow.abstract import AbstractFlowMotor
@@ -40,6 +46,10 @@ class Supervisor(object):
             self._outfile = open(outfile, "w")
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
             self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'TRAVEL_TIME'])
+
+    def set_random_seed(self, seed):
+        random.seed(seed)
+        np.random.seed(seed)
 
     def add_graph(self, mmgraph: MultiModalGraph):
         self._graph = mmgraph
@@ -142,35 +152,45 @@ class Supervisor(object):
         self.tcurrent = tstart
 
         while self.tcurrent < tend:
-            log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
+            try:
+                log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
-            new_users = self.get_new_users(principal_dt)
+                new_users = self.get_new_users(principal_dt)
 
-            self.compute_user_paths(new_users)
+                self.compute_user_paths(new_users)
 
-            log.info(f'Launching {affectation_factor} step of flow ...')
-            start = time()
-            self.step(affectation_factor, affectation_step, flow_dt, flow_step, new_users)
-            end = time()
-            log.info(f'Done [{end-start:.5} s]')
-
-            log.info('Updating graph ...')
-            start = time()
-            self._flow_motor.update_graph()
-            end = time()
-            log.info(f'Done [{end-start:.5} s]')
-
-            if self._write:
-                log.info('Writing travel time of each link in graph ...')
+                log.info(f'Launching {affectation_factor} step of flow ...')
                 start = time()
-                t_str = self._flow_motor.time
-                for link in self._graph.mobility_graph.links.values():
-                    self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['time']])
+                self.step(affectation_factor, affectation_step, flow_dt, flow_step, new_users)
                 end = time()
-                log.info(f'Done [{end - start:.5} s]')
+                log.info(f'Done [{end-start:.5} s]')
 
-            log.info('-'*50)
-            affectation_step += 1
+                log.info('Updating graph ...')
+                start = time()
+                self._flow_motor.update_graph()
+                end = time()
+                log.info(f'Done [{end-start:.5} s]')
+
+                if self._write:
+                    log.info('Writing travel time of each link in graph ...')
+                    start = time()
+                    t_str = self._flow_motor.time
+                    for link in self._graph.mobility_graph.links.values():
+                        self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['time']])
+                    end = time()
+                    log.info(f'Done [{end - start:.5} s]')
+
+                log.info('-'*50)
+                affectation_step += 1
+            except Exception as e:
+                cwd = os.getcwd()
+                report_file = cwd+'/'+'report.json'
+                log.error(e)
+                log.error(f"Simulation failed at {self.tcurrent}, writing a report at {report_file}")
+
+                with open(report_file, 'w') as f:
+                    json.dump(self.create_crash_report(affectation_step, flow_step), f)
+                sys.exit(-1)
 
         self._flow_motor.finalize()
 
@@ -180,4 +200,11 @@ class Supervisor(object):
         if self._write:
             self._outfile.close()
 
+    def create_crash_report(self, affectation_step, flow_step) -> dict:
+        data = dict(time=self.tcurrent,
+                    affectation_step=affectation_step,
+                    flow_step=flow_step,
+                    error=traceback.format_exc())
+
+        return data
 

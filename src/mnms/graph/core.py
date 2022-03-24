@@ -83,7 +83,7 @@ class TopoGraph(OrientedGraph):
         self._adjacency[node.id] = set()
 
     def add_link(self, lid:str, upstream_node:str, downstream_node:str, costs:Dict[str, float],
-                 reference_links:List[str]=None, reference_lane_ids:List[int]=None, mobility_service:str=None) -> None:
+                 reference_links:List[str], reference_lane_ids:List[int]=None, mobility_service:str=None) -> None:
         assert (upstream_node, downstream_node) not in self.links, f"Nodes {upstream_node}, {downstream_node} already connected"
         assert lid not in self._map_lid_nodes, f"Link id {lid} already exist"
 
@@ -233,16 +233,17 @@ class MultiModalGraph(object):
     zones: dict
         Dict of reservoirs define on flow_graph
     """
-    __slots__ = ('flow_graph', 'mobility_graph', 'zones', '_connection_services', 'layers', 'mapping_layer_services')
+    __slots__ = ('flow_graph', 'mobility_graph', 'zones', 'connection_layers', 'layers', 'mapping_layer_services')
 
     def __init__(self, nodes:Dict[str, Tuple[float]]={}, links:Dict[str, Tuple[float]]= {}, mobility_services=[]):
         self.flow_graph = GeoGraph()
         self.mobility_graph = ComposedTopoGraph()
         self.zones = dict()
 
-        self._connection_services = dict()
         self.layers:Dict[str, "AbstractMobilityGraphLayer"] = dict()
         self.mapping_layer_services = dict()
+
+        self.connection_layers = dict()
 
         [self.flow_graph.add_node(nid, pos) for nid, pos in nodes.items()]
         [self.flow_graph.add_link(lid, unid, dnid) for lid, (unid, dnid) in  links.items()]
@@ -264,7 +265,6 @@ class MultiModalGraph(object):
         upstream_service = self.mobility_graph.nodes[upstream_node].layer
         downstream_service = self.mobility_graph.nodes[downstream_node].layer
         assert upstream_service != downstream_service, f"Upstream service must be different from downstream service ({upstream_service})"
-        assert "time" in costs, "time must pe present in the cost dictionnay"
         # If service in the mobility services of MultiModalGraph, we compute the cost of connection
         if downstream_service in self.layers:
             dserv = self.layers[downstream_service]
@@ -273,7 +273,7 @@ class MultiModalGraph(object):
         costs.update({'length': length})
         link = TransitLink(lid, upstream_node, downstream_node, costs)
         self.mobility_graph._add_link(link)
-        self._connection_services[(upstream_node, downstream_node)] = lid
+        self.connection_layers[(upstream_node, downstream_node)] = lid
 
     def add_zone(self, sid: str, links: List[str]):
         for lid in links:

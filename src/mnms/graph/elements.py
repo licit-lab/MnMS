@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import List, FrozenSet
-from itertools import chain
 
 import numpy as np
 
@@ -17,7 +16,7 @@ class GraphElement(ABC):
         Id of the element
 
     """
-    __slots__ = ('id')
+    __slots__ = ('id',)
 
     def __init__(self, id: str):
         self.id = id
@@ -48,7 +47,7 @@ class TopoNode(GraphElement):
     """
     __slots__ = ('reference_node', 'layer')
 
-    def __init__(self, id: str, layer, ref_node:str=None):
+    def __init__(self, id: str, layer, ref_node:str):
         super(TopoNode, self).__init__(id)
         self.reference_node = ref_node
         self.layer = layer
@@ -82,7 +81,7 @@ class GeoNode(GraphElement):
         A list of float of size 2 representing the node position
 
     """
-    __slots__ = ('pos')
+    __slots__ = ('pos',)
 
     def __init__(self, id: str, pos: List[float]):
         super(GeoNode, self).__init__(id)
@@ -127,7 +126,7 @@ class ConnectionLink(GraphElement):
     """
     __slots__ = ('upstream_node', 'downstream_node', 'costs', 'reference_links', 'reference_lane_ids', 'layer')
 
-    def __init__(self, lid, upstream_node, downstream_node, costs=None, reference_links=None, reference_lane_ids=None,
+    def __init__(self, lid, upstream_node, downstream_node, costs, reference_links, reference_lane_ids=None,
                  layer=None):
         super(ConnectionLink, self).__init__(lid)
         self.upstream_node = upstream_node
@@ -142,11 +141,10 @@ class ConnectionLink(GraphElement):
         self.reference_lane_ids = []
         self.layer = layer
 
-        if reference_links is not None:
-            if reference_lane_ids is None:
-                self.reference_lane_ids = [0]*len(reference_links)
-            else:
-                self.reference_lane_ids = reference_lane_ids
+        if reference_lane_ids is None:
+            self.reference_lane_ids = [0]*len(reference_links)
+        else:
+            self.reference_lane_ids = reference_lane_ids
 
     def __repr__(self):
         return f"ConnectionLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"

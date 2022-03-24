@@ -29,11 +29,20 @@ def save_graph(mmgraph: MultiModalGraph, filename, indent=2):
     d['FLOW_GRAPH']['LINKS'] = [link.__dump__() for link in mmgraph.flow_graph.links.values()]
     d['FLOW_GRAPH']['ZONES'] = [sensor.__dump__() for sensor in mmgraph.zones.values()]
 
-    d['MOBILITY_GRAPH']['SERVICES'] = [serv.__dump__() for serv in mmgraph._mobility_services.values()]
-    d['MOBILITY_GRAPH']['CONNECTIONS'] = [mmgraph.mobility_graph.links[nodes].__dump__() for nodes in mmgraph._connection_services]
+    d['MOBILITY_GRAPH']['LAYERS'] = [serv.__dump__() for serv in mmgraph.layers.values()]
+    d['MOBILITY_GRAPH']['CONNECTIONS'] = [mmgraph.mobility_graph.links[nodes].__dump__() for nodes in mmgraph.connection_layers]
 
     with open(filename, 'w') as f:
         json.dump(d, f, indent=indent)
+
+
+def _load_class_by_module_name(cls):
+    cls_name = cls.split('.')[-1]
+    cls_module_name = cls.removesuffix('.' + cls_name)
+    cls_module = import_module(cls_module_name)
+    cls_class = getattr(cls_module, cls_name)
+
+    return  cls_class
 
 
 def load_graph(filename:str) -> MultiModalGraph:
@@ -65,14 +74,16 @@ def load_graph(filename:str) -> MultiModalGraph:
     for sdata in data['FLOW_GRAPH']['ZONES']:
         mmgraph.add_zone(sdata['ID'], sdata['LINKS'])
 
-    for sdata in data['MOBILITY_GRAPH']['SERVICES']:
-        service_type = sdata['TYPE']
-        service_class_name = service_type.split('.')[-1]
-        service_module_name = service_type.removesuffix('.'+service_class_name)
-        service_module = import_module(service_module_name)
-        service_class = getattr(service_module, service_class_name)
-        new_service = service_class.__load__(sdata)
-        mmgraph.add_mobility_service(new_service)
+    for sdata in data['MOBILITY_GRAPH']['LAYERS']:
+        layer_class = _load_class_by_module_name(sdata['TYPE'])
+        layer = layer_class.__load__(sdata)
+
+        for service_data in sdata['SERVICES']:
+            service_class = _load_class_by_module_name(service_data['TYPE'])
+            layer.add_mobility_service(service_class(service_data['ID']))
+
+        mmgraph.add_layer(layer)
+
 
     for cdata in data['MOBILITY_GRAPH']['CONNECTIONS']:
         mmgraph.connect_mobility_service(cdata['ID'], cdata['UPSTREAM'], cdata['DOWNSTREAM'], cdata['COSTS']['length'], cdata['COSTS'])

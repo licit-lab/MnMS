@@ -223,9 +223,6 @@ class TimeTable(object):
             ntime = current_time.add_time(dt)
             table.append(ntime)
             current_time = ntime
-        # print(current_time)
-        # table.append(current_time)
-
         return cls(table)
 
     def get_next_departure(self, date):

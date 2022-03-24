@@ -23,7 +23,7 @@ class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
     def add_node(self, nid: str, ref_node=None) -> None:
         self.graph.add_node(nid, self.id, ref_node)
 
-    def add_link(self, lid: str, unid: str, dnid: str, costs: dict = {}, reference_links=None,
+    def add_link(self, lid: str, unid: str, dnid: str, reference_links:List[str], costs: dict = {},
                  reference_lane_ids=None) -> None:
         self.graph.add_link(lid, unid, dnid, costs, reference_links, reference_lane_ids, self.id)
 
@@ -36,21 +36,22 @@ class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
     @classmethod
     def __load__(cls, data: dict) -> "PersonalCar":
         new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
-        [new_obj._graph._add_node(TopoNode.__load__(ndata)) for ndata in data['NODES']]
-        [new_obj._graph._add_link(ConnectionLink.__load__(ldata)) for ldata in data['LINKS']]
+        [new_obj.graph._add_node(TopoNode.__load__(ndata)) for ndata in data['NODES']]
+        [new_obj.graph._add_link(ConnectionLink.__load__(ldata)) for ldata in data['LINKS']]
         return new_obj
 
     def __dump__(self) -> dict:
         return {"TYPE": ".".join([CarMobilityGraphLayer.__module__, CarMobilityGraphLayer.__name__]),
                 "ID": self.id,
                 "DEFAULT_SPEED": self.default_speed,
-                "NODES": [n.__dump__() for n in self._graph.nodes.values()],
-                "LINKS": [l.__dump__() for l in self._graph.links.values()]}
+                "NODES": [n.__dump__() for n in self.graph.nodes.values()],
+                "LINKS": [l.__dump__() for l in self.graph.links.values()],
+                "SERVICES": [s.__dump__() for s in self.mobility_services.values()]}
 
 
 class PersonalCarMobilityService(AbstractMobilityService):
-    def __init__(self):
-        super(PersonalCarMobilityService, self).__init__('PersonalCar')
+    def __init__(self, id:str='PersonalCar'):
+        super(PersonalCarMobilityService, self).__init__(id)
 
     def request_vehicle(self, user: "User", drop_node:str) -> None:
         upath = list(user.path.nodes)
@@ -66,6 +67,16 @@ class PersonalCarMobilityService(AbstractMobilityService):
         for veh in list(self.fleet.vehicles.values()):
             if veh.is_arrived:
                 self.fleet.delete_vehicle(veh.id)
+
+    def __dump__(self):
+        return {"TYPE": ".".join([PersonalCarMobilityService.__module__, PersonalCarMobilityService.__name__]),
+                "ID": self.id}
+
+    @classmethod
+    def __load__(cls, data):
+        new_obj = cls(data['ID'])
+        return new_obj
+
 
 
 class OnDemandCarMobilityService(AbstractMobilityService):
@@ -113,7 +124,7 @@ class OnDemandCarMobilityService(AbstractMobilityService):
             nearest_veh.destination = user.current_node
             log.info(f"Compute veh path to user {nearest_veh.origin} -> {user.current_node}")
             veh_path = bidirectional_dijkstra(self.graph, nearest_veh.origin, user.current_node, 'time', None)
-            if veh_path.cost == float('inf'):
+            if veh_path.path_cost == float('inf'):
                 raise PathNotFound(nearest_veh.origin, user.current_node)
             log.info(f"{self.id} set VEH path: {veh_path}")
             veh_path = self._construct_veh_path(list(veh_path.nodes)[:-1]+upath[upath.index(user._current_node):upath.index(drop_node)+1])
@@ -122,3 +133,12 @@ class OnDemandCarMobilityService(AbstractMobilityService):
             nearest_veh.take_next_user(user, drop_node)
 
             self.fleet.start_waiting_vehicle(nearest_veh.id)
+
+    def __dump__(self):
+        return {"TYPE": ".".join([OnDemandCarMobilityService.__module__, OnDemandCarMobilityService.__name__]),
+                "ID": self.id}
+
+    @classmethod
+    def __load__(cls, data):
+        new_obj = cls(data['ID'])
+        return new_obj
