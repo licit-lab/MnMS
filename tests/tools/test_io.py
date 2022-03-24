@@ -3,7 +3,7 @@ import unittest
 from tempfile import TemporaryDirectory
 
 from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.car import PersonalCar
+from mnms.mobility_service.car import CarMobilityGraphLayer
 from mnms.graph.io import save_graph, load_graph
 
 
@@ -29,20 +29,20 @@ class TestIO(unittest.TestCase):
 
         self.mmgraph.add_zone('Res', ['0_1', '1_2'])
 
-        serv1 = PersonalCar("s1", 10)
-        serv2 = PersonalCar("s2", 9)
+        serv1 = CarMobilityGraphLayer("s1", 10)
+        serv2 = CarMobilityGraphLayer("s2", 9)
 
         serv1.add_node('S1_0')
         serv1.add_node('S1_1')
-        serv1.add_link('SERV1_0_1', 'S1_0', 'S1_1', {'test':0})
+        serv1.add_link('SERV1_0_1', 'S1_0', 'S1_1', ['0_1'], {'test':0})
 
         serv2.add_node('S2_1')
         serv2.add_node('S2_2')
-        serv2.add_link('SERV2_0_1', 'S2_1', 'S2_2', {'test': 1})
+        serv2.add_link('SERV2_0_1', 'S2_1', 'S2_2', ['1_2'], {'test': 1})
 
-        self.mmgraph.add_mobility_service(serv1)
-        self.mmgraph.add_mobility_service(serv2)
-        self.mmgraph.connect_mobility_service('S1_S2_1', 'S1_1', 'S2_1', 0, {'time': 0})
+        self.mmgraph.add_layer(serv1)
+        self.mmgraph.add_layer(serv2)
+        self.mmgraph.connect_layers('S1_S2_1', 'S1_1', 'S2_1', 0, {})
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -68,8 +68,8 @@ class TestIO(unittest.TestCase):
             self.assertTrue(old_link.upstream_node == new_link.upstream_node)
             self.assertTrue(old_link.downstream_node == new_link.downstream_node)
 
-        self.assertTrue('s1' in new_graph._mobility_services)
-        self.assertTrue('s2' in new_graph._mobility_services)
+        self.assertTrue('s1' in new_graph.layers)
+        self.assertTrue('s2' in new_graph.layers)
 
         self.assertEqual(self.mmgraph.mobility_graph.nodes.keys(), new_graph.mobility_graph.nodes.keys())
 

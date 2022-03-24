@@ -85,6 +85,6 @@ def load_graph(filename:str) -> MultiModalGraph:
         mmgraph.add_layer(layer)
 
     for cdata in data['MOBILITY_GRAPH']['CONNECTIONS']:
-        mmgraph.connection_layers(cdata['ID'], cdata['UPSTREAM'], cdata['DOWNSTREAM'], cdata['COSTS']['length'], cdata['COSTS'])
+        mmgraph.connect_layers(cdata['ID'], cdata['UPSTREAM'], cdata['DOWNSTREAM'], cdata['COSTS']['length'], cdata['COSTS'])
 
     return mmgraph

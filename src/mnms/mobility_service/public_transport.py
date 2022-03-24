@@ -246,7 +246,7 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
     def __init__(self, id:str, veh_type:Type[Vehicle], default_speed:float, services:List[PublicTransportMobilityService]=None, observer=None):
         super(PublicTransportGraphLayer, self).__init__(id, veh_type, default_speed, services, observer)
         self.lines = dict()
-        self.line_connexions = set()
+        self.line_connections = []
 
     def add_mobility_service(self, service:"AbstractMobilityService"):
         assert isinstance(service, PublicTransportMobilityService), f"PublicTransportGraphLayer only accept mobility services with type PublicTransportMobilityService"
@@ -266,29 +266,34 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
     def show_lines(self) -> None:
         print(self.lines)
 
-    def connect_lines(self, ulineid: str, dlineid: str, nid: str, costs:dict=None, two_ways=True) -> None:
-        assert self.lines[ulineid]._prefix(nid) in self.lines[ulineid].stops
-        assert self.lines[dlineid]._prefix(nid) in self.lines[dlineid].stops
-        c = {'time': self.lines[dlineid].timetable.get_freq() / 2, "length": 0}
+    def connect_lines(self, ulineid: str, dlineid: str, unid: str, dnid:str, costs:dict=None, two_ways=True) -> None:
+        assert unid in self.lines[ulineid].stops
+        assert dnid in self.lines[dlineid].stops
+        c = {'waiting_time': self.lines[dlineid]._timetable.get_freq() / 2, "length": 0}
         if costs is not None:
             c.update(costs)
 
-        self._graph.add_link('_'.join([ulineid, dlineid, nid]),
-                             ulineid + '_' + nid,
-                             dlineid + '_' + nid,
-                             c,
-                             mobility_service=self.id)
+        self.graph.add_link('_'.join([unid, dnid]),
+                            unid,
+                            dnid,
+                            c,
+                            [None],
+                            mobility_service=self.id)
+
+        self.line_connections.append('_'.join([unid, dnid]))
 
         if two_ways:
-            c = {'time': self.lines[ulineid].timetable.get_freq() / 2, "length": 0}
+            c = {'waiting_time': self.lines[ulineid]._timetable.get_freq() / 2, "length": 0}
             if costs is not None:
                 c.update(costs)
-            self._graph.add_link('_'.join([dlineid, ulineid, nid]),
-                                 dlineid + '_' + nid,
-                                 ulineid + '_' + nid,
-                                 c,
-                                 mobility_service=self.id)
-            self.line_connexions.add('_'.join([dlineid, ulineid, nid]))
+            self.graph.add_link('_'.join([dnid, unid]),
+                                dnid,
+                                unid,
+                                c,
+                                [None],
+                                mobility_service=self.id)
+
+            self.line_connections.append('_'.join([dnid, unid]))
 
     def connect_to_service(self, nid) -> dict:
         for line in self.lines.values():
@@ -301,7 +306,7 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
                 "VEH_TYPE":  ".".join([self._veh_type.__module__, self._veh_type.__name__]),
                 "DEFAULT_SPEED": self.default_speed,
                 "LINES": [l.__dump__() for l in self.lines.values()],
-                "CONNECTIONS": [self.graph.get_link(l).__dump__() for l in self.line_connexions],
+                "CONNECTIONS": [self.graph.get_link(l).__dump__() for l in self.line_connections],
                 "SERVICES": [s.__dump__() for s in self.mobility_services.values()]}
 
     @classmethod

@@ -45,56 +45,59 @@ class TestPublicTransport(unittest.TestCase):
         self.assertListEqual([2], service.graph.links[('0', '1')].reference_lane_ids)
 
     def test_two_lines(self):
-        service = PublicTransport("TEST", Bus, 1)
+        service = BusMobilityGraphLayer("TEST", 10)
 
-        line0 = service.add_line('L0', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
-        line0.add_stop("0", "00")
-        line0.add_stop("1", "11")
+        line = service.add_line('L0', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
+        line.add_stop("0", "00")
+        line.add_stop("1", "11")
 
-        line0.connect_stops('0_1', '0', '1', 10, {'test': 32}, ['0_1'], [2])
+        line.connect_stops('0_1', '0', '1', 10, ['0_1'], {'test': 32}, [2])
 
         line1 = service.add_line('TEST2', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
         line1.add_stop("32", "4")
-        line1.add_stop("1", "11")
-        line1.connect_stops('32_1', '32', '1', 10, {'test': 2}, ['0_99'], [0])
+        line1.add_stop("2", "11")
+        line1.connect_stops('32_1', '32', '2', 10, ['0_99'], {'test': 2}, [0])
 
-        service.connect_lines('L0', 'TEST2', '1', {'test': 0})
+        service.connect_lines('L0', 'TEST2', '1', '2', {'test': 90})
 
         self.assertTrue('L0' in service.lines)
         self.assertTrue('TEST2' in service.lines)
-        self.assertDictEqual({'_default': 1, 'length': 0, 'test': 0, 'time': 1800.0}, service._graph.links[('L0_1', 'TEST2_1')].costs)
-        self.assertListEqual([], service._graph.links[('L0_1', 'TEST2_1')].reference_links)
-        self.assertListEqual([], service._graph.links[('L0_1', 'TEST2_1')].reference_lane_ids)
+        self.assertEqual(1, service.graph.links[('1', '2')].costs['_default'])
+        self.assertEqual(0, service.graph.links[('1', '2')].costs['length'])
+        self.assertEqual(1800, service.graph.links[('1', '2')].costs['waiting_time'])
+        self.assertEqual(0, service.graph.links[('1', '2')].costs['travel_time'])
+        self.assertEqual(90, service.graph.links[('1', '2')].costs['test'])
+
+        self.assertEqual(90, service.graph.links[('2', '1')].costs['test'])
 
     def test_dump_JSON(self):
         self.maxDiff = None
-        service = PublicTransport("TEST", Bus, 1)
+        service = BusMobilityGraphLayer("TEST", 10)
 
-        line0 = service.add_line('L0', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
-        line0.add_stop("0", "00")
-        line0.add_stop("1", "11")
+        line = service.add_line('L0', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
+        line.add_stop("0", "00")
+        line.add_stop("1", "11")
 
-        line0.connect_stops('0_1', '0', '1', 10, {'test': 32}, ['0_1'], [2])
+        line.connect_stops('0_1', '0', '1', 10, ['0_1'], {'test': 32}, [2])
 
         line1 = service.add_line('TEST2', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
         line1.add_stop("32", "4")
-        line1.add_stop("1", "11")
-        line1.connect_stops('32_1', '32', '1', 10, {'test': 2}, ['0_99'], [0])
+        line1.add_stop("2", "11")
+        line1.connect_stops('32_1', '32', '2', 10, ['0_99'], {'test': 2}, [0])
 
-        service.connect_lines('L0', 'TEST2', '1', {'test': 0})
-
+        service.connect_lines('L0', 'TEST2', '1', '2', {'test': 90})
         data = service.__dump__()
-        expected_dict = {'TYPE': 'mnms.layer.public_transport.PublicTransport',
+        expected_dict = {'TYPE': 'mnms.mobility_service.public_transport.PublicTransportGraphLayer',
                          'ID': 'TEST',
                          'DEFAULT_SPEED': 1,
                          'LINES': [{'ID': 'L0',
                                     'TIMETABLE': [{'HOURS': 0, 'MINUTES': 0, 'SECONDS': 0.0},
                                                               {'HOURS': 1, 'MINUTES': 0, 'SECONDS': 0.0}],
-                                    'STOPS': [{'ID': 'L0_0', 'REF_NODE': '00', 'MOBILITY_SERVICE': 'TEST'},
-                                              {'ID': 'L0_1', 'REF_NODE': '11', 'MOBILITY_SERVICE': 'TEST'}],
-                                    'LINKS': [{'ID': 'L0_0_1',
-                                               'UPSTREAM': 'L0_0',
-                                               'DOWNSTREAM': 'L0_1',
+                                    'STOPS': [{'ID': '0', 'REF_NODE': '00', 'MOBILITY_SERVICE': 'TEST'},
+                                              {'ID': '1', 'REF_NODE': '11', 'MOBILITY_SERVICE': 'TEST'}],
+                                    'LINKS': [{'ID': '0_1',
+                                               'UPSTREAM': '0',
+                                               'DOWNSTREAM': '1',
                                                'COSTS': {'time': 0, 'test': 32, 'length': 10},
                                                'REF_LINKS': ['0_1'],
                                                'REF_LANE_IDS': [2],
@@ -102,28 +105,25 @@ class TestPublicTransport(unittest.TestCase):
                                    {'ID': 'TEST2',
                                     'TIMETABLE': [{'HOURS': 0, 'MINUTES': 0, 'SECONDS': 0.0},
                                                   {'HOURS': 1, 'MINUTES': 0, 'SECONDS': 0.0}],
-                                    'STOPS': [{'ID': 'TEST2_1', 'REF_NODE': '11', 'MOBILITY_SERVICE': 'TEST'},
-                                              {'ID': 'TEST2_32', 'REF_NODE': '4', 'MOBILITY_SERVICE': 'TEST'}],
-                                    'LINKS': [{'ID': 'TEST2_32_1',
-                                               'UPSTREAM': 'TEST2_32',
-                                               'DOWNSTREAM': 'TEST2_1',
+                                    'STOPS': [{'ID': '2', 'REF_NODE': '11', 'MOBILITY_SERVICE': 'TEST'},
+                                              {'ID': '32', 'REF_NODE': '4', 'MOBILITY_SERVICE': 'TEST'}],
+                                    'LINKS': [{'ID': '32_1',
+                                               'UPSTREAM': '32',
+                                               'DOWNSTREAM': '2',
                                                'COSTS': {'time': 0, 'test': 2, 'length': 10},
                                                'REF_LINKS': ['0_99'],
                                                'REF_LANE_IDS': [0], 'MOBILITY_SERVICE': 'TEST'}]}],
                          'CONNECTIONS': [
-                             {'ID': 'TEST2_L0_1',
-                              'UPSTREAM': 'TEST2_1',
-                              'DOWNSTREAM': 'L0_1',
-                              'COSTS': {'time': 1800.0, 'length': 0, 'test': 0},
-                              'REF_LINKS': [],
-                              'REF_LANE_IDS': [],
-                              'MOBILITY_SERVICE': 'TEST'}]}
+                             {'ID': '1_2',
+                              'UPSTREAM': '1',
+                              'DOWNSTREAM': '2',
+                              'COSTS': {'travel_time': 0, 'waiting_time': 1800.0, 'length': 0, 'test': 90},
+                              'REF_LINKS': [None],
+                              'REF_LANE_IDS': [0],
+                              'LAYER': 'TEST'}]}
 
         self.assertEqual(expected_dict['TYPE'], data['TYPE'])
         self.assertEqual('TEST', data['ID'])
         self.assertCountEqual(['L0', 'TEST2'], [ldata['ID'] for ldata in data['LINES']])
         self.assertDictEqual(expected_dict['CONNECTIONS'][0], data['CONNECTIONS'][0])
 
-        line_L0 = [ldata for ldata in data["LINES"] if ldata['ID']=='L0'][0]
-
-        line_TEST2 = [ldata for ldata in data["LINES"] if ldata['ID']=='TEST2'][0]
