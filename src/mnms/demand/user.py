@@ -27,10 +27,14 @@ class User(TimeDependentSubject):
         Path from origin to destination
 
     """
-    def __init__(self, id: str, origin: Union[str, np.ndarray], destination: Union[str, np.ndarray], departure_time: Time,
+    def __init__(self,
+                 id: str,
+                 origin: Union[str, np.ndarray],
+                 destination: Union[str, np.ndarray],
+                 departure_time: Time,
                  available_mobility_services=None,
                  scale_factor=1,
-                 path=None) -> object:
+                 path=None):
         super(User, self).__init__()
         self.id = id
         self.origin = origin

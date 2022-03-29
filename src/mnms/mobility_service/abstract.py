@@ -42,9 +42,9 @@ class AbstractMobilityGraphLayer(ABC):
                      None,
                      heuristic)
 
-    @abstractmethod
-    def update_costs(self, time: Time):
-        pass
+    # @abstractmethod
+    # def update_costs(self, time: Time):
+    #     pass
 
     @abstractmethod
     def __dump__(self) -> dict:

@@ -41,7 +41,6 @@ class Path(object):
                 start = i
         self.layers.append((layer, slice(start, nodes_number, 1)))
 
-
     def __repr__(self):
         return f"Path(path_cost={self.path_cost}, nodes={self.nodes}, layers={self.layers}, services={self.mobility_services})"
 
@@ -296,7 +295,7 @@ def _euclidian_dist(origin:str, dest:str, mmgraph:MultiModalGraph):
 def compute_shortest_path(mmgraph: MultiModalGraph,
                           user: User,
                           cost: _WEIGHT_COST_TYPE = lambda cost: cost['travel_time'] + cost['waiting_time'],
-                          algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar'] = "dijkstra",
+                          algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar'] = "bidirectional_dijkstra",
                           heuristic: Callable[[str, str], float] = None,
                           radius: float = 500,
                           growth_rate_radius: float = 10,
@@ -329,8 +328,11 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
 
     """
 
-    if user.available_mobility_service is not None and 'WALK' not in user.available_mobility_service:
-        log.warning(f"{user} does not have 'WALK' in its available_mobility_service")
+    if user.available_mobility_service is not None:
+        user_accessible_layers = {mmgraph.mapping_layer_services[mservice].id for mservice in user.available_mobility_service}
+        user_accessible_layers.add('WALK')
+    else:
+        user_accessible_layers = None
 
     if algorithm == "dijkstra":
         sh_algo = dijkstra
@@ -436,7 +438,7 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
 
         log.debug(f"Compute path")
 
-        path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
+        path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
 
         # Clean the graph from artificial nodes
 
@@ -507,8 +509,11 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
     penalized_costs = []
     topograph_links = mmgraph.mobility_graph.links
 
-    if user.available_mobility_service is not None and 'WALK' not in user.available_mobility_service:
-        log.warning(f"{user} does not have 'WALK' in its available_mobility_service")
+    if user.available_mobility_service is not None:
+        user_accessible_layers = {mmgraph.mapping_layer_services[mservice].id for mservice in user.available_mobility_service}
+        user_accessible_layers.add('WALK')
+    else:
+        user_accessible_layers = None
 
     if algorithm == "dijkstra":
         sh_algo = dijkstra
@@ -559,13 +564,13 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                                            {'travel_time': dist_destination[ind] / walk_speed,
                                             'length': dist_destination[ind]})
 
-                path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
+                path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
 
                 if path.path_cost != float('inf'):
                     counter = 0
                     similar_path = 0
                     while counter < npath:
-                        path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
+                        path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
 
                         del path.nodes[0]
                         del path.nodes[-1]

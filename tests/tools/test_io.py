@@ -79,6 +79,6 @@ class TestIO(unittest.TestCase):
             self.assertTrue(old_link.id == new_link.id)
             self.assertTrue(old_link.upstream_node == new_link.upstream_node)
             self.assertTrue(old_link.downstream_node == new_link.downstream_node)
-            self.assertDictEqual(old_link.costs, new_link.costs)
+            self.assertTrue(old_link.costs == new_link.costs)
 
         self.assertEqual(list(new_graph.zones.keys()), ['Res'])

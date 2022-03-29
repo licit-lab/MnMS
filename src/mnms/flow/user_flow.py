@@ -12,6 +12,7 @@ log = create_logger(__name__)
 class UserFlow(object):
     def __init__(self, walk_speed=1.42):
         self._graph: MultiModalGraph = None
+        self._mobility_graph = None
         self.users:Dict[str, User] = dict()
         self._transiting = dict()
         self._walking = dict()
@@ -101,20 +102,6 @@ class UserFlow(object):
                     break
             else:
                 log.warning(f"No mobility service found for user {user}")
-
-
-            # layer_id = start_node.layer
-            # layer = self._graph.layers[layer_id]
-            # prev_service_id = layer_id
-            # log.info(f"Request VEH for {nu} at {nu._current_node}")
-            # for i in range(upath.index(start_node.id)+1, len(upath)):
-            #     current_service_id = self._mobility_graph.nodes[upath[i]].layer
-            #     if prev_service_id != current_service_id:
-            #         mservice.request_vehicle(nu, upath[i - 1])
-            #         break
-            #     elif i == len(upath) - 1:
-            #         mservice.request_vehicle(nu, upath[i])
-            #         break
 
     def step(self, dt:Dt, new_users:List[User]):
         log.info(f"Step User Flow {self._tcurrent}")

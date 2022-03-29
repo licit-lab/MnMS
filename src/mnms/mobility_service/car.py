@@ -27,9 +27,6 @@ class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
                  reference_lane_ids=None) -> None:
         self.graph.add_link(lid, unid, dnid, costs, reference_links, reference_lane_ids, self.id)
 
-    def update_costs(self, time: "Time"):
-        pass
-
     def connect_to_layer(self, nid) -> dict:
         return dict()
 
@@ -76,7 +73,6 @@ class PersonalCarMobilityService(AbstractMobilityService):
     def __load__(cls, data):
         new_obj = cls(data['ID'])
         return new_obj
-
 
 
 class OnDemandCarMobilityService(AbstractMobilityService):

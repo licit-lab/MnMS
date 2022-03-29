@@ -263,6 +263,18 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
 
         return new_line
 
+
+    def add_line(self, lid: str, timetable: "TimeTable") -> Line:
+        new_line = Line(lid, self, timetable)
+        self.lines[lid] = new_line
+        for service in self.mobility_services.values():
+            timetable_iter = iter(timetable.table)
+            service._timetable_iter[lid] = iter(timetable.table)
+            service._current_time_table[lid] = next(timetable_iter)
+            service._next_time_table[lid] = next(timetable_iter)
+
+        return new_line
+
     def show_lines(self) -> None:
         print(self.lines)
 
@@ -332,24 +344,6 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
                                     l['COSTS'],
                                     l['REF_LANE_IDS']) for l in ldata['LINKS']]
         return new_obj
-
-    def update_costs(self, time:"Time"):
-        """
-        Update of the cost in PublicTransport links use only the travel time on the link with speed and length plus
-        the frequency of the line divide by 2.
-        :param time:
-        :return:
-        """
-        for lid, line in self.lines.items():
-            start_stop = line.start
-
-            curr_stop = start_stop
-            next_stop = line._adjacency[curr_stop]
-            while next_stop is not None:
-                curr_link = self._graph.links[(line._prefix(curr_stop), line._prefix(next_stop))]
-                curr_link.costs['time'] = curr_link.costs['speed'] * curr_link.costs['length']
-                curr_stop = next_stop
-                next_stop = line._adjacency[curr_stop]
 
     def construct_veh_path(self, lid: str):
         veh_path = list()

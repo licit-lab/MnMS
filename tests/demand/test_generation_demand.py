@@ -4,6 +4,7 @@ from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService
 from mnms.demand.generation import create_random_demand
 
+
 class TestGeneration(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
@@ -29,15 +30,15 @@ class TestGeneration(unittest.TestCase):
 
         serv1.add_node('S1_0', '0')
         serv1.add_node('S1_1', '1')
-        serv1.add_link('SERV1_0_1', 'S1_0', 'S1_1', {'test':0})
+        serv1.add_link('SERV1_0_1', 'S1_0', 'S1_1', ['0_1'], {'test':0})
 
         serv2.add_node('S2_1', '1')
         serv2.add_node('S2_2', '2')
-        serv2.add_link('SERV2_0_1', 'S2_1', 'S2_2', {'test': 1})
+        serv2.add_link('SERV2_0_1', 'S2_1', 'S2_2', ['1_2'], {'test': 1})
 
         self.mmgraph.add_layer(serv1)
         self.mmgraph.add_layer(serv2)
-        self.mmgraph.connection_layers('S1_S2_1', 'S1_1', 'S2_1', 0, {'time':0})
+        self.mmgraph.connect_layers('S1_S2_1', 'S1_1', 'S2_1', 0, {'time':0})
 
     def tearDown(self):
         """Concludes and closes the test.

@@ -109,6 +109,9 @@ class Time(object):
     def __str__(self):
         return self.time
 
+    def __eq__(self, other):
+        return self.to_seconds() == other.to_seconds()
+
     def __lt__(self, other):
         return self.to_seconds() < other.to_seconds()
 

@@ -55,7 +55,7 @@ def create_random_demand(mmgraph: "MultiModalGraph", tstart="07:00:00", tend="18
                 vuser = User(str(uid),unode,dnode,Time.fromSeconds(distrib_time(tstart, tend)))
                 try:
                     path = compute_shortest_path(mmgraph, vuser, cost_path, algorithm='astar')
-                    if path.cost >= min_cost and path.cost < float('inf'):
+                    if path.path_cost >= min_cost and path.path_cost < float('inf'):
                         demand.extend([User(str(uid), unode, dnode, Time.fromSeconds(distrib_time(tstart, tend))) for _ in range(repeat)])
                         uid += 1
                 except PathNotFound:

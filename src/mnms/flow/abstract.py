@@ -3,7 +3,6 @@ from typing import List
 import csv
 
 from mnms.tools.time import Time, Dt
-from mnms.demand.user import User
 from mnms.graph.core import MultiModalGraph
 
 

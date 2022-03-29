@@ -55,3 +55,6 @@ class CostDict(object):
 
     def __deepcopy__(self, memodict={}):
         return CostDict(**self.__store)
+
+    def __eq__(self, other):
+        return self.__store == other.__store

@@ -67,7 +67,7 @@ class TestAlgorithms(unittest.TestCase):
 
         mmgraph.add_layer(bus_layer)
 
-        mmgraph.connect_layers('C0_B0', 'C0', 'L1_B0', 0, {'travel_time': 0})
+        mmgraph.connect_layers('C0_B0', 'C0', 'B0', 0, {'travel_time': 0})
 
         self.mmgraph = mmgraph
 
