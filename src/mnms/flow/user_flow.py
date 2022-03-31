@@ -14,7 +14,7 @@ class UserFlow(object):
         self._graph: MultiModalGraph = None
         self._mobility_graph = None
         self.users:Dict[str, User] = dict()
-        self._transiting = dict()
+        self._transiting = set()
         self._walking = dict()
         self._walk_speed = walk_speed
         self._tcurrent = None
@@ -24,12 +24,10 @@ class UserFlow(object):
 
     def set_time(self, time:Time):
         self._tcurrent = time.copy()
+        self._mobility_graph = self._graph.mobility_graph
 
     def update_time(self, dt:Dt):
         self._tcurrent = self._tcurrent.add_time(dt)
-
-    def initialize(self):
-        self._mobility_graph = self._graph.mobility_graph
 
     def _user_walking(self, dt:Dt):
         finish_walk = list()
@@ -44,18 +42,19 @@ class UserFlow(object):
             upath = user.path.nodes
             cnode = user._current_node
             cnode_ind = upath.index(cnode)
-            user._current_node = self._graph.mobility_graph.nodes[upath[cnode_ind+1]].id
+            user._current_node = upath[cnode_ind+1]
             user._current_link = (user._current_node, upath[upath.index(user._current_node)+1])
-            user._remaining_link_length = 0
+            user._remaining_link_length = self._mobility_graph.links[user._current_link].costs['length']
             del self._walking[user.id]
-            self._transiting[user.id] = user
+            self._transiting.add(user.id)
 
-        self._request_user_vehicles(finish_walk)
+            self._request_user_vehicles(user)
 
     def _process_user(self):
         to_del = list()
         arrived_user = list()
-        for uid, user in self._transiting.items():
+        for uid in self._transiting:
+            user = self.users[uid]
             upath = user.path.nodes
             if user._current_node == upath[-1]:
                 log.info(f"{user} arrived to its destination")
@@ -68,47 +67,43 @@ class UserFlow(object):
                 next_link = self._graph.mobility_graph.links[(cnode, upath[cnode_ind+1])]
                 if isinstance(next_link, TransitLink):
                     log.info(f"{user} enter connection on {next_link}")
-                    self._walking[uid] = next_link.costs['time']
+                    self._walking[uid] = next_link.costs['length']
                     to_del.append(uid)
                 elif isinstance(next_link, ConnectionLink):
-                    self._request_user_vehicles([user])
+                    self._request_user_vehicles(user)
 
         for uid in to_del:
-            del self._transiting[uid]
+            self._transiting.remove(uid)
 
         for uid in arrived_user:
             del self.users[uid]
 
-    def _request_user_vehicles(self, new_users:List[User]):
-        for user in new_users:
-            upath = user.path.nodes
-            log.info(f"RERERERTERERE")
+    def _request_user_vehicles(self, user:User):
+        upath = user.path.nodes
 
-            # Setting user initial position
-            self.users[user.id] = user
-            self._transiting[user.id] = user
-            start_node = self._mobility_graph.nodes[user._current_node]
-            start_node_pos = self._graph.flow_graph.nodes[start_node.reference_node].pos
-            user._position = start_node_pos
+        # Setting user initial position
+        start_node = self._mobility_graph.nodes[user._current_node]
+        start_node_pos = self._graph.flow_graph.nodes[start_node.reference_node].pos
+        user._position = start_node_pos
 
-            # Finding the mobility service associated and request vehicle
-            ind_node_start = upath.index(user._current_node)
-            for ilayer, (layer, slice_nodes) in enumerate(user.path.layers):
-                if slice_nodes.start <= ind_node_start < slice_nodes.stop:
-                    mservice_id = user.path.mobility_services[ilayer]
-                    mservice = self._graph.layers[layer].mobility_services[mservice_id]
-                    log.info(f"Stop {upath[slice_nodes][-1]}, {upath}, {upath[slice_nodes]}")
-                    mservice.request_vehicle(user, upath[slice_nodes][-1])
-                    break
-            else:
-                log.warning(f"No mobility service found for user {user}")
+        # Finding the mobility service associated and request vehicle
+        ind_node_start = upath.index(user._current_node)
+        for ilayer, (layer, slice_nodes) in enumerate(user.path.layers):
+            if slice_nodes.start <= ind_node_start < slice_nodes.stop:
+                mservice_id = user.path.mobility_services[ilayer]
+                mservice = self._graph.layers[layer].mobility_services[mservice_id]
+                log.info(f"Stop {upath[slice_nodes][-1]}, {upath}, {upath[slice_nodes]}")
+                mservice.request_vehicle(user, upath[slice_nodes][-1])
+                break
+        else:
+            log.warning(f"No mobility service found for user {user}")
 
     def step(self, dt:Dt, new_users:List[User]):
         log.info(f"Step User Flow {self._tcurrent}")
 
+        for user in new_users:
+            self.users[user.id] = user
+            self._transiting.add(user.id)
+
         self._process_user()
         self._user_walking(dt)
-        self._request_user_vehicles(new_users)
-
-    def update_graph(self):
-        pass

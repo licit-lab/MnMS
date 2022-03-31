@@ -58,14 +58,13 @@ class TestUserFlow(unittest.TestCase):
         mmgraph.add_layer(car)
         mmgraph.add_layer(bus)
 
-        mmgraph.connect_layers('CAR_BUS', 'C2', 'B2', 0, {'time':0})
+        mmgraph.connect_layers('CAR_BUS', 'C2', 'B2', 100, {'time':0})
 
         self.mmgraph = mmgraph
 
         self.user_flow = UserFlow(1.42)
         self.user_flow.set_graph(mmgraph)
         self.user_flow.set_time(Time('00:01:00'))
-        self.user_flow.initialize()
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -80,10 +79,23 @@ class TestUserFlow(unittest.TestCase):
 
     def test_request_veh(self):
         user = User('U0', '0', '4', Time('00:01:00'))
-        user._current_node = 'C0'
         user.set_path(Path(3400,
-                           ['C0', 'C1', 'C2', 'B2', 'B3', 'B4']))
+                           ['C0', 'C2', 'B2', 'B3', 'B4']))
+        user.path.construct_layers(self.mmgraph.mobility_graph)
+        user.path.mobility_services = ('PersonalCar', 'Bus')
         self.user_flow.step(Dt(minutes=1), [user])
+        self.assertIn('U0', self.user_flow.users)
+        self.assertIn('0', self.mmgraph.layers['car_layer'].mobility_services['PersonalCar'].fleet.vehicles)
+        veh = self.mmgraph.layers['car_layer'].mobility_services['PersonalCar'].fleet.vehicles['0']
+        self.assertEqual((('C0', 'C2'), 1200), veh.path[0])
 
-        self.assertIn('UO', self.user_flow.users)
-        pass
+    def test_walk(self):
+        user = User('U0', '0', '4', Time('00:01:00'))
+        user.set_path(Path(2200,
+                           ['C2', 'B2', 'B3', 'B4']))
+        user.path.construct_layers(self.mmgraph.mobility_graph)
+        user.path.mobility_services = ('PersonalCar', 'Bus')
+        self.user_flow.step(Dt(minutes=1), [user])
+        self.assertIn('U0', self.user_flow.users)
+        self.assertIn('U0', self.user_flow._walking)
+        self.assertAlmostEqual(100-60*1.42, self.user_flow._walking['U0'])
