@@ -8,9 +8,10 @@ from mnms.tools.time import Dt, TimeTable, Time
 from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService, BusMobilityGraphLayer
+from mnms.vehicles.veh_type import Vehicle
 
 
-class TestUserFlow(unittest.TestCase):
+class TestMFDFlow(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
@@ -80,6 +81,8 @@ class TestUserFlow(unittest.TestCase):
         """Concludes and closes the test.
         """
         self.tempfile.cleanup()
+        self.personal_car.fleet._veh_manager.empty()
+        Vehicle._counter = 0
 
     def test_fill(self):
         self.assertIn('res1', self.flow.dict_speeds)

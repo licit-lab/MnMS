@@ -8,6 +8,7 @@ from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobility
 from mnms.mobility_service.public_transport import PublicTransportMobilityService, BusMobilityGraphLayer
 from mnms.demand.user import User
 from mnms.graph.shortest_path import Path
+from mnms.vehicles.veh_type import Vehicle
 
 
 class TestUserFlow(unittest.TestCase):
@@ -34,8 +35,10 @@ class TestUserFlow(unittest.TestCase):
         mmgraph.add_zone('res1', ['0_1', '0_2', '2_3'])
         mmgraph.add_zone('res2', ['3_4'])
 
+        self.personal_car = PersonalCarMobilityService()
+
         car = CarMobilityGraphLayer('car_layer', 10,
-                                    services=[PersonalCarMobilityService()])
+                                    services=[self.personal_car])
         car.add_node('C0', '0')
         car.add_node('C1', '1')
         car.add_node('C2', '2')
@@ -70,6 +73,9 @@ class TestUserFlow(unittest.TestCase):
         """Concludes and closes the test.
         """
         self.tempfile.cleanup()
+        self.personal_car.fleet._veh_manager.empty()
+        Vehicle._counter = 0
+
 
     def test_fill(self):
         self.assertTrue(self.mmgraph is self.user_flow._graph)
@@ -84,9 +90,11 @@ class TestUserFlow(unittest.TestCase):
         user.path.construct_layers(self.mmgraph.mobility_graph)
         user.path.mobility_services = ('PersonalCar', 'Bus')
         self.user_flow.step(Dt(minutes=1), [user])
+
+        print(self.personal_car.fleet._veh_manager._vehicles)
         self.assertIn('U0', self.user_flow.users)
-        self.assertIn('0', self.mmgraph.layers['car_layer'].mobility_services['PersonalCar'].fleet.vehicles)
-        veh = self.mmgraph.layers['car_layer'].mobility_services['PersonalCar'].fleet.vehicles['0']
+        self.assertIn('0', self.personal_car.fleet.vehicles)
+        veh = self.personal_car.fleet.vehicles['0']
         self.assertEqual((('C0', 'C2'), 1200), veh.path[0])
 
     def test_walk(self):
