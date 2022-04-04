@@ -201,7 +201,7 @@ class Supervisor(object):
             self._outfile.close()
 
     def create_crash_report(self, affectation_step, flow_step) -> dict:
-        data = dict(time=self.tcurrent,
+        data = dict(time=str(self.tcurrent),
                     affectation_step=affectation_step,
                     flow_step=flow_step,
                     error=traceback.format_exc())

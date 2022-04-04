@@ -264,7 +264,8 @@ class AbstractDecisionModel(ABC):
             for ls in product(*path_services):
                 new_path = deepcopy(p)
                 services = ls if len(ls) > 1 else ls[0]
-                new_path.mobility_services = services
+                new_path.mobility_services =[]
+                new_path.mobility_services.append(services)
                 service_costs = reduce(lambda x, y: x+y,
                                        [self._mmgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services)])
                 new_path.service_costs = service_costs
@@ -296,7 +297,8 @@ class AbstractDecisionModel(ABC):
         #         paths.append(p)
         #         log.info(f"Done")
 
-        path = self.path_choice(paths)
+        tpath = self.path_choice(paths)
+        path=tpath[0]
         user.set_path(path)
         user._remaining_link_length = self._mmgraph.mobility_graph.links[(path.nodes[0], path.nodes[1])].costs['length']
 
@@ -313,9 +315,9 @@ class AbstractDecisionModel(ABC):
         elif self._write:
             self._csvhandler.writerow([user.id,
                                        str(user.path.cost),
-                                       ' '.join(user.path),
-                                       compute_path_length(self._mmgraph, user.path),
-                                       ' '.join(compute_path_modes(self._mmgraph, user.path))])
+                                       ' '.join(user.path.nodes),
+                                       compute_path_length(self._mmgraph, user.path.nodes),
+                                       ' '.join(compute_path_modes(self._mmgraph, user.path.nodes))])
 
 
 class BaseDecisionModel(AbstractDecisionModel):

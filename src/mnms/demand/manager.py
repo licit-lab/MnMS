@@ -103,13 +103,13 @@ class CSVDemandManager(AbstractDemandManager):
 
         first_line = next(self._reader)
         if demand_type == "coordinate":
-            match_x = re.match(r'^[-+]?[0-9]+\.[0-9]+\d[-+]?[0-9]+\.[0-9]+$', first_line[2])
-            match_y = re.match(r'^[-+]?[0-9]+\.[0-9]+\d[-+]?[0-9]+\.[0-9]+$', first_line[2])
+            match_x=re.match(r'^[-+]?[0-9]*\.*[0-9]+\d\s[-+]?[0-9]*\.*[0-9]+\d$', first_line[2])
+            match_y=re.match(r'^[-+]?[0-9]*\.*[0-9]+\d\s[-+]?[0-9]*\.*[0-9]+\d$', first_line[3])
             if match_x is None or match_y is None:
                 raise CSVDemandParseError(csvfile, demand_type)
         elif demand_type == "node":
             match_x = re.match(r'^\w+$', first_line[2].strip())
-            match_y = re.match(r'^\w+$', first_line[2].strip())
+            match_y = re.match(r'^\w+$', first_line[3].strip())
             if match_x is None or match_y is None:
                 raise CSVDemandParseError(csvfile, demand_type)
 

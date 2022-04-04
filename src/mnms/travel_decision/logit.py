@@ -32,12 +32,13 @@ class LogitDecisionModel(AbstractDecisionModel):
         self._theta = theta
 
     def path_choice(self, paths:List[Path]) -> Tuple[List[str], float]:
-        sum_cost_exp = fsum(exp(-self._theta*p.pa) for p in paths)
+        sum_cost_exp = fsum(exp(-self._theta*p.path_cost) for p in paths)
 
         if sum_cost_exp == 0:
             log.warning(f"Costs are too high for logit, choosing first path")
             return paths[0]
 
+        costs=[p.path_cost for p in paths]
         proba_path = [exp(-self._theta*c)/sum_cost_exp for c in costs]
 
         selected_ind = _choice(range(len(proba_path)), 1,  p=proba_path)[0]

@@ -39,8 +39,8 @@ class Dt(object):
 
     def __sub__(self, other):
         seconds = self._seconds-other._seconds
-        minutes = int(self._minutes-other._minutes)
-        hours = int(self._hours-other._hours)
+        minutes = int(self._minutes-int(other._minutes))
+        hours = int(self._hours-int(other._hours))
         if seconds < 0:
             seconds = 60 + seconds
             minutes -= 1
