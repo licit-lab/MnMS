@@ -1,15 +1,15 @@
 from typing import List
+from copy import deepcopy
 
-from mnms.flow.abstract import AbstractVehicleFlowMotor
+from mnms.flow.abstract import AbstractFlowMotor
 from mnms.flow.MFD import construct_leg
 from mnms.tools.time import Time, Dt
 from mnms.flow.MFD import Reservoir
-
+from mnms.demand.user import User
 
 import numpy as np
 
-
-class MFDFlowEvent(AbstractVehicleFlowMotor):
+class MFDFlowEvent(AbstractFlowMotor):
     def __init__(self, outfile:str=None):
         super(MFDFlowEvent, self).__init__(outfile=outfile)
         if outfile is not None:

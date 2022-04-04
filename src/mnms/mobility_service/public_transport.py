@@ -149,7 +149,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         return all_departures
 
     def request_vehicle(self, user: "User", drop_node:str) -> None:
-        start = user._current_node
+        start = user.path.nodes[0]
 
         for line in self.lines.values():
             if start in line.stops:
