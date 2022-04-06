@@ -9,7 +9,8 @@ import numpy as np
 from mnms.graph import MultiModalGraph
 from mnms.graph.io import save_graph
 from mnms.tools.time import Time, TimeTable, Dt
-from mnms.mobility_service import PersonalCar, PublicTransport
+from mnms.mobility_service.car import CarMobilityGraphLayer
+from mnms.mobility_service.public_transport import PublicTransportGraphLayer
 from mnms import log as rootlogger
 from mnms.log import LOGLEVEL
 
@@ -120,7 +121,7 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None, ban_mobi
             already_present_link[l['ID']] = flow_graph.links[(l['UPSTREAM'], l['DOWNSTREAM'])].id
             num_skip += 1
     rootlogger.warning(f"Number of skipped link: {num_skip}")
-    car = PersonalCar('CAR', speed_car)
+    car = CarMobilityGraphLayer('CAR', speed_car)
 
     [car.add_node(n, n) for n in node_car]
     for l in link_car:
@@ -128,9 +129,9 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None, ban_mobi
             upstream = links[l]['UPSTREAM']
             downstream = links[l]['DOWNSTREAM']
             length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-            car.add_link(l, upstream, downstream, {'time': length/min(links[l].get('VIT_REG', speed_car), speed_car), 'length': length}, reference_links=[l])
+            car.add_link(l, upstream, downstream, reference_links=[l], costs={'time': length/min(links[l].get('VIT_REG', speed_car), speed_car), 'length': length} )
 
-    G.add_mobility_service(car)
+    G.add_layer(car)
 
 
     elem_types_veh = root.xpath("/ROOT_SYMUBRUIT/TRAFICS/TRAFIC/TYPES_DE_VEHICULE")[0]
@@ -141,9 +142,12 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None, ban_mobi
             veh_type_ids[i] = telem.attrib['id']
             mobility_service_speeds[telem.attrib['id']] = float(telem.attrib['vx'])
         else:
-            veh_type_ids[i] = None
+            veh_type_ids[i] = None  # ???
 
-    mobility_services = {id: PublicTransport(id, speed) for id, speed in mobility_service_speeds.items()}
+    # One speed only ?
+    public_transport = PublicTransportGraphLayer('PT', veh_type_ids, 12)
+    
+    #mobility_services = {id: PublicTransportGraphLayer(id, speed) for id, speed in mobility_service_speeds.items()}
 
     elem_transport_line = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/LIGNES_TRANSPORT_GUIDEES")[0]
     for line_elem in elem_transport_line.iter('LIGNE_TRANSPORT_GUIDEE'):
@@ -251,5 +255,5 @@ def convert_symuflow_to_mmgraph(file, speed_car=25, zone_file:str=None, ban_mobi
 
 if __name__ == "__main__":
     rootlogger.setLevel(LOGLEVEL.INFO)
-    convert_symuflow_to_mmgraph(r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/Lyon_symuviainput_1.xml",
-                                zone_file=r"/Users/florian.gacon/Dropbox (LICIT_LAB)/MnMS/Lyon/fichier_liens_Without_RES0.csv")
+    convert_symuflow_to_mmgraph(r"/Users/cecile.becarie/Dropbox (LICIT_LAB)/MnMS/Lyon/Lyon_symuviainput_1.xml",
+                                zone_file=r"/Users/cecile.becarie/Dropbox (LICIT_LAB)/MnMS/Lyon/fichier_liens_Without_RES0.csv")
