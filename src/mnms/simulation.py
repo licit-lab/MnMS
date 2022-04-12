@@ -103,10 +103,12 @@ class Supervisor(object):
                 mservice.update_time(flow_dt)
             
     def step_flow(self, flow_dt, users_step):
-        self._flow_motor.update_time(flow_dt)
-        self._flow_motor.step(flow_dt)
+        # TO CHECK:in the right order ? (if the other direction, there is a time step difference between the moments of creation of the vehicles and the accumulation)
         self._user_flow.update_time(flow_dt)
         self._user_flow.step(flow_dt, users_step)
+        self._flow_motor.update_time(flow_dt)
+        self._flow_motor.step(flow_dt)
+        
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:
@@ -176,7 +178,7 @@ class Supervisor(object):
                     start = time()
                     t_str = self._flow_motor.time
                     for link in self._graph.mobility_graph.links.values():
-                        self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['time']])
+                        self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['travel_time']])
                     end = time()
                     log.info(f'Done [{end - start:.5} s]')
 

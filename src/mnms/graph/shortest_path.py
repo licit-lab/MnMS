@@ -68,7 +68,7 @@ def dijkstra(graph: TopoGraph,
              origin:str,
              destination:str,
              cost: _WEIGHT_COST_TYPE,
-             available_mobility_services:Union[List[str], None]) -> Path:
+             available_layers:Union[List[str], None]) -> Path:
     """Simple dijkstra shortest path algorithm, it set the `path` attribute of the User with the computed shortest
     path
 
@@ -127,9 +127,9 @@ def dijkstra(graph: TopoGraph,
                 link = graph.links[(u, neighbor)]
                 alt = dist[u] + cost_func(graph.links[(u, neighbor)].costs)
                 if isinstance(link, TransitLink):
-                    if available_mobility_services is not None:
-                        dnode_mobility_service = graph.nodes[link.downstream_node].layer
-                        if dnode_mobility_service is not None and dnode_mobility_service not in available_mobility_services:
+                    if available_layers is not None:
+                        dnode_layer = graph.nodes[link.downstream_node].layer
+                        if dnode_layer is not None and dnode_layer not in available_layers:
                             alt = float('inf')
 
                 if alt < dist[neighbor]:
@@ -139,7 +139,7 @@ def dijkstra(graph: TopoGraph,
     return Path(float('inf'))
 
 
-def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE, available_mobility_services:Union[List[str], None]) -> Path:
+def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE, available_layers:Union[List[str], None]) -> Path:
     """
     Bidirectional dijkstra algorithm (inspired from NetworkX implementation: https://github.com/networkx/networkx/blob/networkx-2.7.1/networkx/algorithms/shortest_paths/weighted.py#L2229)
 
@@ -149,7 +149,7 @@ def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: 
     origin
     destination
     cost
-    available_mobility_services
+    available_layers
 
     Returns
     -------
@@ -191,9 +191,9 @@ def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: 
             link = graph.links[nodes[dir]]
             alt = du + cost_func(link.costs)
             if isinstance(link, TransitLink):
-                if available_mobility_services is not None:
-                    dnode_mobility_service = graph.nodes[link.downstream_node].layer
-                    if dnode_mobility_service is not None and dnode_mobility_service not in available_mobility_services:
+                if available_layers is not None:
+                    dnode_layer = graph.nodes[link.downstream_node].layer
+                    if dnode_layer is not None and dnode_layer not in available_layers:
                         alt = float('inf')
 
             if v not in seen[dir] or alt < seen[dir][v]:
@@ -212,7 +212,7 @@ def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: 
     return Path(float('inf'))
 
 
-def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE, available_mobility_services:Union[List[str], None], heuristic: Callable[[str, str], float]) -> Path:
+def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE, available_layers:Union[List[str], None], heuristic: Callable[[str, str], float]) -> Path:
     """A* shortest path algorithm, it set the `path` attribute of the User with the computed shortest
     path
 
@@ -266,9 +266,9 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE
             link = graph.links[(current, neighbor)]
             tentative_gscore = gscore[current] + cost_func(link.costs)
             if isinstance(link, TransitLink):
-                if available_mobility_services is not None:
-                    dnode_mobility_service = graph.nodes[link.downstream_node].layer
-                    if dnode_mobility_service is not None and dnode_mobility_service not in available_mobility_services:
+                if available_layers is not None:
+                    dnode_layer = graph.nodes[link.downstream_node].layer
+                    if dnode_layer is not None and dnode_layer not in available_layers:
                         tentative_gscore = float('inf')
                         discovered_nodes.add(neighbor)
 
@@ -359,7 +359,7 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                                                                                    current_radius,
                                                                                    user.available_mobility_service)
 
-            if len(service_nodes_destination) == 0 or len(service_nodes_destination) == 0:
+            if len(service_nodes_origin) == 0 or len(service_nodes_destination) == 0:
                 current_radius += growth_rate_radius
             else:
                 start_node = f"_{user.id}_START"
@@ -381,7 +381,8 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                                            {'travel_time': dist_destination[ind] / walk_speed,
                                             'length': dist_destination[ind]})
 
-                path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
+                # user.available_mobility_service -> user_accessible_layers
+                path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
 
                 # Clean the graph from artificial nodes
 
