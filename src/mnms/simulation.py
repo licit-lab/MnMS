@@ -85,6 +85,13 @@ class Supervisor(object):
         log.info(f'Done [{end - start:.5} s]')
         
     def initialize(self, tstart:Time):
+
+        # Graph initialization
+        for layer in self._graph.layers.values():
+            for link in layer.graph.links.values():
+                link.costs['speed'] = layer.default_speed
+                link.costs['travel_time'] = link.costs['length'] / link.costs['speed']
+
         for layer in self._graph.layers.values():
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
