@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from collections import deque, defaultdict
+from collections import defaultdict
 from copy import deepcopy
-from dataclasses import dataclass, field
-from typing import Callable, Tuple, List, Literal, Deque, FrozenSet, Union, Dict
+from typing import Callable, Tuple, List, Literal, Union, Dict
 from functools import partial
 from queue import PriorityQueue
-from itertools import count
 
 import numpy as np
 
@@ -235,18 +233,16 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE
 
     cost_func = _weight_computation(cost)
 
-    discovered_nodes = {origin}
     prev = defaultdict(lambda : None)
 
     gscore = defaultdict(lambda : float('inf'))
     gscore[origin] = 0
 
-    fscore = defaultdict(lambda : float('inf'))
-    fscore[origin] = 0
+    fscore_queue = PriorityQueue()
+    fscore_queue.put((0, origin))
 
-    while len(discovered_nodes) > 0:
-        d = {v: fscore[v] for v in discovered_nodes}
-        current = min(d, key=d.get)
+    while not fscore_queue.empty():
+        _, current = fscore_queue.get()
         log.debug(f"{dict(prev)}, current: {current}")
         if current == destination:
             nodes = []
@@ -258,8 +254,6 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE
                 nodes.reverse()
             return Path(gscore[destination], nodes)
 
-        discovered_nodes.remove(current)
-
         for neighbor in graph.get_node_neighbors(current):
 
             # Check if next node mobility service is available for the user
@@ -269,15 +263,12 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE
                 if available_layers is not None:
                     dnode_layer = graph.nodes[link.downstream_node].layer
                     if dnode_layer is not None and dnode_layer not in available_layers:
-                        tentative_gscore = float('inf')
-                        discovered_nodes.add(neighbor)
+                        continue
 
             if tentative_gscore < gscore[neighbor]:
                 prev[neighbor] = current
                 gscore[neighbor] = tentative_gscore
-                fscore[neighbor] = gscore[neighbor] + heuristic(current, destination)
-                if neighbor not in discovered_nodes:
-                    discovered_nodes.add(neighbor)
+                fscore_queue.put((tentative_gscore + heuristic(current, destination), neighbor))
 
     return Path(float('inf'))
 
