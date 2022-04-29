@@ -6,7 +6,7 @@ from typing import Type, List
 
 from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService, AbstractMobilityGraphLayer
-from mnms.tools.containers import CostDict
+from mnms.tools.cost import create_service_costs
 from mnms.tools.exceptions import VehicleNotFoundError
 from mnms.tools.time import TimeTable, Time, Dt
 from mnms.vehicles.veh_type import Vehicle, Bus, Metro
@@ -207,7 +207,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
             self.clean_arrived_vehicles(lid)
 
-    def service_level_costs(self, nodes:List[str]) -> CostDict:
+    def service_level_costs(self, nodes:List[str]) -> dict:
         """
         Must return a dict of costs representing the cost of the service computed from a path
         Parameters
@@ -218,9 +218,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         -------
 
         """
-        return CostDict(waiting_time=0,
-                        environmental=0,
-                        currency=0)
+        return create_service_costs()
 
     def __dump__(self):
         return {"TYPE": ".".join([PublicTransportMobilityService.__module__, PublicTransportMobilityService.__name__]),

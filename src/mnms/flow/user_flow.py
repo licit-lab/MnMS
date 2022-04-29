@@ -81,27 +81,27 @@ class UserFlow(object):
 
     def _request_user_vehicles(self, new_users:List[User]):
         for user in new_users:
-            upath = user.path.nodes
-            log.info(f"RERERERTERERE")
+            if user.path is not None:
+                upath = user.path.nodes
 
-            # Setting user initial position
-            self.users[user.id] = user
-            self._transiting[user.id] = user
-            start_node = self._mobility_graph.nodes[user._current_node]
-            start_node_pos = self._graph.flow_graph.nodes[start_node.reference_node].pos
-            user._position = start_node_pos
+                # Setting user initial position
+                self.users[user.id] = user
+                self._transiting[user.id] = user
+                start_node = self._mobility_graph.nodes[user._current_node]
+                start_node_pos = self._graph.flow_graph.nodes[start_node.reference_node].pos
+                user._position = start_node_pos
 
-            # Finding the mobility service associated and request vehicle
-            ind_node_start = upath.index(user._current_node)
-            for ilayer, (layer, slice_nodes) in enumerate(user.path.layers):
-                if slice_nodes.start <= ind_node_start < slice_nodes.stop:
-                    mservice_id = user.path.mobility_services[ilayer]
-                    mservice = self._graph.layers[layer].mobility_services[mservice_id]
-                    log.info(f"Stop {upath[slice_nodes][-1]}, {upath}, {upath[slice_nodes]}")
-                    mservice.request_vehicle(user, upath[slice_nodes][-1])
-                    break
-            else:
-                log.warning(f"No mobility service found for user {user}")
+                # Finding the mobility service associated and request vehicle
+                ind_node_start = upath.index(user._current_node)
+                for ilayer, (layer, slice_nodes) in enumerate(user.path.layers):
+                    if slice_nodes.start <= ind_node_start < slice_nodes.stop:
+                        mservice_id = user.path.mobility_services[ilayer]
+                        mservice = self._graph.layers[layer].mobility_services[mservice_id]
+                        log.info(f"Stop {upath[slice_nodes][-1]}, {upath}, {upath[slice_nodes]}")
+                        mservice.request_vehicle(user, upath[slice_nodes][-1])
+                        break
+                else:
+                    log.warning(f"No mobility service found for user {user}")
 
     def step(self, dt:Dt, new_users:List[User]):
         log.info(f"Step User Flow {self._tcurrent}")

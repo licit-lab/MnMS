@@ -198,7 +198,7 @@ class Supervisor(object):
                 log.error(f"Simulation failed at {self.tcurrent}, writing a report at {report_file}")
 
                 with open(report_file, 'w') as f:
-                    json.dump(self.create_crash_report(affectation_step, flow_step), f)
+                    json.dump(self.create_crash_report(affectation_step, flow_step), f, indent=4)
                 sys.exit(-1)
 
         self._flow_motor.finalize()
