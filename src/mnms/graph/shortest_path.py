@@ -593,7 +593,7 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                             for p in paths:
                                 p = set(p.nodes)
                                 if p == current_path:
-                                    similar_path += 1
+                                    consecutive_run_number += 1
                                     break
                             else:
                                 computed_paths += 1
@@ -603,10 +603,6 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                             computed_paths += 1
                             paths.append(path)
                             penalized_costs.append(path.path_cost)
-
-                        if similar_path > 3:
-                            log.warning(f'Cant find different paths user {user}')
-                            break
 
                     for lnodes, saved_cost in modified_link_cost.items():
                         mmgraph.mobility_graph.links[lnodes].costs = saved_cost
