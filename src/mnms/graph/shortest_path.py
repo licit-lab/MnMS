@@ -462,7 +462,8 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                                  scale_factor: float = 10,
                                  radius:float = 500,
                                  growth_rate_radius: float = 50,
-                                 walk_speed: float = 1.4) -> Tuple[List[Path], List[float]]:
+                                 walk_speed: float = 1.4,
+                                 max_consecutive_run: int = 10) -> Tuple[List[Path], List[float]]:
     """Compute n best shortest path by increasing the costs of the links previously found as shortest path.
 
     Parameters
@@ -487,6 +488,9 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
         The radius growth if no path is found from origin to destination if User origin/destination are coordinates
     walk_speed: float
         The walk speed in m/s
+    max_consecutive_run: int
+        Number of consecutive shortest path computation, if the number of consecutive shortest path is beyond returns the
+        already computed shortest paths
 
     Returns
     -------
@@ -559,9 +563,13 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                 path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
 
                 if path.path_cost != float('inf'):
-                    counter = 0
-                    similar_path = 0
-                    while counter < npath:
+                    computed_paths = 0
+                    consecutive_run_number = 0
+                    while computed_paths < npath:
+                        if consecutive_run_number > max_consecutive_run:
+                            log.warning(
+                                f'Reach max number of shortest path computation ({max_consecutive_run}), returning the already computed paths')
+                            break
                         path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
 
                         del path.nodes[0]
@@ -588,11 +596,11 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                                     similar_path += 1
                                     break
                             else:
-                                counter += 1
+                                computed_paths += 1
                                 paths.append(path)
                                 penalized_costs.append(path.path_cost)
                         else:
-                            counter += 1
+                            computed_paths += 1
                             paths.append(path)
                             penalized_costs.append(path.path_cost)
 
@@ -628,8 +636,12 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
 
     else:
 
-        counter = 0
-        while counter < npath:
+        computed_paths = 0
+        consecutive_run_number = 0
+        while computed_paths < npath:
+            if consecutive_run_number > max_consecutive_run:
+                log.warning(f'Reach max number of shortest path computation ({max_consecutive_run}), returning the already computed paths')
+                break
             path = compute_shortest_path(mmgraph, user, cost, algorithm, heuristic)
             for ni in range(len(path.nodes) - 1):
                 nj = ni + 1
@@ -643,13 +655,16 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                 for p in paths:
                     p = set(p.nodes)
                     if p == current_path:
+                        consecutive_run_number += 1
                         break
                 else:
-                    counter += 1
+                    consecutive_run_number = 0
+                    computed_paths += 1
                     paths.append(path)
                     penalized_costs.append(path.path_cost)
             else:
-                counter += 1
+                consecutive_run_number = 0
+                computed_paths += 1
                 paths.append(path)
                 penalized_costs.append(path.path_cost)
 
