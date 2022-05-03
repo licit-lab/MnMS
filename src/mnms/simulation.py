@@ -16,7 +16,6 @@ from mnms.travel_decision.model import AbstractDecisionModel
 from mnms.tools.time import Time, Dt
 from mnms.log import create_logger
 from mnms.tools.exceptions import PathNotFound
-from mnms.tools.progress import ProgressBar
 
 log = create_logger(__name__)
 
@@ -115,7 +114,6 @@ class Supervisor(object):
         self._user_flow.step(flow_dt, users_step)
         self._flow_motor.update_time(flow_dt)
         self._flow_motor.step(flow_dt)
-        
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:

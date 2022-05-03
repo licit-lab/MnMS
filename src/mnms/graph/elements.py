@@ -155,7 +155,7 @@ class ConnectionLink(GraphElement):
         return {'ID': self.id,
                 'UPSTREAM': self.upstream_node,
                 'DOWNSTREAM': self.downstream_node,
-                'COSTS': {key: val for key, val in self.costs.items() if key != "_default"},
+                'COSTS': {key: val for key, val in self.costs.items() if key not in ("_default", 'speed')},
                 'REF_LINKS': self.reference_links,
                 'REF_LANE_IDS': self.reference_lane_ids,
                 'LAYER': self.layer}
@@ -207,7 +207,7 @@ class TransitLink(GraphElement):
         return {'ID': self.id,
                 'UPSTREAM': self.upstream_node,
                 'DOWNSTREAM': self.downstream_node,
-                'COSTS': {key: val for key, val in self.costs.items() if key != "_default"}}
+                'COSTS': {key: val for key, val in self.costs.items() if key not in ("_default", 'speed')}}
 
     def __deepcopy__(self, memodict={}):
         cls = self.__class__

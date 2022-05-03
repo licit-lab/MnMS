@@ -586,7 +586,7 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                             link = topograph_links[(path.nodes[ni], path.nodes[nj])]
                             if (path.nodes[ni], path.nodes[nj]) not in modified_link_cost:
                                 modified_link_cost[(path.nodes[ni], path.nodes[nj])] = deepcopy(link.costs)
-                            link.costs.update_from_dict({k: v * scale_factor for k, v in link.costs.items()})
+                            link.costs.update({k: v * scale_factor for k, v in link.costs.items()})
 
                         if len(paths) > 0:
                             current_path = set(path.nodes)

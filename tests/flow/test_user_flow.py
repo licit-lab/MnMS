@@ -85,5 +85,5 @@ class TestUserFlow(unittest.TestCase):
                            ['C0', 'C1', 'C2', 'B2', 'B3', 'B4']))
         self.user_flow.step(Dt(minutes=1), [user])
 
-        self.assertIn('UO', self.user_flow.users)
+        self.assertIn('U0', self.user_flow.users)
         pass
