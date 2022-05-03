@@ -29,6 +29,11 @@ class VehicleManager(object):
         del VehicleManager._vehicles[veh._global_id]
         VehicleManager._type_vehicles[veh.type].remove(veh._global_id)
 
+    def empty(self):
+        VehicleManager._vehicles = dict()
+        VehicleManager._type_vehicles = dict()
+        VehicleManager._new_vehicles = list()
+
 
 if __name__ == "__main__":
     from mnms.vehicles.veh_type import Car

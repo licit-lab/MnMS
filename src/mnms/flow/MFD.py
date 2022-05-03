@@ -56,8 +56,8 @@ class MFDFlow(AbstractFlowMotor):
         if outfile is not None:
             self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'MODE', 'SPEED', 'ACCUMULATION'])
 
-        self.reservoirs = None
-        self.users = None
+        self.reservoirs: List[Reservoir] = list()
+        self.users = dict()
 
         self.dict_accumulations = None
         self.dict_speeds = None
@@ -66,8 +66,6 @@ class MFDFlow(AbstractFlowMotor):
         self.veh_manager = None
 
     def initialize(self):
-        self.reservoirs: List[Reservoir] = list()
-        self.users = dict()
 
         self.dict_accumulations = {}
         self.dict_speeds = {}
