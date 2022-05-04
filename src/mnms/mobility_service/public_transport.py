@@ -242,6 +242,7 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
 
     """
     def __init__(self, id:str, veh_type:Type[Vehicle], default_speed:float, services:List[PublicTransportMobilityService]=None, observer=None):
+        assert issubclass(veh_type, Vehicle)
         super(PublicTransportGraphLayer, self).__init__(id, veh_type, default_speed, services, observer)
         self.lines = dict()
         self.line_connections = []
@@ -249,18 +250,6 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
     def add_mobility_service(self, service:"AbstractMobilityService"):
         assert isinstance(service, PublicTransportMobilityService), f"PublicTransportGraphLayer only accept mobility services with type PublicTransportMobilityService"
         super(PublicTransportGraphLayer, self).add_mobility_service(service)
-
-    def add_line(self, lid: str, timetable: "TimeTable") -> Line:
-        new_line = Line(lid, self, timetable)
-        self.lines[lid] = new_line
-        for service in self.mobility_services.values():
-            timetable_iter = iter(timetable.table)
-            service._timetable_iter[lid] = iter(timetable.table)
-            service._current_time_table[lid] = next(timetable_iter)
-            service._next_time_table[lid] = next(timetable_iter)
-
-        return new_line
-
 
     def add_line(self, lid: str, timetable: "TimeTable") -> Line:
         new_line = Line(lid, self, timetable)

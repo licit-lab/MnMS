@@ -1,6 +1,8 @@
 '''
 Implement a xml parser of symuflow input to get a MultiModdalGraph
 '''
+import argparse
+import os
 
 from lxml import etree
 from collections import defaultdict
@@ -9,13 +11,20 @@ import numpy as np
 from mnms.graph import MultiModalGraph
 from mnms.graph.io import save_graph
 from mnms.tools.time import Time, TimeTable, Dt
-from mnms.mobility_service.car import CarMobilityGraphLayer
+from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportGraphLayer, PublicTransportMobilityService
-from mnms import log as rootlogger
-from mnms.log import LOGLEVEL
+from mnms.vehicles.veh_type import Bus, Metro, Tram
+from mnms.log import LOGLEVEL, create_logger
+
+log = create_logger('symuflow_conversion')
 
 
-def convert_symuflow_to_mmgraph(file, zone_file:str=None, ban_mobility_services=[]):
+_veh_type_convertor = {'METRO': Metro,
+                       'BUS': Bus,
+                       'TRAM': Tram}
+
+
+def convert_symuflow_to_mmgraph(file, output_dir, zone_file:str=None):
     
     tree = etree.parse(file)
     root = tree.getroot()
@@ -64,7 +73,7 @@ def convert_symuflow_to_mmgraph(file, zone_file:str=None, ban_mobility_services=
                 node_car.add(down_nid)
 
         elif tr.find('VOIES_RESERVEES') is not None:
-            print("RESERVED LANE", lid)
+            # print("RESERVED LANE", lid)
             nb_reserved_lane = sum(1 for _ in tr.iter("VOIE_RESERVEE"))
             if nb_reserved_lane != nb_lane:
                 link_car.add(lid)
@@ -118,11 +127,6 @@ def convert_symuflow_to_mmgraph(file, zone_file:str=None, ban_mobility_services=
         links[down_new_lid] = {'UPSTREAM': stop_id, 'DOWNSTREAM': downstream, 'ID': down_new_lid, 'LENGTH': None, "NB_LANE": 1}
         link_to_del[tr_id] = (up_new_lid, down_new_lid)
 
-        # if tr_id in link_car:
-        #     link_car.add(up_new_lid)
-        #     link_car.add(down_new_lid)
-        #     node_car.add(stop_id)
-
     for lid in link_to_del:
         del links[lid]
         link_car.discard(lid)
@@ -136,17 +140,18 @@ def convert_symuflow_to_mmgraph(file, zone_file:str=None, ban_mobility_services=
         try:
             flow_graph.add_link(l['ID'], l['UPSTREAM'], l['DOWNSTREAM'], length=l['LENGTH'], nb_lane=l['NB_LANE'])
         except AssertionError:
-            rootlogger.warning(f"Skipping troncon: {l['ID']}, nodes {(l['UPSTREAM'], l['DOWNSTREAM'])} already connected")
+            log.warning(f"Skipping troncon: {l['ID']}, nodes already connected")
             already_present_link[l['ID']] = flow_graph.links[(l['UPSTREAM'], l['DOWNSTREAM'])].id
             num_skip += 1
-    rootlogger.warning(f"Number of skipped link: {num_skip}")
+    log.warning(f"Number of skipped link: {num_skip}")
     
     
     #------------
     # Builds the layer of the passenger vehicles 
     #------------
     
-    car = CarMobilityGraphLayer('CAR', speed_car)
+    car = CarMobilityGraphLayer('CARLayer', speed_car)
+    car.add_mobility_service(PersonalCarMobilityService())
 
     [car.add_node(n, n) for n in node_car]
     for l in link_car:
@@ -154,7 +159,7 @@ def convert_symuflow_to_mmgraph(file, zone_file:str=None, ban_mobility_services=
             upstream = links[l]['UPSTREAM']
             downstream = links[l]['DOWNSTREAM']
             length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-            car.add_link(l, upstream, downstream, reference_links=[l], costs={'time': length/min(links[l].get('VIT_REG', speed_car), speed_car), 'length': length} )
+            car.add_link(l, upstream, downstream, reference_links=[l], costs={'travel_time': length/min(links[l].get('VIT_REG', speed_car), speed_car), 'length': length} )
 
     G.add_layer(car)
 
@@ -176,14 +181,13 @@ def convert_symuflow_to_mmgraph(file, zone_file:str=None, ban_mobility_services=
         
         if pt_type not in pt_types:
             pt_types.append(pt_type)
-            public_transport = PublicTransportGraphLayer(pt_type+'Layer', veh_type_ids, veh_speeds[pt_type], services=[PublicTransportMobilityService(pt_type)])
+            public_transport = PublicTransportGraphLayer(pt_type+'Layer', _veh_type_convertor[pt_type], veh_speeds[pt_type], services=[PublicTransportMobilityService(pt_type)])
             G.add_layer(public_transport)
         else:
             public_transport = G.layers[pt_type+'Layer']
                  
         # Loads timetable    
         cal_elem = line_elem.xpath("CALENDRIER")[0]
-        print(line_elem.attrib['id'])
 
         freq_elem = cal_elem.xpath('FREQUENCE')
         if len(freq_elem) > 0:
@@ -191,7 +195,6 @@ def convert_symuflow_to_mmgraph(file, zone_file:str=None, ban_mobility_services=
             start = freq_elem.attrib["heuredepart"]
             end = freq_elem.attrib["heurefin"]
             freq = freq_elem.attrib["frequence"]
-            # print(freq_elem)
             line_timetable = TimeTable.create_table_freq(start, end, Dt(seconds=float(freq)))
         else:
             line_timetable = TimeTable()
@@ -200,58 +203,59 @@ def convert_symuflow_to_mmgraph(file, zone_file:str=None, ban_mobility_services=
                 line_timetable.table.append(Time(time_elem.attrib['heuredepart']))
 
         if len(line_timetable.table) == 0:
-            rootlogger.warning(f'There is an empty TimeTable for {line_id}')
+            log.warning(f"There is an empty TimeTable for {line_id}, skipping this one")
+        else:
 
-        new_line = public_transport.add_line(line_id, line_timetable)
-        
-        service_nodes = set()
-        service_links = set()
-        troncons_elem = line_elem.xpath("TRONCONS")[0]
-        
-        for tr_elem in troncons_elem.iter('TRONCON'):
-            tr_id = tr_elem.attrib['id']
-            # print(tr_id)
-            if tr_id in link_to_del:
-                up_lid, down_lid = link_to_del[tr_id]
-                up_node = links[up_lid]['UPSTREAM']
-                down_node = links[up_lid]['DOWNSTREAM']
-                service_nodes.add(up_node)
-                service_nodes.add(down_node)
-                service_links.add(up_lid)
+            new_line = public_transport.add_line(line_id, line_timetable)
 
-                up_node = links[down_lid]['UPSTREAM']
-                down_node = links[down_lid]['DOWNSTREAM']
-                service_nodes.add(up_node)
-                service_nodes.add(down_node)
-                service_links.add(down_lid)
-            else:
-                # print('TR IS NOT DELETED')
-                up_node = links[tr_id]['UPSTREAM']
-                down_node = links[tr_id]['DOWNSTREAM']
-                service_nodes.add(up_node)
-                service_nodes.add(down_node)
-                service_links.add(tr_id)
-                # print(up_node, down_node)
-        for n in service_nodes:
-            new_line.add_stop(n, n)
+            service_nodes = set()
+            service_links = set()
+            troncons_elem = line_elem.xpath("TRONCONS")[0]
 
-        for l in service_links:
-            if l in already_present_link:
-                l = already_present_link[l]
-            up = links[l]['UPSTREAM']
-            down = links[l]['DOWNSTREAM']
-            length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-            costs = {'travel_time': length/min(links[l].get('VIT_REG', veh_speeds[pt_type]), veh_speeds[pt_type]),'waiting_time':0.0'}
-            new_line.connect_stops(l, up, down, length, costs=costs, reference_links=[l])
+            for tr_elem in troncons_elem.iter('TRONCON'):
+                tr_id = tr_elem.attrib['id']
+                # print(tr_id)
+                if tr_id in link_to_del:
+                    up_lid, down_lid = link_to_del[tr_id]
+                    up_node = links[up_lid]['UPSTREAM']
+                    down_node = links[up_lid]['DOWNSTREAM']
+                    service_nodes.add(up_node)
+                    service_nodes.add(down_node)
+                    service_links.add(up_lid)
+
+                    up_node = links[down_lid]['UPSTREAM']
+                    down_node = links[down_lid]['DOWNSTREAM']
+                    service_nodes.add(up_node)
+                    service_nodes.add(down_node)
+                    service_links.add(down_lid)
+                else:
+                    # print('TR IS NOT DELETED')
+                    up_node = links[tr_id]['UPSTREAM']
+                    down_node = links[tr_id]['DOWNSTREAM']
+                    service_nodes.add(up_node)
+                    service_nodes.add(down_node)
+                    service_links.add(tr_id)
+                    # print(up_node, down_node)
+            for n in service_nodes:
+                new_line.add_stop(line_id+'_'+n, n)
+
+            for l in service_links:
+                if l in already_present_link:
+                    l = already_present_link[l]
+                up = links[l]['UPSTREAM']
+                down = links[l]['DOWNSTREAM']
+                length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
+                costs = {'travel_time': length/min(links[l].get('VIT_REG', veh_speeds[pt_type]), veh_speeds[pt_type]),'waiting_time':0.0}
+                new_line.connect_stops(line_id+'_'+l, line_id+'_'+up, line_id+'_'+down, length, costs=costs, reference_links=[l])
  
     G.mobility_graph.check()
-    rootlogger.info("Flow Graph:")
-    rootlogger.info(f"Number of nodes: {G.flow_graph.nb_nodes}")
-    rootlogger.info(f"Number of links: {G.flow_graph.nb_links}")
-    rootlogger.info("Mobility Graph:")
-    rootlogger.info(f"Number of nodes: {G.mobility_graph.nb_nodes}")
-    rootlogger.info(f"Number of links: {G.mobility_graph.nb_links}")
-    rootlogger.info(f"Mobility services: {list(G._mobility_services.keys())}")
+    log.info("Flow Graph:")
+    log.info(f"Number of nodes: {G.flow_graph.nb_nodes}")
+    log.info(f"Number of links: {G.flow_graph.nb_links}")
+    log.info("Mobility Graph:")
+    log.info(f"Number of nodes: {G.mobility_graph.nb_nodes}")
+    log.info(f"Number of links: {G.mobility_graph.nb_links}")
+    log.info(f"Layers: {list(G.layers.keys())}")
 
     if zone_file is not None:
         zone_dict = defaultdict(set)
@@ -269,10 +273,36 @@ def convert_symuflow_to_mmgraph(file, zone_file:str=None, ban_mobility_services=
             links = [l for l in links if l in G.flow_graph._map_lid_nodes]
             G.add_zone(zone, links)
 
-    save_graph(G, file.replace('.xml', '.json'), indent=1)
+    save_graph(G, output_dir+'/'+os.path.basename(file).replace('.xml', '.json'), indent=1)
+
+
+def _path_file_type(path):
+    if os.path.isfile(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(f"{path} is not a valid path")
+
+
+def _path_dir_type(path):
+    if os.path.isdir(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(f"{path} is not a valid path")
 
 
 if __name__ == "__main__":
-    rootlogger.setLevel(LOGLEVEL.INFO)
-    convert_symuflow_to_mmgraph(r"/Volumes/Data/Dropbox (LICIT_LAB)/MnMS/Lyon/Lyon_symuviainput_1.xml",
-                                zone_file=r"/Volumes/Data/Dropbox (LICIT_LAB)/MnMS/Lyon/fichier_liens_Without_RES0.csv")
+
+    convert_symuflow_to_mmgraph('/home/florian/Work/UGE/MnMS/test_v2/issue_dulicate_bus_stop/Lyon_symuviainput_1.xml',
+                                '/home/florian/Work/UGE/MnMS/test_v2/issue_dulicate_bus_stop')
+
+    # parser = argparse.ArgumentParser(description='Convert Symuflow XML graph to mnms JSON graph')
+    # parser.add_argument('symuflow_graph', type=_path_file_type, help='Path to the SymuFlow XML file')
+    # parser.add_argument('--zone_file', type=_path_file_type, help='Path to zones')
+    # parser.add_argument('--output_dir', default=os.getcwd(), type=_path_dir_type, help='Path to the output dir')
+    #
+    # args = parser.parse_args()
+    #
+    # log.setLevel(LOGLEVEL.INFO)
+    # convert_symuflow_to_mmgraph(args.symuflow_graph,
+    #                             args.output_dir,
+    #                             zone_file=args.zone_file)
