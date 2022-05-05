@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from collections import deque, defaultdict
+from collections import defaultdict
 from copy import deepcopy
-from dataclasses import dataclass, field
-from typing import Callable, Tuple, List, Literal, Deque, FrozenSet, Union, Dict
+from typing import Callable, Tuple, List, Literal, Union, Dict
 from functools import partial
 from queue import PriorityQueue
-from itertools import count
 
 import numpy as np
 
@@ -68,7 +66,7 @@ def dijkstra(graph: TopoGraph,
              origin:str,
              destination:str,
              cost: _WEIGHT_COST_TYPE,
-             available_mobility_services:Union[List[str], None]) -> Path:
+             available_layers:Union[List[str], None]) -> Path:
     """Simple dijkstra shortest path algorithm, it set the `path` attribute of the User with the computed shortest
     path
 
@@ -127,9 +125,9 @@ def dijkstra(graph: TopoGraph,
                 link = graph.links[(u, neighbor)]
                 alt = dist[u] + cost_func(graph.links[(u, neighbor)].costs)
                 if isinstance(link, TransitLink):
-                    if available_mobility_services is not None:
-                        dnode_mobility_service = graph.nodes[link.downstream_node].layer
-                        if dnode_mobility_service is not None and dnode_mobility_service not in available_mobility_services:
+                    if available_layers is not None:
+                        dnode_layer = graph.nodes[link.downstream_node].layer
+                        if dnode_layer is not None and dnode_layer not in available_layers:
                             alt = float('inf')
 
                 if alt < dist[neighbor]:
@@ -139,7 +137,7 @@ def dijkstra(graph: TopoGraph,
     return Path(float('inf'))
 
 
-def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE, available_mobility_services:Union[List[str], None]) -> Path:
+def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE, available_layers:Union[List[str], None]) -> Path:
     """
     Bidirectional dijkstra algorithm (inspired from NetworkX implementation: https://github.com/networkx/networkx/blob/networkx-2.7.1/networkx/algorithms/shortest_paths/weighted.py#L2229)
 
@@ -149,7 +147,7 @@ def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: 
     origin
     destination
     cost
-    available_mobility_services
+    available_layers
 
     Returns
     -------
@@ -191,9 +189,9 @@ def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: 
             link = graph.links[nodes[dir]]
             alt = du + cost_func(link.costs)
             if isinstance(link, TransitLink):
-                if available_mobility_services is not None:
-                    dnode_mobility_service = graph.nodes[link.downstream_node].layer
-                    if dnode_mobility_service is not None and dnode_mobility_service not in available_mobility_services:
+                if available_layers is not None:
+                    dnode_layer = graph.nodes[link.downstream_node].layer
+                    if dnode_layer is not None and dnode_layer not in available_layers:
                         alt = float('inf')
 
             if v not in seen[dir] or alt < seen[dir][v]:
@@ -212,7 +210,7 @@ def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: 
     return Path(float('inf'))
 
 
-def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE, available_mobility_services:Union[List[str], None], heuristic: Callable[[str, str], float]) -> Path:
+def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE, available_layers:Union[List[str], None], heuristic: Callable[[str, str], float]) -> Path:
     """A* shortest path algorithm, it set the `path` attribute of the User with the computed shortest
     path
 
@@ -235,18 +233,16 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE
 
     cost_func = _weight_computation(cost)
 
-    discovered_nodes = {origin}
     prev = defaultdict(lambda : None)
 
     gscore = defaultdict(lambda : float('inf'))
     gscore[origin] = 0
 
-    fscore = defaultdict(lambda : float('inf'))
-    fscore[origin] = 0
+    fscore_queue = PriorityQueue()
+    fscore_queue.put((0, origin))
 
-    while len(discovered_nodes) > 0:
-        d = {v: fscore[v] for v in discovered_nodes}
-        current = min(d, key=d.get)
+    while not fscore_queue.empty():
+        _, current = fscore_queue.get()
         log.debug(f"{dict(prev)}, current: {current}")
         if current == destination:
             nodes = []
@@ -258,26 +254,21 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE
                 nodes.reverse()
             return Path(gscore[destination], nodes)
 
-        discovered_nodes.remove(current)
-
         for neighbor in graph.get_node_neighbors(current):
 
             # Check if next node mobility service is available for the user
             link = graph.links[(current, neighbor)]
             tentative_gscore = gscore[current] + cost_func(link.costs)
             if isinstance(link, TransitLink):
-                if available_mobility_services is not None:
-                    dnode_mobility_service = graph.nodes[link.downstream_node].layer
-                    if dnode_mobility_service is not None and dnode_mobility_service not in available_mobility_services:
-                        tentative_gscore = float('inf')
-                        discovered_nodes.add(neighbor)
+                if available_layers is not None:
+                    dnode_layer = graph.nodes[link.downstream_node].layer
+                    if dnode_layer is not None and dnode_layer not in available_layers:
+                        continue
 
             if tentative_gscore < gscore[neighbor]:
                 prev[neighbor] = current
                 gscore[neighbor] = tentative_gscore
-                fscore[neighbor] = gscore[neighbor] + heuristic(current, destination)
-                if neighbor not in discovered_nodes:
-                    discovered_nodes.add(neighbor)
+                fscore_queue.put((tentative_gscore + heuristic(current, destination), neighbor))
 
     return Path(float('inf'))
 
@@ -359,7 +350,7 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                                                                                    current_radius,
                                                                                    user.available_mobility_service)
 
-            if len(service_nodes_destination) == 0 or len(service_nodes_destination) == 0:
+            if len(service_nodes_origin) == 0 or len(service_nodes_destination) == 0:
                 current_radius += growth_rate_radius
             else:
                 start_node = f"_{user.id}_START"
@@ -381,7 +372,8 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                                            {'travel_time': dist_destination[ind] / walk_speed,
                                             'length': dist_destination[ind]})
 
-                path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user.available_mobility_service)
+                # user.available_mobility_service -> user_accessible_layers
+                path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
 
                 # Clean the graph from artificial nodes
 
@@ -470,7 +462,8 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                                  scale_factor: float = 10,
                                  radius:float = 500,
                                  growth_rate_radius: float = 50,
-                                 walk_speed: float = 1.4) -> Tuple[List[Path], List[float]]:
+                                 walk_speed: float = 1.4,
+                                 max_consecutive_run: int = 10) -> Tuple[List[Path], List[float]]:
     """Compute n best shortest path by increasing the costs of the links previously found as shortest path.
 
     Parameters
@@ -495,6 +488,9 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
         The radius growth if no path is found from origin to destination if User origin/destination are coordinates
     walk_speed: float
         The walk speed in m/s
+    max_consecutive_run: int
+        Number of consecutive shortest path computation, if the number of consecutive shortest path is beyond returns the
+        already computed shortest paths
 
     Returns
     -------
@@ -567,9 +563,13 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                 path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
 
                 if path.path_cost != float('inf'):
-                    counter = 0
-                    similar_path = 0
-                    while counter < npath:
+                    computed_paths = 0
+                    consecutive_run_number = 0
+                    while computed_paths < npath:
+                        if consecutive_run_number > max_consecutive_run:
+                            log.warning(
+                                f'Reach max number of shortest path computation ({max_consecutive_run}), returning the already computed paths')
+                            break
                         path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
 
                         del path.nodes[0]
@@ -586,27 +586,23 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                             link = topograph_links[(path.nodes[ni], path.nodes[nj])]
                             if (path.nodes[ni], path.nodes[nj]) not in modified_link_cost:
                                 modified_link_cost[(path.nodes[ni], path.nodes[nj])] = deepcopy(link.costs)
-                            link.costs.update_from_dict({k: v * scale_factor for k, v in link.costs.items()})
+                            link.costs.update({k: v * scale_factor for k, v in link.costs.items()})
 
                         if len(paths) > 0:
                             current_path = set(path.nodes)
                             for p in paths:
                                 p = set(p.nodes)
                                 if p == current_path:
-                                    similar_path += 1
+                                    consecutive_run_number += 1
                                     break
                             else:
-                                counter += 1
+                                computed_paths += 1
                                 paths.append(path)
                                 penalized_costs.append(path.path_cost)
                         else:
-                            counter += 1
+                            computed_paths += 1
                             paths.append(path)
                             penalized_costs.append(path.path_cost)
-
-                        if similar_path > 3:
-                            log.warning(f'Cant find different paths user {user}')
-                            break
 
                     for lnodes, saved_cost in modified_link_cost.items():
                         mmgraph.mobility_graph.links[lnodes].costs = saved_cost
@@ -636,28 +632,35 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
 
     else:
 
-        counter = 0
-        while counter < npath:
+        computed_paths = 0
+        consecutive_run_number = 0
+        while computed_paths < npath:
+            if consecutive_run_number > max_consecutive_run:
+                log.warning(f'Reach max number of shortest path computation ({max_consecutive_run}), returning the already computed paths')
+                break
             path = compute_shortest_path(mmgraph, user, cost, algorithm, heuristic)
             for ni in range(len(path.nodes) - 1):
                 nj = ni + 1
                 link = topograph_links[(path.nodes[ni], path.nodes[nj])]
                 if (path.nodes[ni], path.nodes[nj]) not in modified_link_cost:
                     modified_link_cost[(path.nodes[ni], path.nodes[nj])] = deepcopy(link.costs)
-                link.costs.update_from_dict({k: v * scale_factor for k, v in link.costs.items()})
+                link.costs.update({k: v * scale_factor for k, v in link.costs.items()})
 
             if len(paths) > 0:
                 current_path = set(path.nodes)
                 for p in paths:
                     p = set(p.nodes)
                     if p == current_path:
+                        consecutive_run_number += 1
                         break
                 else:
-                    counter += 1
+                    consecutive_run_number = 0
+                    computed_paths += 1
                     paths.append(path)
                     penalized_costs.append(path.path_cost)
             else:
-                counter += 1
+                consecutive_run_number = 0
+                computed_paths += 1
                 paths.append(path)
                 penalized_costs.append(path.path_cost)
 

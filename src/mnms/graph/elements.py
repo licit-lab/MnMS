@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import List, FrozenSet
+from typing import List, FrozenSet, Dict
 
 import numpy as np
 
-from mnms.tools.containers import CostDict
+from mnms.tools.cost import create_link_costs
 
 
 class GraphElement(ABC):
@@ -131,12 +131,10 @@ class ConnectionLink(GraphElement):
         super(ConnectionLink, self).__init__(lid)
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
-        self.costs: CostDict = CostDict(travel_time= 0,
-                                        waiting_time=0,
-                                        length=0,
-                                        _default=1)
+        self.costs: Dict = create_link_costs()
+
         if costs is not None:
-            self.costs.update_from_dict(costs)
+            self.costs.update(costs)
         self.reference_links = reference_links if reference_links is not None else []
         self.reference_lane_ids = []
         self.layer = layer
@@ -157,7 +155,7 @@ class ConnectionLink(GraphElement):
         return {'ID': self.id,
                 'UPSTREAM': self.upstream_node,
                 'DOWNSTREAM': self.downstream_node,
-                'COSTS': {key: val for key, val in self.costs.items() if key != "_default"},
+                'COSTS': {key: val for key, val in self.costs.items() if key not in ("_default", 'speed')},
                 'REF_LINKS': self.reference_links,
                 'REF_LANE_IDS': self.reference_lane_ids,
                 'LAYER': self.layer}
@@ -194,12 +192,9 @@ class TransitLink(GraphElement):
         super(TransitLink, self).__init__(lid)
         self.upstream_node = upstream_node
         self.downstream_node = downstream_node
-        self.costs: CostDict = CostDict(travel_time= 0,
-                                        waiting_time=0,
-                                        length=0,
-                                        _default=1)
+        self.costs: Dict = create_link_costs()
         if costs is not None:
-            self.costs.update_from_dict(costs)
+            self.costs.update(costs)
 
     def __repr__(self):
         return f"TransitLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
@@ -212,7 +207,7 @@ class TransitLink(GraphElement):
         return {'ID': self.id,
                 'UPSTREAM': self.upstream_node,
                 'DOWNSTREAM': self.downstream_node,
-                'COSTS': {key: val for key, val in self.costs.items() if key != "_default"}}
+                'COSTS': {key: val for key, val in self.costs.items() if key not in ("_default", 'speed')}}
 
     def __deepcopy__(self, memodict={}):
         cls = self.__class__

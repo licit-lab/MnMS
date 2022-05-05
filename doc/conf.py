@@ -91,5 +91,6 @@ if not os.path.isdir(destdir):
     os.makedirs(destdir)
 
 nbsphinx_execute = 'always'
+nbsphinx_allow_errors = True
 
 main(['-e', '-o', destdir, '-d', '4', '-s', source_suffix[1:], '--force', src_dir])

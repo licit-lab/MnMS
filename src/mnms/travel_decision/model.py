@@ -80,7 +80,7 @@ class AbstractDecisionModel(ABC):
                  heuristic=None,
                  outfile:str=None,
                  verbose_file=False,
-                 cost:str='time'):
+                 cost:str='travel_time'):
 
         self._n_shortest_path = n_shortest_path
         self._radius_sp = radius_sp

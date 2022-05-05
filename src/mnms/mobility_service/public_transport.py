@@ -6,7 +6,7 @@ from typing import Type, List
 
 from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService, AbstractMobilityGraphLayer
-from mnms.tools.containers import CostDict
+from mnms.tools.cost import create_service_costs
 from mnms.tools.exceptions import VehicleNotFoundError
 from mnms.tools.time import TimeTable, Time, Dt
 from mnms.vehicles.veh_type import Vehicle, Bus, Metro
@@ -207,7 +207,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
             self.clean_arrived_vehicles(lid)
 
-    def service_level_costs(self, nodes:List[str]) -> CostDict:
+    def service_level_costs(self, nodes:List[str]) -> dict:
         """
         Must return a dict of costs representing the cost of the service computed from a path
         Parameters
@@ -218,9 +218,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         -------
 
         """
-        return CostDict(waiting_time=0,
-                        environmental=0,
-                        currency=0)
+        return create_service_costs()
 
     def __dump__(self):
         return {"TYPE": ".".join([PublicTransportMobilityService.__module__, PublicTransportMobilityService.__name__]),
@@ -244,6 +242,7 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
 
     """
     def __init__(self, id:str, veh_type:Type[Vehicle], default_speed:float, services:List[PublicTransportMobilityService]=None, observer=None):
+        assert issubclass(veh_type, Vehicle)
         super(PublicTransportGraphLayer, self).__init__(id, veh_type, default_speed, services, observer)
         self.lines = dict()
         self.line_connections = []
@@ -251,18 +250,6 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
     def add_mobility_service(self, service:"AbstractMobilityService"):
         assert isinstance(service, PublicTransportMobilityService), f"PublicTransportGraphLayer only accept mobility services with type PublicTransportMobilityService"
         super(PublicTransportGraphLayer, self).add_mobility_service(service)
-
-    def add_line(self, lid: str, timetable: "TimeTable") -> Line:
-        new_line = Line(lid, self, timetable)
-        self.lines[lid] = new_line
-        for service in self.mobility_services.values():
-            timetable_iter = iter(timetable.table)
-            service._timetable_iter[lid] = iter(timetable.table)
-            service._current_time_table[lid] = next(timetable_iter)
-            service._next_time_table[lid] = next(timetable_iter)
-
-        return new_line
-
 
     def add_line(self, lid: str, timetable: "TimeTable") -> Line:
         new_line = Line(lid, self, timetable)

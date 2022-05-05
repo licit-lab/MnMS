@@ -16,7 +16,6 @@ from mnms.travel_decision.model import AbstractDecisionModel
 from mnms.tools.time import Time, Dt
 from mnms.log import create_logger
 from mnms.tools.exceptions import PathNotFound
-from mnms.tools.progress import ProgressBar
 
 log = create_logger(__name__)
 
@@ -85,6 +84,13 @@ class Supervisor(object):
         log.info(f'Done [{end - start:.5} s]')
         
     def initialize(self, tstart:Time):
+
+        # Graph initialization
+        for layer in self._graph.layers.values():
+            for link in layer.graph.links.values():
+                link.costs['speed'] = layer.default_speed
+                link.costs['travel_time'] = link.costs['length'] / link.costs['speed']
+
         for layer in self._graph.layers.values():
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
@@ -103,10 +109,11 @@ class Supervisor(object):
                 mservice.update_time(flow_dt)
             
     def step_flow(self, flow_dt, users_step):
-        self._flow_motor.update_time(flow_dt)
-        self._flow_motor.step(flow_dt)
+        # TO CHECK:in the right order ? (if the other direction, there is a time step difference between the moments of creation of the vehicles and the accumulation)
         self._user_flow.update_time(flow_dt)
         self._user_flow.step(flow_dt, users_step)
+        self._flow_motor.update_time(flow_dt)
+        self._flow_motor.step(flow_dt)
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:
@@ -176,7 +183,7 @@ class Supervisor(object):
                     start = time()
                     t_str = self._flow_motor.time
                     for link in self._graph.mobility_graph.links.values():
-                        self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['time']])
+                        self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['travel_time']])
                     end = time()
                     log.info(f'Done [{end - start:.5} s]')
 
@@ -189,7 +196,7 @@ class Supervisor(object):
                 log.error(f"Simulation failed at {self.tcurrent}, writing a report at {report_file}")
 
                 with open(report_file, 'w') as f:
-                    json.dump(self.create_crash_report(affectation_step, flow_step), f)
+                    json.dump(self.create_crash_report(affectation_step, flow_step), f, indent=4)
                 sys.exit(-1)
 
         self._flow_motor.finalize()

@@ -126,8 +126,13 @@ class Bus(Vehicle):
 
 
 class Metro(Vehicle):
-    def __init__(self, origin:str, destination:str, path: List[Tuple[Tuple[str, str], float]], capacity:int=500,):
+    def __init__(self, origin:str, destination:str, path: List[Tuple[Tuple[str, str], float]], capacity:int=500):
         super(Metro, self).__init__(origin, destination, path, capacity)
+
+
+class Tram(Vehicle):
+    def __init__(self, origin: str, destination: str, path: List[Tuple[Tuple[str, str], float]], capacity: int = 100):
+        super(Tram, self).__init__(origin, destination, path, capacity)
 
 
 if __name__ == "__main__":

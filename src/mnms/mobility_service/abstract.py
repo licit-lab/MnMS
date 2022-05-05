@@ -4,7 +4,7 @@ from typing import Type, List, Dict
 from mnms.demand.user import User
 from mnms.graph.core import TopoGraph
 from mnms.graph.shortest_path import Path, astar
-from mnms.tools.containers import CostDict
+from mnms.tools.cost import create_service_costs
 from mnms.tools.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle
@@ -94,7 +94,7 @@ class AbstractMobilityService(ABC):
             veh_path.append((key, self.graph.links[key].costs['length']))
         return veh_path
 
-    def service_level_costs(self, nodes:List[str]) -> CostDict:
+    def service_level_costs(self, nodes:List[str]) -> dict:
         """
         Must return a dict of costs representing the cost of the service computed from a path
         Parameters
@@ -105,9 +105,7 @@ class AbstractMobilityService(ABC):
         -------
 
         """
-        return CostDict(waiting_time=0,
-                        environmental=0,
-                        currency=0)
+        return create_service_costs()
 
 
     @abstractmethod
