@@ -178,7 +178,7 @@ def convert_symuflow_to_mmgraph(file, output_dir, zone_file:str=None):
         coeffs=rep_type_elem.attrib['coeffs']
         ss= [int(x) for x in coeffs.split(" ")]
         pt_type=veh_type_ids[ss.index(1)]
-        
+
         if pt_type not in pt_types:
             pt_types.append(pt_type)
             public_transport = PublicTransportGraphLayer(pt_type+'Layer', _veh_type_convertor[pt_type], veh_speeds[pt_type], services=[PublicTransportMobilityService(pt_type)])
@@ -269,7 +269,6 @@ def convert_symuflow_to_mmgraph(file, output_dir, zone_file:str=None):
                 line = reader.readline()
 
         for zone, links in sorted(zone_dict.items()):
-            print(zone)
             links = [l for l in links if l in G.flow_graph._map_lid_nodes]
             G.add_zone(zone, links)
 
@@ -291,18 +290,14 @@ def _path_dir_type(path):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Convert Symuflow XML graph to mnms JSON graph')
+    parser.add_argument('symuflow_graph', type=_path_file_type, help='Path to the SymuFlow XML file')
+    parser.add_argument('--zone_file', type=_path_file_type, help='Path to zones')
+    parser.add_argument('--output_dir', default=os.getcwd(), type=_path_dir_type, help='Path to the output dir')
 
-    convert_symuflow_to_mmgraph('/home/florian/Work/UGE/MnMS/test_v2/issue_dulicate_bus_stop/Lyon_symuviainput_1.xml',
-                                '/home/florian/Work/UGE/MnMS/test_v2/issue_dulicate_bus_stop')
+    args = parser.parse_args()
 
-    # parser = argparse.ArgumentParser(description='Convert Symuflow XML graph to mnms JSON graph')
-    # parser.add_argument('symuflow_graph', type=_path_file_type, help='Path to the SymuFlow XML file')
-    # parser.add_argument('--zone_file', type=_path_file_type, help='Path to zones')
-    # parser.add_argument('--output_dir', default=os.getcwd(), type=_path_dir_type, help='Path to the output dir')
-    #
-    # args = parser.parse_args()
-    #
-    # log.setLevel(LOGLEVEL.INFO)
-    # convert_symuflow_to_mmgraph(args.symuflow_graph,
-    #                             args.output_dir,
-    #                             zone_file=args.zone_file)
+    log.setLevel(LOGLEVEL.INFO)
+    convert_symuflow_to_mmgraph(args.symuflow_graph,
+                                args.output_dir,
+                                zone_file=args.zone_file)
