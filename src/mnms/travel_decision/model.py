@@ -299,7 +299,7 @@ class AbstractDecisionModel(ABC):
 
         tpath = self.path_choice(paths)
         path = tpath[0]
-        if len(path) > 1:
+        if len(path.nodes) > 1:
             user.set_path(path)
             user._remaining_link_length = self._mmgraph.mobility_graph.links[(path.nodes[0], path.nodes[1])].costs['length']
         else:
