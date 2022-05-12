@@ -298,9 +298,13 @@ class AbstractDecisionModel(ABC):
         #         log.info(f"Done")
 
         tpath = self.path_choice(paths)
-        path=tpath[0]
-        user.set_path(path)
-        user._remaining_link_length = self._mmgraph.mobility_graph.links[(path.nodes[0], path.nodes[1])].costs['length']
+        path = tpath[0]
+        if len(path) > 1:
+            user.set_path(path)
+            user._remaining_link_length = self._mmgraph.mobility_graph.links[(path.nodes[0], path.nodes[1])].costs['length']
+        else:
+            log.warning(f"Path {path} is not valid for {user}")
+            raise PathNotFound(user.origin, user.destination)
 
         log.info(f"Computed path {user.id}: {user.path}")
 
