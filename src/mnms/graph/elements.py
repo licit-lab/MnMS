@@ -77,7 +77,7 @@ class TopoNode(Node):
 
     @classmethod
     def __load__(cls, data: dict) -> "TopoNode":
-        return cls(data['ID'], data['LAYER'], data['REF_NODE'], data['EXCLUDE_MOVEMENTS'])
+        return cls(data['ID'], data['LAYER'], data['REF_NODE'], data.get('EXCLUDE_MOVEMENTS', None))
 
     def __dump__(self) -> dict:
         return {'ID': self.id,
