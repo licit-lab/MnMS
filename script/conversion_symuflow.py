@@ -133,7 +133,7 @@ def convert_symuflow_to_mmgraph(file, output_dir, zone_file:str=None):
 
     flow_graph = G.flow_graph
 
-    [flow_graph.add_node(n, pos) for n, pos in nodes.items()]
+    [flow_graph.create_node(n, pos) for n, pos in nodes.items()]
     num_skip = 0
     already_present_link = dict()
     for l in links.values():
@@ -153,7 +153,7 @@ def convert_symuflow_to_mmgraph(file, output_dir, zone_file:str=None):
     car = CarMobilityGraphLayer('CARLayer', speed_car)
     car.add_mobility_service(PersonalCarMobilityService())
 
-    [car.add_node(n, n) for n in node_car]
+    [car.create_node(n, n) for n in node_car]
     for l in link_car:
         if l in flow_graph._map_lid_nodes:
             upstream = links[l]['UPSTREAM']

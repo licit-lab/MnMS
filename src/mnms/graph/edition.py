@@ -25,8 +25,7 @@ def delete_node(graph: OrientedGraph, nid:str, upstream_nodes:List[str]=[]):
     """
     assert nid in graph.nodes, f"Node '{nid}' not in graph"
     del graph.nodes[nid]
-    del graph._adjacency[nid]
-    [graph._adjacency[up].remove(nid) for up in upstream_nodes]
+    [graph.nodes[up].adj.remove(nid) for up in upstream_nodes]
 
 
 def delete_link_from_id(graph: OrientedGraph, lid:str):
@@ -48,7 +47,7 @@ def delete_link_from_id(graph: OrientedGraph, lid:str):
     nodes = graph._map_lid_nodes[lid]
     del graph.links[nodes]
     del graph._map_lid_nodes[lid]
-    graph._adjacency[nodes[0]].remove(nodes[1])
+    graph.nodes[nodes[0]].adj.remove(nodes[1])
 
 
 def delete_link_from_extremities(graph: OrientedGraph, upstream:str, downstream:str):
@@ -73,7 +72,7 @@ def delete_link_from_extremities(graph: OrientedGraph, upstream:str, downstream:
     lid = graph.links[nodes].id
     del graph.links[nodes]
     del graph._map_lid_nodes[lid]
-    graph._adjacency[nodes[0]].remove(nodes[1])
+    graph.nodes[nodes[0]].adj.remove(nodes[1])
 
 
 def delete_node_downstream_links(graph: OrientedGraph, nid:str):
@@ -91,7 +90,7 @@ def delete_node_downstream_links(graph: OrientedGraph, nid:str):
     None
 
     """
-    downstream_nodes = set(graph.get_node_neighbors(nid))
+    downstream_nodes = set(graph.nodes[nid].adj)
     for nd in downstream_nodes:
         delete_link_from_extremities(graph, nid, nd)
     delete_node(graph, nid)

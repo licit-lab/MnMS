@@ -21,35 +21,35 @@ class TestAlgorithms(unittest.TestCase):
 
         flow_graph = mmgraph.flow_graph
 
-        flow_graph.add_node('0', [0, 0])
-        flow_graph.add_node('1', [1, 0])
-        flow_graph.add_node('2', [3, 0])
-        flow_graph.add_node('3', [1, 1])
-        flow_graph.add_node('4', [0, 1])
+        flow_graph.create_node('0', [0, 0])
+        flow_graph.create_node('1', [1, 0])
+        flow_graph.create_node('2', [3, 0])
+        flow_graph.create_node('3', [1, 1])
+        flow_graph.create_node('4', [0, 1])
 
-        flow_graph.add_link('0_1', '0', '1')
-        flow_graph.add_link('1_2', '1', '2')
-        flow_graph.add_link('1_3', '1', '3')
-        flow_graph.add_link('3_2', '3', '2')
-        flow_graph.add_link('4_3', '4', '3')
-        flow_graph.add_link('0_4', '0', '4')
+        flow_graph.create_link('0_1', '0', '1')
+        flow_graph.create_link('1_2', '1', '2')
+        flow_graph.create_link('1_3', '1', '3')
+        flow_graph.create_link('3_2', '3', '2')
+        flow_graph.create_link('4_3', '4', '3')
+        flow_graph.create_link('0_4', '0', '4')
 
         car_layer = CarMobilityGraphLayer('Car',
                                           services=[PersonalCarMobilityService(),
                                                     OnDemandCarMobilityService('Uber')])
 
-        car_layer.add_node('C0', '0')
-        car_layer.add_node('C1', '1')
-        car_layer.add_node('C2', '2')
-        car_layer.add_node('C3', '3')
-        car_layer.add_node('C4', '4')
+        car_layer.create_node('C0', '0')
+        car_layer.create_node('C1', '1')
+        car_layer.create_node('C2', '2')
+        car_layer.create_node('C3', '3')
+        car_layer.create_node('C4', '4')
 
-        car_layer.add_link('C0_1', 'C0', 'C1', ['0_1'], {'travel_time':1})
-        car_layer.add_link('C1_2', 'C1', 'C2', ['1_2'], {'travel_time':1})
-        car_layer.add_link('C1_3', 'C1', 'C3', ['1_3'], {'travel_time':1})
-        car_layer.add_link('C3_2', 'C3', 'C2', ['3_2'], {'travel_time':1})
-        car_layer.add_link('C4_3', 'C4', 'C3', ['4_3'], {'travel_time':1})
-        car_layer.add_link('C0_4', 'C0', 'C4', ['0_4'], {'travel_time':1})
+        car_layer.create_link('C0_1', 'C0', 'C1', ['0_1'], {'travel_time':1})
+        car_layer.create_link('C1_2', 'C1', 'C2', ['1_2'], {'travel_time':1})
+        car_layer.create_link('C1_3', 'C1', 'C3', ['1_3'], {'travel_time':1})
+        car_layer.create_link('C3_2', 'C3', 'C2', ['3_2'], {'travel_time':1})
+        car_layer.create_link('C4_3', 'C4', 'C3', ['4_3'], {'travel_time':1})
+        car_layer.create_link('C0_4', 'C0', 'C4', ['0_4'], {'travel_time':1})
 
         mmgraph.add_layer(car_layer)
 

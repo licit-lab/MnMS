@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 
 mmgraph = MultiModalGraph()
 
-mmgraph.flow_graph.add_node('0', [0, 0])
-mmgraph.flow_graph.add_node('1', [1, 0])
-mmgraph.flow_graph.add_node('2', [1, 1])
-mmgraph.flow_graph.add_node('3', [0, 1])
+mmgraph.flow_graph.create_node('0', [0, 0])
+mmgraph.flow_graph.create_node('1', [1, 0])
+mmgraph.flow_graph.create_node('2', [1, 1])
+mmgraph.flow_graph.create_node('3', [0, 1])
 
 mmgraph.flow_graph._add_link('0_1')
 mmgraph.flow_graph._add_link('1_0')
@@ -27,18 +27,18 @@ car_service = mmgraph.add_mobility_service('Car')
 bus_service = mmgraph.add_mobility_service('Bus')
 uber_service = mmgraph.add_mobility_service('Uber')
 
-bus_service.add_node('0')
-bus_service.add_node('1')
-bus_service.add_node('2')
+bus_service.create_node('0')
+bus_service.create_node('1')
+bus_service.create_node('2')
 
 bus_service._add_link('BUS_0_1')
 bus_service._add_link('BUS_1_2')
 bus_service._add_link('BUS_0_2')
 
-car_service.add_node('0')
-car_service.add_node('1')
-car_service.add_node('2')
-car_service.add_node('3')
+car_service.create_node('0')
+car_service.create_node('1')
+car_service.create_node('2')
+car_service.create_node('3')
 
 car_service._add_link('CAR_0_1')
 car_service._add_link('CAR_1_0')
@@ -49,8 +49,8 @@ car_service._add_link('CAR_3_2')
 car_service._add_link('CAR_3_1')
 car_service._add_link('CAR_1_3')
 
-uber_service.add_node('0')
-uber_service.add_node('1')
+uber_service.create_node('0')
+uber_service.create_node('1')
 
 uber_service._add_link('UBER_0_1')
 

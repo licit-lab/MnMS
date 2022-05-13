@@ -17,8 +17,8 @@ car = PersonalCar('car_layer', 10)
 bus = PersonalCar('bus', 10)
 
 for n in mmgraph.flow_graph.nodes.keys():
-    car.add_node('CAR_'+n, n)
-    bus.add_node('BUS_'+n, n)
+    car.create_node('CAR_' + n, n)
+    bus.create_node('BUS_' + n, n)
 
 for l in mmgraph.flow_graph.links.values():
     uid = l.upstream_node

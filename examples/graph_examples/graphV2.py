@@ -25,19 +25,19 @@ mmgraph = MultiModalGraph()
 
 flow_graph = mmgraph.flow_graph
 
-flow_graph.add_node('0', [0, 0])
-flow_graph.add_node('1', [1, 0])
-flow_graph.add_node('2', [2, 0])
-flow_graph.add_node('3', [3, 0])
+flow_graph.create_node('0', [0, 0])
+flow_graph.create_node('1', [1, 0])
+flow_graph.create_node('2', [2, 0])
+flow_graph.create_node('3', [3, 0])
 
-flow_graph.add_node('4', [0.5, 0.5])
-flow_graph.add_node('5', [1, 1])
-flow_graph.add_node('6', [1.5, 2])
-flow_graph.add_node('7', [3, 2])
+flow_graph.create_node('4', [0.5, 0.5])
+flow_graph.create_node('5', [1, 1])
+flow_graph.create_node('6', [1.5, 2])
+flow_graph.create_node('7', [3, 2])
 
-flow_graph.add_node('8', [0, 1])
-flow_graph.add_node('9', [2, 1])
-flow_graph.add_node('10', [3, 1])
+flow_graph.create_node('8', [0, 1])
+flow_graph.create_node('9', [2, 1])
+flow_graph.create_node('10', [3, 1])
 
 flow_graph.add_link('0_1', '0', '1')
 flow_graph.add_link('1_2', '1', '2')
@@ -58,9 +58,9 @@ flow_graph.add_link('3_10', '3', '10')
 
 
 tram = PersonalCar('TRAM', 10)
-tram.add_node('0', '0')
-tram.add_node('1', '1')
-tram.add_node('5', '5')
+tram.create_node('0', '0')
+tram.create_node('1', '1')
+tram.create_node('5', '5')
 
 tram.add_link('0_1', '0', '1', {'time':1}, ['0_1'], [0])
 tram.add_link('1_5', '1', '5', {'time':1}, ['1_5'], [0])

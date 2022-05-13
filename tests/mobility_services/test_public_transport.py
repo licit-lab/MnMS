@@ -42,7 +42,6 @@ class TestPublicTransport(unittest.TestCase):
         self.assertEqual(0, service.graph.links[('0', '1')].costs['waiting_time'])
         self.assertEqual(0, service.graph.links[('0', '1')].costs['travel_time'])
         self.assertListEqual(["0_1"], service.graph.links[('0', '1')].reference_links)
-        self.assertListEqual([2], service.graph.links[('0', '1')].reference_lane_ids)
 
     def test_two_lines(self):
         service = BusMobilityGraphLayer("TEST", 10)
@@ -119,7 +118,6 @@ class TestPublicTransport(unittest.TestCase):
                               'DOWNSTREAM': '2',
                               'COSTS': {'travel_time': 0, 'waiting_time': 1800.0, 'length': 0, 'test': 90},
                               'REF_LINKS': [None],
-                              'REF_LANE_IDS': [0],
                               'LAYER': 'TEST'}]}
 
         self.assertEqual(expected_dict['TYPE'], data['TYPE'])

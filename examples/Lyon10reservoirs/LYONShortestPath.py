@@ -20,7 +20,7 @@ rootlogger.info(f"Links: {len(mmgraph.flow_graph.links)}")
 car = PersonalCar('Car', 10)
 
 for node in mmgraph.flow_graph.nodes.values():
-    car.add_node(node.id, node.id)
+    car.create_node(node.id, node.id)
 
 
 for link in mmgraph.flow_graph.links.values():

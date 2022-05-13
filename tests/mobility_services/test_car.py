@@ -19,10 +19,10 @@ class TestCarMobilityService(unittest.TestCase):
     def test_fill(self):
         service = CarMobilityGraphLayer("TEST", 1)
 
-        service.add_node('0', '00')
-        service.add_node('1', '11')
+        service.create_node('0', '00')
+        service.create_node('1', '11')
 
-        service.add_link('0_1', '0', '1', ['0_2', '2_3'], {'test': 32, '_default': 1}, [0, 2])
+        service.create_link('0_1', '0', '1', ['0_2', '2_3'], {'test': 32, '_default': 1})
 
         self.assertListEqual(['0', '1'], [n.id for n in service.graph.nodes.values()])
         self.assertListEqual(['00', '11'], [n.reference_node for n in service.graph.nodes.values()])
@@ -31,20 +31,18 @@ class TestCarMobilityService(unittest.TestCase):
         self.assertEqual(32, service.graph.links[('0', '1')].costs['test'])
         self.assertEqual(1, service.graph.links[('0', '1')].costs['_default'])
         self.assertEqual(0, service.graph.links[('0', '1')].costs['waiting_time'])
-        self.assertListEqual(['0_2', '2_3'], service.graph.links[('0', '1')].reference_links)
-        self.assertListEqual([0, 2], service.graph.links[('0', '1')].reference_lane_ids)
 
     def test_dump_JSON(self):
         self.maxDiff = None
         service = CarMobilityGraphLayer("TEST", 1)
-        service.add_node('0', '00')
-        service.add_node('1', '11')
-        service.add_link('0_1', '0', '1', ['0_2', '2_3'], {'test': 32}, [0, 2])
+        service.create_node('0', '00')
+        service.create_node('1', '11')
+        service.create_link('0_1', '0', '1', ['0_2', '2_3'], {'test': 32})
         expected_dict = {'ID': 'TEST',
                          'TYPE': 'mnms.mobility_service.car.CarMobilityGraphLayer',
                          'DEFAULT_SPEED': 1,
-                         'NODES': [{'ID': '0', 'REF_NODE': '00', 'LAYER': 'TEST'},
-                                   {'ID': '1', 'REF_NODE': '11', 'LAYER': 'TEST'}],
+                         'NODES': [{'ID': '0', 'REF_NODE': '00', 'LAYER': 'TEST', 'EXCLUDE_MOVEMENTS': {}},
+                                   {'ID': '1', 'REF_NODE': '11', 'LAYER': 'TEST', 'EXCLUDE_MOVEMENTS': {}}],
                          'LINKS': [{'ID': '0_1',
                                     'UPSTREAM': '0',
                                     'DOWNSTREAM': '1',
@@ -53,7 +51,6 @@ class TestCarMobilityService(unittest.TestCase):
                                               'waiting_time': 0,
                                               'travel_time': 0},
                                     'REF_LINKS': ['0_2', '2_3'],
-                                    'REF_LANE_IDS': [0, 2],
                                     'LAYER': 'TEST'}],
                          'SERVICES': []}
         self.assertDictEqual(expected_dict, service.__dump__())
@@ -62,15 +59,14 @@ class TestCarMobilityService(unittest.TestCase):
         data = {'ID': 'TEST',
                          'TYPE': 'mnms.layer.base.PersonalCar',
                          'DEFAULT_SPEED': 1,
-                         'NODES': [{'ID': '0', 'REF_NODE': '00', 'LAYER': 'TEST'},
-                                   {'ID': '1', 'REF_NODE': '11', 'LAYER': 'TEST'}],
+                         'NODES': [{'ID': '0', 'REF_NODE': '00', 'LAYER': 'TEST','EXCLUDE_MOVEMENTS': {}},
+                                   {'ID': '1', 'REF_NODE': '11', 'LAYER': 'TEST', 'EXCLUDE_MOVEMENTS': {},}],
                          'LINKS': [{'ID': '0_1',
                                     'UPSTREAM': '0',
                                     'DOWNSTREAM': '1',
                                     'COSTS': {'time': 0,
                                               'test': 32},
                                     'REF_LINKS': ['0_2', '2_3'],
-                                    'REF_LANE_IDS': [0, 2],
                                     'LAYER': 'TEST'}]}
 
         service = CarMobilityGraphLayer.__load__(data)
@@ -83,4 +79,3 @@ class TestCarMobilityService(unittest.TestCase):
         self.assertEqual(0, service.graph.links[('0', '1')].costs['time'])
         self.assertEqual(0, service.graph.links[('0', '1')].costs['waiting_time'])
         self.assertListEqual(['0_2', '2_3'], service.graph.links[('0', '1')].reference_links)
-        self.assertListEqual([0, 2], service.graph.links[('0', '1')].reference_lane_ids)

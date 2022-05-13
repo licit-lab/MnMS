@@ -1,10 +1,13 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import List, FrozenSet, Dict
+from typing import List, FrozenSet, Dict, Set, Optional
 
 import numpy as np
 
 from mnms.tools.cost import create_link_costs
+from mnms.log import create_logger
+
+log = create_logger(__name__)
 
 
 class GraphElement(ABC):
@@ -34,7 +37,16 @@ class GraphElement(ABC):
         pass
 
 
-class TopoNode(GraphElement):
+class Node(GraphElement):
+    __slots__ = ('adj', 'radj')
+
+    def __init__(self, id):
+        super(Node, self).__init__(id)
+        self.adj = set()
+        self.radj = set()
+
+
+class TopoNode(Node):
     """Class representing a topological node, it can refer to a GeoNode id
 
     Parameters
@@ -45,24 +57,33 @@ class TopoNode(GraphElement):
         A reference to GeoNode (default is None)
 
     """
-    __slots__ = ('reference_node', 'layer')
+    __slots__ = ('reference_node', 'layer', '_exclude_movements')
 
-    def __init__(self, id: str, layer, ref_node:str):
+    def __init__(self, id: str, layer: str, ref_node: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
         super(TopoNode, self).__init__(id)
         self.reference_node = ref_node
         self.layer = layer
+        self._exclude_movements = dict() if exclude_movements is None else exclude_movements
+        self._exclude_movements[None] = set()
+
+    def get_exits(self, predecessor: Optional[str] = None):
+        return (i for i in self.adj if predecessor not in self._exclude_movements or i not in self._exclude_movements[predecessor])
+
+    def get_entrances(self, predecessor: Optional[str] = None):
+        return (i for i in self.radj if i not in self._exclude_movements or predecessor not in self._exclude_movements[i])
 
     def __repr__(self):
         return f"TopoNode(id={self.id}, ref_node={self.reference_node})"
 
     @classmethod
     def __load__(cls, data: dict) -> "TopoNode":
-        return cls(data['ID'], data['LAYER'], data['REF_NODE'])
+        return cls(data['ID'], data['LAYER'], data['REF_NODE'], data['EXCLUDE_MOVEMENTS'])
 
     def __dump__(self) -> dict:
         return {'ID': self.id,
                 'REF_NODE': self.reference_node,
-                'LAYER': self.layer}
+                'LAYER': self.layer,
+                'EXCLUDE_MOVEMENTS': {key: val for key, val in self._exclude_movements.items() if key is not None}}
 
     def __deepcopy__(self, memodict={}):
         cls = self.__class__
@@ -70,7 +91,7 @@ class TopoNode(GraphElement):
         return result
 
 
-class GeoNode(GraphElement):
+class GeoNode(Node):
     """Class representing a geometric node
 
     Parameters
@@ -104,7 +125,16 @@ class GeoNode(GraphElement):
         return result
 
 
-class ConnectionLink(GraphElement):
+class Link(GraphElement):
+    __slots__ = ('upstream', 'downstream')
+
+    def __init__(self, id: str, upstream_node: str, downstream_node: str):
+        super(Link, self).__init__(id)
+        self.upstream = upstream_node
+        self.downstream = downstream_node
+
+
+class ConnectionLink(Link):
     """Link between two Mobility Service of the same kind.
 
     Parameters
@@ -124,40 +154,30 @@ class ConnectionLink(GraphElement):
     mobility_service: str
         Identifier of the mobility service that use this TopoLink
     """
-    __slots__ = ('upstream_node', 'downstream_node', 'costs', 'reference_links', 'reference_lane_ids', 'layer')
+    __slots__ = ('upstream_node', 'downstream_node', 'costs', 'reference_links', 'layer')
 
-    def __init__(self, lid, upstream_node, downstream_node, costs, reference_links, reference_lane_ids=None,
-                 layer=None):
-        super(ConnectionLink, self).__init__(lid)
-        self.upstream_node = upstream_node
-        self.downstream_node = downstream_node
+    def __init__(self, lid, upstream_node, downstream_node, costs, reference_links, layer=None):
+        super(ConnectionLink, self).__init__(lid, upstream_node, downstream_node)
         self.costs: Dict = create_link_costs()
 
         if costs is not None:
             self.costs.update(costs)
         self.reference_links = reference_links if reference_links is not None else []
-        self.reference_lane_ids = []
         self.layer = layer
-
-        if reference_lane_ids is None:
-            self.reference_lane_ids = [0]*len(reference_links)
-        else:
-            self.reference_lane_ids = reference_lane_ids
 
     def __repr__(self):
         return f"ConnectionLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
 
     @classmethod
     def __load__(cls, data: dict) -> "ConnectionLink":
-        return cls(data['ID'], data['UPSTREAM'], data['DOWNSTREAM'], data['COSTS'], data['REF_LINKS'], data['REF_LANE_IDS'], data['LAYER'])
+        return cls(data['ID'], data['UPSTREAM'], data['DOWNSTREAM'], data['COSTS'], data['REF_LINKS'], data['LAYER'])
 
     def __dump__(self) -> dict:
         return {'ID': self.id,
-                'UPSTREAM': self.upstream_node,
-                'DOWNSTREAM': self.downstream_node,
+                'UPSTREAM': self.upstream,
+                'DOWNSTREAM': self.downstream,
                 'COSTS': {key: val for key, val in self.costs.items() if key not in ("_default", 'speed')},
                 'REF_LINKS': self.reference_links,
-                'REF_LANE_IDS': self.reference_lane_ids,
                 'LAYER': self.layer}
 
     def __deepcopy__(self, memodict={}):
@@ -167,12 +187,11 @@ class ConnectionLink(GraphElement):
                      self.downstream_node,
                      deepcopy(self.costs),
                      deepcopy(self.reference_links),
-                     deepcopy(self.reference_lane_ids),
                      self.layer)
         return result
 
 
-class TransitLink(GraphElement):
+class TransitLink(Link):
     """ Link between two different mobility service
 
     Parameters
@@ -189,9 +208,7 @@ class TransitLink(GraphElement):
     __slots__ = ('upstream_node', 'downstream_node', 'costs')
 
     def __init__(self, lid, upstream_node, downstream_node, costs=None):
-        super(TransitLink, self).__init__(lid)
-        self.upstream_node = upstream_node
-        self.downstream_node = downstream_node
+        super(TransitLink, self).__init__(lid, upstream_node, downstream_node)
         self.costs: Dict = create_link_costs()
         if costs is not None:
             self.costs.update(costs)
@@ -205,8 +222,8 @@ class TransitLink(GraphElement):
 
     def __dump__(self) -> dict:
         return {'ID': self.id,
-                'UPSTREAM': self.upstream_node,
-                'DOWNSTREAM': self.downstream_node,
+                'UPSTREAM': self.upstream,
+                'DOWNSTREAM': self.downstream,
                 'COSTS': {key: val for key, val in self.costs.items() if key not in ("_default", 'speed')}}
 
     def __deepcopy__(self, memodict={}):
@@ -218,7 +235,7 @@ class TransitLink(GraphElement):
         return result
 
 
-class GeoLink(GraphElement):
+class GeoLink(Link):
     """Link between two GeoNode, define a physical road link
 
     Parameters
@@ -234,13 +251,10 @@ class GeoLink(GraphElement):
     nb_lane: int
         Number of lane on this link (default 1)
     """
-    __slots__ = ('upstream_node', 'downstream_node', 'nb_lane', 'zone', 'length')
+    __slots__ = ('upstream_node', 'downstream_node', 'zone', 'length')
 
-    def __init__(self, lid, upstream_node, downstream_node, length, nb_lane=1):
-        super(GeoLink, self).__init__(lid)
-        self.upstream_node = upstream_node
-        self.downstream_node = downstream_node
-        self.nb_lane = nb_lane
+    def __init__(self, lid, upstream_node, downstream_node, length):
+        super(GeoLink, self).__init__(lid, upstream_node, downstream_node)
         self.zone = None
         self.length = length
 
@@ -249,22 +263,20 @@ class GeoLink(GraphElement):
 
     @classmethod
     def __load__(cls, data: dict) -> "GeoLink":
-        return cls(data['ID'], data['UPSTREAM'], data['DOWNSTREAM'], data['LENGTH'], data['NB_LANES'])
+        return cls(data['ID'], data['UPSTREAM'], data['DOWNSTREAM'], data['LENGTH'])
 
     def __dump__(self) -> dict:
         return {'ID': self.id,
-                'UPSTREAM': self.upstream_node,
-                'DOWNSTREAM': self.downstream_node,
-                'LENGTH': self.length,
-                'NB_LANES': self.nb_lane}
+                'UPSTREAM': self.upstream,
+                'DOWNSTREAM': self.downstream,
+                'LENGTH': self.length}
 
     def __deepcopy__(self, memodict={}):
         cls = self.__class__
         result = cls(self.id,
                      self.upstream_node,
                      self.downstream_node,
-                     self.length,
-                     self.nb_lane)
+                     self.length)
         return result
 
 

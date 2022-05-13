@@ -66,10 +66,10 @@ def load_graph(filename:str) -> MultiModalGraph:
     flow_graph = mmgraph.flow_graph
 
     for ndata in data['FLOW_GRAPH']['NODES']:
-        flow_graph._add_node(GeoNode.__load__(ndata))
+        flow_graph.add_node(GeoNode.__load__(ndata))
 
     for ldata in data['FLOW_GRAPH']['LINKS']:
-        flow_graph._add_link(GeoLink.__load__(ldata))
+        flow_graph.add_link(GeoLink.__load__(ldata))
 
     for sdata in data['FLOW_GRAPH']['ZONES']:
         mmgraph.add_zone(sdata['ID'], sdata['LINKS'])

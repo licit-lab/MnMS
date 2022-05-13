@@ -21,16 +21,16 @@ class TestMFDFlow(unittest.TestCase):
         mmgraph = MultiModalGraph()
         flow_graph = mmgraph.flow_graph
 
-        flow_graph.add_node('0', [0, 0])
-        flow_graph.add_node('1', [0, 40000])
-        flow_graph.add_node('2', [1200, 0])
-        flow_graph.add_node('3', [1400, 0])
-        flow_graph.add_node('4', [3400, 0])
+        flow_graph.create_node('0', [0, 0])
+        flow_graph.create_node('1', [0, 40000])
+        flow_graph.create_node('2', [1200, 0])
+        flow_graph.create_node('3', [1400, 0])
+        flow_graph.create_node('4', [3400, 0])
 
-        flow_graph.add_link('0_1', '0', '1')
-        flow_graph.add_link('0_2', '0', '2')
-        flow_graph.add_link('2_3', '2', '3')
-        flow_graph.add_link('3_4', '3', '4')
+        flow_graph.create_link('0_1', '0', '1')
+        flow_graph.create_link('0_2', '0', '2')
+        flow_graph.create_link('2_3', '2', '3')
+        flow_graph.create_link('3_4', '3', '4')
 
         mmgraph.add_zone('res1', ['0_1', '0_2', '2_3'])
         mmgraph.add_zone('res2', ['3_4'])
@@ -38,12 +38,12 @@ class TestMFDFlow(unittest.TestCase):
         self.personal_car = PersonalCarMobilityService()
         car = CarMobilityGraphLayer('car_layer', 10,
                                     services=[self.personal_car])
-        car.add_node('C0', '0')
-        car.add_node('C1', '1')
-        car.add_node('C2', '2')
+        car.create_node('C0', '0')
+        car.create_node('C1', '1')
+        car.create_node('C2', '2')
 
-        car.add_link('C0_C1', 'C0', 'C1', costs={'length':40000}, reference_links=['0_1'])
-        car.add_link('C0_C2', 'C0', 'C2', costs={'length':1200}, reference_links=['0_2'])
+        car.create_link('C0_C1', 'C0', 'C1', costs={'length':40000}, reference_links=['0_1'])
+        car.create_link('C0_C2', 'C0', 'C2', costs={'length':1200}, reference_links=['0_2'])
 
         self.public_transport = PublicTransportMobilityService('Bus')
         bus = BusMobilityGraphLayer('BusLayer', 10,

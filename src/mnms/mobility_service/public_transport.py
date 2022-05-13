@@ -45,8 +45,8 @@ class Line(object):
 
         self._timetable = timetable
 
-    def add_stop(self, sid:str, ref_node:str=None) -> None:
-        self._service_graph.add_node(sid, self.graph_layer.id, ref_node)
+    def add_stop(self, sid:str, ref_node:str) -> None:
+        self._service_graph.create_node(sid, self.graph_layer.id, ref_node)
         self.stops.append(sid)
 
     def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, reference_links, costs=None,
@@ -55,13 +55,12 @@ class Line(object):
         assert down_sid in self.stops
         costs = {} if costs is None else costs
         costs.update({'length': length})
-        self._service_graph.add_link(lid,
-                                     up_sid,
-                                     down_sid,
-                                     costs,
-                                     reference_links,
-                                     reference_lane_ids=reference_lane_ids,
-                                     mobility_service=self.graph_layer.id)
+        self._service_graph.create_link(lid,
+                                        up_sid,
+                                        down_sid,
+                                        costs,
+                                        reference_links,
+                                        mobility_service=self.graph_layer.id)
         self.links.add(lid)
         self._adjacency[up_sid] = down_sid
         self._rev_adjacency[down_sid] = up_sid
@@ -272,12 +271,12 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
         if costs is not None:
             c.update(costs)
 
-        self.graph.add_link('_'.join([unid, dnid]),
-                            unid,
-                            dnid,
-                            c,
-                            [None],
-                            mobility_service=self.id)
+        self.graph.create_link('_'.join([unid, dnid]),
+                               unid,
+                               dnid,
+                               c,
+                               [None],
+                               self.id)
 
         self.line_connections.append('_'.join([unid, dnid]))
 
@@ -285,12 +284,12 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
             c = {'waiting_time': self.lines[ulineid]._timetable.get_freq() / 2, "length": 0}
             if costs is not None:
                 c.update(costs)
-            self.graph.add_link('_'.join([dnid, unid]),
-                                dnid,
-                                unid,
-                                c,
-                                [None],
-                                mobility_service=self.id)
+            self.graph.create_link('_'.join([dnid, unid]),
+                                   dnid,
+                                   unid,
+                                   c,
+                                   [None],
+                                   self.id)
 
             self.line_connections.append('_'.join([dnid, unid]))
 

@@ -1,5 +1,5 @@
 from random import sample
-from typing import List
+from typing import List, Optional, Dict, Set
 
 import numpy as np
 
@@ -20,12 +20,11 @@ class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
     def __init__(self, id='Car', default_speed=13.8, services:List[AbstractMobilityService]=None, observer=None):
         super(CarMobilityGraphLayer, self).__init__(id, Car, default_speed, services, observer)
 
-    def add_node(self, nid: str, ref_node=None) -> None:
-        self.graph.add_node(nid, self.id, ref_node)
+    def create_node(self, nid: str, ref_node, exclude_movements: Optional[Dict[str, Set[str]]] = None) -> None:
+        self.graph.create_node(nid, self.id, ref_node, exclude_movements)
 
-    def add_link(self, lid: str, unid: str, dnid: str, reference_links:List[str], costs: dict = {},
-                 reference_lane_ids=None) -> None:
-        self.graph.add_link(lid, unid, dnid, costs, reference_links, reference_lane_ids, self.id)
+    def create_link(self, lid: str, unid: str, dnid: str, reference_links:List[str], costs: dict = {}) -> None:
+        self.graph.create_link(lid, unid, dnid, costs, reference_links, self.id)
 
     def connect_to_layer(self, nid) -> dict:
         return dict()
@@ -33,8 +32,8 @@ class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
     @classmethod
     def __load__(cls, data: dict) -> "PersonalCar":
         new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
-        [new_obj.graph._add_node(TopoNode.__load__(ndata)) for ndata in data['NODES']]
-        [new_obj.graph._add_link(ConnectionLink.__load__(ldata)) for ldata in data['LINKS']]
+        [new_obj.graph.add_node(TopoNode.__load__(ndata)) for ndata in data['NODES']]
+        [new_obj.graph.add_link(ConnectionLink.__load__(ldata)) for ldata in data['LINKS']]
         return new_obj
 
     def __dump__(self) -> dict:

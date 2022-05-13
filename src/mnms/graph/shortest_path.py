@@ -98,6 +98,7 @@ def dijkstra(graph: TopoGraph,
         vertices.add(v)
 
     dist[origin] = 0
+    prev[origin] = None
     log.debug(f'Dist : {dist}')
 
     while len(vertices) > 0:
@@ -117,7 +118,7 @@ def dijkstra(graph: TopoGraph,
             nodes.reverse()
             return Path(dist[destination], nodes)
 
-        for neighbor in graph.get_node_neighbors(u):
+        for neighbor in graph.nodes[u].get_exits(prev[u]):
             log.debug(f"Neighbor Node {neighbor}")
             if neighbor in vertices:
 
@@ -164,7 +165,7 @@ def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: 
     queue[0].put((0, origin))
     queue[1].put((0, destination))
 
-    neighbors = [graph._adjacency, graph._rev_adjacency]
+    prev = [{origin: None}, {destination:None}]
 
     finaldist = float('inf')
     finalpath = []
@@ -184,7 +185,12 @@ def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: 
                         nodes=finalpath)
             return path
 
-        for v in neighbors[dir][u]:
+        if dir == 0:
+            neigh = graph.nodes[u].get_exits(prev[dir][u])
+        else:
+            neigh = graph.nodes[u].get_entrances(prev[dir][u])
+
+        for v in neigh:
             nodes = [(u, v), (v, u)]
             link = graph.links[nodes[dir]]
             alt = du + cost_func(link.costs)
@@ -198,6 +204,7 @@ def bidirectional_dijkstra(graph: TopoGraph, origin:str, destination:str, cost: 
                 seen[dir][v] = alt
                 queue[dir].put((alt, v))
                 paths[dir][v] = paths[dir][u] + [v]
+                prev[dir][v] = u
 
                 if v in seen[0] and v in seen[1]:
                     totaldist = seen[0][v] + seen[1][v]
@@ -250,11 +257,10 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE
                 while current in prev.keys():
                     nodes.append(current)
                     current = prev[current]
-                nodes.append(current)
                 nodes.reverse()
             return Path(gscore[destination], nodes)
 
-        for neighbor in graph.get_node_neighbors(current):
+        for neighbor in graph.nodes[current].get_exits(prev[current]):
 
             # Check if next node mobility service is available for the user
             link = graph.links[(current, neighbor)]
@@ -286,7 +292,7 @@ def _euclidian_dist(origin:str, dest:str, mmgraph:MultiModalGraph):
 def compute_shortest_path(mmgraph: MultiModalGraph,
                           user: User,
                           cost: _WEIGHT_COST_TYPE = lambda cost: cost['travel_time'] + cost['waiting_time'],
-                          algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar'] = "bidirectional_dijkstra",
+                          algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar'] = "astar",
                           heuristic: Callable[[str, str], float] = None,
                           radius: float = 500,
                           growth_rate_radius: float = 10,
@@ -356,8 +362,8 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
                 start_node = f"_{user.id}_START"
                 end_node = f"_{user.id}_END"
 
-                mmgraph.mobility_graph.add_node(start_node, None)
-                mmgraph.mobility_graph.add_node(end_node, None)
+                mmgraph.mobility_graph.create_node(start_node, None, None)
+                mmgraph.mobility_graph.create_node(end_node, None, None)
 
                 log.debug(f"Create start artificial links with: {service_nodes_origin}")
                 # print(dist_origin[0]/walk_speed)
@@ -413,8 +419,8 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
         end_node = f"END_{user.origin}_{user.destination}"
         log.debug(f"Create artitificial nodes: {start_node}, {end_node}")
 
-        mmgraph.mobility_graph.add_node(start_node, 'WALK')
-        mmgraph.mobility_graph.add_node(end_node, 'WALK')
+        mmgraph.mobility_graph.create_node(start_node, 'WALK', None)
+        mmgraph.mobility_graph.create_node(end_node, 'WALK', None)
 
         log.debug(f"Create start artificial links with: {start_nodes}")
         virtual_cost = {cost: 0} if isinstance(cost, str) else {}
@@ -544,8 +550,8 @@ def compute_n_best_shortest_path(mmgraph: MultiModalGraph,
                 start_node = f"_{user.id}_START"
                 end_node = f"_{user.id}_END"
 
-                mmgraph.mobility_graph.add_node(start_node, None)
-                mmgraph.mobility_graph.add_node(end_node, None)
+                mmgraph.mobility_graph.create_node(start_node, None, None)
+                mmgraph.mobility_graph.create_node(end_node, None, None)
 
                 log.debug(f"Create start artificial links with: {service_nodes_origin}")
                 # print(dist_origin[0]/walk_speed)

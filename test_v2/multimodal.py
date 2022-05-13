@@ -29,11 +29,11 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 mmgraph = MultiModalGraph()
 fgraph = mmgraph.flow_graph
 
-fgraph.add_node('0', [0, 0])
-fgraph.add_node('1', [1000, 0])
-fgraph.add_node('2', [2000, 0])
-fgraph.add_node('3', [3000, 0])
-fgraph.add_node('4', [2000, 1000])
+fgraph.create_node('0', [0, 0])
+fgraph.create_node('1', [1000, 0])
+fgraph.create_node('2', [2000, 0])
+fgraph.create_node('3', [3000, 0])
+fgraph.create_node('4', [2000, 1000])
 
 fgraph.add_link('0_1', '0', '1')
 fgraph.add_link('1_2', '1', '2')
@@ -66,8 +66,8 @@ car = CarMobilityGraphLayer('Car',
                                       OnDemandCarMobilityService('Uber')],
                             observer=veh_observer)
 
-car.add_node('A2', '2')
-car.add_node('A3', '3')
+car.create_node('A2', '2')
+car.create_node('A3', '3')
 
 car.add_link('A2_A3', 'A2', 'A3', {'length': 1000}, reference_links=['2_3'])
 
