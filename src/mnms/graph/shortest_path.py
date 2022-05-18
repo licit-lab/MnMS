@@ -125,6 +125,7 @@ def dijkstra(graph: TopoGraph,
                 # Check if next node mobility service is available for the user
                 link = graph.links[(u, neighbor)]
                 alt = dist[u] + cost_func(graph.links[(u, neighbor)].costs)
+
                 if isinstance(link, TransitLink):
                     if available_layers is not None:
                         dnode_layer = graph.nodes[link.downstream_node].layer
@@ -251,6 +252,7 @@ def astar(graph: TopoGraph, origin:str, destination:str, cost: _WEIGHT_COST_TYPE
     while not fscore_queue.empty():
         _, current = fscore_queue.get()
         log.debug(f"{dict(prev)}, current: {current}")
+
         if current == destination:
             nodes = []
             if prev[current] is not None or current == origin:

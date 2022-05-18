@@ -327,8 +327,7 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
                                     l['DOWNSTREAM'],
                                     l['COSTS']['length'],
                                     l['REF_LINKS'],
-                                    l['COSTS'],
-                                    l['REF_LANE_IDS']) for l in ldata['LINKS']]
+                                    l['COSTS']) for l in ldata['LINKS']]
         return new_obj
 
     def construct_veh_path(self, lid: str):
