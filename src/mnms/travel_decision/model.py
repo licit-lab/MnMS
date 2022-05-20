@@ -103,7 +103,7 @@ class AbstractDecisionModel(ABC):
             self._csvhandler.writerow(['ID', 'COST', 'PATH', 'LENGTH', 'SERVICE'])
 
     @abstractmethod
-    def path_choice(self, paths:List[Path]) -> Tuple[List[str], float]:
+    def path_choice(self, paths: List[Path]) -> Path:
         pass
 
     def set_mandatory_mobility_services(self, services:List[str]):
@@ -297,8 +297,7 @@ class AbstractDecisionModel(ABC):
         #         paths.append(p)
         #         log.info(f"Done")
 
-        tpath = self.path_choice(paths)
-        path = tpath[0]
+        path = self.path_choice(paths)
         if len(path.nodes) > 1:
             user.set_path(path)
             user._remaining_link_length = self._mmgraph.mobility_graph.links[(path.nodes[0], path.nodes[1])].costs['length']

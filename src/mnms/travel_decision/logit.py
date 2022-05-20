@@ -31,7 +31,7 @@ class LogitDecisionModel(AbstractDecisionModel):
         super(LogitDecisionModel, self).__init__(mmgraph, outfile=outfile, n_shortest_path=n_shortest_path, verbose_file=verbose_file)
         self._theta = theta
 
-    def path_choice(self, paths:List[Path]) -> Tuple[List[str], float]:
+    def path_choice(self, paths:List[Path]) -> Path:
         sum_cost_exp = fsum(exp(-self._theta*p.path_cost) for p in paths)
 
         if sum_cost_exp == 0:
@@ -42,4 +42,4 @@ class LogitDecisionModel(AbstractDecisionModel):
         proba_path = [exp(-self._theta*c)/sum_cost_exp for c in costs]
 
         selected_ind = _choice(range(len(proba_path)), 1,  p=proba_path)[0]
-        return paths[selected_ind], costs[selected_ind]
+        return paths[selected_ind]
