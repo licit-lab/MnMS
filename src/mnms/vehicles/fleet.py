@@ -28,8 +28,8 @@ class FleetManager(object):
         new_veh = self._waiting.pop(id)
         self.vehicles[new_veh.id] = new_veh
         self.__veh_manager.add_vehicle(new_veh)
-        for user in self.vehicles[id]._passenger:
-            user._waiting_vehicle = False
+        for user in self.vehicles[id]._passenger.values():
+            user[1]._waiting_vehicle = False
 
     def delete_vehicle(self, vehid:str):
         self.__veh_manager.remove_vehicle(self.vehicles[vehid])

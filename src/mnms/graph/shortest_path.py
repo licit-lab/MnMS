@@ -11,7 +11,7 @@ import numpy as np
 from mnms.log import create_logger
 from mnms.graph.core import TopoGraph, MultiModalGraph, TransitLink
 from mnms.graph.search import mobility_nodes_in_radius
-from mnms.graph.edition import delete_node_upstream_links, delete_node_downstream_links
+from mnms.graph.edition import delete_node_upstream_links, delete_node_downstream_links, delete_node
 from mnms.tools.exceptions import PathNotFound
 from mnms.demand.user import User
 
@@ -444,8 +444,8 @@ def compute_shortest_path(mmgraph: MultiModalGraph,
 
         log.debug(f"Clean graph")
 
-        delete_node_downstream_links(mmgraph.mobility_graph, start_node)
-        delete_node_upstream_links(mmgraph.mobility_graph, end_node, end_nodes)
+        delete_node(mmgraph.mobility_graph, start_node)
+        delete_node(mmgraph.mobility_graph, end_node)
         for n in start_nodes:
             del mmgraph.connection_layers[(start_node, n)]
         for n in end_nodes:

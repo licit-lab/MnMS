@@ -160,7 +160,7 @@ class MFDFlow(AbstractFlowMotor):
         for veh_id in self.veh_manager._vehicles:
             veh = self.veh_manager._vehicles[veh_id]
             log.info(f"{veh.current_link}, {veh}")
-            curr_link = self._graph.mobility_graph.links[(veh.current_link)]
+            curr_link = self._graph.mobility_graph.links[tuple(veh.current_link)]
             lid = curr_link.reference_links[0] # take reservoir of first part of trip
             flow_link = self._graph.flow_graph.get_link(lid)
             res_id = flow_link.zone

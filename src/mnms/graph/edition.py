@@ -6,7 +6,7 @@ from mnms.graph.core import OrientedGraph, MultiModalGraph
 from mnms.tools.progress import ProgressBar
 
 
-def delete_node(graph: OrientedGraph, nid:str, upstream_nodes:List[str]=[]):
+def delete_node(graph: OrientedGraph, nid:str):
     """Safe deletion of a node in a graph
 
     Parameters
@@ -24,8 +24,14 @@ def delete_node(graph: OrientedGraph, nid:str, upstream_nodes:List[str]=[]):
 
     """
     assert nid in graph.nodes, f"Node '{nid}' not in graph"
+
+    for n in graph.nodes[nid].radj:
+        graph.nodes[n].adj.remove(nid)
+
+    for n in graph.nodes[nid].adj:
+        graph.nodes[n].radj.remove(nid)
+
     del graph.nodes[nid]
-    [graph.nodes[up].adj.remove(nid) for up in upstream_nodes]
 
 
 def delete_link_from_id(graph: OrientedGraph, lid:str):

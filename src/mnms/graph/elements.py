@@ -77,13 +77,14 @@ class TopoNode(Node):
 
     @classmethod
     def __load__(cls, data: dict) -> "TopoNode":
-        return cls(data['ID'], data['LAYER'], data['REF_NODE'], data.get('EXCLUDE_MOVEMENTS', None))
+        exclude_movements = data.get('EXCLUDE_MOVEMENTS', dict())
+        return cls(data['ID'], data['LAYER'], data['REF_NODE'], {key: set(val) for key, val in exclude_movements.items()})
 
     def __dump__(self) -> dict:
         return {'ID': self.id,
                 'REF_NODE': self.reference_node,
                 'LAYER': self.layer,
-                'EXCLUDE_MOVEMENTS': {key: val for key, val in self._exclude_movements.items() if key is not None}}
+                'EXCLUDE_MOVEMENTS': {key: list(val) for key, val in self._exclude_movements.items() if key is not None}}
 
     def __deepcopy__(self, memodict={}):
         cls = self.__class__
