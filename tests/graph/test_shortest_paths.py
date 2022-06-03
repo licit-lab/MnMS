@@ -5,7 +5,7 @@ import numpy as np
 from mnms.graph import MultiModalGraph
 from mnms.graph.search import nearest_mobility_service
 from mnms.graph.shortest_path import (astar, dijkstra, _euclidian_dist, compute_shortest_path,
-                                      compute_n_best_shortest_path, bidirectional_dijkstra)
+                                      compute_k_shortest_path, bidirectional_dijkstra)
 from mnms.graph.edition import walk_connect
 from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService, OnDemandCarMobilityService
 from mnms.demand.user import User
@@ -79,19 +79,19 @@ class TestAlgorithms(unittest.TestCase):
         user = User(id='TEST', departure_time=None, origin='C0', destination='C2')
         path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time', user.available_mobility_service)
         self.assertListEqual(list(path.nodes), ['C0', 'C1', 'C2'])
-        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] + \
-                        self.mmgraph.mobility_graph.links[('C1', 'C2')].costs['travel_time']
+        expected_cost = self.mmgraph.mobility_graph.sections[('C0', 'C1')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.sections[('C1', 'C2')].costs['travel_time']
         self.assertEqual(expected_cost, path.path_cost)
 
-        self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] = 1e10
+        self.mmgraph.mobility_graph.sections[('C0', 'C1')].costs['travel_time'] = 1e10
         path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time',
                         user.available_mobility_service)
 
         self.assertListEqual(list(path.nodes), ['C0', 'C4', 'C3', 'C2'])
 
-        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C4')].costs['travel_time'] + \
-                        self.mmgraph.mobility_graph.links[('C4', 'C3')].costs['travel_time'] + \
-                        self.mmgraph.mobility_graph.links[('C3', 'C2')].costs['travel_time']
+        expected_cost = self.mmgraph.mobility_graph.sections[('C0', 'C4')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.sections[('C4', 'C3')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.sections[('C3', 'C2')].costs['travel_time']
 
         self.assertEqual(expected_cost, path.path_cost)
 
@@ -99,19 +99,19 @@ class TestAlgorithms(unittest.TestCase):
         user = User(id='TEST', departure_time=None, origin='C0', destination='C2')
         path = bidirectional_dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time', user.available_mobility_service)
         self.assertListEqual(list(path.nodes), ['C0', 'C1', 'C2'])
-        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] + \
-                        self.mmgraph.mobility_graph.links[('C1', 'C2')].costs['travel_time']
+        expected_cost = self.mmgraph.mobility_graph.sections[('C0', 'C1')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.sections[('C1', 'C2')].costs['travel_time']
         self.assertEqual(expected_cost, path.path_cost)
 
-        self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] = 1e10
+        self.mmgraph.mobility_graph.sections[('C0', 'C1')].costs['travel_time'] = 1e10
         path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time',
                         user.available_mobility_service)
 
         self.assertListEqual(list(path.nodes), ['C0', 'C4', 'C3', 'C2'])
 
-        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C4')].costs['travel_time'] + \
-                        self.mmgraph.mobility_graph.links[('C4', 'C3')].costs['travel_time'] + \
-                        self.mmgraph.mobility_graph.links[('C3', 'C2')].costs['travel_time']
+        expected_cost = self.mmgraph.mobility_graph.sections[('C0', 'C4')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.sections[('C4', 'C3')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.sections[('C3', 'C2')].costs['travel_time']
 
         self.assertEqual(expected_cost, path.path_cost)
 
@@ -121,19 +121,19 @@ class TestAlgorithms(unittest.TestCase):
         path = astar(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time',
                         user.available_mobility_service, heuristic)
         self.assertListEqual(list(path.nodes), ['C0', 'C1', 'C2'])
-        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] + \
-                        self.mmgraph.mobility_graph.links[('C1', 'C2')].costs['travel_time']
+        expected_cost = self.mmgraph.mobility_graph.sections[('C0', 'C1')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.sections[('C1', 'C2')].costs['travel_time']
         self.assertEqual(expected_cost, path.path_cost)
 
-        self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] = 1e10
+        self.mmgraph.mobility_graph.sections[('C0', 'C1')].costs['travel_time'] = 1e10
         path = dijkstra(self.mmgraph.mobility_graph, user.origin, user.destination, 'travel_time',
                         user.available_mobility_service)
 
         self.assertListEqual(list(path.nodes), ['C0', 'C4', 'C3', 'C2'])
 
-        expected_cost = self.mmgraph.mobility_graph.links[('C0', 'C4')].costs['travel_time'] + \
-                        self.mmgraph.mobility_graph.links[('C4', 'C3')].costs['travel_time'] + \
-                        self.mmgraph.mobility_graph.links[('C3', 'C2')].costs['travel_time']
+        expected_cost = self.mmgraph.mobility_graph.sections[('C0', 'C4')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.sections[('C4', 'C3')].costs['travel_time'] + \
+                        self.mmgraph.mobility_graph.sections[('C3', 'C2')].costs['travel_time']
 
         self.assertEqual(expected_cost, path.path_cost)
 
@@ -141,14 +141,14 @@ class TestAlgorithms(unittest.TestCase):
         user = User(id='TEST', departure_time=None, origin='0', destination='2')
         path = compute_shortest_path(self.mmgraph, user, cost='travel_time')
         self.assertListEqual(list(path.nodes), ['C0', 'C1', 'C2'])
-        self.mmgraph.mobility_graph.links[('C0', 'C1')].costs['travel_time'] = 1e10
+        self.mmgraph.mobility_graph.sections[('C0', 'C1')].costs['travel_time'] = 1e10
         path = compute_shortest_path(self.mmgraph, user, cost='travel_time', algorithm='astar')
 
         self.assertListEqual(list(path.nodes), ['C0', 'C4', 'C3', 'C2'])
 
     def test_compute_nbest_shortest_path_node(self):
         user = User(id='TEST', departure_time=None, origin='0', destination='2')
-        paths, costs = compute_n_best_shortest_path(self.mmgraph, user, 2, cost='travel_time')
+        paths, costs = compute_k_shortest_path(self.mmgraph, user, 2, cost='travel_time')
 
         self.assertAlmostEqual(paths[0].path_cost, 2)
         self.assertListEqual(list(paths[0].nodes), ['C0', 'C1', 'C2'])
@@ -158,12 +158,8 @@ class TestAlgorithms(unittest.TestCase):
 
     def test_compute_nbest_shortest_path_coordinates(self):
         user = User(id='TEST', departure_time=None, origin=np.array([0, 0]), destination=np.array([3, 0]))
-        paths, penalized_costs = compute_n_best_shortest_path(self.mmgraph,
-                                                              user,
-                                                              5,
-                                                              cost='travel_time',
-                                                              radius=0.1,
-                                                              growth_rate_radius=1e-5)
+        paths, penalized_costs = compute_k_shortest_path(self.mmgraph, user, 5, cost='travel_time', radius=0.1,
+                                                         growth_rate_radius=1e-5)
 
         self.assertAlmostEqual(paths[0].path_cost, 2)
         self.assertListEqual(list(paths[0].nodes), ['C0', 'C1', 'C2'])

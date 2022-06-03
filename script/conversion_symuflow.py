@@ -54,12 +54,12 @@ _veh_type_convertor = {'METRO': Metro,
 #     #------------
 #
 #     nodes = defaultdict(list)
-#     links = dict()
+#     sections = dict()
 #
 #     node_car = set()
 #     link_car = set()
 #
-#     # Loads the nodes and the links of the road network
+#     # Loads the nodes and the sections of the road network
 #     tr_elem = root.xpath('/ROOT_SYMUBRUIT/RESEAUX/RESEAU/TRONCONS')[0]
 #     for tr in tr_elem.iter("TRONCON"):
 #         lid = tr.attrib['id']
@@ -99,17 +99,17 @@ _veh_type_convertor = {'METRO': Metro,
 #                 length += np.linalg.norm(curr_coords-last_coords)
 #                 last_coords = curr_coords
 #             length += np.linalg.norm(down_coord-last_coords)
-#             links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': length, "NB_LANE":nb_lane}
+#             sections[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': length, "NB_LANE":nb_lane}
 #         else:
-#             links[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': None, "NB_LANE":nb_lane}
+#             sections[lid] = {'UPSTREAM': up_nid, 'DOWNSTREAM': down_nid, 'ID': lid, 'LENGTH': None, "NB_LANE":nb_lane}
 #
 #         if 'vit_reg' in tr.attrib:
-#             links[lid]['VIT_REG'] = float(tr.attrib['vit_reg'])
+#             sections[lid]['VIT_REG'] = float(tr.attrib['vit_reg'])
 #
 #
 #     nodes = {n: np.mean(pos, axis=0) for n, pos in nodes.items()}
 #
-#     # Loads the nodes (stops) of the public transport network and build the corresponding links
+#     # Loads the nodes (stops) of the public transport network and build the corresponding sections
 #     arret_elem = root.xpath('/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/ARRETS')[0]
 #     link_to_del = dict()
 #
@@ -118,7 +118,7 @@ _veh_type_convertor = {'METRO': Metro,
 #         stop_id = arret.attrib['id']
 #         stop_pos = float(arret.attrib['position'])
 #
-#         link = links[tr_id]
+#         link = sections[tr_id]
 #         upstream = link["UPSTREAM"]
 #         downstream = link["DOWNSTREAM"]
 #         pos_up = nodes[upstream]
@@ -130,12 +130,12 @@ _veh_type_convertor = {'METRO': Metro,
 #
 #         up_new_lid = f"{upstream}_{stop_id}"
 #         down_new_lid = f"{stop_id}_{downstream}"
-#         links[up_new_lid] =  {'UPSTREAM': upstream, 'DOWNSTREAM': stop_id, 'ID': up_new_lid, 'LENGTH': None, "NB_LANE": 1}
-#         links[down_new_lid] = {'UPSTREAM': stop_id, 'DOWNSTREAM': downstream, 'ID': down_new_lid, 'LENGTH': None, "NB_LANE": 1}
+#         sections[up_new_lid] =  {'UPSTREAM': upstream, 'DOWNSTREAM': stop_id, 'ID': up_new_lid, 'LENGTH': None, "NB_LANE": 1}
+#         sections[down_new_lid] = {'UPSTREAM': stop_id, 'DOWNSTREAM': downstream, 'ID': down_new_lid, 'LENGTH': None, "NB_LANE": 1}
 #         link_to_del[tr_id] = (up_new_lid, down_new_lid)
 #
 #     for lid in link_to_del:
-#         del links[lid]
+#         del sections[lid]
 #         link_car.discard(lid)
 #
 #     flow_graph = G.flow_graph
@@ -143,12 +143,12 @@ _veh_type_convertor = {'METRO': Metro,
 #     [flow_graph.create_node(n, pos) for n, pos in nodes.items()]
 #     num_skip = 0
 #     already_present_link = dict()
-#     for l in links.values():
+#     for l in sections.values():
 #         try:
 #             flow_graph.create_link(l['ID'], l['UPSTREAM'], l['DOWNSTREAM'], length=l['LENGTH'])
 #         except AssertionError:
 #             log.warning(f"Skipping troncon: {l['ID']}, nodes already connected")
-#             already_present_link[l['ID']] = flow_graph.links[(l['UPSTREAM'], l['DOWNSTREAM'])].id
+#             already_present_link[l['ID']] = flow_graph.sections[(l['UPSTREAM'], l['DOWNSTREAM'])].id
 #             num_skip += 1
 #     log.warning(f"Number of skipped link: {num_skip}")
 #
@@ -163,10 +163,10 @@ _veh_type_convertor = {'METRO': Metro,
 #     [car.create_node(n, n) for n in node_car]
 #     for l in link_car:
 #         if l in flow_graph._map_lid_nodes:
-#             upstream = links[l]['UPSTREAM']
-#             downstream = links[l]['DOWNSTREAM']
-#             length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-#             car.create_link(l, upstream, downstream, reference_links=[l], costs={'travel_time': length/min(links[l].get('VIT_REG', speed_car), speed_car), 'length': length} )
+#             upstream = sections[l]['UPSTREAM']
+#             downstream = sections[l]['DOWNSTREAM']
+#             length = flow_graph.sections[flow_graph._map_lid_nodes[l]].length
+#             car.create_link(l, upstream, downstream, reference_links=[l], costs={'travel_time': length/min(sections[l].get('VIT_REG', speed_car), speed_car), 'length': length} )
 #
 #     G.add_layer(car)
 #
@@ -224,21 +224,21 @@ _veh_type_convertor = {'METRO': Metro,
 #                 # print(tr_id)
 #                 if tr_id in link_to_del:
 #                     up_lid, down_lid = link_to_del[tr_id]
-#                     up_node = links[up_lid]['UPSTREAM']
-#                     down_node = links[up_lid]['DOWNSTREAM']
+#                     up_node = sections[up_lid]['UPSTREAM']
+#                     down_node = sections[up_lid]['DOWNSTREAM']
 #                     service_nodes.add(up_node)
 #                     service_nodes.add(down_node)
 #                     service_links.add(up_lid)
 #
-#                     up_node = links[down_lid]['UPSTREAM']
-#                     down_node = links[down_lid]['DOWNSTREAM']
+#                     up_node = sections[down_lid]['UPSTREAM']
+#                     down_node = sections[down_lid]['DOWNSTREAM']
 #                     service_nodes.add(up_node)
 #                     service_nodes.add(down_node)
 #                     service_links.add(down_lid)
 #                 else:
 #                     # print('TR IS NOT DELETED')
-#                     up_node = links[tr_id]['UPSTREAM']
-#                     down_node = links[tr_id]['DOWNSTREAM']
+#                     up_node = sections[tr_id]['UPSTREAM']
+#                     down_node = sections[tr_id]['DOWNSTREAM']
 #                     service_nodes.add(up_node)
 #                     service_nodes.add(down_node)
 #                     service_links.add(tr_id)
@@ -249,19 +249,19 @@ _veh_type_convertor = {'METRO': Metro,
 #             for l in service_links:
 #                 if l in already_present_link:
 #                     l = already_present_link[l]
-#                 up = links[l]['UPSTREAM']
-#                 down = links[l]['DOWNSTREAM']
-#                 length = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-#                 costs = {'travel_time': length/min(links[l].get('VIT_REG', veh_speeds[pt_type]), veh_speeds[pt_type]),'waiting_time':0.0}
+#                 up = sections[l]['UPSTREAM']
+#                 down = sections[l]['DOWNSTREAM']
+#                 length = flow_graph.sections[flow_graph._map_lid_nodes[l]].length
+#                 costs = {'travel_time': length/min(sections[l].get('VIT_REG', veh_speeds[pt_type]), veh_speeds[pt_type]),'waiting_time':0.0}
 #                 new_line.connect_stops(line_id+'_'+l, line_id+'_'+up, line_id+'_'+down, length, costs=costs, reference_links=[l])
 #
 #     G.mobility_graph.check()
 #     log.info("Flow Graph:")
 #     log.info(f"Number of nodes: {G.flow_graph.nb_nodes}")
-#     log.info(f"Number of links: {G.flow_graph.nb_links}")
+#     log.info(f"Number of sections: {G.flow_graph.nb_links}")
 #     log.info("Mobility Graph:")
 #     log.info(f"Number of nodes: {G.mobility_graph.nb_nodes}")
-#     log.info(f"Number of links: {G.mobility_graph.nb_links}")
+#     log.info(f"Number of sections: {G.mobility_graph.nb_links}")
 #     log.info(f"Layers: {list(G.layers.keys())}")
 #
 #     if zone_file is not None:
@@ -275,9 +275,9 @@ _veh_type_convertor = {'METRO': Metro,
 #
 #                 line = reader.readline()
 #
-#         for zone, links in sorted(zone_dict.items()):
-#             links = [l for l in links if l in G.flow_graph._map_lid_nodes]
-#             G.add_zone(zone, links)
+#         for zone, sections in sorted(zone_dict.items()):
+#             sections = [l for l in sections if l in G.flow_graph._map_lid_nodes]
+#             G.add_zone(zone, sections)
 #
 #     save_graph(G, output_dir+'/'+os.path.basename(file).replace('.xml', '.json'), indent=1)
 

@@ -5,7 +5,7 @@ import numpy as np
 
 from mnms import create_logger
 from mnms.demand import User
-from mnms.graph.elements import TopoNode, ConnectionLink
+from mnms.graph.core import Node, ConnectionLink
 from mnms.graph.shortest_path import bidirectional_dijkstra
 from mnms.mobility_service.abstract import AbstractMobilityGraphLayer, AbstractMobilityService
 from mnms.tools.exceptions import PathNotFound
@@ -32,7 +32,7 @@ class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
     @classmethod
     def __load__(cls, data: dict) -> "PersonalCar":
         new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
-        [new_obj.graph.add_node(TopoNode.__load__(ndata)) for ndata in data['NODES']]
+        [new_obj.graph.add_node(Node.__load__(ndata)) for ndata in data['NODES']]
         [new_obj.graph.add_link(ConnectionLink.__load__(ldata)) for ldata in data['LINKS']]
         return new_obj
 
@@ -41,7 +41,7 @@ class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
                 "ID": self.id,
                 "DEFAULT_SPEED": self.default_speed,
                 "NODES": [n.__dump__() for n in self.graph.nodes.values()],
-                "LINKS": [l.__dump__() for l in self.graph.links.values()],
+                "LINKS": [l.__dump__() for l in self.graph.sections.values()],
                 "SERVICES": [s.__dump__() for s in self.mobility_services.values()]}
 
 

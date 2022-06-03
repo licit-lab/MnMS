@@ -245,16 +245,16 @@ class MFDFlowEvent(AbstractFlowMotor):
         mobility_graph = self._graph.mobility_graph
         flow_graph = self._graph.flow_graph
         topolink_lenghts = dict()
-        res_links = {res.id: self._graph.zones[res.id].links for res in self.reservoirs}
+        res_links = {res.id: self._graph.zones[res.id].sections for res in self.reservoirs}
         res_dict = {res.id: res for res in self.reservoirs}
 
-        for tid, topolink in mobility_graph.links.items():
+        for tid, topolink in mobility_graph.sections.items():
             if isinstance(topolink, ConnectionLink):
                 link_service = topolink.layer
                 topolink_lenghts[topolink.id] = {'lengths': {},
                                                  'speeds': {}}
                 for l in topolink.reference_links:
-                    topolink_lenghts[topolink.id]['lengths'][l] = flow_graph.links[flow_graph._map_lid_nodes[l]].length
+                    topolink_lenghts[topolink.id]['lengths'][l] = flow_graph.sections[flow_graph._map_lid_nodes[l]].length
                     topolink_lenghts[topolink.id]['speeds'][l] = None
                     for resid, reslinks in res_links.items():
                         res = res_dict[resid]
@@ -273,11 +273,11 @@ class MFDFlowEvent(AbstractFlowMotor):
                     total_len += length
                 else:
                     link_node = mobility_graph._map_lid_nodes[tid]
-                    link = mobility_graph.links[link_node]
+                    link = mobility_graph.sections[link_node]
                     new_speed = self._graph._mobility_services[link.layer].default_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
-            mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
-            mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] = total_len / new_speed
+            mobility_graph.sections[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
+            mobility_graph.sections[mobility_graph._map_lid_nodes[tid]].costs['time'] = total_len / new_speed
 
     def write_result(self, step_affectation: int, step_flow: int):
         tcurrent = self._tcurrent.time

@@ -24,7 +24,7 @@ class TestCreate(unittest.TestCase):
 
         self.assertEqual(mmgraph.flow_graph.nodes['0'].adj, set('1'))
         self.assertEqual(list(mmgraph.flow_graph.nodes.keys()), ['0', '1'])
-        self.assertEqual(list(mmgraph.flow_graph.links.keys()), [('0', '1')])
+        self.assertEqual(list(mmgraph.flow_graph.sections.keys()), [('0', '1')])
 
     def test_mobility_graph(self):
         mmgraph = MultiModalGraph()
@@ -37,7 +37,7 @@ class TestCreate(unittest.TestCase):
         mmgraph.add_layer(service)
 
         self.assertEqual(list(mmgraph.mobility_graph.nodes.keys()), ['dummy_0', 'dummy_1'])
-        self.assertEqual(list(mmgraph.mobility_graph.links.keys()), [('dummy_0', 'dummy_1')])
+        self.assertEqual(list(mmgraph.mobility_graph.sections.keys()), [('dummy_0', 'dummy_1')])
 
     def test_exclude_movements(self):
         service = CarMobilityGraphLayer('dummy', 10, services=[PersonalCarMobilityService()])

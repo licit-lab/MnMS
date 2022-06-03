@@ -2,8 +2,7 @@ from abc import ABC,abstractmethod
 from typing import Type, List, Dict
 
 from mnms.demand.user import User
-from mnms.graph.core import TopoGraph
-from mnms.graph.shortest_path import Path, astar
+from mnms.graph.core import OrientedGraph
 from mnms.tools.cost import create_service_costs
 from mnms.tools.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
@@ -20,7 +19,7 @@ class AbstractMobilityGraphLayer(ABC):
         self.id = id
         self.default_speed = default_speed
         self.mobility_services = dict()
-        self.graph = TopoGraph()
+        self.graph = OrientedGraph()
         self._veh_type = veh_type
 
         if services is not None:
@@ -33,14 +32,6 @@ class AbstractMobilityGraphLayer(ABC):
         service.layer = self
         service.fleet = FleetManager(self._veh_type)
         self.mobility_services[service.id] = service
-
-    def compute_shortest_path(self, user:User, cost:str, heuristic) -> Path:
-        return astar(self.graph,
-                     user.origin,
-                     user.destination,
-                     cost,
-                     None,
-                     heuristic)
 
     # @abstractmethod
     # def update_costs(self, time: Time):

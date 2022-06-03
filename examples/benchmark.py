@@ -16,7 +16,7 @@ car_layer = CarMobilityGraphLayer()
 for nid in mmgraph.flow_graph.nodes:
     car_layer.create_node(nid, nid)
 
-for lid, link in mmgraph.flow_graph.links.items():
+for lid, link in mmgraph.flow_graph.sections.items():
     car_layer.create_link(lid, link.upstream, link.downstream, [lid], {'length':link.length})
 
 

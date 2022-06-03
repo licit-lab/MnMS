@@ -5,8 +5,7 @@ from collections import defaultdict
 import numpy as np
 
 from mnms.flow.abstract import AbstractFlowMotor
-from mnms.graph.core import MultiModalGraph
-from mnms.graph.elements import ConnectionLink
+from mnms.graph.core import ConnectionLink
 from mnms.log import create_logger
 from mnms.tools.time import Dt, Time
 from mnms.vehicles.manager import VehicleManager
@@ -19,7 +18,10 @@ class Reservoir(object):
     # id to identify the sensor, is not used for now, could be a string
     # modes are the transportation modes available for the sensor
     # fct_MFD_speed is the function returning the mean speeds as a function of the accumulations
-    def __init__(self, id: str, modes, fct_MFD_speed: Callable[[Dict[str, float]], Dict[str, float]]):
+    def __init__(self,
+                 id: str,
+                 modes,
+                 fct_MFD_speed: Callable[[Dict[str, float]], Dict[str, float]]):
         self.id = id
         self.modes = modes
         self.compute_MFD_speed = fct_MFD_speed
@@ -40,7 +42,7 @@ class Reservoir(object):
     @classmethod
     def fromZone(cls, mmgraph:"MultiModalGraph", zid:str, fct_MFD_speed):
         modes = set()
-        for lid in mmgraph.zones[zid].links:
+        for lid in mmgraph.zones[zid].sections:
             nodes = mmgraph.flow_graph._map_lid_nodes[lid]
             for mobility_node in mmgraph.mobility_graph.get_node_references(nodes[0]) + mmgraph.mobility_graph.get_node_references(nodes[1]):
                 mservice_id = mmgraph.mobility_graph.nodes[mobility_node].layer
@@ -85,10 +87,8 @@ class MFDFlow(AbstractFlowMotor):
         unode, dnode = veh.current_link
         remaining_length = veh.remaining_link_length
 
-        unode_ref = self._mobility_nodes[unode].reference_node
-        unode_pos = self._flow_nodes[unode_ref].pos
-        dnode_ref = self._mobility_nodes[dnode].reference_node
-        dnode_pos = self._flow_nodes[dnode_ref].pos
+        unode_pos = self._graph.nodes[unode].position
+        dnode_pos = self._graph.nodes[dnode].position
 
         direction = dnode_pos - unode_pos
         norm_direction = np.linalg.norm(direction)
@@ -151,8 +151,7 @@ class MFDFlow(AbstractFlowMotor):
 
         while len(self.veh_manager._new_vehicles) > 0:
             new_veh = self.veh_manager._new_vehicles.pop()
-            origin_ref = self._mobility_nodes[new_veh.origin].reference_node
-            origin_pos =  self._flow_nodes[origin_ref].pos
+            origin_pos = self._graph.nodes[new_veh.origin].position
             new_veh.set_position(origin_pos)
             new_veh.notify(self._tcurrent.remove_time(dt))
 
@@ -160,10 +159,9 @@ class MFDFlow(AbstractFlowMotor):
         for veh_id in self.veh_manager._vehicles:
             veh = self.veh_manager._vehicles[veh_id]
             log.info(f"{veh.current_link}, {veh}")
-            curr_link = self._graph.mobility_graph.links[tuple(veh.current_link)]
+            curr_link = self._graph.links[tuple(veh.current_link)]
             lid = curr_link.reference_links[0] # take reservoir of first part of trip
-            flow_link = self._graph.flow_graph.get_link(lid)
-            res_id = flow_link.zone
+            res_id = self._graph.roaddb.sections[lid]['zone']
             veh_type = veh.type.upper() # dirty
             self.dict_accumulations[res_id][veh_type] += 1
 
@@ -175,38 +173,35 @@ class MFDFlow(AbstractFlowMotor):
         # Move the vehicles
         for veh_id in self.veh_manager._vehicles:
             veh = self.veh_manager._vehicles[veh_id]
-            curr_link = self._graph.mobility_graph.links[veh.current_link]
+            curr_link = self._graph.links[veh.current_link]
             lid = curr_link.reference_links[0]
-            flow_link = self._graph.flow_graph.get_link(lid)
-            res_id = flow_link.zone
+            res_id = self._graph.roaddb.sections[lid]['zone']
             veh_type = veh.type.upper()
             speed = self.dict_speeds[res_id][veh_type]
             veh.speed = speed
             self.move_veh(veh, self._tcurrent.remove_time(dt), dt, speed)
 
     def update_graph(self):
-        mobility_graph = self._graph.mobility_graph
-        flow_graph = self._graph.flow_graph
-        topolink_lenghts = dict()
-        res_links = {res.id: self._graph.zones[res.id].links for res in self.reservoirs}
+        topolink_lengths = dict()
+        res_links = {res.id: self._graph.roaddb.zones[res.id] for res in self.reservoirs}
         res_dict = {res.id: res for res in self.reservoirs}
 
-        for tid, topolink in mobility_graph.links.items():
+        for tid, topolink in self._graph.links.items():
             if isinstance(topolink, ConnectionLink):
                 link_service = topolink.layer
-                topolink_lenghts[topolink.id] = {'lengths': {},
+                topolink_lengths[tid] = {'lengths': {},
                                                  'speeds': {}}
                 for l in topolink.reference_links:
-                    topolink_lenghts[topolink.id]['lengths'][l] = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-                    topolink_lenghts[topolink.id]['speeds'][l] = None
+                    topolink_lengths[tid]['lengths'][l] = self._graph.roaddb.sections[l]['length']
+                    topolink_lengths[tid]['speeds'][l] = None
                     for resid, reslinks in res_links.items():
                         res = res_dict[resid]
                         if l in reslinks:
                             mspeed = res.dict_speeds[link_service.upper()]
-                            topolink_lenghts[topolink.id]['speeds'][l] = mspeed
+                            topolink_lengths[tid]['speeds'][l] = mspeed
                             break
 
-        for tid, tdata in topolink_lenghts.items():
+        for tid, tdata in topolink_lengths.items():
             total_len = 0
             new_speed = 0
             for gid, length in tdata['lengths'].items():
@@ -215,13 +210,13 @@ class MFDFlow(AbstractFlowMotor):
                 if speed is not None:
                     new_speed += length * speed
                 else:
-                    link_node = mobility_graph._map_lid_nodes[tid]
-                    link = mobility_graph.links[link_node]
+                    link = self._graph.roaddb.sections[tid]
                     new_speed = self._graph.layers[link.layer].default_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             if new_speed != 0:
-                mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['travel_time'] = total_len/new_speed
-                mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
+                self._graph.links[tid].costs['travel_time'] = total_len / new_speed
+                self._graph.links[tid].costs['speed'] = new_speed
+
 
     def write_result(self, step_affectation:int, step_flow:int):
         tcurrent = self._tcurrent.time

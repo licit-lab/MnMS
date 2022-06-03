@@ -79,7 +79,7 @@ class Line(object):
         return {"ID": self.id,
                 "TIMETABLE": [time.time for time in self._timetable.table],
                 "STOPS": [self._service_graph.nodes[s].__dump__() for s in stops],
-                "LINKS":[self._service_graph.links[self._service_graph._map_lid_nodes[l]].__dump__() for l in self.links]}
+                "LINKS":[self._service_graph.sections[self._service_graph._map_lid_nodes[l]].__dump__() for l in self.links]}
 
     def construct_veh_path(self):
         veh_path = list()
@@ -88,7 +88,7 @@ class Line(object):
             unode = path[i]
             dnode = path[i+1]
             key = (unode, dnode)
-            veh_path.append((key, self.graph_layer.graph.links[key].costs['length']))
+            veh_path.append((key, self.graph_layer.graph.sections[key].costs['length']))
         return veh_path
 
 
@@ -338,7 +338,7 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
             dnode = path[i+1]
             if self._graph.nodes[dnode].layer == self.id:
                 key = (unode, dnode)
-                veh_path.append((key, self._graph.links[key].costs['length']))
+                veh_path.append((key, self._graph.sections[key].costs['length']))
             else:
                 break
         return veh_path

@@ -1,7 +1,9 @@
 import csv
+import sys
 from typing import List, Literal, Union
 from abc import ABC, abstractmethod
 import re
+from pathlib import Path
 
 import numpy as np
 
@@ -9,6 +11,9 @@ from mnms.demand.user import User
 from mnms.tools.exceptions import CSVDemandParseError
 from mnms.tools.time import Time
 from mnms.tools.observer import Observer
+from mnms.log import create_logger
+
+log = create_logger(__name__)
 
 
 class AbstractDemandManager(ABC):
@@ -90,7 +95,7 @@ class CSVDemandManager(AbstractDemandManager):
     delimiter: str
         Delimiter for the CSV file
     """
-    def __init__(self, csvfile, demand_type:Literal['node', 'coordinate']='node', delimiter=';'):
+    def __init__(self, csvfile: Union[Path, str], demand_type:Literal['node', 'coordinate']='node', delimiter=';'):
         super(CSVDemandManager, self).__init__()
         assert demand_type == 'coordinate' or demand_type == 'node', f"demand_type must be 'node' or 'coordinate' not '{demand_type}'"
 
@@ -99,12 +104,16 @@ class CSVDemandManager(AbstractDemandManager):
         self._reader = csv.reader(self._file, delimiter=delimiter, quotechar='|')
         self._demand_type = demand_type
 
-        next(self._reader)
+        try:
+            next(self._reader)
+        except StopIteration:
+            log.error(f'{self._filename} is empty')
+            sys.exit(-1)
 
         first_line = next(self._reader)
         if demand_type == "coordinate":
-            match_x=re.match(r'^[-+]?[0-9]*\.*[0-9]+\d\s[-+]?[0-9]*\.*[0-9]+\d$', first_line[2])
-            match_y=re.match(r'^[-+]?[0-9]*\.*[0-9]+\d\s[-+]?[0-9]*\.*[0-9]+\d$', first_line[3])
+            match_x=re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[2])
+            match_y=re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[3])
             if match_x is None or match_y is None:
                 raise CSVDemandParseError(csvfile, demand_type)
         elif demand_type == "node":

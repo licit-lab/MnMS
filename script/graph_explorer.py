@@ -44,10 +44,10 @@ def get_info_geonode(graph):
         node = graph.nodes[node_input]
         print("Position         :", node.pos)
         print("Downstream nodes :", graph._adjacency[node.id])
-        print("Downstream links :", {graph.links[(node_input, dnode)].id for dnode in graph._adjacency[node.id]})
+        print("Downstream sections :", {graph.sections[(node_input, dnode)].id for dnode in graph._adjacency[node.id]})
         unodes = {up for up, down in graph._adjacency.items() if node_input in down}
         print("Upstream nodes   :", unodes)
-        print("Upstream links   :", {graph.links[(n, node_input)].id for n in unodes})
+        print("Upstream sections   :", {graph.sections[(n, node_input)].id for n in unodes})
         print('')
     else:
         print(f"Error, '{node_input}' not in graph nodes")
@@ -59,14 +59,14 @@ def get_info_geolink(graph):
     link_input = input()
     print('')
     if link_input in graph._map_lid_nodes:
-        link = graph.links[graph._map_lid_nodes[link_input]]
+        link = graph.sections[graph._map_lid_nodes[link_input]]
         print("Upstream   :", link.upstream_node)
         print("Downstream :", link.downstream_node)
         print("Length     :", link.length)
 
         print('')
     else:
-        print(f"Error, '{link_input}' not in graph links")
+        print(f"Error, '{link_input}' not in graph sections")
         print('')
 
 
@@ -79,10 +79,10 @@ def get_info_toponode(graph):
         print("Reference node   :", node.reference_node)
         print("Mobility service :", node.layer, end='\n\n')
         print("Downstream nodes :", graph._adjacency[node.id])
-        print("Downstream links :", {graph.links[(node_input, dnode)].id for dnode in graph._adjacency[node.id]})
+        print("Downstream sections :", {graph.sections[(node_input, dnode)].id for dnode in graph._adjacency[node.id]})
         unodes = {up for up, down in graph._adjacency.items() if node_input in down}
         print("Upstream nodes   :", unodes)
-        print("Upstream links   :", {graph.links[(n, node_input)].id for n in unodes})
+        print("Upstream sections   :", {graph.sections[(n, node_input)].id for n in unodes})
         print('')
     else:
         print(f"Error, '{node_input}' not in graph nodes")
@@ -94,12 +94,12 @@ def get_info_topolink(graph):
     link_input = input()
     print('')
     if link_input in graph._map_lid_nodes:
-        link = graph.links[graph._map_lid_nodes[link_input]]
+        link = graph.sections[graph._map_lid_nodes[link_input]]
         print("Type             :", link.__class__.__name__)
         print("Upstream         :", link.upstream_node)
         print("Downstream       :", link.downstream_node)
         print("Mobility service :", link.layer)
-        print("Reference links  :", link.reference_links)
+        print("Reference sections  :", link.reference_links)
         print("Reference lanes  :", link.reference_lane_ids)
         print("Costs:")
         for key, val in link.costs.items():
@@ -108,7 +108,7 @@ def get_info_topolink(graph):
 
         print('')
     else:
-        print(f"Error, '{link_input}' not in graph links")
+        print(f"Error, '{link_input}' not in graph sections")
         print('')
 
 
