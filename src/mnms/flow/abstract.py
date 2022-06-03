@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List
 import csv
 
-from mnms.tools.time import Time, Dt
+from mnms.time import Time, Dt
 from mnms.graph.layers import MultiLayerGraph
 
 

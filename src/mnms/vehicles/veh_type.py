@@ -4,7 +4,7 @@ import numpy as np
 
 from mnms.tools.observer import TimeDependentSubject
 from mnms.log import create_logger
-from mnms.tools.time import Time
+from mnms.time import Time
 
 log = create_logger(__name__)
 

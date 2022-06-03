@@ -1,10 +1,9 @@
 from mnms import LOGLEVEL
 from mnms.graph.core import MultiModalGraph
-from mnms.graph.shortest_path import compute_shortest_path
 from mnms.log import set_mnms_logger_level
 from mnms.mobility_service.car import PersonalCarMobilityService, CarMobilityGraphLayer
 from mnms.demand.user import User
-from mnms.tools.time import Time, Dt
+from mnms.time import Time, Dt
 from mnms.demand.manager import BaseDemandManager
 from mnms.simulation import Supervisor
 from mnms.travel_decision.model import BaseDecisionModel

@@ -2,11 +2,10 @@ from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.public_transport import BusMobilityGraphLayer, PublicTransportMobilityService
 from mnms.mobility_service.car import PersonalCarMobilityService, CarMobilityGraphLayer, OnDemandCarMobilityService
 from mnms.demand.user import User
-from mnms.tools.time import Time, Dt, TimeTable
+from mnms.time import Time, Dt, TimeTable
 from mnms.demand.manager import BaseDemandManager
 from mnms.simulation import Supervisor
 from mnms.travel_decision.model import BaseDecisionModel
-from mnms.tools.observer import CSVUserObserver
 from mnms.flow.MFD import MFDFlow, Reservoir
 from mnms.tools.observer import CSVVehicleObserver, CSVUserObserver
 import os

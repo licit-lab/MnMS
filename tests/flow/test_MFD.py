@@ -4,8 +4,9 @@ from tempfile import TemporaryDirectory
 from mnms.demand import User
 from mnms.flow.MFD import MFDFlow, Reservoir
 from mnms.graph.shortest_path import Path
-from mnms.tools.time import Dt, TimeTable, Time
-from mnms.graph.core import MultiModalGraph
+from mnms.time import Dt, TimeTable, Time
+from mnms.graph.layers import MultiLayerGraph
+from mnms.graph.road import RoadDataBase
 from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService, BusMobilityGraphLayer
 from mnms.vehicles.veh_type import Vehicle
@@ -18,14 +19,15 @@ class TestMFDFlow(unittest.TestCase):
         self.tempfile = TemporaryDirectory()
         self.pathdir = self.tempfile.name+'/'
 
-        mmgraph = MultiModalGraph()
-        flow_graph = mmgraph.flow_graph
+        mmgraph = MultiLayerGraph()
+        roaddb = RoadDataBase()
 
-        flow_graph.create_node('0', [0, 0])
-        flow_graph.create_node('1', [0, 40000])
-        flow_graph.create_node('2', [1200, 0])
-        flow_graph.create_node('3', [1400, 0])
-        flow_graph.create_node('4', [3400, 0])
+
+        roaddb.create_node('0', [0, 0])
+        roaddb.create_node('1', [0, 40000])
+        roaddb.create_node('2', [1200, 0])
+        roaddb.create_node('3', [1400, 0])
+        roaddb.create_node('4', [3400, 0])
 
         flow_graph.create_link('0_1', '0', '1')
         flow_graph.create_link('0_2', '0', '2')

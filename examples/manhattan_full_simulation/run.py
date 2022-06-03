@@ -9,7 +9,7 @@ from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.mobility_service.car import PersonalCarMobilityService
 from mnms.flow.MFD import MFDFlow, Reservoir
 from mnms.simulation import Supervisor
-from mnms.tools.time import Time, Dt
+from mnms.time import Time, Dt
 from mnms.tools.observer import CSVUserObserver
 
 

@@ -9,7 +9,7 @@ from mnms.graph.core import Node, ConnectionLink
 from mnms.graph.shortest_path import bidirectional_dijkstra
 from mnms.mobility_service.abstract import AbstractMobilityGraphLayer, AbstractMobilityService
 from mnms.tools.exceptions import PathNotFound
-from mnms.tools.time import Dt
+from mnms.time import Dt
 from mnms.vehicles.veh_type import Car
 
 

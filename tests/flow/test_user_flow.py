@@ -2,7 +2,7 @@ import unittest
 from tempfile import TemporaryDirectory
 
 from mnms.flow.user_flow import UserFlow
-from mnms.tools.time import Time, Dt, TimeTable
+from mnms.time import Time, Dt, TimeTable
 from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService, BusMobilityGraphLayer

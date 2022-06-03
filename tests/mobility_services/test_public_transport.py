@@ -1,8 +1,7 @@
 import unittest
 
-from mnms.mobility_service.public_transport import PublicTransportMobilityService, BusMobilityGraphLayer
-from mnms.tools.time import TimeTable, Dt
-from mnms.vehicles.veh_type import Bus
+from mnms.mobility_service.public_transport import BusMobilityGraphLayer
+from mnms.time import TimeTable, Dt
 
 
 class TestPublicTransport(unittest.TestCase):

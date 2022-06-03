@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import csv
 from typing import List
 
-from mnms.tools.time import Time
+from mnms.time import Time
 from mnms.log import create_logger
 
 log = create_logger(__name__)

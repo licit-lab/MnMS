@@ -6,11 +6,10 @@ from mnms.graph import MultiModalGraph
 from mnms.graph.search import nearest_mobility_service
 from mnms.graph.shortest_path import (astar, dijkstra, _euclidian_dist, compute_shortest_path,
                                       compute_k_shortest_path, bidirectional_dijkstra)
-from mnms.graph.edition import walk_connect
 from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService, OnDemandCarMobilityService
 from mnms.demand.user import User
 from mnms.mobility_service.public_transport import BusMobilityGraphLayer, PublicTransportMobilityService
-from mnms.tools.time import TimeTable, Dt
+from mnms.time import TimeTable, Dt
 
 
 class TestAlgorithms(unittest.TestCase):

@@ -8,7 +8,7 @@ from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService, AbstractMobilityGraphLayer
 from mnms.tools.cost import create_service_costs
 from mnms.tools.exceptions import VehicleNotFoundError
-from mnms.tools.time import TimeTable, Time, Dt
+from mnms.time import TimeTable, Time, Dt
 from mnms.vehicles.veh_type import Vehicle, Bus, Metro
 
 log = create_logger(__name__)

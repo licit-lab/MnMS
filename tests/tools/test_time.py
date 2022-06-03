@@ -1,7 +1,7 @@
 import unittest
 from decimal import Decimal
 
-from mnms.tools.time import Time, TimeTable, Dt
+from mnms.time import Time, Dt
 
 
 class TestTime(unittest.TestCase):

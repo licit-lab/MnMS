@@ -7,7 +7,7 @@ import numpy as np
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.graph.core import ConnectionLink
 from mnms.log import create_logger
-from mnms.tools.time import Dt, Time
+from mnms.time import Dt, Time
 from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Vehicle
 

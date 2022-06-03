@@ -12,9 +12,7 @@ import numpy as np
 
 from mnms.graph import MultiModalGraph
 from mnms.graph.io import save_graph
-from mnms.tools.time import Time, TimeTable, Dt
 from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService
-from mnms.mobility_service.public_transport import PublicTransportGraphLayer, PublicTransportMobilityService
 from mnms.vehicles.veh_type import Bus, Metro, Tram
 from mnms.log import LOGLEVEL, create_logger
 

@@ -6,6 +6,7 @@ import numpy as np
 from .core import OrientedGraph, Node, ConnectionLink, TransitLink
 from .road import RoadDataBase
 from ..mobility_service.abstract import AbstractMobilityService
+from mnms.time import TimeTable
 from ..vehicles.fleet import FleetManager
 from ..vehicles.veh_type import Vehicle
 from ..log import create_logger
@@ -13,8 +14,9 @@ from ..log import create_logger
 log = create_logger(__name__)
 
 
-class Layer(object):
-    def __init__(self, id: str,
+class AbstractLayer(object):
+    def __init__(self,
+                 id: str,
                  roaddb: RoadDataBase,
                  veh_type: Type[Vehicle],
                  default_speed: float,
@@ -36,25 +38,6 @@ class Layer(object):
                 if observer is not None:
                     s.attach_vehicle_observer(observer)
 
-    def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]]):
-        assert dbnode in self._roaddb.nodes
-
-        new_node = Node(nid, self._id, dbnode, exclude_movements)
-        new_node.position = np.array(self._roaddb.nodes[dbnode])
-        self.graph.add_node(new_node)
-
-        self._map_nodes[dbnode] = nid
-
-    def create_link(self, lid, upstream, downstream, costs, reference_links):
-        new_link = ConnectionLink(lid, upstream, downstream, costs, reference_links, self._id)
-        self.graph.add_link(new_link)
-
-        for l in reference_links:
-            if l not in self._map_links:
-                self._map_links[l] = set()
-
-            self._map_links[l].add(lid)
-
     def add_mobility_service(self, service:AbstractMobilityService):
         service.layer = self
         service.fleet = FleetManager(self._veh_type)
@@ -67,6 +50,90 @@ class Layer(object):
     @property
     def id(self):
         return self._id
+
+
+class Layer(AbstractLayer):
+    def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]]):
+        assert dbnode in self._roaddb.nodes
+
+        new_node = Node(nid, self._id, dbnode, exclude_movements)
+        new_node.position = np.array(self._roaddb.nodes[dbnode])
+        self.graph.add_node(new_node)
+
+        self._map_nodes[dbnode] = nid
+
+    def create_link(self, lid, upstream, downstream, costs, reference_links):
+        new_link = ConnectionLink(lid, upstream, downstream, costs, reference_links, self.id)
+        self.graph.add_link(new_link)
+
+        for l in reference_links:
+            if l not in self._map_links:
+                self._map_links[l] = set()
+            self._map_links[l].add(lid)
+
+
+class PublicTransportLayer(AbstractLayer):
+    def __init__(self,
+                 id: str,
+                 roaddb: RoadDataBase,
+                 veh_type: Type[Vehicle],
+                 default_speed: float,
+                 services: Optional[List[AbstractMobilityService]] = None,
+                 observer: Optional = None):
+        super(PublicTransportLayer, self).__init__(id, roaddb, veh_type, default_speed, services, observer)
+        self.lines = dict()
+
+    def _create_stop(self, sid, dbnode):
+        assert dbnode in self._roaddb.stops
+
+        new_node = Node(sid, self._id, dbnode)
+        new_node.position = np.array(self._roaddb.stops[dbnode]['absolute_position'])
+        self.graph.add_node(new_node)
+
+        self._map_nodes[dbnode] = sid
+
+    def _connect_stops(self, lid, upstream, downstream, reference_sections):
+        line_length = sum(self._roaddb.sections[s]['length'] for s in reference_sections[1:-1])
+        line_length += self._roaddb.sections[reference_sections[0]]['length']*(1-self._roaddb.stops[upstream]['relative_position'])
+        line_length += self._roaddb.sections[reference_sections[-1]]['length'] * self._roaddb.stops[downstream]['relative_position']
+
+        costs = {'length': line_length}
+        new_link = ConnectionLink(self.id+'_'+lid, self.id+'_'+upstream, self.id+'_'+downstream, costs, reference_sections, self.id)
+        self.graph.add_link(new_link)
+
+        for l in reference_sections:
+            if l not in self._map_links:
+                self._map_links[l] = set()
+            self._map_links[l].add(lid)
+
+    def create_line(self, id,
+                    stops:List[str],
+                    sections: List[List[str]],
+                    timetable: TimeTable,
+                    bidirectional: bool = True):
+
+        assert len(stops) == len(sections)+1
+
+        self.lines[id] = {'stops': stops,
+                          'sections': sections,
+                          'table': timetable}
+
+        for s in stops:
+            self._create_stop(self.id+'_'+s, s)
+
+        for i in range(len(stops)-1):
+            up = stops[i]
+            down = stops[i+1]
+            self._connect_stops('_'.join([self.id, up, down]),
+                                up,
+                                down,
+                                sections[i])
+
+            if bidirectional:
+                self._connect_stops('_'.join([self.id, down, id]),
+                                    down,
+                                    up,
+                                    sections[i][::-1])
 
 
 class OriginDestinationLayer(object):

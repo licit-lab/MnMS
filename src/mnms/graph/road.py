@@ -9,10 +9,11 @@ def _compute_dist(pos1: np.ndarray, pos2: np.ndarray):
 
 
 class RoadDataBase(object):
-    __slots__ = ('nodes', 'sections', 'zones', '_layers')
+    __slots__ = ('nodes', 'sections', 'zones', 'stops', '_layers')
 
     def __init__(self):
         self.nodes = dict()
+        self.stops = dict()
         self.sections = dict()
         self.zones = defaultdict(set)
 
@@ -20,6 +21,19 @@ class RoadDataBase(object):
 
     def register_node(self, nid: str, pos: List[float]):
         self.nodes[nid] = np.array(pos)
+
+    def register_stop(self, sid: str, lid: str, relative_position: float):
+        assert 0 <= relative_position <= 1, f"relative_position must be between 0 and 1"
+
+        sec = self.sections[lid]
+        up_node_pos = self.nodes[sec['upstream']]
+        down_node_pos = self.nodes[sec['downstream']]
+
+        abs_pos = up_node_pos + (down_node_pos - up_node_pos)*relative_position
+
+        self.stops[sid] = {'section': lid,
+                           'relative_position': relative_position,
+                           'absolute_position': abs_pos}
 
     def register_section(self, lid: str, upstream: str, downstream: str, length: Optional[float] = None, zone: Optional[str] = None):
         assert upstream in self.nodes, f"{upstream} node is not registered"
@@ -33,6 +47,7 @@ class RoadDataBase(object):
 
         self.zones[zone].add(lid)
 
+    # TODO
     def delete_link(self, lid: str, layers: Optional[List[str]] = None):
         if layers is not None:
             for layer_id in layers:

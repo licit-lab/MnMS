@@ -1,6 +1,3 @@
-import json
-import os
-import sys
 from time import time
 import csv
 import traceback
@@ -13,7 +10,7 @@ from mnms.flow.abstract import AbstractFlowMotor
 from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.abstract import AbstractDecisionModel
-from mnms.tools.time import Time, Dt
+from mnms.time import Time, Dt
 from mnms.log import create_logger
 from mnms.tools.exceptions import PathNotFound
 

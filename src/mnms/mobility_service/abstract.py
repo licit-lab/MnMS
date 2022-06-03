@@ -1,10 +1,10 @@
 from abc import ABC,abstractmethod
-from typing import Type, List, Dict
+from typing import Type, List
 
 from mnms.demand.user import User
 from mnms.graph.core import OrientedGraph
 from mnms.tools.cost import create_service_costs
-from mnms.tools.time import Time, Dt
+from mnms.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle
 

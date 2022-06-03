@@ -9,7 +9,7 @@ import numpy as np
 
 from mnms.demand.user import User
 from mnms.tools.exceptions import CSVDemandParseError
-from mnms.tools.time import Time
+from mnms.time import Time
 from mnms.tools.observer import Observer
 from mnms.log import create_logger
 

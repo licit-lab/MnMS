@@ -8,6 +8,27 @@ from ..mobility_service.abstract import AbstractMobilityService
 from ..vehicles.veh_type import Vehicle, Car
 
 
+def generate_line_road(start: List[float], end: List[float], n: int, resid: str = 'RES'):
+    roaddb = RoadDataBase()
+
+    start = np.array(start)
+    end = np.array(end)
+    dir = end-start
+    dist = np.linalg.norm(dir)
+    dx = dist/(n-1)
+    dir_dx = (dir/dist)*dx
+
+    for i in range(n):
+        roaddb.register_node(str(i), start+dir_dx*i)
+
+    for i in range(n-1):
+        roaddb.register_section('_'.join([str(i), str(i+1)]),
+                                str(i),
+                                str(i+1),
+                                zone=resid)
+
+    return roaddb
+
 def generate_square_road(link_length=None, resid='RES'):
     roaddb = RoadDataBase()
 

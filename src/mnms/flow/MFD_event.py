@@ -1,11 +1,9 @@
 from typing import List
-from copy import deepcopy
 
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.flow.MFD import construct_leg
-from mnms.tools.time import Time, Dt
+from mnms.time import Time, Dt
 from mnms.flow.MFD import Reservoir
-from mnms.demand.user import User
 
 import numpy as np
 
