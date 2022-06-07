@@ -74,8 +74,9 @@ class Supervisor(object):
         for nu in new_users:
             try:
                 self._decision_model(nu)
+                log.info(nu.path)
             except PathNotFound:
-                pass
+                log.warning(f'Path not found for user {nu.id}')
 
         end = time()
         log.info(f'Done [{end - start:.5} s]')

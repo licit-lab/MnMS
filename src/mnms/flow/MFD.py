@@ -101,12 +101,13 @@ class MFDFlow(AbstractFlowMotor):
         dist_travelled = dt.to_seconds()*speed
         for next_pass in list(veh._next_passenger):
             take_node = veh._next_passenger[next_pass][1]._current_node
-            ref_node = self._mobility_nodes[take_node].reference_node
-            ref_node_pos = self._flow_nodes[ref_node].pos
+            node_pos = self._graph.nodes[take_node].position
+            # ref_node = self._mobility_nodes[take_node].reference_node
+            # ref_node_pos = self._flow_nodes[ref_node].pos
             if take_node == veh._current_link[0]:
                 veh.start_user_trip(next_pass, take_node)
                 _, user = veh._passenger[next_pass]
-                user._position = ref_node_pos
+                user._position = node_pos
                 user.notify(tcurrent)
 
         if dist_travelled > veh._remaining_link_length:

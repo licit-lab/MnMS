@@ -1,11 +1,8 @@
-from typing import Optional, Type, List
+from typing import List
 
 import numpy as np
 
-from .road import RoadDataBase
-from .layers import Layer, OriginDestinationLayer
-from ..mobility_service.abstract import AbstractMobilityService
-from ..vehicles.veh_type import Vehicle, Car
+from mnms.graph.road import RoadDataBase
 
 
 def generate_line_road(start: List[float], end: List[float], n: int, resid: str = 'RES'):
@@ -28,6 +25,7 @@ def generate_line_road(start: List[float], end: List[float], n: int, resid: str 
                                 zone=resid)
 
     return roaddb
+
 
 def generate_square_road(link_length=None, resid='RES'):
     roaddb = RoadDataBase()
@@ -107,50 +105,3 @@ def generate_manhattan_road(n, link_length, resid='RES'):
         roaddb.register_section(f"{down}_{up}", down, up, link_length, resid)
 
     return roaddb
-
-
-def generate_layer_from_roads(roaddb: RoadDataBase,
-                              layer_id: str,
-                              veh_type:Type[Vehicle] = Car,
-                              default_speed: float = 14,
-                              mobility_services: Optional[List[AbstractMobilityService]] = None):
-
-    layer = Layer(layer_id, roaddb, veh_type, default_speed, mobility_services)
-
-
-    for n, pos in roaddb.nodes.items():
-        layer.create_node(f"{layer_id}_{n}", n, {})
-
-    for lid, data in roaddb.sections.items():
-        layer.create_link(f"{layer_id}_{lid}",
-                          f"{layer_id}_{data['upstream']}",
-                          f"{layer_id}_{data['downstream']}",
-                          {'length': data['length']},
-                          [lid])
-    return layer
-
-
-def generate_grid_origin_destination_layer(xmin: float,
-                                           ymin: float,
-                                           xmax: float,
-                                           ymax: float,
-                                           nx: int,
-                                           ny: Optional[int] = None):
-    if ny is None:
-        ny = nx
-
-    x_dist = xmax - xmin
-    y_dist = ymax - ymin
-
-    dx = x_dist/nx
-    dy = y_dist/ny
-
-    odlayer = OriginDestinationLayer()
-
-    for j in range(ny):
-        for i in range(nx):
-            pos = np.array([xmin+i*dx, ymin+j*dy])
-            odlayer.create_destination_node(f"DESTINATION_{str(i+j*nx)}", pos)
-            odlayer.create_origin_node(f"ORIGIN_{str(i + j * nx)}", pos)
-
-    return odlayer

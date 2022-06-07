@@ -38,7 +38,7 @@ class AbstractLayer(object):
                 if observer is not None:
                     s.attach_vehicle_observer(observer)
 
-    def add_mobility_service(self, service:AbstractMobilityService):
+    def add_mobility_service(self, service: AbstractMobilityService):
         service.layer = self
         service.fleet = FleetManager(self._veh_type)
         self.mobility_services[service.id] = service
@@ -106,34 +106,49 @@ class PublicTransportLayer(AbstractLayer):
                 self._map_links[l] = set()
             self._map_links[l].add(lid)
 
-    def create_line(self, id,
-                    stops:List[str],
+    def create_line(self,
+                    lid: str,
+                    stops: List[str],
                     sections: List[List[str]],
                     timetable: TimeTable,
                     bidirectional: bool = True):
 
         assert len(stops) == len(sections)+1
 
-        self.lines[id] = {'stops': stops,
-                          'sections': sections,
-                          'table': timetable}
+        self.lines[lid] = {'stops': stops,
+                           'sections': sections,
+                           'table': timetable,
+                           'nodes': [],
+                           'links': []}
 
         for s in stops:
-            self._create_stop(self.id+'_'+s, s)
+            nid = self.id+'_'+s
+            self.lines[lid]['nodes'].append(nid)
+            self._create_stop(nid, s)
 
         for i in range(len(stops)-1):
             up = stops[i]
             down = stops[i+1]
-            self._connect_stops('_'.join([self.id, up, down]),
+            link_id = '_'.join([self.id, up, down])
+            self.lines[lid]['links'].append(link_id)
+            self._connect_stops(link_id,
                                 up,
                                 down,
                                 sections[i])
 
             if bidirectional:
-                self._connect_stops('_'.join([self.id, down, id]),
+                link_id = '_'.join([self.id, down, up])
+                self.lines[lid]['links'].append(link_id)
+                self._connect_stops(link_id,
                                     down,
                                     up,
                                     sections[i][::-1])
+
+        for service in self.mobility_services.values():
+            timetable_iter = iter(timetable.table)
+            service._timetable_iter[lid] = iter(timetable.table)
+            service._current_time_table[lid] = next(timetable_iter)
+            service._next_time_table[lid] = next(timetable_iter)
 
 
 class OriginDestinationLayer(object):
@@ -156,7 +171,7 @@ class OriginDestinationLayer(object):
 
 class MultiLayerGraph(object):
     def __init__(self,
-                 layers:List[Layer] = [],
+                 layers:List[AbstractLayer] = [],
                  odlayer:Optional[OriginDestinationLayer] = None,
                  connection_distance:Optional[float] = None):
         self.nodes = ChainMap()

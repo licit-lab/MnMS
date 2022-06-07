@@ -1,7 +1,7 @@
 import pathlib
 
-from mnms.graph.generation import (generate_manhattan_road, generate_layer_from_roads,
-                                   generate_grid_origin_destination_layer)
+from mnms.generation.roads import generate_manhattan_road
+from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer
 from mnms.graph.layers import MultiLayerGraph
 from mnms.demand.manager import CSVDemandManager
 from mnms.log import set_mnms_logger_level, LOGLEVEL

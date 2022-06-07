@@ -1,6 +1,7 @@
 import sys
 from collections import defaultdict, deque
 from copy import deepcopy
+from functools import cached_property
 from importlib import import_module
 from typing import Type, List
 
@@ -19,77 +20,77 @@ def _NoneDefault():
 
 
 # TODO: When a Line is created ensure that nodes are ordered
-class Line(object):
-    """Represent a line of a PublicTransport mobility service
-
-    Parameters
-    ----------
-    id: str
-        Id of the line
-    mobility_service: PublicTransport
-        The PublicTransport class in which the line is
-    timetable: TimeTable
-        The time table of departure
-
-    """
-    def __init__(self, id: str, graph_layer: "PublicTransportGraphLayer", timetable: "TimeTable"):
-        self.id = id
-        self.stops = list()
-        self.links = set()
-        self.graph_layer = graph_layer
-        self.service_id = graph_layer.id
-
-        self._service_graph = self.graph_layer.graph
-        self._adjacency = defaultdict(_NoneDefault)
-        self._rev_adjacency = defaultdict(_NoneDefault)
-
-        self._timetable = timetable
-
-    def add_stop(self, sid:str, ref_node:str) -> None:
-        self._service_graph.create_node(sid, self.graph_layer.id, ref_node)
-        self.stops.append(sid)
-
-    def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, reference_links, costs=None,
-                      reference_lane_ids=None) -> None:
-        assert up_sid in self.stops
-        assert down_sid in self.stops
-        costs = {} if costs is None else costs
-        costs.update({'length': length})
-        self._service_graph.create_link(lid,
-                                        up_sid,
-                                        down_sid,
-                                        costs,
-                                        reference_links,
-                                        mobility_service=self.graph_layer.id)
-        self.links.add(lid)
-        self._adjacency[up_sid] = down_sid
-        self._rev_adjacency[down_sid] = up_sid
-
-
-    @property
-    def start(self):
-        return self.stops[0]
-
-    @property
-    def end(self):
-        return self.stops[-1]
-
-    def __dump__(self) -> dict:
-        stops = deepcopy(self.stops)
-        return {"ID": self.id,
-                "TIMETABLE": [time.time for time in self._timetable.table],
-                "STOPS": [self._service_graph.nodes[s].__dump__() for s in stops],
-                "LINKS":[self._service_graph.sections[self._service_graph._map_lid_nodes[l]].__dump__() for l in self.links]}
-
-    def construct_veh_path(self):
-        veh_path = list()
-        path = self.stops
-        for i in range(len(path) - 1):
-            unode = path[i]
-            dnode = path[i+1]
-            key = (unode, dnode)
-            veh_path.append((key, self.graph_layer.graph.sections[key].costs['length']))
-        return veh_path
+# class Line(object):
+#     """Represent a line of a PublicTransport mobility service
+#
+#     Parameters
+#     ----------
+#     id: str
+#         Id of the line
+#     mobility_service: PublicTransport
+#         The PublicTransport class in which the line is
+#     timetable: TimeTable
+#         The time table of departure
+#
+#     """
+#     def __init__(self, id: str, graph_layer: "PublicTransportGraphLayer", timetable: "TimeTable"):
+#         self.id = id
+#         self.stops = list()
+#         self.links = set()
+#         self.graph_layer = graph_layer
+#         self.service_id = graph_layer.id
+#
+#         self._service_graph = self.graph_layer.graph
+#         self._adjacency = defaultdict(_NoneDefault)
+#         self._rev_adjacency = defaultdict(_NoneDefault)
+#
+#         self._timetable = timetable
+#
+#     def add_stop(self, sid:str, ref_node:str) -> None:
+#         self._service_graph.create_node(sid, self.graph_layer.id, ref_node)
+#         self.stops.append(sid)
+#
+#     def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, reference_links, costs=None,
+#                       reference_lane_ids=None) -> None:
+#         assert up_sid in self.stops
+#         assert down_sid in self.stops
+#         costs = {} if costs is None else costs
+#         costs.update({'length': length})
+#         self._service_graph.create_link(lid,
+#                                         up_sid,
+#                                         down_sid,
+#                                         costs,
+#                                         reference_links,
+#                                         mobility_service=self.graph_layer.id)
+#         self.links.add(lid)
+#         self._adjacency[up_sid] = down_sid
+#         self._rev_adjacency[down_sid] = up_sid
+#
+#
+#     @property
+#     def start(self):
+#         return self.stops[0]
+#
+#     @property
+#     def end(self):
+#         return self.stops[-1]
+#
+#     def __dump__(self) -> dict:
+#         stops = deepcopy(self.stops)
+#         return {"ID": self.id,
+#                 "TIMETABLE": [time.time for time in self._timetable.table],
+#                 "STOPS": [self._service_graph.nodes[s].__dump__() for s in stops],
+#                 "LINKS":[self._service_graph.sections[self._service_graph._map_lid_nodes[l]].__dump__() for l in self.links]}
+#
+#     def construct_veh_path(self):
+#         veh_path = list()
+#         path = self.stops
+#         for i in range(len(path) - 1):
+#             unode = path[i]
+#             dnode = path[i+1]
+#             key = (unode, dnode)
+#             veh_path.append((key, self.graph_layer.graph.sections[key].costs['length']))
+#         return veh_path
 
 
 class PublicTransportMobilityService(AbstractMobilityService):
@@ -103,7 +104,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         self._next_time_table = dict()
         self._next_veh_departure = defaultdict(_NoneDefault)
 
-    @property
+    @cached_property
     def lines(self):
         return self.layer.lines
 
@@ -116,57 +117,67 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 self.fleet.delete_vehicle(first_veh.id)
                 self.clean_arrived_vehicles(lid)
 
-    def new_departures(self, time, dt, line:Line, all_departures=None):
-        veh_path = line.construct_veh_path()
+    def construct_veh_path(self, lid):
+        veh_path = list()
+        path = self.lines[lid]['nodes']
+        for i in range(len(path) - 1):
+            unode = path[i]
+            dnode = path[i+1]
+            key = (unode, dnode)
+            veh_path.append((key, self.graph.links[key].costs['length']))
+        return veh_path
+
+    def new_departures(self, time, dt, lid:str, all_departures=None):
+        veh_path = self.construct_veh_path(lid)
 
         if all_departures is None:
-            if self._next_veh_departure[line.id] is None:
-                new_veh = self.fleet.create_waiting_vehicle(line.stops[0], line.stops[-1], veh_path)
-                self._next_veh_departure[line.id] = (self._current_time_table[line.id], new_veh)
+            if self._next_veh_departure[lid] is None:
+                new_veh = self.fleet.create_waiting_vehicle(self.lines[lid]['nodes'][0], self.lines[lid]['nodes'][-1], veh_path)
+                self._next_veh_departure[lid] = (self._current_time_table[lid], new_veh)
             all_departures = list()
 
-        if time > self._current_time_table[line.id]:
-            self._current_time_table[line.id] = self._next_time_table[line.id]
+        if time > self._current_time_table[lid]:
+            self._current_time_table[lid] = self._next_time_table[lid]
             try:
-                self._next_time_table[line.id] = next(self._timetable_iter[line.id])
+                self._next_time_table[lid] = next(self._timetable_iter[lid])
             except StopIteration:
                 return all_departures
-            self.new_departures(time, dt, line, all_departures)
+            self.new_departures(time, dt, lid, all_departures)
 
         next_time = time.add_time(dt)
-        if time <= self._current_time_table[line.id] < next_time:
-            all_departures.append(self._next_veh_departure[line.id][1])
-            self.vehicles[line.id].appendleft(self._next_veh_departure[line.id][1])
-            self._current_time_table[line.id] = self._next_time_table[line.id]
+        if time <= self._current_time_table[lid] < next_time:
+            all_departures.append(self._next_veh_departure[lid][1])
+            self.vehicles[lid].appendleft(self._next_veh_departure[lid][1])
+            self._current_time_table[lid] = self._next_time_table[lid]
             try:
-                self._next_time_table[line.id] = next(self._timetable_iter[line.id])
-                new_veh = self.fleet.create_waiting_vehicle(line.stops[0], line.stops[-1], veh_path)
-                self._next_veh_departure[line.id] = (self._current_time_table[line.id], new_veh)
+                self._next_time_table[lid] = next(self._timetable_iter[lid])
+                new_veh = self.fleet.create_waiting_vehicle(self.lines[lid]['nodes'][0], self.lines[lid]['nodes'][-1], veh_path)
+                self._next_veh_departure[lid] = (self._current_time_table[lid], new_veh)
             except StopIteration:
                 return all_departures
-            self.new_departures(time, dt, line, all_departures)
+            self.new_departures(time, dt, lid, all_departures)
         return all_departures
 
     def request_vehicle(self, user: "User", drop_node:str) -> None:
-        start = user.path.nodes[0]
+        start = user._current_node
 
-        for line in self.lines.values():
-            if start in line.stops:
+        for lid, line in self.lines.items():
+            if start in line['nodes']:
                 user_line = line
+                user_line_id = lid
                 break
         else:
             log.error(f'{user} start is not in the PublicTransport mobility service {self.id}')
             sys.exit(-1)
 
-        prev_line_node = user_line._rev_adjacency[start]
-        if prev_line_node is None:
-            departure_time, waiting_veh = user_line._next_veh_departure
+        if self.graph.nodes[start].radj:
+            departure_time, waiting_veh = self._next_veh_departure[user_line_id]
             waiting_veh.take_next_user(user, drop_node)
             return
         else:
             curr_veh = None
             next_veh = None
-            it_veh = iter(self.vehicles[user_line.id])
+            it_veh = iter(self.vehicles[user_line])
             ind_start = user_line.stops.index(start)
             try:
                 curr_veh = next(it_veh)
@@ -198,8 +209,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
                         raise VehicleNotFoundError(user, self)
 
     def update(self, dt: Dt):
-        for lid, line in self.lines.items():
-            for new_veh in self.new_departures(self._tcurrent, dt, line):
+        for lid in self.lines:
+            for new_veh in self.new_departures(self._tcurrent, dt, lid):
                 self.fleet.start_waiting_vehicle(new_veh.id)
                 if self._observer is not None:
                     new_veh.attach(self._observer)
@@ -250,16 +261,16 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
         assert isinstance(service, PublicTransportMobilityService), f"PublicTransportGraphLayer only accept mobility services with type PublicTransportMobilityService"
         super(PublicTransportGraphLayer, self).add_mobility_service(service)
 
-    def add_line(self, lid: str, timetable: "TimeTable") -> Line:
-        new_line = Line(lid, self, timetable)
-        self.lines[lid] = new_line
-        for service in self.mobility_services.values():
-            timetable_iter = iter(timetable.table)
-            service._timetable_iter[lid] = iter(timetable.table)
-            service._current_time_table[lid] = next(timetable_iter)
-            service._next_time_table[lid] = next(timetable_iter)
-
-        return new_line
+    # def add_line(self, lid: str, timetable: "TimeTable") -> Line:
+    #     new_line = Line(lid, self, timetable)
+    #     self.lines[lid] = new_line
+    #     for service in self.mobility_services.values():
+    #         timetable_iter = iter(timetable.table)
+    #         service._timetable_iter[lid] = iter(timetable.table)
+    #         service._current_time_table[lid] = next(timetable_iter)
+    #         service._next_time_table[lid] = next(timetable_iter)
+    #
+    #     return new_line
 
     def show_lines(self) -> None:
         print(self.lines)
