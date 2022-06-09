@@ -44,7 +44,7 @@ class TimeDependentSubject(ABC):
     def detach(self, obs):
         self._observers.remove(obs)
 
-    def notify(self, time:Time):
+    def notify(self, time: Time):
         for obs in self._observers:
             obs.update(self, time)
 

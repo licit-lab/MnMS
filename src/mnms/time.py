@@ -183,8 +183,8 @@ class Time(object):
         new_minutes = new_minutes%60
         new_seconds = new_seconds%60
         if new_seconds < 0:
-            n = -new_seconds//60
-            new_seconds = 60*n - new_seconds%60
+            n = -new_seconds//60 + 1
+            new_seconds = 60*n + new_seconds%60
             new_minutes -= n
         if new_minutes < 0:
             n = -new_minutes // 60 +1
@@ -243,10 +243,5 @@ class TimeTable(object):
 
 
 if __name__ == "__main__":
-    # t = TimeTable.create_table_freq("05:00:00", "22:00:00", Dt(seconds=600))
-
-    t = Time.fromSeconds(0)
-
-    t2 = t.add_time(Dt(seconds=32))
-    t3 = t2.add_time(Dt(seconds=30))
-    print(t3)
+    a = Time('07:19:00.00')
+    print(a.remove_time(Dt(seconds=100)))

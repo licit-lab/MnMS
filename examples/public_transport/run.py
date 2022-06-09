@@ -42,7 +42,7 @@ pblayer = PublicTransportLayer('BUS',
 pblayer.create_line('L0',
                     ['S0', 'S1', 'S2'],
                     [['0_1', '1_2'], ['1_2', '2_3']],
-                    TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=5)))
+                    TimeTable.create_table_freq('07:0:00', '08:00:00', Dt(minutes=10)))
 
 odlayer = generate_matching_origin_destination_layer(roaddb)
 
@@ -69,7 +69,7 @@ decision_model = DummyDecisionModel(mlgraph)
 # Flow Motor
 
 def mfdspeed(dacc):
-    dacc['CAR'] = 3
+    dacc['BUS'] = 5
     return dacc
 
 flow_motor = MFDFlow()
@@ -81,6 +81,6 @@ supervisor = Supervisor(mlgraph,
                         decision_model)
 
 supervisor.run(Time("07:00:00"),
-               Time("08:00:00"),
+               Time("07:21:10"),
                Dt(seconds=10),
                10)
