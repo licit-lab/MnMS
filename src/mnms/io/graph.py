@@ -2,9 +2,10 @@ import json
 from importlib import import_module
 
 from mnms.graph.core import Node
+from mnms.graph.layers import MultiLayerGraph
 
 
-def save_graph(mmgraph: MultiModalGraph, filename, indent=2):
+def save_graph(mlgraph: MultiLayerGraph, filename, indent=2):
     """Save a MultiModalGraph as a JSON file
 
     Parameters
@@ -22,12 +23,8 @@ def save_graph(mmgraph: MultiModalGraph, filename, indent=2):
 
     """
     d = {}
-    d['FLOW_GRAPH'] = {}
+    d['ROAD_DATA'] = {}
     d['MOBILITY_GRAPH'] = {}
-
-    d['FLOW_GRAPH']['NODES'] = [node.__dump__() for node in mmgraph.flow_graph.nodes.values()]
-    d['FLOW_GRAPH']['LINKS'] = [link.__dump__() for link in mmgraph.flow_graph.sections.values()]
-    d['FLOW_GRAPH']['ZONES'] = [sensor.__dump__() for sensor in mmgraph.zones.values()]
 
     d['MOBILITY_GRAPH']['LAYERS'] = [serv.__dump__() for serv in mmgraph.layers.values()]
     d['MOBILITY_GRAPH']['CONNECTIONS'] = [mmgraph.mobility_graph.sections[nodes].__dump__() for nodes in mmgraph.connection_layers]

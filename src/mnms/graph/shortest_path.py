@@ -12,8 +12,6 @@ from numpy.linalg import norm as _norm
 from mnms.graph.layers import MultiLayerGraph
 from mnms.log import create_logger
 from mnms.graph.core import OrientedGraph, TransitLink, Node
-from mnms.graph.search import mobility_nodes_in_radius
-from mnms.graph.edition import delete_node_upstream_links, delete_node_downstream_links, delete_node
 from mnms.tools.exceptions import PathNotFound
 from mnms.demand.user import User
 
@@ -287,176 +285,6 @@ def _euclidian_dist(origin: Node, dest: Node):
     return _norm(origin.position - dest.position)
 
 
-def compute_shortest_path(mmgraph: MultiLayerGraph,
-                          user: User,
-                          cost: _WEIGHT_COST_TYPE = lambda cost: cost['travel_time'] + cost['waiting_time'],
-                          algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar'] = "astar",
-                          heuristic: Callable[[str, str], float] = None,
-                          radius: float = 500,
-                          growth_rate_radius: float = 10,
-                          walk_speed: float = 1.4) -> Path:
-    """Compute shortest path from a User origin/destination and a multimodal graph
-
-    Parameters
-    ----------
-    mmgraph: MultiLayerGraph
-        The multimodal graph to use for the shortest path algorithm
-    user: User
-        The user with an origin/destination
-    cost: str
-        The cost name
-    algorithm: str
-        The algorithm to use for the shortest path computation
-    heuristic: function
-        The heuristic function to use if astar is chosen as algorithm
-    radius: float
-        The radius of mobility service search around the User if its origin/destination are coordinates
-    growth_rate_radius: float
-        The radius growth if no path is found from origin to destination if User origin/destination are coordinates
-    walk_speed: float
-        The walk speed in m/s
-
-    Returns
-    -------
-    float
-        The cost of the path
-
-    """
-
-    if user.available_mobility_service is not None:
-        user_accessible_layers = {mmgraph.mapping_layer_services[mservice].id for mservice in user.available_mobility_service}
-        user_accessible_layers.add('WALK')
-    else:
-        user_accessible_layers = None
-
-    if algorithm == "dijkstra":
-        sh_algo = dijkstra
-    elif algorithm == "bidirectional_dijkstra":
-        sh_algo = bidirectional_dijkstra
-    elif algorithm == "astar":
-        if heuristic is None:
-            heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
-        sh_algo = partial(astar, heuristic=heuristic)
-    else:
-        raise NotImplementedError(f"Algorithm '{algorithm}' is not implemented")
-
-    # If user has coordinates as origin/destination
-    if isinstance(user.origin, np.ndarray) and isinstance(user.destination, np.ndarray):
-
-        current_radius = radius
-        while True:
-            service_nodes_origin, dist_origin = mobility_nodes_in_radius(user.origin,
-                                                                         mmgraph,
-                                                                         current_radius,
-                                                                         user.available_mobility_service)
-            service_nodes_destination, dist_destination = mobility_nodes_in_radius(user.destination,
-                                                                                   mmgraph,
-                                                                                   current_radius,
-                                                                                   user.available_mobility_service)
-
-            if len(service_nodes_origin) == 0 or len(service_nodes_destination) == 0:
-                current_radius += growth_rate_radius
-            else:
-                start_node = f"_{user.id}_START"
-                end_node = f"_{user.id}_END"
-
-                mmgraph.mobility_graph.create_node(start_node, None, None)
-                mmgraph.mobility_graph.create_node(end_node, None, None)
-
-                log.debug(f"Create start artificial sections with: {service_nodes_origin}")
-                # print(dist_origin[0]/walk_speed)
-                for ind, n in enumerate(service_nodes_origin):
-                    mmgraph.connect_layers(start_node + '_' + n, start_node, n, 0,
-                                           {'travel_time': dist_origin[ind] / walk_speed,
-                                            'length': dist_origin[ind]})
-
-                log.debug(f"Create end artificial sections with: {service_nodes_destination}")
-                for ind, n in enumerate(service_nodes_destination):
-                    mmgraph.connect_layers(n + '_' + end_node, n, end_node, 0,
-                                           {'travel_time': dist_destination[ind] / walk_speed,
-                                            'length': dist_destination[ind]})
-
-                # user.available_mobility_service -> user_accessible_layers
-                path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
-
-                # Clean the graph from artificial nodes
-
-                log.debug(f"Clean graph")
-
-                delete_node_downstream_links(mmgraph.mobility_graph, start_node)
-                delete_node_upstream_links(mmgraph.mobility_graph, end_node, service_nodes_destination)
-                for n in service_nodes_origin:
-                    del mmgraph.connection_layers[(start_node, n)]
-                for n in service_nodes_destination:
-                    del mmgraph.connection_layers[(n, end_node)]
-
-                if path.path_cost != float('inf'):
-                    break
-
-                current_radius += growth_rate_radius
-
-        del path.nodes[0]
-        del path.nodes[-1]
-
-        return path
-
-    else:
-
-        start_nodes = [n for n in mmgraph.mobility_graph.get_node_references(user.origin)]
-        end_nodes = [n for n in mmgraph.mobility_graph.get_node_references(user.destination)]
-
-        if len(start_nodes) == 0:
-            log.warning(f"There is no mobility service connected to origin node {user.origin}")
-            raise PathNotFound(user.origin, user.destination)
-
-        if len(end_nodes) == 0:
-            log.warning(f"There is no mobility service connected to destination node {user.destination}")
-            raise PathNotFound(user.origin, user.destination)
-
-        start_node = f"START_{user.origin}_{user.destination}"
-        end_node = f"END_{user.origin}_{user.destination}"
-        log.debug(f"Create artitificial nodes: {start_node}, {end_node}")
-
-        mmgraph.mobility_graph.create_node(start_node, 'WALK', None)
-        mmgraph.mobility_graph.create_node(end_node, 'WALK', None)
-
-        log.debug(f"Create start artificial sections with: {start_nodes}")
-        virtual_cost = {cost: 0} if isinstance(cost, str) else {}
-        virtual_cost.update({'time': 0})
-        for n in start_nodes:
-            mmgraph.connect_layers(start_node + '_' + n, start_node, n, 0, virtual_cost)
-
-        log.debug(f"Create end artificial sections with: {end_nodes}")
-        for n in end_nodes:
-            mmgraph.connect_layers(n + '_' + end_node, n, end_node, 0, virtual_cost)
-
-        # Compute paths
-
-        log.debug(f"Compute path")
-
-        path = sh_algo(mmgraph.mobility_graph, start_node, end_node, cost, user_accessible_layers)
-
-        # Clean the graph from artificial nodes
-
-        log.debug(f"Clean graph")
-
-        delete_node(mmgraph.mobility_graph, start_node)
-        delete_node(mmgraph.mobility_graph, end_node)
-        for n in start_nodes:
-            del mmgraph.connection_layers[(start_node, n)]
-        for n in end_nodes:
-            del mmgraph.connection_layers[(n, end_node)]
-
-        if path.path_cost == float('inf'):
-            log.warning(f"Path not found for {user}")
-            raise PathNotFound(user.origin, user.destination)
-
-        del path.nodes[0]
-        del path.nodes[-1]
-
-        return path
-
-
 def compute_k_shortest_path(mmgraph: MultiLayerGraph,
                             user: User,
                             npath: int,
@@ -464,9 +292,6 @@ def compute_k_shortest_path(mmgraph: MultiLayerGraph,
                             algorithm: Literal['dijkstra', 'bidirectional_dijkstra', 'astar'] = 'astar',
                             heuristic: Callable[[str, str], float]=None,
                             scale_factor: float = 10,
-                            radius:float = 500,
-                            growth_rate_radius: float = 50,
-                            walk_speed: float = 1.4,
                             max_consecutive_run: int = 10) -> Tuple[List[Path], List[float]]:
     """Compute n best shortest path by increasing the costs of the sections previously found as shortest path.
 

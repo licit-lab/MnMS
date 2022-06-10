@@ -1,6 +1,0 @@
-{
-    "time": "07:10:00.00",
-    "affectation_step": 60,
-    "flow_step": 0,
-    "error": "Traceback (most recent call last):\n  File \"/home/florian/Work/UGE/MnMS/src/mnms/simulation.py\", line 171, in run\n    self.step(affectation_factor, affectation_step, flow_dt, flow_step, new_users)\n  File \"/home/florian/Work/UGE/MnMS/src/mnms/simulation.py\", line 134, in step\n    self.step_flow(flow_dt, users_step)\n  File \"/home/florian/Work/UGE/MnMS/src/mnms/simulation.py\", line 114, in step_flow\n    self._user_flow.step(flow_dt, users_step)\n  File \"/home/florian/Work/UGE/MnMS/src/mnms/flow/user_flow.py\", line 111, in step\n    self._request_user_vehicles(new_users)\n  File \"/home/florian/Work/UGE/MnMS/src/mnms/flow/user_flow.py\", line 101, in _request_user_vehicles\n    mservice.request_vehicle(user, upath[slice_nodes][-1])\n  File \"/home/florian/Work/UGE/MnMS/test_v2/myExample2.py\", line 96, in request_vehicle\n    raise PathNotFound(nearest_veh.origin, user.current_node)\nmnms.tools.exceptions.PathNotFound: No paths has been found between C2 -> C0\n"
-}

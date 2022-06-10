@@ -25,6 +25,8 @@ class AbstractLayer(object):
         self._id = id
         self.graph = OrientedGraph()
         self._roaddb = roaddb
+        self._roaddb._layers[id] = self
+
         self._default_speed = default_speed
 
         self._map_nodes = dict()
@@ -32,6 +34,7 @@ class AbstractLayer(object):
 
         self.mobility_services = dict()
         self._veh_type = veh_type
+
         if services is not None:
             for s in services:
                 self.add_mobility_service(s)

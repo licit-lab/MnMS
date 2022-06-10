@@ -69,9 +69,6 @@ class AbstractDecisionModel(ABC):
     """
     def __init__(self, mmgraph:MultiLayerGraph,
                  n_shortest_path:int=3,
-                 radius_sp:float=500,
-                 radius_growth_sp:float=50,
-                 walk_speed:float=1.4,
                  scale_factor_sp:int=10,
                  algorithm:Literal['astar', 'dijkstra']='astar',
                  heuristic=None,
@@ -80,10 +77,7 @@ class AbstractDecisionModel(ABC):
                  cost:str='travel_time'):
 
         self._n_shortest_path = n_shortest_path
-        self._radius_sp = radius_sp
-        self._radius_growth_sp = radius_growth_sp
         self._mmgraph = mmgraph
-        self._walk_speed = walk_speed
         self._scale_factor = scale_factor_sp
         self._algorithm = algorithm
         self._heuristic = heuristic
@@ -108,10 +102,13 @@ class AbstractDecisionModel(ABC):
 
     # TODO: restrict combination of paths (ex: we dont want Uber->Bus)
     def __call__(self, user:User):
-        layer_paths, _ = compute_k_shortest_path(self._mmgraph, user, self._n_shortest_path, cost=self._cost,
-                                                 algorithm=self._algorithm, heuristic=self._heuristic,
-                                                 scale_factor=self._scale_factor, radius=self._radius_sp,
-                                                 growth_rate_radius=self._radius_growth_sp, walk_speed=self._walk_speed)
+        layer_paths, _ = compute_k_shortest_path(self._mmgraph,
+                                                 user,
+                                                 self._n_shortest_path,
+                                                 cost=self._cost,
+                                                 algorithm=self._algorithm,
+                                                 heuristic=self._heuristic,
+                                                 scale_factor=self._scale_factor)
 
 
 

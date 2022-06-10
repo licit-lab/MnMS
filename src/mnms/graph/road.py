@@ -55,3 +55,19 @@ class RoadDataBase(object):
         else:
             for layer in self._layers.values():
                 pass
+
+    def __dump__(self):
+        return {'NODES': self.nodes,
+                'STOPS': self.stops,
+                'SECTIONS': self.sections}
+
+    @classmethod
+    def __load__(cls, data):
+        new_obj = cls()
+        new_obj.nodes = data['NODES']
+        new_obj.stops = data['STOPS']
+
+        for lid, d in data['SECTIONS'].items():
+            new_obj.register_section(lid, d['upstream'], d['downstream'], d['length'], d['zone'])
+
+        return new_obj
