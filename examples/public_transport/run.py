@@ -6,6 +6,7 @@ from mnms.flow.MFD import Reservoir, MFDFlow
 from mnms.generation.roads import generate_line_road
 from mnms.generation.layers import generate_matching_origin_destination_layer
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
+from mnms.io.graph import save_graph
 from mnms.log import set_mnms_logger_level
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.simulation import Supervisor
@@ -56,6 +57,8 @@ odlayer = generate_matching_origin_destination_layer(roaddb)
 mlgraph = MultiLayerGraph([pblayer],
                           odlayer,
                           200)
+
+save_graph(mlgraph, cwd.joinpath("graph.json"))
 
 # Demand
 

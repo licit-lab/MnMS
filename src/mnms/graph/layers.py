@@ -206,6 +206,8 @@ class MultiLayerGraph(object):
             self.mapping_layer_services[service] = layer
 
     def connect_origin_destination_layer(self, odlayer:OriginDestinationLayer, connection_distance: float):
+        assert self.odlayer is None
+
         self.odlayer = odlayer
         _norm = np.linalg.norm
 

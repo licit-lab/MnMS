@@ -11,10 +11,15 @@ log = create_logger(__name__)
 
 
 class Dt(object):
-    def __init__(self, hours:int=0, minutes:int=0, seconds:float=0):
+    def __init__(self,
+                 hours: int = 0,
+                 minutes: int = 0,
+                 seconds: float = 0):
+
         assert hours >= 0, f"{hours}"
         assert minutes >= 0
         assert seconds >= 0
+
         new_seconds = Decimal(seconds)%60
         new_minutes = minutes + seconds//60
         hours = hours + new_minutes//60
@@ -240,8 +245,3 @@ class TimeTable(object):
         else:
             log.warning("TimeTable has no Time and cant compute a frequency")
             return None
-
-
-if __name__ == "__main__":
-    a = Time('07:19:00.00')
-    print(a.remove_time(Dt(seconds=100)))
