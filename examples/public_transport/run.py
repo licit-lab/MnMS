@@ -3,18 +3,17 @@ import pathlib
 from mnms import LOGLEVEL
 from mnms.demand import CSVDemandManager
 from mnms.flow.MFD import Reservoir, MFDFlow
-from mnms.generation.roads import generate_line_road
 from mnms.generation.layers import generate_matching_origin_destination_layer
+from mnms.generation.roads import generate_line_road
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
-from mnms.io.graph import save_graph
+from mnms.io.graph import save_graph, load_graph
 from mnms.log import set_mnms_logger_level
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.simulation import Supervisor
+from mnms.time import TimeTable, Time, Dt
 from mnms.tools.observer import CSVUserObserver
 from mnms.travel_decision import DummyDecisionModel
 from mnms.vehicles.veh_type import Bus
-from mnms.time import TimeTable, Time, Dt
-
 
 set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation',
                                       'mnms.vehicles.veh_type',
@@ -58,8 +57,9 @@ mlgraph = MultiLayerGraph([pblayer],
                           odlayer,
                           200)
 
-save_graph(mlgraph, cwd.joinpath("graph.json"))
+save_graph(mlgraph, cwd.parent.joinpath('graph.json'))
 
+load_graph(cwd.parent.joinpath('graph.json'))
 # Demand
 
 demand = CSVDemandManager(cwd, demand_type='coordinate')

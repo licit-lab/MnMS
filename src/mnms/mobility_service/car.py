@@ -16,33 +16,33 @@ from mnms.vehicles.veh_type import Car
 log = create_logger(__name__)
 
 
-class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
-    def __init__(self, id='Car', default_speed=13.8, services:List[AbstractMobilityService]=None, observer=None):
-        super(CarMobilityGraphLayer, self).__init__(id, Car, default_speed, services, observer)
-
-    def create_node(self, nid: str, ref_node, exclude_movements: Optional[Dict[str, Set[str]]] = None) -> None:
-        self.graph.create_node(nid, self.id, ref_node, exclude_movements)
-
-    def create_link(self, lid: str, unid: str, dnid: str, reference_links:List[str], costs: dict = {}) -> None:
-        self.graph.create_link(lid, unid, dnid, costs, reference_links, self.id)
-
-    def connect_to_layer(self, nid) -> dict:
-        return dict()
-
-    @classmethod
-    def __load__(cls, data: dict) -> "PersonalCar":
-        new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
-        [new_obj.graph.add_node(Node.__load__(ndata)) for ndata in data['NODES']]
-        [new_obj.graph.add_link(ConnectionLink.__load__(ldata)) for ldata in data['LINKS']]
-        return new_obj
-
-    def __dump__(self) -> dict:
-        return {"TYPE": ".".join([CarMobilityGraphLayer.__module__, CarMobilityGraphLayer.__name__]),
-                "ID": self.id,
-                "DEFAULT_SPEED": self.default_speed,
-                "NODES": [n.__dump__() for n in self.graph.nodes.values()],
-                "LINKS": [l.__dump__() for l in self.graph.sections.values()],
-                "SERVICES": [s.__dump__() for s in self.mobility_services.values()]}
+# class CarMobilityGraphLayer(AbstractMobilityGraphLayer):
+#     def __init__(self, id='Car', default_speed=13.8, services:List[AbstractMobilityService]=None, observer=None):
+#         super(CarMobilityGraphLayer, self).__init__(id, Car, default_speed, services, observer)
+#
+#     def create_node(self, nid: str, ref_node, exclude_movements: Optional[Dict[str, Set[str]]] = None) -> None:
+#         self.graph.create_node(nid, self.id, ref_node, exclude_movements)
+#
+#     def create_link(self, lid: str, unid: str, dnid: str, reference_links:List[str], costs: dict = {}) -> None:
+#         self.graph.create_link(lid, unid, dnid, costs, reference_links, self.id)
+#
+#     def connect_to_layer(self, nid) -> dict:
+#         return dict()
+#
+#     @classmethod
+#     def __load__(cls, data: dict) -> "PersonalCar":
+#         new_obj = cls(data['ID'], data["DEFAULT_SPEED"])
+#         [new_obj.graph.add_node(Node.__load__(ndata)) for ndata in data['NODES']]
+#         [new_obj.graph.add_link(ConnectionLink.__load__(ldata)) for ldata in data['LINKS']]
+#         return new_obj
+#
+#     def __dump__(self) -> dict:
+#         return {"TYPE": ".".join([CarMobilityGraphLayer.__module__, CarMobilityGraphLayer.__name__]),
+#                 "ID": self.id,
+#                 "DEFAULT_SPEED": self.default_speed,
+#                 "NODES": [n.__dump__() for n in self.graph.nodes.values()],
+#                 "LINKS": [l.__dump__() for l in self.graph.sections.values()],
+#                 "SERVICES": [s.__dump__() for s in self.mobility_services.values()]}
 
 
 class PersonalCarMobilityService(AbstractMobilityService):

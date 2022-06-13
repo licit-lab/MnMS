@@ -245,3 +245,11 @@ class TimeTable(object):
         else:
             log.warning("TimeTable has no Time and cant compute a frequency")
             return None
+
+    def __dump__(self):
+        return [time.time for time in self.table]
+
+
+    @classmethod
+    def __load__(cls, data):
+        return cls([Time(t) for t in data])

@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from collections import ChainMap
 from typing import Optional, Dict, Set, List, Type
 
@@ -10,6 +11,7 @@ from mnms.time import TimeTable
 from ..vehicles.fleet import FleetManager
 from ..vehicles.veh_type import Vehicle
 from ..log import create_logger
+from mnms.io.utils import load_class_by_module_name
 
 log = create_logger(__name__)
 
@@ -54,6 +56,15 @@ class AbstractLayer(object):
     def id(self):
         return self._id
 
+    @abstractmethod
+    def __dump__(self):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def __load__(cls, data: Dict, roaddb: RoadDataBase):
+        pass
+
 
 class Layer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]]):
@@ -73,6 +84,34 @@ class Layer(AbstractLayer):
             if l not in self._map_links:
                 self._map_links[l] = set()
             self._map_links[l].add(lid)
+
+    def __dump__(self):
+        return {'ID': self.id,
+                'TYPE': ".".join([self.__class__.__module__, self.__class__.__name__]),
+                'VEH_TYPE': ".".join([self._veh_type.__module__, self._veh_type.__name__]),
+                'DEFAULT_SPEED': self.default_speed,
+                'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
+                'NODES': [n.__dump__() for n in self.graph.nodes.values()],
+                'LINKS': [l.__dump__() for l in self.graph.links.values()]}
+
+    @classmethod
+    def __load__(cls, data: Dict, roaddb: RoadDataBase):
+        new_obj = cls(data['ID'],
+                      roaddb,
+                      load_class_by_module_name(data['VEH_TYPE']),
+                      data['DEFAULT_SPEED'])
+
+        for ndata in data['NODES']:
+            new_obj.create_node(ndata['ID'], ndata['REF_NODE'], ndata['EXCLUDE_MOVEMENTS'])
+
+        for ldata in data['LINKS']:
+            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'], ldata['REF_LINKS'])
+
+        for sdata in data['SERVICES']:
+            serv_type = load_class_by_module_name(sdata['TYPE'])
+            new_obj.add_mobility_service(serv_type.__load__(sdata))
+
+        return new_obj
 
 
 class PublicTransportLayer(AbstractLayer):
@@ -121,6 +160,7 @@ class PublicTransportLayer(AbstractLayer):
         self.lines[lid] = {'stops': stops,
                            'sections': sections,
                            'table': timetable,
+                           'bidirectional': bidirectional,
                            'nodes': [],
                            'links': []}
 
@@ -153,6 +193,33 @@ class PublicTransportLayer(AbstractLayer):
             service._current_time_table[lid] = next(timetable_iter)
             service._next_time_table[lid] = next(timetable_iter)
 
+    def __dump__(self):
+        return {'ID': self.id,
+                'TYPE': ".".join([self.__class__.__module__, self.__class__.__name__]),
+                'VEH_TYPE': ".".join([self._veh_type.__module__, self._veh_type.__name__]),
+                'DEFAULT_SPEED': self.default_speed,
+                'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
+                'LINES': [{'ID': lid,
+                           'STOPS': ldata['stops'],
+                           'SECTIONS': ldata['sections'],
+                           'TIMETABLE': ldata['table'].__dump__()} for lid, ldata in self.lines.items()]}
+
+    @classmethod
+    def __load__(cls, data: Dict, roaddb: RoadDataBase):
+        new_obj = cls(data['ID'],
+                      roaddb,
+                      load_class_by_module_name(data['VEH_TYPE']),
+                      data['DEFAULT_SPEED'])
+
+        for ldata in data['LINES']:
+            new_obj.create_line(ldata['ID'], ldata['STOPS'], ldata['SECTIONS'], TimeTable.__load__(ldata['TIMETABLE']))
+
+        for sdata in data['SERVICES']:
+            serv_type = load_class_by_module_name(sdata['TYPE'])
+            new_obj.add_mobility_service(serv_type.__load__(sdata))
+
+        return new_obj
+
 
 class OriginDestinationLayer(object):
     def __init__(self):
@@ -170,6 +237,20 @@ class OriginDestinationLayer(object):
         new_node.position = np.array(pos)
 
         self.destinations[nid] = new_node
+
+    def __dump__(self):
+        return {'ORIGINS': {node.id: node.position for node in self.origins.values()},
+                'DESTINATIONS': {node.id: node.position for node in self.destinations.values()}}
+
+    @classmethod
+    def __load__(cls, data) -> "OriginDestinationLayer":
+        new_obj = cls()
+        for nid, pos in data['ORIGINS'].values():
+            new_obj.create_origin_node(nid, pos)
+        for nid, pos in data['DESTINATIONS'].values():
+            new_obj.create_destination_node(nid, pos)
+
+        return new_obj
 
 
 class MultiLayerGraph(object):
@@ -241,6 +322,5 @@ class MultiLayerGraph(object):
 
         self.nodes.maps[0].update(odlayer.origins)
         self.nodes.maps[0].update(odlayer.destinations)
-
 
 
