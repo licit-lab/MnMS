@@ -25,13 +25,17 @@ class Supervisor(object):
                  decision_model: AbstractDecisionModel,
                  outfile: str = None):
 
-        self._graph: MultiLayerGraph = graph
+        self._graph: MultiLayerGraph = None
         self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
-        self._flow_motor.set_graph(graph)
+
         self._decision_model:AbstractDecisionModel = decision_model
         self._user_flow = UserFlow()
+
+        self.add_graph(graph)
+        self._flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)
+
         
         self.tcurrent = None
 
@@ -49,6 +53,7 @@ class Supervisor(object):
 
     def add_graph(self, mmgraph: MultiLayerGraph):
         self._graph = mmgraph
+        self._graph.construct_layer_service_mapping()
 
     def add_flow_motor(self, flow: AbstractFlowMotor):
         self._flow_motor = flow

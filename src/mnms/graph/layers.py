@@ -9,7 +9,7 @@ from .road import RoadDataBase
 from ..mobility_service.abstract import AbstractMobilityService
 from mnms.time import TimeTable
 from ..vehicles.fleet import FleetManager
-from ..vehicles.veh_type import Vehicle
+from ..vehicles.veh_type import Vehicle, Car
 from ..log import create_logger
 from mnms.io.utils import load_class_by_module_name
 
@@ -112,6 +112,15 @@ class Layer(AbstractLayer):
             new_obj.add_mobility_service(serv_type.__load__(sdata))
 
         return new_obj
+
+
+class CarLayer(Layer):
+    def __init__(self,
+                 roaddb: RoadDataBase,
+                 default_speed: float = 13.8,
+                 services: Optional[List[AbstractMobilityService]] = None,
+                 observer: Optional = None):
+        super(CarLayer, self).__init__('CAR', roaddb, Car, default_speed, services, observer)
 
 
 class PublicTransportLayer(AbstractLayer):
@@ -279,12 +288,12 @@ class MultiLayerGraph(object):
         self.layers[layer.id] = layer
         self.roaddb = layer._roaddb
 
-        if len(layer.mobility_services) == 0:
-            log.warning(f"Layer with id '{layer.id}' does not have any mobility services in it, add mobility services "
-                        f"before adding the layer to the MultiModalGraph")
-
-        for service in layer.mobility_services:
-            self.mapping_layer_services[service] = layer
+        # if len(layer.mobility_services) == 0:
+        #     log.warning(f"Layer with id '{layer.id}' does not have any mobility services in it, add mobility services "
+        #                 f"before adding the layer to the MultiModalGraph")
+        #
+        # for service in layer.mobility_services:
+        #     self.mapping_layer_services[service] = layer
 
     def connect_origin_destination_layer(self, odlayer:OriginDestinationLayer, connection_distance: float):
         assert self.odlayer is None
@@ -323,4 +332,8 @@ class MultiLayerGraph(object):
         self.nodes.maps[0].update(odlayer.origins)
         self.nodes.maps[0].update(odlayer.destinations)
 
+    def construct_layer_service_mapping(self):
+        for lid, layer in self.layers.items():
+            for service in layer.mobility_services:
+                self.mapping_layer_services[service] = lid
 
