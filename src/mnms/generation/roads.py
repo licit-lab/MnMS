@@ -5,7 +5,7 @@ import numpy as np
 from mnms.graph.road import RoadDataBase
 
 
-def generate_line_road(start: List[float], end: List[float], n: int, resid: str = 'RES'):
+def generate_line_road(start: List[float], end: List[float], n: int, resid: str = 'RES', bothways: bool = True):
     roaddb = RoadDataBase()
 
     start = np.array(start)
@@ -23,6 +23,11 @@ def generate_line_road(start: List[float], end: List[float], n: int, resid: str 
                                 str(i),
                                 str(i+1),
                                 zone=resid)
+        if bothways:
+            roaddb.register_section('_'.join([str(i + 1), str(i)]),
+                                    str(i+1),
+                                    str(i),
+                                    zone=resid)
 
     return roaddb
 
