@@ -3,11 +3,13 @@ import pathlib
 from mnms import LOGLEVEL
 from mnms.demand import CSVDemandManager
 from mnms.flow.MFD import Reservoir, MFDFlow
-from mnms.generation.layers import generate_matching_origin_destination_layer
-from mnms.generation.roads import generate_line_road
+from mnms.generation.layers import generate_matching_origin_destination_layer, generate_layer_from_roads, \
+    generate_grid_origin_destination_layer
+from mnms.generation.roads import generate_line_road, generate_manhattan_road
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
 from mnms.io.graph import save_graph, load_graph
 from mnms.log import set_mnms_logger_level
+from mnms.mobility_service.car import PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.simulation import Supervisor
 from mnms.time import TimeTable, Time, Dt
@@ -46,20 +48,15 @@ pblayer.create_line('L0',
 
 odlayer = generate_matching_origin_destination_layer(roaddb)
 
-# road_db = generate_manhattan_road(10, 100)
-# car_layer = generate_layer_from_roads(road_db,
-#                                       'CAR',
-#                                       mobility_services=[PersonalCarMobilityService()])
-#
-# odlayer = generate_grid_origin_destination_layer(0, 0, 1000, 1000, 10, 10)
+road_db = generate_manhattan_road(10, 100)
+car_layer = generate_layer_from_roads(road_db,
+                                      'CAR',
+                                      mobility_services=[PersonalCarMobilityService()])
 
 mlgraph = MultiLayerGraph([pblayer],
                           odlayer,
                           200)
 
-save_graph(mlgraph, cwd.parent.joinpath('graph.json'))
-
-load_graph(cwd.parent.joinpath('graph.json'))
 # Demand
 
 demand = CSVDemandManager(cwd, demand_type='coordinate')

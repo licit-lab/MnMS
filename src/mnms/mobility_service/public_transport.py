@@ -15,84 +15,6 @@ from mnms.vehicles.veh_type import Vehicle, Bus, Metro
 log = create_logger(__name__)
 
 
-def _NoneDefault():
-    return None
-
-
-# TODO: When a Line is created ensure that nodes are ordered
-# class Line(object):
-#     """Represent a line of a PublicTransport mobility service
-#
-#     Parameters
-#     ----------
-#     id: str
-#         Id of the line
-#     mobility_service: PublicTransport
-#         The PublicTransport class in which the line is
-#     timetable: TimeTable
-#         The time table of departure
-#
-#     """
-#     def __init__(self, id: str, graph_layer: "PublicTransportGraphLayer", timetable: "TimeTable"):
-#         self.id = id
-#         self.stops = list()
-#         self.links = set()
-#         self.graph_layer = graph_layer
-#         self.service_id = graph_layer.id
-#
-#         self._service_graph = self.graph_layer.graph
-#         self._adjacency = defaultdict(_NoneDefault)
-#         self._rev_adjacency = defaultdict(_NoneDefault)
-#
-#         self._timetable = timetable
-#
-#     def add_stop(self, sid:str, ref_node:str) -> None:
-#         self._service_graph.create_node(sid, self.graph_layer.id, ref_node)
-#         self.stops.append(sid)
-#
-#     def connect_stops(self, lid:str, up_sid: str, down_sid: str, length:float, reference_links, costs=None,
-#                       reference_lane_ids=None) -> None:
-#         assert up_sid in self.stops
-#         assert down_sid in self.stops
-#         costs = {} if costs is None else costs
-#         costs.update({'length': length})
-#         self._service_graph.create_link(lid,
-#                                         up_sid,
-#                                         down_sid,
-#                                         costs,
-#                                         reference_links,
-#                                         mobility_service=self.graph_layer.id)
-#         self.links.add(lid)
-#         self._adjacency[up_sid] = down_sid
-#         self._rev_adjacency[down_sid] = up_sid
-#
-#
-#     @property
-#     def start(self):
-#         return self.stops[0]
-#
-#     @property
-#     def end(self):
-#         return self.stops[-1]
-#
-#     def __dump__(self) -> dict:
-#         stops = deepcopy(self.stops)
-#         return {"ID": self.id,
-#                 "TIMETABLE": [time.time for time in self._timetable.table],
-#                 "STOPS": [self._service_graph.nodes[s].__dump__() for s in stops],
-#                 "LINKS":[self._service_graph.sections[self._service_graph._map_lid_nodes[l]].__dump__() for l in self.links]}
-#
-#     def construct_veh_path(self):
-#         veh_path = list()
-#         path = self.stops
-#         for i in range(len(path) - 1):
-#             unode = path[i]
-#             dnode = path[i+1]
-#             key = (unode, dnode)
-#             veh_path.append((key, self.graph_layer.graph.sections[key].costs['length']))
-#         return veh_path
-
-
 class PublicTransportMobilityService(AbstractMobilityService):
     def __init__(self, id:str):
         super(PublicTransportMobilityService, self).__init__(id)
@@ -102,7 +24,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         self._timetable_iter = dict()
         self._current_time_table = dict()
         self._next_time_table = dict()
-        self._next_veh_departure = defaultdict(_NoneDefault)
+        self._next_veh_departure = defaultdict(lambda: None)
 
     @cached_property
     def lines(self):
@@ -261,17 +183,6 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
         assert isinstance(service, PublicTransportMobilityService), f"PublicTransportGraphLayer only accept mobility services with type PublicTransportMobilityService"
         super(PublicTransportGraphLayer, self).add_mobility_service(service)
 
-    # def add_line(self, lid: str, timetable: "TimeTable") -> Line:
-    #     new_line = Line(lid, self, timetable)
-    #     self.lines[lid] = new_line
-    #     for service in self.mobility_services.values():
-    #         timetable_iter = iter(timetable.table)
-    #         service._timetable_iter[lid] = iter(timetable.table)
-    #         service._current_time_table[lid] = next(timetable_iter)
-    #         service._next_time_table[lid] = next(timetable_iter)
-    #
-    #     return new_line
-
     def show_lines(self) -> None:
         print(self.lines)
 
@@ -360,11 +271,3 @@ class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
                 return {"wating_time": line._timetable.get_freq() / 2}
 
 
-class BusMobilityGraphLayer(PublicTransportGraphLayer):
-    def __init__(self, id:str, default_speed:float, services:List[AbstractMobilityService]=None, observer=None):
-        super(BusMobilityGraphLayer, self).__init__(id, Bus, default_speed, services, observer)
-
-
-class MetroMobilityGraphLayer(PublicTransportGraphLayer):
-    def __init__(self, id:str, default_speed:float, services:List[AbstractMobilityService]=None, observer=None):
-        super(MetroMobilityGraphLayer, self).__init__(id, Metro, default_speed, services, observer)

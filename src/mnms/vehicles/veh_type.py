@@ -50,6 +50,10 @@ class Vehicle(TimeDependentSubject):
         return len(self._passenger) >= self._capacity
 
     @property
+    def is_empty(self):
+        return bool(self._passenger)
+
+    @property
     def id(self):
         return self._global_id
 

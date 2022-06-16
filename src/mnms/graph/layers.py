@@ -67,7 +67,7 @@ class AbstractLayer(object):
 
 
 class Layer(AbstractLayer):
-    def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]]):
+    def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
         assert dbnode in self._roaddb.nodes
 
         new_node = Node(nid, self._id, dbnode, exclude_movements)
@@ -333,7 +333,7 @@ class MultiLayerGraph(object):
         self.nodes.maps[0].update(odlayer.destinations)
 
     def construct_layer_service_mapping(self):
-        for lid, layer in self.layers.items():
+        for layer in self.layers.values():
             for service in layer.mobility_services:
-                self.mapping_layer_services[service] = lid
+                self.mapping_layer_services[service] = layer
 

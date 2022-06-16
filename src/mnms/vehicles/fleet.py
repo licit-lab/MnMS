@@ -1,5 +1,3 @@
-import logging
-
 from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Vehicle
 
@@ -9,8 +7,7 @@ class FleetManager(object):
         self.__veh_manager = VehicleManager()
         self.vehicles = dict()
         self._constructor = veh_type
-
-        self._waiting = dict()
+        self._stopped = dict()
 
     def create_vehicle(self, *args, **kwargs):
         new_veh = self._constructor(*args, **kwargs)
@@ -20,12 +17,12 @@ class FleetManager(object):
 
     def create_waiting_vehicle(self, *args, **kwargs):
         new_veh = self._constructor(*args, **kwargs)
-        self._waiting[new_veh.id] = new_veh
+        self._stopped[new_veh.id] = new_veh
         self.__veh_manager.add_new_vehicle(new_veh)
         return new_veh
 
     def start_waiting_vehicle(self, id:str):
-        new_veh = self._waiting.pop(id)
+        new_veh = self._stopped.pop(id)
         self.vehicles[new_veh.id] = new_veh
         self.__veh_manager.add_vehicle(new_veh)
         for user in self.vehicles[id]._passenger.values():

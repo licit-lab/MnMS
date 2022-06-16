@@ -69,22 +69,23 @@ class UserFlow(object):
         to_del = list()
         arrived_user = list()
         for uid, user in self._transiting.items():
-            upath = user.path.nodes
-            if user._current_node == upath[-1]:
-                log.info(f"{user} arrived to its destination")
-                user.finish_trip(self._tcurrent)
-                arrived_user.append(uid)
-                to_del.append(uid)
-            elif not user.is_in_vehicle and not user._waiting_vehicle:
-                cnode = user._current_node
-                cnode_ind = upath.index(cnode)
-                next_link = self._graph.links[(cnode, upath[cnode_ind+1])]
-                if isinstance(next_link, TransitLink):
-                    log.info(f"{user} enter connection on {next_link}")
-                    self._walking[uid] = next_link.costs['travel_time']
+            if user.path is not None:
+                upath = user.path.nodes
+                if user._current_node == upath[-1]:
+                    log.info(f"{user} arrived to its destination")
+                    user.finish_trip(self._tcurrent)
+                    arrived_user.append(uid)
                     to_del.append(uid)
-                elif isinstance(next_link, ConnectionLink):
-                    self._request_user_vehicles(user)
+                elif not user.is_in_vehicle and not user._waiting_vehicle:
+                    cnode = user._current_node
+                    cnode_ind = upath.index(cnode)
+                    next_link = self._graph.links[(cnode, upath[cnode_ind+1])]
+                    if isinstance(next_link, TransitLink):
+                        log.info(f"{user} enter connection on {next_link}")
+                        self._walking[uid] = next_link.costs['travel_time']
+                        to_del.append(uid)
+                    elif isinstance(next_link, ConnectionLink):
+                        self._request_user_vehicles(user)
 
         for uid in to_del:
             del self._transiting[uid]
