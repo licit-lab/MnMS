@@ -53,6 +53,7 @@ log = create_logger(__name__)
 #                  'reference_node',
 #                  'layer',
 #                  '_exclude_movements')
+                 'links')
 
 #     def __init__(self, id: str, layer: str, ref_node: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
 #         super(Node, self).__init__(id)
@@ -65,6 +66,7 @@ log = create_logger(__name__)
 #         self.layer = layer
 #         self._exclude_movements = dict() if exclude_movements is None else exclude_movements
 #         self._exclude_movements[None] = set()
+        self.links = set()
 
 #     def get_exits(self, predecessor: Optional[str] = None):
 #         return (i for i in self.adj if predecessor not in self._exclude_movements or i not in self._exclude_movements[predecessor])
@@ -257,6 +259,8 @@ class Zone():
 
 #         unode.adj.add(link.downstream)
 #         dnode.radj.add(link.upstream)
+
+        unode.links.add(link)
 
 #     def create_node(self,
 #                     nid: str,
