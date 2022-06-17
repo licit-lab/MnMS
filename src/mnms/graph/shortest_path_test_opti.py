@@ -1,10 +1,11 @@
+from multiprocessing import Process, cpu_count
 from timeit import default_timer as timer
-from typing import Callable, Union, List, Dict
+from typing import Callable, Union, List, Dict, NamedTuple
 
 import pandas as pd
 
-from mnms.graph.core import TopoGraph
-from mnms.graph.elements import TransitLink
+from mnms.demand import User
+from mnms.graph.core import OrientedGraph
 from mnms.graph.shortest_path import Path, _weight_computation
 
 _WEIGHT_COST_TYPE = Union[str, Callable[[Dict[str, float]], float]]
@@ -36,7 +37,7 @@ class Measure:
             print(f"{self._txt} time = {timer() - self._t0}")
 
 # @measure
-def dijkstra_v2(graph: TopoGraph,
+def dijkstra_v2(graph,
                 origin:str,
                 destination:str,
                 cost: _WEIGHT_COST_TYPE,
@@ -100,18 +101,17 @@ def dijkstra_v2(graph: TopoGraph,
             return Path(dist[destination], nodes)
 
         # with Measure("", neighbor_time):
-        for links_id in graph.nodes[u].links_id:
-            link = graph.links_from_id[links_id]
+        for link in graph.nodes[u].links:
             neighbor = link.downstream
             if neighbor in vertices:
 
                 # Check if next node mobility service is available for the user
                 alt = dist[u] + cost_func(link.costs)
-                if isinstance(link, TransitLink):
-                    if available_layers is not None:
-                        dnode_layer = graph.nodes[link.downstream_node].layer
-                        if dnode_layer is not None and dnode_layer not in available_layers:
-                            alt = float('inf')
+                # if isinstance(link, TransitLink):
+                #     if available_layers is not None:
+                #         dnode_layer = graph.nodes[link.downstream_node].layer
+                #         if dnode_layer is not None and dnode_layer not in available_layers:
+                #             alt = float('inf')
 
                 if alt < dist.get(neighbor, float('inf')):
                     dist[neighbor] = alt
@@ -122,7 +122,7 @@ def dijkstra_v2(graph: TopoGraph,
     return Path(float('inf'))
 
 
-def dijkstra_multi_dest(graph: TopoGraph,
+def dijkstra_multi_dest(graph,
                         origin:str,
                         destination: List[str],
                         cost: _WEIGHT_COST_TYPE,
@@ -180,11 +180,11 @@ def dijkstra_multi_dest(graph: TopoGraph,
 
                 # Check if next node mobility service is available for the user
                 alt = dist[u][0] + cost_func(link.costs)
-                if isinstance(link, TransitLink):
-                    if available_layers is not None:
-                        dnode_layer = graph.nodes[link.downstream_node].layer
-                        if dnode_layer is not None and dnode_layer not in available_layers:
-                            alt = float('inf')
+                # if isinstance(link, TransitLink):
+                #     if available_layers is not None:
+                #         dnode_layer = graph.nodes[link.downstream_node].layer
+                #         if dnode_layer is not None and dnode_layer not in available_layers:
+                #             alt = float('inf')
 
                 if alt < dist.get(neighbor, [float('inf')])[0]:
                     dist[neighbor] = (alt, u)
@@ -196,7 +196,7 @@ def dijkstra_multi_dest(graph: TopoGraph,
     return Path(float('inf'))
 
 
-def dijkstra_vold(graph: TopoGraph,
+def dijkstra_vold(graph,
                   origin:str,
                   destination:str,
                   cost: _WEIGHT_COST_TYPE,
@@ -263,11 +263,11 @@ def dijkstra_vold(graph: TopoGraph,
 
                 # Check if next node mobility service is available for the user
                 alt = line["cost"] + cost_func(link.costs)
-                if isinstance(link, TransitLink):
-                    if available_layers is not None:
-                        dnode_layer = graph.nodes[link.downstream_node].layer
-                        if dnode_layer is not None and dnode_layer not in available_layers:
-                            alt = float('inf')
+                # if isinstance(link, TransitLink):
+                #     if available_layers is not None:
+                #         dnode_layer = graph.nodes[link.downstream_node].layer
+                #         if dnode_layer is not None and dnode_layer not in available_layers:
+                #             alt = float('inf')
 
                 if alt < dist.get(neighbor, [float('inf')])[0]:
                     dist[neighbor] = (alt, u)
@@ -276,3 +276,41 @@ def dijkstra_vold(graph: TopoGraph,
 
     return Path(float('inf'))
 
+# in : List[User] (contient origine dest et service de mobilité), graph, nb proc, algo, heuristic
+# out : Dict[user_id, List[path]
+
+
+class RunOnProcess(Process):
+    def __init__(self, list_user: List[User], method: Callable,
+                 params: Dict, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._list_user = list_user
+        self._method = method
+        self._params = params
+        self.results = {}
+
+    def run(self):
+        self.results.clear()
+        for user in self._list_user:
+            self._params["origin"] = user.origin
+            self._params["destination"] = user.destination
+            self.results[user.id] = self._method(**self._params)
+
+
+def run_on_proc(list_user: List[User],  method: callable,
+                method_params: List[Dict], nb_proc: int = cpu_count()):
+    size = len(list_user)
+    list_idx = [size//nb_proc*i for i in range(nb_proc+1)]
+    list_idx[-1] += size % nb_proc
+
+    list_proc: List[RunOnProcess] = []
+    for idx in range(1, nb_proc+1):
+        p = RunOnProcess(list_user[list_idx[idx-1]: list_idx[idx]],
+                         method, method_params[idx-1])
+        p.start()
+        list_proc.append(p)
+    [p.join() for p in list_proc]
+
+    return {(key, val) for proc in list_proc
+            for key, val in proc.results.items()}

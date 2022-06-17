@@ -15,12 +15,17 @@ from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
 
-from mnms.graph.generation import manhattan
+from mnms.demand import User
+from mnms.generation.layers import generate_layer_from_roads
+from mnms.generation.roads import generate_manhattan_road
+from mnms.graph.layers import Layer
 from mnms.graph.shortest_path import dijkstra, astar, _euclidian_dist, \
     bidirectional_dijkstra
-from mnms.graph.shortest_path_test_opti import dijkstra_v2, dijkstra_multi_dest
+from mnms.graph.shortest_path_test_opti import dijkstra_v2, dijkstra_multi_dest, \
+    run_on_proc
+from mnms.mobility_service.car import PersonalCarMobilityService
+from mnms.time import Time
 
-from mnms.mobility_service.car import CarMobilityGraphLayer
 from mnms.tools.render import draw_flow_graph
 
 
@@ -66,8 +71,8 @@ def run_for_stat(method: Method, graph, nb_iter, heuristic):
     res = None
     for i in range(nb_iter):
         params = {"graph": graph,
-                  "origin": 'NORTH_0',
-                  "destination": 'EAST_0',
+                  "origin": 'CAR_NORTH_0',
+                  "destination": 'CAR_EAST_0',
                   "cost": "length",
                   "available_layers": ['Car']}
         if method.heuristic:
@@ -87,22 +92,21 @@ def run_for_stat(method: Method, graph, nb_iter, heuristic):
 
 
 def create_graph(graph_size):
-    mmgraph = manhattan(graph_size, 1)
-
+    road_db = generate_manhattan_road(graph_size, 1)
+    car_layer = generate_layer_from_roads(
+        road_db,  'CAR', mobility_services=[PersonalCarMobilityService()])
     # fig, ax = plt.subplots()
     # draw_flow_graph(ax, mmgraph.flow_graph)
 
-    car_layer = CarMobilityGraphLayer()
+    # for nid in road_db.flow_graph.nodes:
+    #     car_layer.create_node(nid, nid)
+    #
+    # for lid, link in road_db.flow_graph.links.items():
+    #     car_layer.create_link(lid, link.upstream, link.downstream, [lid], {'length':link.length})
 
-    for nid in mmgraph.flow_graph.nodes:
-        car_layer.create_node(nid, nid)
+    # road_db.add_layer(car_layer)
 
-    for lid, link in mmgraph.flow_graph.links.items():
-        car_layer.create_link(lid, link.upstream, link.downstream, [lid], {'length':link.length})
-
-    mmgraph.add_layer(car_layer)
-
-    return mmgraph, car_layer
+    return road_db, car_layer
 
 
 def stat_benchmark(list_method: List[EnumMethods], list_graph_size, nb_iter, print_df=False, df_path=None):
@@ -146,30 +150,39 @@ def simple_benchmark(method: EnumMethods, graph_size: int):
     run_method([('NORTH_0', 'EAST_99')], method.value, car_layer.graph, heuristic)
 
 
-def build_od_list(mmgraph):
-    origins = [node for node in mmgraph.flow_graph.nodes.keys() if node.startswith("WEST")]
-    destinations = [node for node in mmgraph.flow_graph.nodes.keys() if node.startswith("EAST")]
+def build_user_list(mmgraph):
+    origins = ["CAR_"+node for node in mmgraph.nodes.keys() if node.startswith("WEST")]
+    destinations = ["CAR_"+node for node in mmgraph.nodes.keys() if node.startswith("EAST")]
     destinations = destinations[:30]
+    list_od = list(product(origins, destinations))
+    tstart = Time("07:00:00").to_seconds()
+    tend = Time("18:00:00").to_seconds()
+    distrib_time = np.random.uniform
 
-    return list(product(origins, destinations))
+    return [User(str(uid), origin, destination,
+                 Time.fromSeconds(distrib_time(tstart, tend)))
+            for uid, (origin, destination) in enumerate(list_od)]
 
 
-def multi_proc_benchmark(enum_method: EnumMethods, graph_size, nb_proc):
+def multi_proc_benchmark(enum_method: EnumMethods, graph_size, nb_proc = None):
     mmgraph, car_layer = create_graph(graph_size)
-    od_list = build_od_list(mmgraph)
+    user_list = build_user_list(mmgraph)
     heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
 
-    start = timer()
-    run_method(od_list, enum_method.value, car_layer.graph, heuristic)
-    time_seq = timer() - start
-    print(f"time seq = {time_seq}s = {timedelta(seconds=time_seq)}")
+    # start = timer()
+    # run_method(od_list, enum_method.value, car_layer.graph, heuristic)
+    # time_seq = timer() - start
+    # print(f"time seq = {time_seq}s = {timedelta(seconds=time_seq)}")
 
-    list_graph = []
+    list_params = []
     for idx in range(nb_proc):
         mmgraph, car_layer = create_graph(graph_size)
-        list_graph.append(car_layer.graph)
+        params = {"graph": car_layer.graph,
+                  "cost": "length",
+                  "available_layers": ['Car']}
+        list_params.append(params)
     start = timer()
-    run_on_proc(od_list, nb_proc, enum_method.value, list_graph, heuristic)
+    run_on_proc(user_list, enum_method.value.func, list_params, nb_proc)
     time_multi = timer() - start
     print(f"time multi proc = {time_multi}s = {timedelta(seconds=time_multi)}")
 
@@ -188,22 +201,8 @@ def run_method(od_list, method: Method, graph, heuristic):
         # print(ret)
 
 
-def run_on_proc(od_list, nb_proc, method, list_graph, heuristic):
-    size = len(od_list)
-    list_idx = [size//nb_proc*i for i in range(nb_proc+1)]
-    list_idx[-1] += size % nb_proc
-
-    list_proc = []
-    for idx in range(1, nb_proc+1):
-        graph = list_graph[idx-1]
-        p = Process(target=run_method, args=(od_list[list_idx[idx-1]: list_idx[idx]], method, graph, heuristic))
-        p.start()
-        list_proc.append(p)
-    [p.join() for p in list_proc]
-
-
 if __name__ == '__main__':
     # simple_benchmark(EnumMethods.BIDIR_DIJKSTRA, 100)
     # stat_benchmark([EnumMethods.DIJKSTRA_V2], [100], 5, True)
-    stat_benchmark([EnumMethods.DIJKSTRA_V3], [100], 10, True)
-    # multi_proc_benchmark(EnumMethods.DIJKSTRA_V2, 100, 8)
+    # stat_benchmark([EnumMethods.DIJKSTRA_V3], [100], 10, True)
+    multi_proc_benchmark(EnumMethods.DIJKSTRA_V2, 10, 8)
