@@ -2,6 +2,7 @@ from multiprocessing import Process, cpu_count
 from timeit import default_timer as timer
 from typing import Callable, Union, List, Dict, NamedTuple
 
+import cppgraph
 import pandas as pd
 
 from mnms.demand import User
@@ -61,6 +62,8 @@ def dijkstra_v2(graph,
 
     """
     cost_func = _weight_computation(cost)
+    origin = "CAR_" + origin
+    destination = "CAR_" + destination
 
     vertices = set()
     dist = dict()
@@ -314,3 +317,9 @@ def run_on_proc(list_user: List[User],  method: callable,
 
     return {(key, val) for proc in list_proc
             for key, val in proc.results.items()}
+
+
+def dijkstra_cpp(graph, origin: str, destination: str, cost: _WEIGHT_COST_TYPE,
+                 available_layers):
+    ret = cppgraph.dijkstra(graph, origin, destination, cost)
+    return Path(len(ret), ret)
