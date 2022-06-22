@@ -4,10 +4,13 @@
 Implement a xml parser of symuflow input to get a MultiModdalGraph
 '''
 import argparse
+import json
 import os
 import sys
 
 from collections import defaultdict
+from typing import Dict
+
 import numpy as np
 
 from mnms.graph.road import RoadDataBase
@@ -414,10 +417,7 @@ _veh_type_convertor = {'METRO': Metro,
 #
 #     save_graph(mmgraph, output_dir+'/'+os.path.basename(file).replace('.xml', '.json'), indent=1)
 
-
-
-
-def convert_symuflow_to_mmgraph(file, output_dir, zone_file:str=None):
+def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None):
     parser = etree.XMLParser(remove_comments=True)
     contents = etree.parse(file, parser=parser)
     root = contents.getroot()
@@ -491,7 +491,10 @@ def convert_symuflow_to_mmgraph(file, output_dir, zone_file:str=None):
         roaddb.register_node(nid, pos)
 
     for tid, tdata in troncons.items():
-        roaddb.register_section(tid, tdata['up'], tdata['down'], tdata['length'])
+        if zone_dict is None:
+            roaddb.register_section(tid, tdata['up'], tdata['down'], tdata['length'])
+        else:
+            roaddb.register_section(tid, tdata['up'], tdata['down'], tdata['length'], zone_dict[tid])
 
     stop_elem = root.xpath('/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/ARRETS')
     map_tr_stops = dict()
@@ -556,78 +559,80 @@ def convert_symuflow_to_mmgraph(file, output_dir, zone_file:str=None):
     # -----------------------------------
     # PUBLIC TRANSPORT
     # -----------------------------------
+    elem_transport_line = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/LIGNES_TRANSPORT_GUIDEES")
 
-    elem_transport_line = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/LIGNES_TRANSPORT_GUIDEES")[0]
-    elem_types_veh = root.xpath("/ROOT_SYMUBRUIT/TRAFICS/TRAFIC/TYPES_DE_VEHICULE")[0]
-    veh_type_ids = dict()
-    veh_speeds = dict()
-    for i, telem in enumerate(elem_types_veh.iter('TYPE_DE_VEHICULE')):
-        veh_type_ids[i] = telem.attrib['id']
-        veh_speeds[telem.attrib['id']] = float(telem.attrib['vx'])
-    pt_types = {}
+    if elem_transport_line:
+        elem_transport_line = elem_transport_line[0]
+        elem_types_veh = root.xpath("/ROOT_SYMUBRUIT/TRAFICS/TRAFIC/TYPES_DE_VEHICULE")[0]
+        veh_type_ids = dict()
+        veh_speeds = dict()
+        for i, telem in enumerate(elem_types_veh.iter('TYPE_DE_VEHICULE')):
+            veh_type_ids[i] = telem.attrib['id']
+            veh_speeds[telem.attrib['id']] = float(telem.attrib['vx'])
+        pt_types = {}
 
-    # Loops on the public transport lines
-    for line_elem in elem_transport_line.iter('LIGNE_TRANSPORT_GUIDEE'):
-        line_id=line_elem.attrib['id']
-        rep_type_elem = line_elem.xpath('REP_TYPEVEHICULES/REP_TYPEVEHICULE')[0]
-        coeffs=rep_type_elem.attrib['coeffs']
-        ss= [int(x) for x in coeffs.split(" ")]
-        pt_type=veh_type_ids[ss.index(1)]
+        # Loops on the public transport lines
+        for line_elem in elem_transport_line.iter('LIGNE_TRANSPORT_GUIDEE'):
+            line_id=line_elem.attrib['id']
+            rep_type_elem = line_elem.xpath('REP_TYPEVEHICULES/REP_TYPEVEHICULE')[0]
+            coeffs=rep_type_elem.attrib['coeffs']
+            ss= [int(x) for x in coeffs.split(" ")]
+            pt_type=veh_type_ids[ss.index(1)]
 
-        if pt_type+'Layer' not in pt_types:
-            public_transport = PublicTransportLayer(pt_type+'Layer',
-                                                    roaddb,
-                                                    _veh_type_convertor[pt_type],
-                                                    veh_speeds[pt_type],
-                                                    services=[])
-            pt_types[pt_type+'Layer'] = public_transport
-        else:
-            public_transport = pt_types[pt_type+'Layer']
+            if pt_type+'Layer' not in pt_types:
+                public_transport = PublicTransportLayer(pt_type+'Layer',
+                                                        roaddb,
+                                                        _veh_type_convertor[pt_type],
+                                                        veh_speeds[pt_type],
+                                                        services=[])
+                pt_types[pt_type+'Layer'] = public_transport
+            else:
+                public_transport = pt_types[pt_type+'Layer']
 
-        # Loads timetable
-        cal_elem = line_elem.xpath("CALENDRIER")[0]
+            # Loads timetable
+            cal_elem = line_elem.xpath("CALENDRIER")[0]
 
-        freq_elem = cal_elem.xpath('FREQUENCE')
-        if len(freq_elem) > 0:
-            freq_elem = freq_elem[0]
-            start = freq_elem.attrib["heuredepart"]
-            end = freq_elem.attrib["heurefin"]
-            freq = freq_elem.attrib["frequence"]
-            line_timetable = TimeTable.create_table_freq(start, end, Dt(seconds=float(freq)))
-        else:
-            line_timetable = TimeTable()
-            for time_elem in cal_elem.iter("HORAIRE"):
-                # print(time_elem.attrib['heuredepart'])
-                line_timetable.table.append(Time(time_elem.attrib['heuredepart']))
+            freq_elem = cal_elem.xpath('FREQUENCE')
+            if len(freq_elem) > 0:
+                freq_elem = freq_elem[0]
+                start = freq_elem.attrib["heuredepart"]
+                end = freq_elem.attrib["heurefin"]
+                freq = freq_elem.attrib["frequence"]
+                line_timetable = TimeTable.create_table_freq(start, end, Dt(seconds=float(freq)))
+            else:
+                line_timetable = TimeTable()
+                for time_elem in cal_elem.iter("HORAIRE"):
+                    # print(time_elem.attrib['heuredepart'])
+                    line_timetable.table.append(Time(time_elem.attrib['heuredepart']))
 
-        if len(line_timetable.table) == 0:
-            log.warning(f"There is an empty TimeTable for {line_id}, skipping this one")
-        else:
-            troncons_elem = line_elem.xpath("TRONCONS")[0]
-            line_tr = [tr_elem.attrib['id'] for tr_elem in troncons_elem.iter('TRONCON')]
-            line_stops = []
-            sections = []
+            if len(line_timetable.table) == 0:
+                log.warning(f"There is an empty TimeTable for {line_id}, skipping this one")
+            else:
+                troncons_elem = line_elem.xpath("TRONCONS")[0]
+                line_tr = [tr_elem.attrib['id'] for tr_elem in troncons_elem.iter('TRONCON')]
+                line_stops = []
+                sections = []
 
-            sec_buffer = []
+                sec_buffer = []
 
-            for i in range(len(line_tr)):
-                tr = line_tr[i]
-                if tr in map_tr_stops and line_id in map_tr_stops[tr]['lines']:
+                for i in range(len(line_tr)):
+                    tr = line_tr[i]
+                    if tr in map_tr_stops and line_id in map_tr_stops[tr]['lines']:
+                        sec_buffer.append(tr)
+                        line_stops.append(map_tr_stops[tr]['stop'])
+                        break
+
+                for tr in line_tr[i:]:
                     sec_buffer.append(tr)
-                    line_stops.append(map_tr_stops[tr]['stop'])
-                    break
+                    if tr in map_tr_stops and line_id in map_tr_stops[tr]['lines']:
+                        sections.append(sec_buffer)
+                        line_stops.append(map_tr_stops[tr]['stop'])
+                        sec_buffer = []
 
-            for tr in line_tr[i:]:
-                sec_buffer.append(tr)
-                if tr in map_tr_stops and line_id in map_tr_stops[tr]['lines']:
-                    sections.append(sec_buffer)
-                    line_stops.append(map_tr_stops[tr]['stop'])
-                    sec_buffer = []
+                public_transport.create_line(line_id, line_stops, sections, line_timetable, bidirectional=False)
 
-            public_transport.create_line(line_id, line_stops, sections, line_timetable, bidirectional=False)
-
-    for p in pt_types.values():
-        mlgraph.add_layer(p)
+        for p in pt_types.values():
+            mlgraph.add_layer(p)
 
     # if zone_file is not None:
     #     zone_dict = defaultdict(set)
@@ -664,12 +669,23 @@ def _path_dir_type(path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Convert Symuflow XML graph to mnms JSON graph')
     parser.add_argument('symuflow_graph', type=_path_file_type, help='Path to the SymuFlow XML file')
-    parser.add_argument('--zone_file', type=_path_file_type, help='Path to zones')
     parser.add_argument('--output_dir', default=os.getcwd(), type=_path_dir_type, help='Path to the output dir')
+
+    command_group = parser.add_mutually_exclusive_group()
+    command_group.add_argument('--mono_res', default=None, type=str, help='Use a unique reservoir')
+    command_group.add_argument('--multi_res', default=None, type=_path_file_type, help='Path to JSON file containing the mapping section/reservoir')
 
     args = parser.parse_args()
 
     log.setLevel(LOGLEVEL.INFO)
-    convert_symuflow_to_mmgraph(args.symuflow_graph,
-                                args.output_dir,
-                                zone_file=args.zone_file)
+
+    log.info(f"Writing MNMS graph at '{args.output_dir}' ...")
+    if args.mono_res is not None:
+        convert_symuflow_to_mnms(args.symuflow_graph, args.output_dir, zone_dict=defaultdict(lambda: args.mono_res))
+    elif args.multi_res is not None:
+        with open(args.multi_res, 'r') as f:
+            res_dict = json.load(f)
+        convert_symuflow_to_mnms(args.symuflow_graph, args.output_dir, res_dict)
+    else:
+        convert_symuflow_to_mnms(args.symuflow_graph, args.output_dir)
+    log.info(f"Done!")
