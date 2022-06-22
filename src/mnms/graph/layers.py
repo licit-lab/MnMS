@@ -94,11 +94,19 @@ class Layer(AbstractLayer):
                 'NODES': [n.__dump__() for n in self.graph.nodes.values()],
                 'LINKS': [l.__dump__() for l in self.graph.links.values()]}
 
+
+class CarLayer(Layer):
+    def __init__(self,
+                 roaddb: RoadDataBase,
+                 default_speed: float = 13.8,
+                 services: Optional[List[AbstractMobilityService]] = None,
+                 observer: Optional = None):
+        super(CarLayer, self).__init__('CAR', roaddb, Car, default_speed, services, observer)
+
+
     @classmethod
     def __load__(cls, data: Dict, roaddb: RoadDataBase):
-        new_obj = cls(data['ID'],
-                      roaddb,
-                      load_class_by_module_name(data['VEH_TYPE']),
+        new_obj = cls(roaddb,
                       data['DEFAULT_SPEED'])
 
         for ndata in data['NODES']:
@@ -112,15 +120,6 @@ class Layer(AbstractLayer):
             new_obj.add_mobility_service(serv_type.__load__(sdata))
 
         return new_obj
-
-
-class CarLayer(Layer):
-    def __init__(self,
-                 roaddb: RoadDataBase,
-                 default_speed: float = 13.8,
-                 services: Optional[List[AbstractMobilityService]] = None,
-                 observer: Optional = None):
-        super(CarLayer, self).__init__('CAR', roaddb, Car, default_speed, services, observer)
 
 
 class PublicTransportLayer(AbstractLayer):
