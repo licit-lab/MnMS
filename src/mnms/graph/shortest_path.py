@@ -425,7 +425,7 @@ def compute_k_shortest_path(mmgraph: MultiLayerGraph,
             if consecutive_run_number > max_consecutive_run:
                 log.warning(f'Reach max number of shortest path computation ({max_consecutive_run}), returning the already computed paths')
                 break
-            path = compute_shortest_path(mmgraph, user, cost, algorithm, heuristic)
+            path = sh_algo(mmgraph, user, cost, algorithm, heuristic)
             for ni in range(len(path.nodes) - 1):
                 nj = ni + 1
                 link = topograph_links[(path.nodes[ni], path.nodes[nj])]
