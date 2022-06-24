@@ -19,19 +19,19 @@ log = create_logger(__name__)
 
 def compute_path_length(mmgraph: MultiLayerGraph, path:List[str]) -> float:
     len_path = 0
-    mgraph_links = mmgraph.mobility_graph.sections
-    fgraph_links = mmgraph.flow_graph
+    mgraph_links = mmgraph.roaddb.sections
+    fgraph_links = mmgraph.links
     for i in range(len(path) - 1):
         j = i + 1
-        c_link = mgraph_links[(path[i], path[j])]
+        c_link = fgraph_links[(path[i], path[j])]
         if not isinstance(c_link, TransitLink):
-            len_path += sum(fgraph_links.get_link(ref_link).length for ref_link in c_link.reference_links)
+            len_path += sum(mgraph_links[ref_link]['length'] for ref_link in c_link.reference_links)
     return len_path
 
 
 def compute_path_modes(mmgraph: MultiLayerGraph, path:List[str]) -> List[str]:
-    mgraph_links = mmgraph.mobility_graph.sections
-    mgraph_nodes = mmgraph.mobility_graph.nodes
+    mgraph_links = mmgraph.links
+    mgraph_nodes = mmgraph.nodes
     yield mgraph_nodes[path[0]].layer
     for i in range(len(path) - 1):
         j = i + 1
@@ -170,7 +170,7 @@ class AbstractDecisionModel(ABC):
             log.warning(f"Path {path} is not valid for {user}")
             raise PathNotFound(user.origin, user.destination)
 
-        log.info(f"Computed path {user.id}: {user.path}")
+        log.info(f"Computed path for {user}")
 
         if self._verbose_file:
             for p in paths:

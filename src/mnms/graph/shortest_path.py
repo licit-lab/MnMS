@@ -416,8 +416,8 @@ def compute_k_shortest_path(mmgraph: MultiLayerGraph,
                 raise PathNotFound(closest_origin, closest_destinations)
 
     else:
-        assert user.origin in odlayer.origins, f"User {user.id} origin is not in the OriginDestinationLayer"
-        assert user.destination in odlayer.destinations, f"User {user.id} destination is not in the OriginDestinationLayer"
+        assert 'ORIGIN_'+user.origin in odlayer.origins, f"User {user.id} origin is not in the OriginDestinationLayer"
+        assert 'DESTINATION_'+user.destination in odlayer.destinations, f"User {user.id} destination is not in the OriginDestinationLayer"
 
         computed_paths = 0
         consecutive_run_number = 0
@@ -425,31 +425,34 @@ def compute_k_shortest_path(mmgraph: MultiLayerGraph,
             if consecutive_run_number > max_consecutive_run:
                 log.warning(f'Reach max number of shortest path computation ({max_consecutive_run}), returning the already computed paths')
                 break
-            path = sh_algo(mmgraph, user, cost, algorithm, heuristic)
-            for ni in range(len(path.nodes) - 1):
-                nj = ni + 1
-                link = topograph_links[(path.nodes[ni], path.nodes[nj])]
-                if (path.nodes[ni], path.nodes[nj]) not in modified_link_cost:
-                    modified_link_cost[(path.nodes[ni], path.nodes[nj])] = deepcopy(link.costs)
-                link.costs.update({k: v * scale_factor for k, v in link.costs.items()})
+            path = sh_algo(mmgraph, 'ORIGIN_'+user.origin ,'DESTINATION_'+user.destination, cost, user_accessible_layers)
+            if path.path_cost != float('inf'):
+                for ni in range(len(path.nodes) - 1):
+                    nj = ni + 1
+                    link = topograph_links[(path.nodes[ni], path.nodes[nj])]
+                    if (path.nodes[ni], path.nodes[nj]) not in modified_link_cost:
+                        modified_link_cost[(path.nodes[ni], path.nodes[nj])] = deepcopy(link.costs)
+                    link.costs.update({k: v * scale_factor for k, v in link.costs.items()})
 
-            if len(paths) > 0:
-                current_path = set(path.nodes)
-                for p in paths:
-                    p = set(p.nodes)
-                    if p == current_path:
-                        consecutive_run_number += 1
-                        break
+                if len(paths) > 0:
+                    current_path = set(path.nodes)
+                    for p in paths:
+                        p = set(p.nodes)
+                        if p == current_path:
+                            consecutive_run_number += 1
+                            break
+                    else:
+                        consecutive_run_number = 0
+                        computed_paths += 1
+                        paths.append(path)
+                        penalized_costs.append(path.path_cost)
                 else:
                     consecutive_run_number = 0
                     computed_paths += 1
                     paths.append(path)
                     penalized_costs.append(path.path_cost)
             else:
-                consecutive_run_number = 0
-                computed_paths += 1
-                paths.append(path)
-                penalized_costs.append(path.path_cost)
+                raise PathNotFound(user.origin, user.destination)
 
         for lnodes, saved_cost in modified_link_cost.items():
             mmgraph.links[lnodes].costs = saved_cost
