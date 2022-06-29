@@ -17,9 +17,11 @@ public:
     std::string mupstream;
     std::string mdownstream;
     std::unordered_map<std::string, double> mcosts;
+    std::string mlabel;
 
-    Link(std::string _id, std::string _up, std::string _down, std::unordered_map<std::string, double> _costs) {
+    Link(std::string _id, std::string _up, std::string _down, std::unordered_map<std::string, double> _costs, std::string label = "_def") {
         mid = _id.c_str();
+        mlabel = label.c_str();
         mupstream = _up.c_str();
         mdownstream = _down.c_str();
         mcosts = _costs;

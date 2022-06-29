@@ -1,8 +1,19 @@
-from mgraph import OrientedGraph
+from random import randrange
+from mgraph.cpp import generate_manhattan, dijkstra, parallel_dijkstra
 
-g = OrientedGraph()
 
-g.add_node("0", 0, 0)
-g.add_node("1", 1, 0)
+g = generate_manhattan(3, 10)
 
-g.add_link("0_1", "0", "1", {"length": 1})
+print(dijkstra(g, "SOUTH_0", "NORTH_0", "length"))
+
+
+
+N = int(1e6)
+
+origins = ["SOUTH_0"]*N
+dests = ["NORTH_0"]*N
+available_labels = [set() for _ in range(N)]
+
+print("Launch")
+parallel_dijkstra(g, origins, dests, "length", available_labels, 3)
+print("Done")

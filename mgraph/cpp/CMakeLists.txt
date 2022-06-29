@@ -17,7 +17,7 @@ message(STATUS "OPENMP DIRS: ${OpenMP_CXX_INCLUDE_DIRS}")
 
 
 add_subdirectory(src)
-add_subdirectory(examples)
+# add_subdirectory(examples)
 
 install(DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include

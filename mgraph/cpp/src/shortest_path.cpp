@@ -19,7 +19,7 @@
 typedef std::pair<double, std::string> QueueItem;
 typedef std::priority_queue< QueueItem, std::vector<QueueItem> , std::greater<QueueItem> > PriorityQueue;
 
-std::vector<std::string> dijkstra(const OrientedGraph &G, const std::string &origin, const std::string &destination, const std::string &cost) {
+std::vector<std::string> dijkstra(const OrientedGraph &G, const std::string &origin, const std::string &destination, const std::string &cost, setstring accessibleLabels) {
     std::vector<std::string> path;
 
     PriorityQueue pq;
@@ -56,32 +56,41 @@ std::vector<std::string> dijkstra(const OrientedGraph &G, const std::string &ori
 
         for(const auto link: G.mnodes.at(u)->madj)
         {
-            std::string neighbor = link->mdownstream;
-            double new_dist = dist[u] + link->mcosts[cost];
+            if(accessibleLabels.empty() || accessibleLabels.find(link->mlabel) != accessibleLabels.end()) {
+                std::string neighbor = link->mdownstream;
+                double new_dist = dist[u] + link->mcosts[cost];
 
-            if (dist[neighbor] > new_dist)
-            {
-                dist[neighbor] = new_dist;
-                pq.push(QueueItem(new_dist, neighbor));
-                prev[neighbor] = u;
+                if (dist[neighbor] > new_dist)
+                {
+                    dist[neighbor] = new_dist;
+                    pq.push(QueueItem(new_dist, neighbor));
+                    prev[neighbor] = u;
+                }
             }
+
         }
     }
     return path;
 };
 
 
-std::vector<std::vector<std::string>> parallelDijkstra(const OrientedGraph &G, std::vector<std::string>  origins, std::vector<std::string>  destinations, std::string cost, int threadNumber) {
+std::vector<std::vector<std::string>> parallelDijkstra(const OrientedGraph &G, std::vector<std::string>  origins, std::vector<std::string>  destinations, std::string cost, std::vector<setstring> vecAvailableLabels, int threadNumber) {
     omp_set_num_threads(threadNumber);
+    
 
     int nbPath = origins.size();
     std::vector<std::vector<std::string>> res(nbPath);
 
-    #pragma omp parallel for shared(res) schedule(dynamic) 
+    #pragma omp parallel for shared(res, vecAvailableLabels) schedule(dynamic) 
     for (size_t i = 0; i < nbPath; i++)
-    {
-        // std::cout << "Current thread number: " << omp_get_thread_num() << std::endl;
-        res[i] = dijkstra(G, origins[i], destinations[i], cost);
+    {   
+        if(vecAvailableLabels.empty()) {
+            res[i] = dijkstra(G, origins[i], destinations[i], cost, {});
+        }
+        else {
+            res[i] = dijkstra(G, origins[i], destinations[i], cost, vecAvailableLabels[i]);
+        }
+        
     }
     
     return res;
