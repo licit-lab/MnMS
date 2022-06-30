@@ -4,7 +4,9 @@ from typing import Optional, Dict, Set, List, Type
 
 import numpy as np
 
-from .core import OrientedGraph, Node, ConnectionLink, TransitLink
+from mgraph import OrientedGraph, Node, Link
+
+# from .core import OrientedGraph, Node, ConnectionLink, TransitLink
 from .road import RoadDataBase
 from ..mobility_service.abstract import AbstractMobilityService
 from mnms.time import TimeTable
@@ -69,15 +71,15 @@ class AbstractLayer(object):
 class Layer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
         assert dbnode in self._roaddb.nodes
-
-        new_node = Node(nid, self._id, dbnode, exclude_movements)
-        new_node.position = np.array(self._roaddb.nodes[dbnode])
+        node_pos = self._roaddb.nodes[dbnode]
+        new_node = Node(nid, node_pos[0], node_pos[1])
         self.graph.add_node(new_node)
 
         self._map_nodes[dbnode] = nid
 
     def create_link(self, lid, upstream, downstream, costs, reference_links):
-        new_link = ConnectionLink(lid, upstream, downstream, costs, reference_links, self.id)
+        costs['length'] = sum(self._roaddb.sections[l]['length'] for l in reference_links)
+        new_link = Link(lid, upstream, downstream, costs, self.id)
         self.graph.add_link(new_link)
 
         for l in reference_links:

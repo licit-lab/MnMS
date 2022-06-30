@@ -8,7 +8,7 @@ print(dijkstra(g, "SOUTH_0", "NORTH_0", "length"))
 
 
 
-N = int(1e6)
+N = int(3e6)
 
 origins = ["SOUTH_0"]*N
 dests = ["NORTH_0"]*N
