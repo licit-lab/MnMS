@@ -133,6 +133,20 @@ double computePathLength(OrientedGraph &G, const std::vector<std::string> &path)
 }
 
 
+double computePathCost(OrientedGraph &G, const std::vector<std::string> &path, std::string cost) {
+    double c = 0;
+
+    for (size_t i = 0; i < path.size() - 1 ; i++)
+    {
+        std::shared_ptr<Link> link = G.mnodes[path[i]]->madj[path[i+1]];
+        c += link->mcosts[cost];
+    }
+
+    return c; 
+
+}
+
+
 void showPath(pathCost path) {
     std::cout<< path.second << " [";
     for(const auto &p: path.first) {
@@ -213,6 +227,10 @@ std::vector<pathCost> KShortestPath(OrientedGraph &G, const std::string &origin,
     
     for(const auto &keyVal: initial_costs) {
         G.mlinks[keyVal.first]->mcosts = keyVal.second;
+    }
+
+    for(auto &p:paths) {
+        p.second = computePathCost(G, p.first, cost);
     }
 
     return paths;
