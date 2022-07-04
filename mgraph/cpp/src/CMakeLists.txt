@@ -4,7 +4,7 @@ set(MGRAPH_SRC
   shortest_path.cpp
 )
 
-add_library(mgraphlib SHARED ${MGRAPH_SRC})
+add_library(mgraphlib ${MGRAPH_SRC})
 
 target_link_libraries(mgraphlib PUBLIC OpenMP::OpenMP_CXX)
 

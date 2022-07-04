@@ -2,13 +2,15 @@
 
 #include <vector>
 #include <string>
+#include <utility>
 
-#include <omp.h>
 
 #pragma once
 
 typedef std::set<std::string> setstring;
+typedef std::pair<std::vector<std::string>, double> pathCost;
 
-std::vector<std::string> dijkstra(const OrientedGraph &G, const std::string &origin, const std::string &destination, const std::string &cost, setstring accessibleLabels = {});
-
-std::vector<std::vector<std::string>> parallelDijkstra(const OrientedGraph &G, std::vector<std::string>  origins, std::vector<std::string>  destinations, std::string cost, std::vector<setstring> vecAvailableLabels = {}, int threadNumber = omp_get_max_threads());
+pathCost dijkstra(const OrientedGraph &G, const std::string &origin, const std::string &destination, const std::string &cost, setstring accessibleLabels = {});
+std::vector<pathCost> parallelDijkstra(const OrientedGraph &G, std::vector<std::string>  origins, std::vector<std::string>  destinations, std::string cost, int threadNumber, std::vector<setstring> vecAvailableLabels = {});
+std::vector<pathCost> KShortestPath(OrientedGraph &G, const std::string &origin, const std::string &destination, const std::string &cost, setstring accessibleLabels, double minDist, double maxDist, int kPath);
+std::vector<std::vector<pathCost> > parallelKShortestPath(OrientedGraph &G, const std::vector<std::string> &origins, const std::vector<std::string> &destinations, const std::string &cost, std::vector<setstring> accessibleLabels, double minDist, double maxDist, int kPath, int threadNumber);
