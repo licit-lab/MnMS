@@ -2,18 +2,14 @@ cmake_minimum_required(VERSION 3.19)
 project(Mgraph VERSION 1.0.0)
 
 
-
-# set(OpenMP_DIR ${CMAKE_PREFIX_PATH}/include)
 find_package(OpenMP REQUIRED)
 
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 set(MGRAPH_HEADERS
   include/mgraph/create.h
   include/mgraph/graph.h
   include/mgraph/shortest_path.h
 )
-message(STATUS "OPENMP DIRS: ${OpenMP_CXX_INCLUDE_DIRS}")
 
 
 add_subdirectory(src)
@@ -25,14 +21,12 @@ add_subdirectory(src)
 include(CTest)
 add_subdirectory(tests)
 
-
 # ---------------------------------
 
 
 
 
-
-
+# ------------- INSTALL -------------
 
 install(DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include
@@ -67,3 +61,5 @@ install(
   ${CMAKE_BINARY_DIR}/Mgraph/MgraphConfigVersion.cmake
   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/mgraph
   COMPONENT Development)
+
+  # --------------------------------

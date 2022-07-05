@@ -2,11 +2,15 @@
 create_test_sourcelist (Tests
   CommonCxxTests.cxx
   testGraph.cxx
-  )
+  testDijkstra1.cxx
+  testDijkstra2.cxx
+)
 
 # add the executable
 add_executable (CommonCxxTests ${Tests})
 target_link_libraries(CommonCxxTests mgraphlib)
+target_include_directories(CommonCxxTests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 
 # remove the test driver source file
 set (TestsToRun ${Tests})

@@ -96,7 +96,7 @@ public:
         std::vector<std::shared_ptr<Link> > res;
         for(const auto &l: madj) {
             std::string neighbor = l.second->mdownstream;
-            if(mexclude_movements.find(predecessor) == mexclude_movements.end() || mexclude_movements[neighbor].find(predecessor) == mexclude_movements[neighbor].end()) {
+            if(mexclude_movements.find(predecessor) == mexclude_movements.end() || mexclude_movements[predecessor].find(neighbor) == mexclude_movements[predecessor].end()) {
                 res.push_back(l.second);
             }
         }
