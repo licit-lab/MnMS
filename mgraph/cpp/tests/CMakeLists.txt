@@ -1,10 +1,10 @@
 # create the testing file and list of tests
 create_test_sourcelist (Tests
-  CommonCxxTests.cxx
-  testGraph.cxx
-  testDijkstra1.cxx
-  testDijkstra2.cxx
-  testKShortestPath.cxx
+  CommonCxxTests.cpp
+  testGraph.cpp
+  testDijkstra1.cpp
+  testDijkstra2.cpp
+  testKShortestPath.cpp
 )
 
 # add the executable
@@ -15,7 +15,7 @@ target_include_directories(CommonCxxTests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # remove the test driver source file
 set (TestsToRun ${Tests})
-remove (TestsToRun CommonCxxTests.cxx)
+remove (TestsToRun CommonCxxTests.cpp)
 
 # Add all the ADD_TEST for each test
 foreach (test ${TestsToRun})
