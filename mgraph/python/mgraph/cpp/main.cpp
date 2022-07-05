@@ -5,13 +5,6 @@
 #include <mgraph/shortest_path.h>
 #include <mgraph/create.h>
 
-
-class Test {
-    public:
-    std::unordered_map<std::string,std::string> t;
-};
-
-
 namespace py = pybind11;
 
 PYBIND11_MODULE(cpp, m) {
