@@ -152,7 +152,7 @@ void showPath(pathCost path) {
     for(const auto &p: path.first) {
         std::cout << p << ", ";
     }
-    std::cout<< "]\n";
+    std::cout<< "]"<<std::endl;
 }
 
 
@@ -163,8 +163,8 @@ std::vector<pathCost> KShortestPath(OrientedGraph &G, const std::string &origin,
     pathCost firstPath = dijkstra(G, origin, destination, cost);
     paths.push_back(firstPath);
 
-    // std::cout << "First path: ";
-    // showPath(firstPath); 
+    std::cout << "First path: ";
+    showPath(firstPath); 
 
     double firstPathLength = computePathLength(G, firstPath.first);
     
@@ -175,16 +175,16 @@ std::vector<pathCost> KShortestPath(OrientedGraph &G, const std::string &origin,
     while (pathCounter < kPath && retry < 10)
     {
         pathCost newPath = dijkstra(G, origin, destination, cost);
-        // std::cout << G.mlinks["0_1"]->mcosts["time"]+G.mlinks["1_3"]->mcosts["time"]+G.mlinks["3_2"]->mcosts["time"] << "\n";
-        // std::cout << "Computed path: ";
-        // showPath(newPath); 
+        // std::cout << G.mlinks["0_1"]->mcosts["time"]+G.mlinks["1_3"]->mcosts["time"]+G.mlinks["3_2"]->mcosts["time"] << std::endl;
+        std::cout << "Computed path: ";
+        showPath(newPath); 
 
         increaseCostsFromPath(G, newPath.first, initial_costs);
         double newPathLength = computePathLength(G, newPath.first);
 
         double diffPathLength = newPathLength - firstPathLength;
-        if(diffPathLength > minDist) {
-            if(diffPathLength < maxDist) {
+        if(diffPathLength >= minDist) {
+            if(diffPathLength <= maxDist) {
                 
 
                 
@@ -198,15 +198,15 @@ std::vector<pathCost> KShortestPath(OrientedGraph &G, const std::string &origin,
                 }
 
                 if(isNew) {
-                    // std::cout << "Accept path: ";
-                    // showPath(newPath); 
+                    std::cout << "Accept path: ";
+                    showPath(newPath); 
                     paths.push_back(newPath);
                     retry = 0;
                     pathCounter += 1;
                 }
                 else {
-                    // std::cout << "Reject path same : ";
-                    // showPath(newPath); 
+                    std::cout << "Reject path same : ";
+                    showPath(newPath); 
                     retry += 1;
                 }
 
@@ -214,13 +214,13 @@ std::vector<pathCost> KShortestPath(OrientedGraph &G, const std::string &origin,
             }
 
             else {
-                // std::cout << "Dist too high: " << firstPathLength << " " << newPathLength <<"\n";
+                std::cout << "Dist too high: " << firstPathLength << " " << newPathLength <<"\n";
                 break;
             }
         }
 
         else {
-            // std::cout << "Dist too short: " << diffPathLength <<"\n";
+            std::cout << "Dist too short: " << diffPathLength <<"\n";
             retry += 1;
         }
     }

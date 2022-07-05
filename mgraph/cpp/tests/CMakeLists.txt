@@ -4,6 +4,7 @@ create_test_sourcelist (Tests
   testGraph.cxx
   testDijkstra1.cxx
   testDijkstra2.cxx
+  testKShortestPath.cxx
 )
 
 # add the executable
