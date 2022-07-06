@@ -75,11 +75,13 @@ public:
         mposition[1] = other.mposition[1];
 
         for(const auto &keyVal: other.madj) {
-            madj[keyVal.first] = keyVal.second;
+            std::shared_ptr<Link> l = std::make_shared<Link>(*keyVal.second);
+            madj[keyVal.first] = l;
         }
 
         for(const auto &keyVal: other.mradj) {
-            mradj[keyVal.first] = keyVal.second;
+            std::shared_ptr<Link> l = std::make_shared<Link>(*keyVal.second);
+            mradj[keyVal.first] = l;
         }
 
         for(const auto &keyVal: other.mexclude_movements) {
@@ -123,7 +125,7 @@ public:
     std::unordered_map<std::string, std::shared_ptr<Link> > mlinks;
     void AddNode(std::string _id, double x, double y, mapsets excludeMovements = {});
     void AddNode(std::shared_ptr<Node> n);
-    void AddLink(std::string _id, std::string _up, std::string _down, double length, std::unordered_map<std::string, double> _costs);
+    void AddLink(std::string _id, std::string _up, std::string _down, double length, std::unordered_map<std::string, double> _costs, std::string label = "_def");
     void AddLink(std::shared_ptr<Link> l);
     void ShowNodes();
     void ShowLinks();
@@ -150,3 +152,6 @@ public:
 
 
 std::shared_ptr<OrientedGraph> copyGraph(const OrientedGraph &G);
+
+
+std::shared_ptr<OrientedGraph> mergeOrientedGraph(std::vector<std::shared_ptr<OrientedGraph> > allGraphs);

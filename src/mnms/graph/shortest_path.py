@@ -11,7 +11,7 @@ from numpy.linalg import norm as _norm
 
 from mnms.graph.layers import MultiLayerGraph
 from mnms.log import create_logger
-from mnms.graph.core import OrientedGraph, TransitLink, Node
+from mgraph import OrientedGraph, Node
 from mnms.tools.exceptions import PathNotFound
 from mnms.demand.user import User
 

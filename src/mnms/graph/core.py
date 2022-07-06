@@ -178,7 +178,7 @@ log = create_logger(__name__)
 #         return result
 
 
-class Zone(GraphElement):
+class Zone():
     """Set of sections that define a geographic zone
 
     Parameters
@@ -193,7 +193,7 @@ class Zone(GraphElement):
     __slots__ = ('mobility_services', 'links')
 
     def __init__(self, resid: str, links:List[str]=[], mobility_services:List[str]=[]):
-        super(Zone, self).__init__(resid)
+        self.id = resid
         self.mobility_services = frozenset(mobility_services)
         self.links: FrozenSet[str] = frozenset(links)
 

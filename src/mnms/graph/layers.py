@@ -78,8 +78,8 @@ class Layer(AbstractLayer):
         self._map_nodes[dbnode] = nid
 
     def create_link(self, lid, upstream, downstream, costs, reference_links):
-        costs['length'] = sum(self._roaddb.sections[l]['length'] for l in reference_links)
-        new_link = Link(lid, upstream, downstream, costs, self.id)
+        length = sum(self._roaddb.sections[l]['length'] for l in reference_links)
+        new_link = Link(lid, upstream, downstream, length, costs, self.id)
         self.graph.add_link(new_link)
 
         for l in reference_links:
@@ -237,14 +237,12 @@ class OriginDestinationLayer(object):
         self.destinations = dict()
 
     def create_origin_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, '_ODLAYER', None)
-        new_node.position = np.array(pos)
+        new_node = Node(nid, pos[0], pos[1])
 
         self.origins[nid] = new_node
 
     def create_destination_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, '_ODLAYER', None)
-        new_node.position = np.array(pos)
+        new_node = Node(nid, pos[0], pos[1])
 
         self.destinations[nid] = new_node
 
@@ -338,3 +336,7 @@ class MultiLayerGraph(object):
             for service in layer.mobility_services:
                 self.mapping_layer_services[service] = layer
 
+
+
+
+if __name__ == "__main__":

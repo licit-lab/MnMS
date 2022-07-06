@@ -30,9 +30,9 @@ int testKShortestPath(int argc, char *argv[])
     assertTrue(paths[0].second==12, "First path cost not equal 12");
     assertTrue(paths[0].first==std::vector<std::string>{"0", "3"}, "First path nodes not equal 0, 3");
     assertTrue(paths[1].second==24, "Second path cost not equal 24");
-    assertTrue(paths[1].first==std::vector<std::string>{"0", "2", "3"}, "First path nodes not equal 0, 2, 3");
-    assertTrue(paths[2].second==26, "Third path cost not equal 25");
-    assertTrue(paths[2].first==std::vector<std::string>{"0", "1", "3"}, "First path nodes not equal 0, 1, 3");
+    assertTrue(paths[1].first==std::vector<std::string>{"0", "2", "3"}, "Second path nodes not equal 0, 2, 3");
+    assertTrue(paths[2].second==26, "Third path cost not equal 26");
+    assertTrue(paths[2].first==std::vector<std::string>{"0", "1", "3"}, "Third path nodes not equal 0, 1, 3");
 
 
     return 0;

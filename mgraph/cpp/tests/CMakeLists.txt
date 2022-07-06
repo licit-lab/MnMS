@@ -2,6 +2,7 @@
 create_test_sourcelist (Tests
   CommonCxxTests.cpp
   testGraph.cpp
+  testGraphMerge.cpp
   testDijkstra1.cpp
   testDijkstra2.cpp
   testKShortestPath.cpp

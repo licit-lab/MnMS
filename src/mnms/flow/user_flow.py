@@ -2,7 +2,7 @@ from typing import Dict, List
 
 from mnms.graph.layers import MultiLayerGraph
 from mnms.demand.user import User
-from mnms.graph.core import ConnectionLink, TransitLink
+# from mnms.graph.core import ConnectionLink, TransitLink
 from mnms.time import Dt, Time
 from mnms.log import create_logger
 

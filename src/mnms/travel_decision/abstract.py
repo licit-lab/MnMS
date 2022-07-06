@@ -7,7 +7,6 @@ from itertools import product
 
 
 from mnms.demand.user import User
-from mnms.graph.core import TransitLink
 from mnms.graph.layers import MultiLayerGraph
 from mnms.graph.shortest_path import compute_k_shortest_path, Path
 from mnms.log import create_logger

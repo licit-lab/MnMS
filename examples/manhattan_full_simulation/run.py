@@ -33,24 +33,24 @@ car_layer = generate_layer_from_roads(road_db,
                                       mobility_services=[PersonalCarMobilityService()])
 
 odlayer = generate_grid_origin_destination_layer(0, 0, 300, 300, 3, 3)
-
+#
 mlgraph = MultiLayerGraph([car_layer],
                           odlayer,
                           1e-3)
-
-save_graph(mlgraph, cwd.parent.joinpath('graph.json'))
-
-load_graph(cwd.parent.joinpath('graph.json'))
+#
+# save_graph(mlgraph, cwd.parent.joinpath('graph.json'))
+#
+# load_graph(cwd.parent.joinpath('graph.json'))
 
 #
 # # Demand
 #
-# demand = CSVDemandManager(cwd, demand_type='coordinate')
-# demand.add_user_observer(CSVUserObserver('user.csv'))
+demand = CSVDemandManager(cwd, demand_type='coordinate')
+demand.add_user_observer(CSVUserObserver('user.csv'))
 #
 # # Decison Model
 #
-# decision_model = DummyDecisionModel(mlgraph)
+decision_model = DummyDecisionModel(mlgraph)
 #
 # # Flow Motor
 #
