@@ -2,7 +2,7 @@
 
 Mgraph is the C++ graph library used by `mnms`. You must have `CMake` and `make` installed on your computer.
 
-## C++
+## C++ Only
 
 Inside your conda environment go to the cpp folder, and install the code using cmake:
 
@@ -18,7 +18,11 @@ make -j install
 
 ## Python
 
-To install the python interface just launch the line:
+To install C++ code and python interface just launch the line:
 ```shell
-python -m pip install ./python
+python setup.py install       
+```
+You can install C++ code and python interface with wheel too :
+```shell
+pip install mgraph-*.whl
 ```

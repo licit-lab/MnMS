@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
 import re
+import shutil
 import subprocess
 import sys
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
+
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
 PLAT_TO_CMAKE = {
@@ -47,6 +49,7 @@ class CMakeBuild(build_ext):
             "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}".format(extdir),
             "-DPYTHON_EXECUTABLE={}".format(sys.executable),
             "-DCMAKE_BUILD_TYPE={}".format(cfg),  # not used on MSVC, but no harm
+            "-DCMAKE_PREFIX_PATH={}".format(sys.prefix),
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
@@ -120,13 +123,30 @@ class CMakeBuild(build_ext):
         )
 
 
+# build cpp sources
+if sys.argv[1] == "bdist_wheel":
+    env_path = sys.prefix
+    os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "..", "cpp"))
+    if os.path.isdir("build"):
+        shutil.rmtree("build")
+    os.mkdir("build")
+    os.chdir("build")
+    subprocess.check_call(f"cmake .. -DCMAKE_PREFIX_PATH={env_path} "
+                          f"-DCMAKE_INSTALL_PREFIX={env_path} "
+                          f"-DCMAKE_BUILD_TYPE=Release", shell=True)
+    subprocess.check_call("cmake --build . --target install --config Release",
+                          shell=True)
+    os.chdir(os.path.join("..", "..", "python"))
+
+
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="mgraph",
     version="0.0.1",
     long_description="",
-    packages= ["mgraph"],
+    packages=["mgraph"],
     ext_modules=[CMakeExtension("mgraph.cpp")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
