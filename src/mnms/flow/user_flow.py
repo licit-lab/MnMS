@@ -19,6 +19,8 @@ class UserFlow(object):
         self._walk_speed = walk_speed
         self._tcurrent = None
 
+        self._user_waiting_service = dict()
+
     def set_graph(self, mmgraph:MultiModalGraph):
         self._graph = mmgraph
 
@@ -80,7 +82,7 @@ class UserFlow(object):
             del self.users[uid]
 
     def _request_user_vehicles(self, new_users:List[User]):
-        for user in new_users:
+        for user in new_users+list(self._user_waiting_service.values()):
             if user.path is not None:
                 upath = user.path.nodes
 
@@ -98,7 +100,12 @@ class UserFlow(object):
                         mservice_id = user.path.mobility_services[ilayer]
                         mservice = self._graph.layers[layer].mobility_services[mservice_id]
                         log.info(f"Stop {upath[slice_nodes][-1]}, {upath}, {upath[slice_nodes]}")
-                        mservice.request_vehicle(user, upath[slice_nodes][-1])
+                        found_veh = mservice.request_vehicle(user, upath[slice_nodes][-1])
+
+                        if not found_veh:
+                            self._user_waiting_service[user.id] = user
+                        else:
+                            self._user_waiting_service.pop(user.id, None)
                         break
                 else:
                     log.warning(f"No mobility service found for user {user}")

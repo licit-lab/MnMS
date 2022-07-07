@@ -167,7 +167,7 @@ class ConnectionLink(Link):
         self.layer = layer
 
     def __repr__(self):
-        return f"ConnectionLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
+        return f"ConnectionLink(id={self.id}, upstream={self.upstream}, downstream={self.downstream})"
 
     @classmethod
     def __load__(cls, data: dict) -> "ConnectionLink":
@@ -215,7 +215,7 @@ class TransitLink(Link):
             self.costs.update(costs)
 
     def __repr__(self):
-        return f"TransitLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node})"
+        return f"TransitLink(id={self.id}, upstream={self.upstream}, downstream={self.downstream})"
 
     @classmethod
     def __load__(cls, data: dict) -> "TransitLink":
@@ -260,7 +260,7 @@ class GeoLink(Link):
         self.length = length
 
     def __repr__(self):
-        return f"GeoLink(id={self.id}, upstream={self.upstream_node}, downstream={self.downstream_node}, len={self.length})"
+        return f"GeoLink(id={self.id}, upstream={self.upstream}, downstream={self.downstream}, len={self.length})"
 
     @classmethod
     def __load__(cls, data: dict) -> "GeoLink":

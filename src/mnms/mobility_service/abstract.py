@@ -109,7 +109,7 @@ class AbstractMobilityService(ABC):
 
 
     @abstractmethod
-    def request_vehicle(self, user: "User", drop_node:str) -> None:
+    def request_vehicle(self, user: "User", drop_node:str) -> bool:
         """This method must be implemented by any subclass of AbstractMobilityService.
         It must found a vehicle and call the take_next_user of the vehicle on the user.
 
