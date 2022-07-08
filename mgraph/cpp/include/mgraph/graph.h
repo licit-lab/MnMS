@@ -4,6 +4,7 @@
 #include <memory>
 #include <set>
 #include <vector>
+#include <array>
 
 #include <iostream>
 
@@ -56,7 +57,7 @@ public:
 class Node {
 public:
     std::string mid;
-    double mposition[2];
+    std::array<double, 2> mposition;
     std::unordered_map<std::string, std::shared_ptr<Link> > madj;
     std::unordered_map<std::string, std::shared_ptr<Link> > mradj;
 

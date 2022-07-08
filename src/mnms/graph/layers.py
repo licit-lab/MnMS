@@ -15,6 +15,8 @@ from ..vehicles.veh_type import Vehicle, Car
 from ..log import create_logger
 from mnms.io.utils import load_class_by_module_name
 
+from mgraph.cpp import merge_oriented_graph
+
 log = create_logger(__name__)
 
 
@@ -237,12 +239,12 @@ class OriginDestinationLayer(object):
         self.destinations = dict()
 
     def create_origin_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, pos[0], pos[1])
+        new_node = Node(nid, pos[0], pos[1], {})
 
         self.origins[nid] = new_node
 
     def create_destination_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, pos[0], pos[1])
+        new_node = Node(nid, pos[0], pos[1], {})
 
         self.destinations[nid] = new_node
 
@@ -266,8 +268,10 @@ class MultiLayerGraph(object):
                  layers:List[AbstractLayer] = [],
                  odlayer:Optional[OriginDestinationLayer] = None,
                  connection_distance:Optional[float] = None):
-        self.nodes = ChainMap()
-        self.links = ChainMap()
+        # self.nodes = ChainMap()
+        # self.links = ChainMap()
+
+        self.graph = merge_oriented_graph([l.graph for l in layers])
 
         self.layers = dict()
         self.mapping_layer_services = dict()
@@ -275,24 +279,12 @@ class MultiLayerGraph(object):
         self.odlayer = None
         self.roaddb = None
 
-        for l in layers:
-            self.add_layer(l)
+        # for l in layers:
+        #     self.add_layer(l)
 
         if odlayer is not None and connection_distance is not None:
             self.connect_origin_destination_layer(odlayer, connection_distance)
 
-    def add_layer(self, layer: Layer):
-        self.nodes.maps.append(layer.graph.nodes)
-        self.links.maps.append(layer.graph.links)
-        self.layers[layer.id] = layer
-        self.roaddb = layer._roaddb
-
-        # if len(layer.mobility_services) == 0:
-        #     log.warning(f"Layer with id '{layer.id}' does not have any mobility services in it, add mobility services "
-        #                 f"before adding the layer to the MultiModalGraph")
-        #
-        # for service in layer.mobility_services:
-        #     self.mapping_layer_services[service] = layer
 
     def connect_origin_destination_layer(self, odlayer:OriginDestinationLayer, connection_distance: float):
         assert self.odlayer is None
@@ -300,36 +292,38 @@ class MultiLayerGraph(object):
         self.odlayer = odlayer
         _norm = np.linalg.norm
 
+        [self.graph.add_node(n.id, n.position[0], n.position[1], dict(n.exclude_movements)) for n in odlayer.origins.values()]
+        [self.graph.add_node(n.id, n.position[0], n.position[1], dict(n.exclude_movements)) for n in odlayer.destinations.values()]
+
         for nid, node in odlayer.origins.items():
             npos = node.position
 
-            for layer_nid, lnode in self.nodes.items():
-                dist = _norm(npos - lnode.position)
+            for layer_nid, lnode in self.graph.nodes.items():
+                dist = _norm(np.array(npos) - np.array(lnode.position))
                 if dist < connection_distance:
                     # Create sections
-                    up_link = TransitLink(f"{nid}_{layer_nid}", nid, layer_nid, {'length':dist})
-                    self.links[(nid, layer_nid)] = up_link
+                    self.graph.add_link(f"{layer_nid}_{nid}", layer_nid, nid, dist, {'length': dist}, "TRANSIT")
+                    # self.links[(nid, layer_nid)] = up_link
 
                     # Update adjacency and reverse adjacency of nodes
-                    node.adj.add(layer_nid)
-                    lnode.radj.add(nid)
+                    # node.adj.add(layer_nid)
+                    # lnode.radj.add(nid)
 
         for nid, node in odlayer.destinations.items():
             npos = node.position
 
-            for layer_nid, lnode in self.nodes.items():
-                dist = _norm(npos - lnode.position)
+            for layer_nid, lnode in self.graph.nodes.items():
+                dist = _norm(np.array(npos) - np.array(lnode.position))
                 if dist < connection_distance:
                     # Create sections
-                    down_link = TransitLink(f"{layer_nid}_{nid}", layer_nid, nid, {'length': dist})
-                    self.links[(layer_nid, nid)] = down_link
+                    self.graph.add_link(f"{layer_nid}_{nid}", layer_nid, nid, dist, {'length': dist}, "TRANSIT")
 
                     # Update adjacency and reverse adjacency of nodes
-                    lnode.adj.add(nid)
-                    node.radj.add(layer_nid)
+                    # lnode.adj.add(nid)
+                    # node.radj.add(layer_nid)
 
-        self.nodes.maps[0].update(odlayer.origins)
-        self.nodes.maps[0].update(odlayer.destinations)
+
+
 
     def construct_layer_service_mapping(self):
         for layer in self.layers.values():
@@ -340,3 +334,4 @@ class MultiLayerGraph(object):
 
 
 if __name__ == "__main__":
+    pass

@@ -16,6 +16,12 @@ cmake .. -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
 make -j install
 ```
 
+You can then lauch the tests in the `build` directory:
+
+```shell
+ctest --output-on-failure
+```
+
 ## Python
 
 To install C++ code and python interface just launch the line:
