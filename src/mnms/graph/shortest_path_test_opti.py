@@ -2,11 +2,10 @@ from multiprocessing import Process, cpu_count
 from timeit import default_timer as timer
 from typing import Callable, Union, List, Dict, NamedTuple
 
-import cppgraph
 import pandas as pd
+from mgraph import cpp as mgraph
 
 from mnms.demand import User
-from mnms.graph.core import OrientedGraph
 from mnms.graph.shortest_path import Path, _weight_computation
 
 _WEIGHT_COST_TYPE = Union[str, Callable[[Dict[str, float]], float]]
@@ -62,8 +61,8 @@ def dijkstra_v2(graph,
 
     """
     cost_func = _weight_computation(cost)
-    origin = "CAR_" + origin
-    destination = "CAR_" + destination
+    origin = origin
+    destination = destination
 
     vertices = set()
     dist = dict()
@@ -321,5 +320,5 @@ def run_on_proc(list_user: List[User],  method: callable,
 
 def dijkstra_cpp(graph, origin: str, destination: str, cost: _WEIGHT_COST_TYPE,
                  available_layers):
-    ret = cppgraph.dijkstra(graph, origin, destination, cost)
+    ret = mgraph.dijkstra(graph, origin, destination, cost)
     return Path(len(ret), ret)

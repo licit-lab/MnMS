@@ -7,7 +7,8 @@ from datetime import timedelta
 from enum import Enum
 from functools import partial
 from itertools import product
-from multiprocessing import Process
+from multiprocessing import Process, cpu_count, freeze_support
+from sys import platform
 from typing import NamedTuple, Callable, List
 
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ from timeit import default_timer as timer
 
 import numpy as np
 import pandas as pd
-import cppgraph
+from mgraph import cpp as mgraph
 
 from mnms.demand import User
 from mnms.generation.layers import generate_layer_from_roads
@@ -52,7 +53,7 @@ def create_graph(graph_size):
 
 
 def create_graph_cpp(graph_size):
-    g = cppgraph.generate_mahattan(graph_size, LINK_LENGTH)
+    g = mgraph.generate_manhattan(graph_size, LINK_LENGTH)
     return g, None
 
 
@@ -128,7 +129,7 @@ def stat_benchmark(list_method: List[EnumMethods], list_graph_size, nb_iter, pri
             res, time = run_for_stat(method.value, graph, nb_iter)
             data.append(time)
 
-            print(f"{method.value.name} : time = {statistics.mean(time)}")
+            # print(f"{method.value.name} : time = {statistics.mean(time)}")
 
         # if len(res1.nodes) == len(res2.nodes):
         #     print("Validé")
@@ -140,10 +141,12 @@ def stat_benchmark(list_method: List[EnumMethods], list_graph_size, nb_iter, pri
 
     if print_df:
         data = np.array(data)
-        iterables = [list_graph_size, [method.name() for method in list_method]]
-        df = pd.DataFrame(data, index=pd.MultiIndex.from_product(iterables, names=["n=", "method"]))
+        iterables = [[size**2 for size in list_graph_size], [method.name() for method in list_method]]
+        df = pd.DataFrame(data, index=pd.MultiIndex.from_product(iterables, names=["nodes", "method"]))
+        df = df.assign(min=df.min(axis=1))
+        df = df.assign(max=df.max(axis=1))
         df = df.assign(mean=df.mean(axis=1))
-        df = df.assign(tot=df.sum(axis=1))
+        # df = df.assign(tot=df.sum(axis=1))
         print(df)
         if df_path:
             df.to_csv(df_path)
@@ -157,8 +160,8 @@ def simple_benchmark(method: EnumMethods, graph_size: int):
 
 
 def build_user_list(mmgraph):
-    origins = [node for node in mmgraph.nodes.keys() if node.startswith("WEST")]
-    destinations = [node for node in mmgraph.nodes.keys() if node.startswith("EAST")]
+    origins = [node for node in mmgraph.nodes.keys() if node.startswith("CAR_WEST")]
+    destinations = [node for node in mmgraph.nodes.keys() if node.startswith("CAR_EAST")]
     destinations = destinations[:30]
     list_od = list(product(origins, destinations))
     tstart = Time("07:00:00").to_seconds()
@@ -170,7 +173,7 @@ def build_user_list(mmgraph):
             for uid, (origin, destination) in enumerate(list_od)]
 
 
-def multi_proc_benchmark(enum_method: EnumMethods, graph_size, nb_proc = None):
+def multi_proc_benchmark(enum_method: EnumMethods, graph_size, nb_proc=None):
     graph, mmgraph = enum_method.value.build_graph(graph_size)
     user_list = build_user_list(graph)
     # heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
@@ -208,7 +211,9 @@ def run_method(od_list, method: Method, graph):
 
 
 if __name__ == '__main__':
+    freeze_support()
     # simple_benchmark(EnumMethods.DIJKSTRA_CPP, 10)
-    # stat_benchmark([EnumMethods.DIJKSTRA_V2], [100], 5, True)
+    # stat_benchmark([EnumMethods.DIJKSTRA, EnumMethods.ASTAR, EnumMethods.DIJKSTRA_V2, EnumMethods.DIJKSTRA_CPP], [50, 100, 150], 5, True)
+    stat_benchmark([EnumMethods.DIJKSTRA_CPP], [50, 100, 120, 150], 5, True, f"disjktra cpp stat on {platform}.csv")
     # stat_benchmark([EnumMethods.DIJKSTRA_V2, EnumMethods.DIJKSTRA_CPP], [100], 10, True)
-    multi_proc_benchmark(EnumMethods.DIJKSTRA_CPP, 100, 8)
+    # multi_proc_benchmark(EnumMethods.DIJKSTRA_CPP, 10, cpu_count())

@@ -126,11 +126,11 @@ def dijkstra(graph: OrientedGraph,
                 link = graph.links[(u, neighbor)]
                 alt = dist[u] + cost_func(graph.links[(u, neighbor)].costs)
 
-                if isinstance(link, TransitLink):
-                    if available_layers is not None:
-                        dnode_layer = graph.nodes[link.downstream].layer
-                        if dnode_layer is not None and dnode_layer not in available_layers:
-                            alt = float('inf')
+                # if isinstance(link, TransitLink):
+                #     if available_layers is not None:
+                #         dnode_layer = graph.nodes[link.downstream].layer
+                #         if dnode_layer is not None and dnode_layer not in available_layers:
+                #             alt = float('inf')
 
                 if alt < dist[neighbor]:
                     dist[neighbor] = alt
