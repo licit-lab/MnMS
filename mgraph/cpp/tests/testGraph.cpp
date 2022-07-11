@@ -17,9 +17,9 @@ int testGraph(int argc, char *argv[])
 
     std::unordered_map<std::string, std::set<std::string> > excludeMovements;
     excludeMovements["a"] = {"c"};
-    G.AddNode("b", 2, 5, excludeMovements);
+    G.AddNode("b", 2, 5, "", excludeMovements);
     
-    std::shared_ptr<Node> newNode = std::make_shared<Node>("c", 12, 43);
+    std::shared_ptr<Node> newNode = std::make_shared<Node>("c", 12., 43.);
     G.AddNode(newNode);
     
     G.AddNode("d", 435, 345);

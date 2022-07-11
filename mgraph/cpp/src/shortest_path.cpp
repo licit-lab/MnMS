@@ -109,12 +109,19 @@ void increaseCostsFromPath(OrientedGraph &G, const std::vector<std::string> &pat
     for (size_t i = 0; i < path.size() - 1 ; i++)
     {
         std::shared_ptr<Link> link = G.mnodes[path[i]]->madj[path[i+1]];
-        for(auto &keyVal: link->mcosts) {
-            if(initial_costs.find(link->mid) == initial_costs.end()) {
+        if(initial_costs.find(link->mid) == initial_costs.end()) {
+            for(auto &keyVal: link->mcosts) {
                 initial_costs[link->mid][keyVal.first] = keyVal.second;
+                keyVal.second *= 10;
             }
-            keyVal.second *= 10;
         }
+        else {
+            for(auto &keyVal: link->mcosts) {
+                keyVal.second *= 10;
+            }
+        }
+        
+        
     }
     
 }
@@ -140,6 +147,7 @@ double computePathCost(OrientedGraph &G, const std::vector<std::string> &path, s
     {
         std::shared_ptr<Link> link = G.mnodes[path[i]]->madj[path[i+1]];
         c += link->mcosts[cost];
+        // std::cout<<link->mcosts[cost]<<std::endl;
     }
 
     return c; 
@@ -163,6 +171,10 @@ std::vector<pathCost> KShortestPath(OrientedGraph &G, const std::string &origin,
     pathCost firstPath = dijkstra(G, origin, destination, cost);
     paths.push_back(firstPath);
 
+    if(firstPath.first.empty()) {
+        return paths;
+    }
+
     // std::cout << "First path: ";
     // showPath(firstPath); 
 
@@ -182,53 +194,46 @@ std::vector<pathCost> KShortestPath(OrientedGraph &G, const std::string &origin,
         double newPathLength = computePathLength(G, newPath.first);
 
         double diffPathLength = newPathLength - firstPathLength;
-        if(diffPathLength >= minDist) {
-            if(diffPathLength <= maxDist) {
-                
 
-                bool isNew = true;
-                for(const auto &p: paths) {
-                    if(p.first == newPath.first) {
-                        isNew = false;
-                        break;
-                    }
+        if(minDist <= diffPathLength && diffPathLength <= maxDist) {
+            bool isNew = true;
+            for(const auto &p: paths) {
+                if(p.first == newPath.first) {
+                    isNew = false;
+                    break;
                 }
-
-                if(isNew) {
-                    // std::cout << "Accept path: ";
-                    // showPath(newPath); 
-                    paths.push_back(newPath);
-                    retry = 0;
-                    pathCounter += 1;
-                }
-                else {
-                    // std::cout << "Reject path same : ";
-                    // showPath(newPath); 
-                    retry += 1;
-                }
-
-
             }
 
+            if(isNew) {
+                // std::cout<< minDist << " " << diffPathLength << " " << maxDist<<std::endl;
+                // std::cout << "Accepted path: ";
+                // showPath(newPath); 
+                paths.push_back(newPath);
+                retry = 0;
+                pathCounter += 1;
+            }
             else {
-                // std::cout << "Dist too high: " << firstPathLength << " " << newPathLength <<"\n";
                 retry += 1;
             }
+
         }
 
         else {
-            // std::cout << "Dist too short: " << diffPathLength <<"\n";
             retry += 1;
         }
     }
+
     
     for(const auto &keyVal: initial_costs) {
         G.mlinks[keyVal.first]->mcosts = keyVal.second;
     }
 
     for(auto &p:paths) {
+        // showPath(p);
         p.second = computePathCost(G, p.first, cost);
+        // showPath(p);
     }
+    // showPath(firstPath); 
 
     return paths;
 }
@@ -251,13 +256,11 @@ std::vector<std::vector<pathCost> > parallelKShortestPath(OrientedGraph &G, cons
                 res[i] = KShortestPath(*privateG, origins[i], destinations[i], cost, {}, minDist, maxDist, kPath);
             }
             else {
-                res[i] = KShortestPath(*privateG, origins[i], destinations[i], cost, accessibleLabels[i], minDist, maxDist, kPath);
+                res[i] = KShortestPath(*privateG, origins[i], destinations[i], cost, accessibleLabels[i], minDist, maxDist, kPath);  
             }
         
         }
     }
-    
-    
     return res;
 
 }

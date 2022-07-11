@@ -14,7 +14,7 @@ int testGraphMerge(int argc, char *argv[])
 {
     std::shared_ptr<OrientedGraph> G1 = std::make_shared<OrientedGraph>();
     G1->AddNode("a", 0, 0);
-    G1->AddNode("b", 2, 5, {{"a", {"c"}}});
+    G1->AddNode("b", 2, 5, "", {{"a", {"c"}}});
     G1->AddNode("c", 12, 43);
     G1->AddNode("d", 435, 345);
 
@@ -31,7 +31,6 @@ int testGraphMerge(int argc, char *argv[])
     G2->AddLink("f_y", "f", "y", 22, {{"time", 22}});
     
     
-
     std::shared_ptr<OrientedGraph> G3 = std::make_shared<OrientedGraph>();
 
 

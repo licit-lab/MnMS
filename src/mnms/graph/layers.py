@@ -74,7 +74,7 @@ class Layer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
         assert dbnode in self._roaddb.nodes
         node_pos = self._roaddb.nodes[dbnode]
-        new_node = Node(nid, node_pos[0], node_pos[1])
+        new_node = Node(nid, node_pos[0], node_pos[1], self.id, exclude_movements)
         self.graph.add_node(new_node)
 
         self._map_nodes[dbnode] = nid
@@ -239,12 +239,12 @@ class OriginDestinationLayer(object):
         self.destinations = dict()
 
     def create_origin_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, pos[0], pos[1], {})
+        new_node = Node(nid, pos[0], pos[1], "ODLAYER")
 
         self.origins[nid] = new_node
 
     def create_destination_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, pos[0], pos[1], {})
+        new_node = Node(nid, pos[0], pos[1], "ODLAYER")
 
         self.destinations[nid] = new_node
 
@@ -268,8 +268,6 @@ class MultiLayerGraph(object):
                  layers:List[AbstractLayer] = [],
                  odlayer:Optional[OriginDestinationLayer] = None,
                  connection_distance:Optional[float] = None):
-        # self.nodes = ChainMap()
-        # self.links = ChainMap()
 
         self.graph = merge_oriented_graph([l.graph for l in layers])
 
@@ -279,12 +277,11 @@ class MultiLayerGraph(object):
         self.odlayer = None
         self.roaddb = None
 
-        # for l in layers:
-        #     self.add_layer(l)
+        for l in layers:
+            self.layers[l.id] = l
 
         if odlayer is not None and connection_distance is not None:
             self.connect_origin_destination_layer(odlayer, connection_distance)
-
 
     def connect_origin_destination_layer(self, odlayer:OriginDestinationLayer, connection_distance: float):
         assert self.odlayer is None
@@ -292,38 +289,30 @@ class MultiLayerGraph(object):
         self.odlayer = odlayer
         _norm = np.linalg.norm
 
-        [self.graph.add_node(n.id, n.position[0], n.position[1], dict(n.exclude_movements)) for n in odlayer.origins.values()]
-        [self.graph.add_node(n.id, n.position[0], n.position[1], dict(n.exclude_movements)) for n in odlayer.destinations.values()]
+        [self.graph.add_node(n) for n in odlayer.origins.values()]
+        [self.graph.add_node(n) for n in odlayer.destinations.values()]
+
+        odlayer_nodes = set()
+        odlayer_nodes.update(odlayer.origins.keys())
+        odlayer_nodes.update(odlayer.destinations.keys())
 
         for nid, node in odlayer.origins.items():
             npos = node.position
 
             for layer_nid, lnode in self.graph.nodes.items():
                 dist = _norm(np.array(npos) - np.array(lnode.position))
-                if dist < connection_distance:
+                if dist < connection_distance and lnode.id not in odlayer_nodes:
                     # Create sections
-                    self.graph.add_link(f"{layer_nid}_{nid}", layer_nid, nid, dist, {'length': dist}, "TRANSIT")
-                    # self.links[(nid, layer_nid)] = up_link
-
-                    # Update adjacency and reverse adjacency of nodes
-                    # node.adj.add(layer_nid)
-                    # lnode.radj.add(nid)
+                    self.graph.add_link(f"{nid}_{layer_nid}", nid, layer_nid, dist, {'length': dist}, "TRANSIT")
 
         for nid, node in odlayer.destinations.items():
             npos = node.position
 
             for layer_nid, lnode in self.graph.nodes.items():
                 dist = _norm(np.array(npos) - np.array(lnode.position))
-                if dist < connection_distance:
+                if dist < connection_distance and lnode.id not in odlayer_nodes:
                     # Create sections
                     self.graph.add_link(f"{layer_nid}_{nid}", layer_nid, nid, dist, {'length': dist}, "TRANSIT")
-
-                    # Update adjacency and reverse adjacency of nodes
-                    # lnode.adj.add(nid)
-                    # node.radj.add(layer_nid)
-
-
-
 
     def construct_layer_service_mapping(self):
         for layer in self.layers.values():

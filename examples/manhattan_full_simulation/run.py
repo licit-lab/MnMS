@@ -34,6 +34,7 @@ car_layer = generate_layer_from_roads(road_db,
 
 odlayer = generate_grid_origin_destination_layer(0, 0, 300, 300, 3, 3)
 #
+
 mlgraph = MultiLayerGraph([car_layer],
                           odlayer,
                           1e-3)
@@ -42,31 +43,31 @@ mlgraph = MultiLayerGraph([car_layer],
 #
 # load_graph(cwd.parent.joinpath('graph.json'))
 
-#
-# # Demand
-#
+
+# Demand
+
 demand = CSVDemandManager(cwd, demand_type='coordinate')
 demand.add_user_observer(CSVUserObserver('user.csv'))
-#
-# # Decison Model
-#
+
+# Decison Model
+
 decision_model = DummyDecisionModel(mlgraph)
-#
-# # Flow Motor
-#
-# def mfdspeed(dacc):
-#     dacc['CAR'] = 3
-#     return dacc
-#
-# flow_motor = MFDFlow()
-# flow_motor.add_reservoir(Reservoir('RES', 'CAR', mfdspeed))
-#
-# supervisor = Supervisor(mlgraph,
-#                         demand,
-#                         flow_motor,
-#                         decision_model)
-#
-# supervisor.run(Time("07:00:00"),
-#                Time("08:00:00"),
-#                Dt(seconds=10),
-#                10)
+
+# Flow Motor
+
+def mfdspeed(dacc):
+    dacc['CAR'] = 3
+    return dacc
+
+flow_motor = MFDFlow()
+flow_motor.add_reservoir(Reservoir('RES', 'CAR', mfdspeed))
+
+supervisor = Supervisor(mlgraph,
+                        demand,
+                        flow_motor,
+                        decision_model)
+
+supervisor.run(Time("07:00:00"),
+               Time("08:00:00"),
+               Dt(seconds=10),
+               10)

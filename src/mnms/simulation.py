@@ -2,9 +2,12 @@ from time import time
 import csv
 import traceback
 import random
+from typing import List
 
 import numpy as np
+from mgraph import parallel_k_shortest_path
 
+from mnms.demand import User
 from mnms.graph.layers import MultiLayerGraph
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.flow.user_flow import UserFlow
@@ -25,7 +28,7 @@ class Supervisor(object):
                  decision_model: AbstractDecisionModel,
                  outfile: str = None):
 
-        self._graph: MultiLayerGraph = None
+        self._mlgraph: MultiLayerGraph = None
         self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
 
@@ -52,12 +55,12 @@ class Supervisor(object):
         np.random.seed(seed)
 
     def add_graph(self, mmgraph: MultiLayerGraph):
-        self._graph = mmgraph
-        self._graph.construct_layer_service_mapping()
+        self._mlgraph = mmgraph
+        self._mlgraph.construct_layer_service_mapping()
 
     def add_flow_motor(self, flow: AbstractFlowMotor):
         self._flow_motor = flow
-        flow.set_graph(self._graph)
+        flow.set_graph(self._mlgraph)
 
     def add_demand(self, demand: AbstractDemandManager):
         self._demand = demand
@@ -72,33 +75,25 @@ class Supervisor(object):
 
         return new_users
 
-    def compute_user_paths(self, new_users):
+    def compute_user_paths(self, new_users: List[User]):
         log.info('Computing paths for new users ..')
         start = time()
-        # for nu in ProgressBar(new_users, "Compute paths"):
-        for nu in new_users:
-            try:
-                self._decision_model(nu)
-            except PathNotFound:
-                log.warning(f'Path not found for user {nu.id}')
-
+        self._decision_model(new_users)
         end = time()
         log.info(f'Done [{end - start:.5} s]')
         
     def initialize(self, tstart:Time):
 
-        # Graph initialization
-        for layer in self._graph.layers.values():
-            for link in layer.graph.links.values():
-                link.costs['speed'] = layer.default_speed
-                link.costs['travel_time'] = link.costs['length'] / link.costs['speed']
+        for link in self._mlgraph.graph.links.values():
+            if link.label == "TRANSIT":
+                speed = self._user_flow._walk_speed
+            else:
+                speed = self._mlgraph.layers[link.label].default_speed
 
+            link.update_costs({"speed": speed,
+                              "travel_time": link.length/speed})
 
-        for link in self._graph.links.maps[0].values():
-            link.costs['speed'] = self._user_flow._walk_speed
-            link.costs['travel_time'] = link.costs['length'] / link.costs['speed']
-
-        for layer in self._graph.layers.values():
+        for layer in self._mlgraph.layers.values():
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
         
@@ -108,7 +103,7 @@ class Supervisor(object):
         self._user_flow.set_time(tstart)
 
     def update_mobility_services(self, flow_dt:Dt):
-        for layer in self._graph.layers.values():
+        for layer in self._mlgraph.layers.values():
             for mservice in layer.mobility_services.values():
                 log.info(f'Update mobility service {mservice.id}')
                 mservice.update(flow_dt)
@@ -188,7 +183,7 @@ class Supervisor(object):
                 log.info('Writing travel time of each link in graph ...')
                 start = time()
                 t_str = self._flow_motor.time
-                for link in self._graph.mobility_graph.sections.values():
+                for link in self._mlgraph.mobility_graph.sections.values():
                     self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['travel_time']])
                 end = time()
                 log.info(f'Done [{end - start:.5} s]')

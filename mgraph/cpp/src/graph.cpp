@@ -13,8 +13,8 @@
 #include <limits>
 
 
-void OrientedGraph::AddNode(std::string _id, double x, double y, mapsets excludeMovements) {
-    std::shared_ptr<Node> new_node = std::make_shared<Node>(_id, x, y,excludeMovements);
+void OrientedGraph::AddNode(std::string _id, double x, double y, std::string label, mapsets excludeMovements) {
+    std::shared_ptr<Node> new_node = std::make_shared<Node>(_id, x, y, label, excludeMovements);
     mnodes[_id] = new_node;
 };
 
@@ -92,7 +92,7 @@ std::shared_ptr<OrientedGraph> mergeOrientedGraph(std::vector<std::shared_ptr<Or
                 }
                 excludeMovements[keyVal.first] = copy;
             }
-            newGraph->AddNode(keyValNodes.first, keyValNodes.second->mposition[0], keyValNodes.second->mposition[1], excludeMovements);
+            newGraph->AddNode(keyValNodes.first, keyValNodes.second->mposition[0], keyValNodes.second->mposition[1], keyValNodes.second->mlabel, excludeMovements);
         }
 
         for(const auto &keyVal: G->mlinks) {

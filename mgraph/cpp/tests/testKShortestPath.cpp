@@ -20,12 +20,12 @@ int testKShortestPath(int argc, char *argv[])
     G.AddLink("0_2", "0", "2", 1, {{"time", 12}});
     G.AddLink("2_3", "2", "3", 1, {{"time", 12}});
     G.AddLink("0_3", "0", "3", 1, {{"time", 12}});
-    G.AddLink("0_4", "0", "4", 11, {{"time", 3}});
+    G.AddLink("0_4", "0", "4", 11, {{"time", 14}});
     G.AddLink("4_3", "4", "3", 11, {{"time", 12}});
 
     auto paths = KShortestPath(G, "0", "3", "time", {}, 0, 10, 4);
     assertTrue(paths.size()==3, "Did not found 3 paths");
-
+    
 
     assertTrue(paths[0].second==12, "First path cost not equal 12");
     assertTrue(paths[0].first==std::vector<std::string>{"0", "3"}, "First path nodes not equal 0, 3");

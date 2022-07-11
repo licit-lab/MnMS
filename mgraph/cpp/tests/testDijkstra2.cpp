@@ -11,7 +11,7 @@ int testDijkstra2(int argc, char *argv[])
     G.AddNode("0", 0, 0);
     G.AddNode("1", 1, 0);
     G.AddNode("2", 1, 1);
-    G.AddNode("3", 0, 1, {{"0", {"2"}}});
+    G.AddNode("3", 0, 1, "", {{"0", {"2"}}});
 
     G.AddLink("0_1", "0", "1", 1, {{"time", 12}});
     G.AddLink("1_2", "1", "2", 1, {{"time", 13}});

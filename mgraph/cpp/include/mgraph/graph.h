@@ -23,7 +23,7 @@ public:
     std::string mlabel;
     double mlength;
 
-    Link(std::string _id, std::string _up, std::string _down, double length, std::unordered_map<std::string, double> _costs, std::string label = "_def") {
+    Link(std::string _id, std::string _up, std::string _down, double length, std::unordered_map<std::string, double> _costs, std::string label = "") {
         mid = _id.c_str();
         mlabel = label.c_str();
         mupstream = _up.c_str();
@@ -60,14 +60,16 @@ public:
     std::array<double, 2> mposition;
     std::unordered_map<std::string, std::shared_ptr<Link> > madj;
     std::unordered_map<std::string, std::shared_ptr<Link> > mradj;
+    std::string mlabel;
 
     mapsets mexclude_movements;
 
-    Node(std::string _id, double x, double y, mapsets exclude_movements = {}) {
+    Node(std::string _id, double x, double y, std::string label = "", mapsets exclude_movements = {}) {
         mid = _id.c_str();
         mposition[0] = x;
         mposition[1] = y;
         mexclude_movements = exclude_movements;
+        mlabel = label.c_str();
     }
 
     Node(const Node &other) {
@@ -124,9 +126,9 @@ class OrientedGraph {
 public:
     std::unordered_map<std::string, std::shared_ptr<Node> > mnodes;
     std::unordered_map<std::string, std::shared_ptr<Link> > mlinks;
-    void AddNode(std::string _id, double x, double y, mapsets excludeMovements = {});
+    void AddNode(std::string _id, double x, double y, std::string label = "", mapsets excludeMovements = {});
     void AddNode(std::shared_ptr<Node> n);
-    void AddLink(std::string _id, std::string _up, std::string _down, double length, std::unordered_map<std::string, double> _costs, std::string label = "_def");
+    void AddLink(std::string _id, std::string _up, std::string _down, double length, std::unordered_map<std::string, double> _costs, std::string label = "");
     void AddLink(std::shared_ptr<Link> l);
     void ShowNodes();
     void ShowLinks();
