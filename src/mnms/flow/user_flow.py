@@ -30,6 +30,7 @@ class UserFlow(object):
     def _user_walking(self, dt:Dt):
         finish_walk = list()
         finish_trip = list()
+        graph = self._graph.graph
         for uid, remaining_length in self._walking.items():
             remaining_length -= dt.to_seconds() * self._walk_speed
             user = self.users[uid]
@@ -53,7 +54,7 @@ class UserFlow(object):
             upath = user.path.nodes
             cnode = user._current_node
             cnode_ind = upath.index(cnode)
-            user._current_node = self._graph.nodes[upath[cnode_ind+1]].id
+            user._current_node = graph.nodes[upath[cnode_ind+1]].id
             user._current_link = (user._current_node, upath[upath.index(user._current_node)+1])
             user._remaining_link_length = 0
             del self._walking[user.id]
@@ -66,6 +67,7 @@ class UserFlow(object):
             del self._walking[u.id]
 
     def _process_user(self):
+        graph = self._graph.graph
         to_del = list()
         arrived_user = list()
         for uid, user in self._transiting.items():
@@ -79,12 +81,13 @@ class UserFlow(object):
                 elif not user.is_in_vehicle and not user._waiting_vehicle:
                     cnode = user._current_node
                     cnode_ind = upath.index(cnode)
-                    next_link = self._graph.links[(cnode, upath[cnode_ind+1])]
-                    if isinstance(next_link, TransitLink):
+                    # next_link = graph.links[(cnode, upath[cnode_ind+1])]
+                    next_link = graph.nodes[cnode].adj[upath[cnode_ind+1]]
+                    if next_link.label == "TRANSIT":
                         log.info(f"{user} enter connection on {next_link}")
                         self._walking[uid] = next_link.costs['travel_time']
                         to_del.append(uid)
-                    elif isinstance(next_link, ConnectionLink):
+                    else:
                         self._request_user_vehicles(user)
 
         for uid in to_del:
@@ -100,7 +103,7 @@ class UserFlow(object):
             # Setting user initial position
             self.users[user.id] = user
             self._transiting[user.id] = user
-            start_node = self._graph.nodes[user._current_node]
+            start_node = self._graph.graph.nodes[user._current_node]
             start_node_pos = start_node.position
             user._position = start_node_pos
 

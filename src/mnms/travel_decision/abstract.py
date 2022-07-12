@@ -16,33 +16,17 @@ from mnms.log import create_logger
 from mnms.tools.dict_tools import sum_cost_dict
 from mnms.tools.exceptions import PathNotFound
 
-from mgraph import parallel_k_shortest_path
+from mgraph import parallel_k_shortest_path, OrientedGraph
 
 log = create_logger(__name__)
 
 
-def compute_path_length(mmgraph: MultiLayerGraph, path:List[str]) -> float:
+def compute_path_length(mlgraph: OrientedGraph, path:List[str]) -> float:
     len_path = 0
-    mgraph_links = mmgraph.roaddb.sections
-    fgraph_links = mmgraph.links
     for i in range(len(path) - 1):
         j = i + 1
-        c_link = fgraph_links[(path[i], path[j])]
-        if not isinstance(c_link, TransitLink):
-            len_path += sum(mgraph_links[ref_link]['length'] for ref_link in c_link.reference_links)
+        len_path += mlgraph.nodes[path[i]].adj[path[j]].length
     return len_path
-
-
-def compute_path_modes(mmgraph: MultiLayerGraph, path:List[str]) -> List[str]:
-    mgraph_links = mmgraph.links
-    mgraph_nodes = mmgraph.nodes
-    yield mgraph_nodes[path[0]].layer
-    for i in range(len(path) - 1):
-        j = i + 1
-        c_link = mgraph_links[(path[i], path[j])]
-        if isinstance(c_link, TransitLink):
-            yield c_link.id
-            yield mgraph_nodes[path[j]].layer
 
 
 def _process_shortest_path_inputs(odlayer, users):
@@ -143,10 +127,59 @@ class AbstractDecisionModel(ABC):
                                          self._thread_number)
 
         for i, kpath in enumerate(paths):
+            user_paths = []
+            user = new_users[i]
             for p in kpath:
-                p = Path(p[1], p[0])
-                p.construct_layers(self._mmgraph.graph)
-                pass
+                if p[0]:
+                    p = Path(p[1], p[0])
+                    p.construct_layers(self._mmgraph.graph)
+
+                    path_services = []
+
+                    for layer, node_inds in p.layers:
+                        layer_services = []
+                        path_services.append(layer_services)
+                        for service in self._mmgraph.layers[layer].mobility_services:
+                            if user.available_mobility_service is None or service in user.available_mobility_service:
+                                layer_services.append(service)
+
+                    for ls in product(*path_services):
+                        new_path = deepcopy(p)
+                        services = ls if len(ls) > 1 else ls[0]
+                        new_path.mobility_services =[]
+                        new_path.mobility_services.append(services)
+
+                        service_costs = sum_cost_dict(*(self._mmgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services) ))
+
+                        new_path.service_costs = service_costs
+                        user_paths.append(new_path)
+
+            if user_paths:
+                path = self.path_choice(user_paths)
+                if len(path.nodes) > 1:
+                    user.set_path(path)
+                    user._remaining_link_length = self._mmgraph.graph.nodes[path.nodes[0]].adj[path.nodes[1]].length
+                else:
+                    log.warning(f"Path %s is not valid for %s", str(path), user.id)
+                    raise PathNotFound(user.origin, user.destination)
+
+                log.info(f"Computed path for %s", user.id)
+
+                if self._verbose_file:
+                    for p in user_paths:
+                        self._csvhandler.writerow([user.id,
+                                                   str(path.path_cost),
+                                                   ' '.join(p.nodes),
+                                                   compute_path_length(self._mmgraph.graph, p.nodes),
+                                                   ' '.join(p.mobility_services)])
+
+                elif self._write:
+                    self._csvhandler.writerow([user.id,
+                                               str(user.path.path_cost),
+                                               ' '.join(user.path.nodes),
+                                               compute_path_length(self._mmgraph.graph, user.path.nodes),
+                                               ' '.join(user.path.mobility_services)])
+
 
 
         # paths = []
