@@ -46,7 +46,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
             unode = path[i]
             dnode = path[i+1]
             key = (unode, dnode)
-            veh_path.append((key, self.graph.links[key].costs['length']))
+            link = self.graph.nodes[unode].adj[dnode]
+            veh_path.append((key, link.length))
         return veh_path
 
     def new_departures(self, time, dt, lid:str, all_departures=None):

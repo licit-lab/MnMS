@@ -51,7 +51,7 @@ demand.add_user_observer(CSVUserObserver('user.csv'))
 
 # Decison Model
 
-decision_model = DummyDecisionModel(mlgraph)
+decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
 
 # Flow Motor
 

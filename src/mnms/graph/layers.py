@@ -35,8 +35,10 @@ class AbstractLayer(object):
 
         self._default_speed = default_speed
 
-        self._map_nodes = dict()
-        self._map_links = dict()
+        # self._map_nodes = dict()
+        # self._map_links = dict()
+
+        self.map_reference_links = dict()
 
         self.mobility_services = dict()
         self._veh_type = veh_type
@@ -77,17 +79,19 @@ class Layer(AbstractLayer):
         new_node = Node(nid, node_pos[0], node_pos[1], self.id, exclude_movements)
         self.graph.add_node(new_node)
 
-        self._map_nodes[dbnode] = nid
+        # self._map_nodes[dbnode] = nid
 
     def create_link(self, lid, upstream, downstream, costs, reference_links):
         length = sum(self._roaddb.sections[l]['length'] for l in reference_links)
         new_link = Link(lid, upstream, downstream, length, costs, self.id)
         self.graph.add_link(new_link)
 
-        for l in reference_links:
-            if l not in self._map_links:
-                self._map_links[l] = set()
-            self._map_links[l].add(lid)
+        self.map_reference_links[lid] = reference_links
+
+        # for l in reference_links:
+        #     if l not in self._map_links:
+        #         self._map_links[l] = set()
+        #     self._map_links[l].add(lid)
 
     def __dump__(self):
         return {'ID': self.id,
@@ -140,11 +144,9 @@ class PublicTransportLayer(AbstractLayer):
     def _create_stop(self, sid, dbnode):
         assert dbnode in self._roaddb.stops
 
-        new_node = Node(sid, self._id, dbnode)
-        new_node.position = np.array(self._roaddb.stops[dbnode]['absolute_position'])
+        node_pos = np.array(self._roaddb.stops[dbnode]['absolute_position'])
+        new_node = Node(sid, node_pos[0], node_pos[1], self.id)
         self.graph.add_node(new_node)
-
-        self._map_nodes[dbnode] = sid
 
     def _connect_stops(self, lid, upstream, downstream, reference_sections):
         line_length = sum(self._roaddb.sections[s]['length'] for s in reference_sections[1:-1])
@@ -152,13 +154,10 @@ class PublicTransportLayer(AbstractLayer):
         line_length += self._roaddb.sections[reference_sections[-1]]['length'] * self._roaddb.stops[downstream]['relative_position']
 
         costs = {'length': line_length}
-        new_link = ConnectionLink(self.id+'_'+lid, self.id+'_'+upstream, self.id+'_'+downstream, costs, reference_sections, self.id)
+        new_link = Link(lid, self.id+'_'+upstream, self.id+'_'+downstream, line_length, costs, self.id)
         self.graph.add_link(new_link)
+        self.map_reference_links[lid] = reference_sections
 
-        for l in reference_sections:
-            if l not in self._map_links:
-                self._map_links[l] = set()
-            self._map_links[l].add(lid)
 
     def create_line(self,
                     lid: str,
@@ -273,9 +272,13 @@ class MultiLayerGraph(object):
 
         self.layers = dict()
         self.mapping_layer_services = dict()
+        self.map_reference_links = ChainMap()
+
+        for l in layers:
+            self.map_reference_links.maps.append(l.map_reference_links)
 
         self.odlayer = None
-        self.roaddb = None
+        self.roaddb = layers[0]._roaddb
 
         for l in layers:
             self.layers[l.id] = l
