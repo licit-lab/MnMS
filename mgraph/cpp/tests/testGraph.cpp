@@ -19,7 +19,7 @@ int testGraph(int argc, char *argv[])
     excludeMovements["a"] = {"c"};
     G.AddNode("b", 2, 5, "", excludeMovements);
     
-    std::shared_ptr<Node> newNode = std::make_shared<Node>("c", 12., 43.);
+    Node *newNode = new Node("c", 12., 43.);
     G.AddNode(newNode);
     
     G.AddNode("d", 435, 345);
@@ -27,7 +27,7 @@ int testGraph(int argc, char *argv[])
     G.AddLink("b_c", "b", "c", 12, {{"time", 12}});
     G.AddLink("b_d", "b", "d", 12, {{"time", 12}});
 
-    std::vector<std::shared_ptr<Link> > exits = G.mnodes["b"]->getExits("a");
+    std::vector<Link*> exits = G.mnodes["b"]->getExits("a");
     
     assertTrue(exits.size()==1, "Exits does not return one link");
     assertTrue(exits[0]->mdownstream=="d", "Node should be d");

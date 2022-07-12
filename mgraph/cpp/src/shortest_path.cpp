@@ -108,7 +108,7 @@ void increaseCostsFromPath(OrientedGraph &G, const std::vector<std::string> &pat
 
     for (size_t i = 0; i < path.size() - 1 ; i++)
     {
-        std::shared_ptr<Link> link = G.mnodes[path[i]]->madj[path[i+1]];
+        Link *link = G.mnodes[path[i]]->madj[path[i+1]];
         if(initial_costs.find(link->mid) == initial_costs.end()) {
             for(auto &keyVal: link->mcosts) {
                 initial_costs[link->mid][keyVal.first] = keyVal.second;
@@ -132,7 +132,7 @@ double computePathLength(OrientedGraph &G, const std::vector<std::string> &path)
 
     for (size_t i = 0; i < path.size() - 1 ; i++)
     {
-        std::shared_ptr<Link> link = G.mnodes[path[i]]->madj[path[i+1]];
+        Link *link = G.mnodes[path[i]]->madj[path[i+1]];
         length += link->mlength;
     }
 
@@ -145,7 +145,7 @@ double computePathCost(OrientedGraph &G, const std::vector<std::string> &path, s
 
     for (size_t i = 0; i < path.size() - 1 ; i++)
     {
-        std::shared_ptr<Link> link = G.mnodes[path[i]]->madj[path[i+1]];
+        Link *link = G.mnodes[path[i]]->madj[path[i+1]];
         c += link->mcosts[cost];
         // std::cout<<link->mcosts[cost]<<std::endl;
     }
@@ -237,6 +237,117 @@ std::vector<pathCost> KShortestPath(OrientedGraph &G, const std::string &origin,
 
     return paths;
 }
+
+
+
+std::vector<pathCost> YenKShortestPath(OrientedGraph &G, std::string origin, std::string destination, std::string cost, setstring accessibleLabels, int kPath) {
+    std::vector<pathCost> A;
+    std::vector<pathCost> B;
+    A.push_back(dijkstra(G, origin, destination, cost, accessibleLabels));
+    std::cout << "First path: ";
+    showPath(A[0]); 
+
+    double inf = std::numeric_limits<double>::infinity();
+
+    for (size_t k = 1; k < kPath; k++)
+    {   
+
+        std::cout<<"k="<<k<<std::endl;
+        for (size_t i = 0; i < A[k-1].first.size()-2; i++)
+        {
+            std::cout<<"i="<<i<<std::endl;
+            std::unordered_map<std::string, double> initial_costs;
+            std::string spurNode = A[k-1].first[i];
+            pathCost rootPath;
+            rootPath.second = 0;
+            rootPath.first.insert(rootPath.first.begin(), A[k-1].first.begin(), A[k-1].first.begin()+i+1);
+            std::cout << "Root path: ";
+            showPath(rootPath);
+
+            if(rootPath.first.size() >= 2) {
+                for (int j = 0; j < rootPath.first.size()-1; j++) {   
+                    std::cout<<"Getting cost "<<G.mnodes[rootPath.first[j]]->madj[rootPath.first[j+1]]<<std::endl;
+                    rootPath.second += G.mnodes[rootPath.first[j]]->madj[rootPath.first[j+1]]->mcosts[cost];
+                }
+            }
+
+            for(const pathCost &pc: A) {
+                std::cout << "Compare path: "<<std::endl;
+                showPath(pc);
+                showPath(rootPath);
+                if (std::equal(pc.first.begin(), pc.first.begin()+i, rootPath.first.begin()))
+                {
+                    std::cout<<"Removing "<<pc.first[i]<<"->"<< pc.first[i+1]<<std::endl;
+                    Link *l = G.mnodes[pc.first[i]]->madj[pc.first[i+1]];
+                    
+                    if(initial_costs.find(l->mid) == initial_costs.end()) {
+                        initial_costs[l->mid] = l->mcosts[cost];
+                    }
+                    l->mcosts[cost] = inf;
+                }
+                
+            }
+            
+
+            std::cout<<"Finish removing"<<std::endl;
+
+
+
+            pathCost spurPath = dijkstra(G, spurNode, destination, cost, accessibleLabels);
+            pathCost totalPath;
+            totalPath.first = rootPath.first;
+
+            // if(rootPath.first.size()>= 2) {
+            //     totalPath.first = rootPath.first;
+            // }
+            
+            totalPath.first.insert(totalPath.first.end(), spurPath.first.begin()+1, spurPath.first.end());
+            totalPath.second = rootPath.second + spurPath.second;
+
+            std::cout << "Full B path: ";
+            showPath(totalPath); 
+
+
+            for(const auto &keyVal:initial_costs) {
+                std::cout<<"Reseting cost "<<keyVal.first<<" "<<keyVal.second<<std::endl;
+                G.mlinks[keyVal.first]->mcosts[cost] = keyVal.second;
+                std::cout<<G.mlinks[keyVal.first]<<std::endl;
+                std::cout<<G.mnodes["C"]->madj["E"]<<std::endl;
+            }
+
+
+            bool toAdd = true;
+            for(const auto &prevPath:B) {
+                if(totalPath.first==prevPath.first) {
+                    toAdd = false;
+                    break;
+                }
+            }
+
+            if(toAdd) {
+                B.push_back(totalPath);
+            }
+
+            
+        }
+
+        if(B.empty()) {
+            break;
+        }
+
+        std::sort(B.begin(), B.end(), [](pathCost a, pathCost b) {return a.second < b.second; });
+        A[k] = B[0];
+        B.erase(B.begin());
+        
+    }
+    
+
+
+    return A;
+
+}
+
+
 
 
 
