@@ -2,7 +2,7 @@ from abc import ABC,abstractmethod
 from typing import Type, List
 
 from mnms.demand.user import User
-from mgraph import OrientedGraph
+from hipop.graph import OrientedGraph
 from mnms.tools.cost import create_service_costs
 from mnms.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager

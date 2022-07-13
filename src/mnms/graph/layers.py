@@ -4,7 +4,7 @@ from typing import Optional, Dict, Set, List, Type
 
 import numpy as np
 
-from mgraph import OrientedGraph, Node, Link
+from hipop.graph import OrientedGraph, Node, Link
 
 # from .core import OrientedGraph, Node, ConnectionLink, TransitLink
 from .road import RoadDataBase
@@ -15,7 +15,7 @@ from ..vehicles.veh_type import Vehicle, Car
 from ..log import create_logger
 from mnms.io.utils import load_class_by_module_name
 
-from mgraph.cpp import merge_oriented_graph
+from hipop.graph import merge_oriented_graph
 
 log = create_logger(__name__)
 
@@ -76,15 +76,13 @@ class Layer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
         assert dbnode in self._roaddb.nodes
         node_pos = self._roaddb.nodes[dbnode]
-        new_node = Node(nid, node_pos[0], node_pos[1], self.id, exclude_movements)
-        self.graph.add_node(new_node)
+        self.graph.add_node(nid, node_pos[0], node_pos[1], self.id, exclude_movements)
 
         # self._map_nodes[dbnode] = nid
 
     def create_link(self, lid, upstream, downstream, costs, reference_links):
         length = sum(self._roaddb.sections[l]['length'] for l in reference_links)
-        new_link = Link(lid, upstream, downstream, length, costs, self.id)
-        self.graph.add_link(new_link)
+        self.graph.add_link(lid, upstream, downstream, length, costs, self.id)
 
         self.map_reference_links[lid] = reference_links
 
@@ -292,8 +290,8 @@ class MultiLayerGraph(object):
         self.odlayer = odlayer
         _norm = np.linalg.norm
 
-        [self.graph.add_node(n) for n in odlayer.origins.values()]
-        [self.graph.add_node(n) for n in odlayer.destinations.values()]
+        [self.graph.add_node(n.id, n.position[0], n.position[1], n.label, n.exclude_movements) for n in odlayer.origins.values()]
+        [self.graph.add_node(n.id, n.position[0], n.position[1], n.label, n.exclude_movements) for n in odlayer.destinations.values()]
 
         odlayer_nodes = set()
         odlayer_nodes.update(odlayer.origins.keys())

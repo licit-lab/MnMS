@@ -5,7 +5,6 @@ import random
 from typing import List
 
 import numpy as np
-from mgraph import parallel_k_shortest_path
 
 from mnms.demand import User
 from mnms.graph.layers import MultiLayerGraph

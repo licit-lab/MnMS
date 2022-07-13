@@ -16,7 +16,8 @@ from mnms.log import create_logger
 from mnms.tools.dict_tools import sum_cost_dict
 from mnms.tools.exceptions import PathNotFound
 
-from mgraph import parallel_k_shortest_path, OrientedGraph
+from hipop.shortest_path import parallel_k_shortest_path
+from hipop.graph import OrientedGraph
 
 log = create_logger(__name__)
 
@@ -115,7 +116,7 @@ class AbstractDecisionModel(ABC):
     # TODO: restrict combination of paths (ex: we dont want Uber->Bus)
     def __call__(self, new_users: List[User]):
         origins, destinations, available_mobility_services = _process_shortest_path_inputs(self._mmgraph.odlayer, new_users)
-
+        # print(origins, destinations, available_mobility_services)
         paths = parallel_k_shortest_path(self._mmgraph.graph,
                                          origins,
                                          destinations,
