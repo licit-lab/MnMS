@@ -8,6 +8,7 @@ from enum import Enum
 from functools import partial
 from itertools import product
 from multiprocessing import Process
+from sys import platform
 from typing import NamedTuple, Callable, List
 
 import matplotlib.pyplot as plt
@@ -15,7 +16,6 @@ from timeit import default_timer as timer
 
 import numpy as np
 import pandas as pd
-import cppgraph
 
 from mnms.demand import User
 from mnms.generation.layers import generate_layer_from_roads
@@ -24,7 +24,7 @@ from mnms.graph.layers import Layer
 from mnms.graph.shortest_path import dijkstra, astar, _euclidian_dist, \
     bidirectional_dijkstra
 from mnms.graph.shortest_path_test_opti import dijkstra_v2, dijkstra_multi_dest, \
-    run_on_proc, dijkstra_cpp
+    run_on_proc
 from mnms.mobility_service.car import PersonalCarMobilityService
 from mnms.time import Time
 
@@ -51,9 +51,9 @@ def create_graph(graph_size):
     return car_layer.graph, road_db
 
 
-def create_graph_cpp(graph_size):
-    g = cppgraph.generate_mahattan(graph_size, LINK_LENGTH)
-    return g, None
+# def create_graph_cpp(graph_size):
+#     g = cppgraph.generate_mahattan(graph_size, LINK_LENGTH)
+#     return g, None
 
 
 class Method(NamedTuple):
@@ -70,7 +70,7 @@ class EnumMethods(Enum):
     DIJKSTRA_V3 = Method("Dijktra_v3", dijkstra_multi_dest, create_graph)
     ASTAR = Method("Astar", astar, create_graph, True)
     BIDIR_DIJKSTRA = Method("Bidirectional Dijkstra", bidirectional_dijkstra, create_graph)
-    DIJKSTRA_CPP = Method("Dijkstra cpp", dijkstra_cpp, create_graph_cpp)
+    # DIJKSTRA_CPP = Method("Dijkstra cpp", dijkstra_cpp, create_graph_cpp)
 
     def name(self):
         return self.value.name
@@ -104,8 +104,8 @@ def run_for_stat(method: Method, graph, nb_iter):
                   "destination": 'EAST_0',
                   "cost": "length",
                   "available_layers": ['Car']}
-        # if method.heuristic:
-        #     params["heuristic"] = heuristic
+        if method.heuristic:
+            params["heuristic"] = partial(_euclidian_dist, mmgraph=graph)
         # if method.multi_dest:
         #     params["destination"] = ['EAST_0', 'EAST_1', 'EAST_2', 'EAST_3']
         start = timer()
@@ -128,7 +128,7 @@ def stat_benchmark(list_method: List[EnumMethods], list_graph_size, nb_iter, pri
             res, time = run_for_stat(method.value, graph, nb_iter)
             data.append(time)
 
-            print(f"{method.value.name} : time = {statistics.mean(time)}")
+            # print(f"{method.value.name} : time = {statistics.mean(time)}")
 
         # if len(res1.nodes) == len(res2.nodes):
         #     print("Validé")
@@ -140,10 +140,12 @@ def stat_benchmark(list_method: List[EnumMethods], list_graph_size, nb_iter, pri
 
     if print_df:
         data = np.array(data)
-        iterables = [list_graph_size, [method.name() for method in list_method]]
-        df = pd.DataFrame(data, index=pd.MultiIndex.from_product(iterables, names=["n=", "method"]))
+        iterables = [[size**2 for size in list_graph_size], [method.name() for method in list_method]]
+        df = pd.DataFrame(data, index=pd.MultiIndex.from_product(iterables, names=["nodes", "method"]))
+        df = df.assign(min=df.min(axis=1))
+        df = df.assign(max=df.max(axis=1))
         df = df.assign(mean=df.mean(axis=1))
-        df = df.assign(tot=df.sum(axis=1))
+        # df = df.assign(tot=df.sum(axis=1))
         print(df)
         if df_path:
             df.to_csv(df_path)
@@ -210,5 +212,6 @@ def run_method(od_list, method: Method, graph):
 if __name__ == '__main__':
     # simple_benchmark(EnumMethods.DIJKSTRA_CPP, 10)
     # stat_benchmark([EnumMethods.DIJKSTRA_V2], [100], 5, True)
-    # stat_benchmark([EnumMethods.DIJKSTRA_V2, EnumMethods.DIJKSTRA_CPP], [100], 10, True)
-    multi_proc_benchmark(EnumMethods.DIJKSTRA_CPP, 100, 8)
+    stat_benchmark([EnumMethods.DIJKSTRA, EnumMethods.DIJKSTRA_V2], [50, 100, 120, 150], 5, True, f"disjktra stat on {platform}_2.csv")
+    # stat_benchmark([EnumMethods.ASTAR], [50], 5, True)
+    # multi_proc_benchmark(EnumMethods.DIJKSTRA_CPP, 100, 8)

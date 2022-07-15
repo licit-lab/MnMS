@@ -52,8 +52,8 @@ class Node(GraphElement):
                  'position',
                  'reference_node',
                  'layer',
-                 '_exclude_movements')
-                 'links')
+                 '_exclude_movements',
+                 "links")
 
     def __init__(self, id: str, layer: str, ref_node: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
         super(Node, self).__init__(id)

@@ -99,17 +99,17 @@ def dijkstra(graph: OrientedGraph,
 
     dist[origin] = 0
     prev[origin] = None
-    log.debug(f'Dist : {dist}')
+    # log.debug(f'Dist : {dist}')
 
     while len(vertices) > 0:
         d = {v:dist[v] for v in vertices}
         u = min(d, key=d.get)
         vertices.remove(u)
-        log.debug(f'Prev {prev}')
-        log.debug(f"Curr Node {u}")
+        # log.debug(f'Prev {prev}')
+        # log.debug(f"Curr Node {u}")
 
         if u == destination:
-            log.debug(f"Found destination {u}")
+            # log.debug(f"Found destination {u}")
             nodes = []
             if prev[u] is not None or u == origin:
                 while u is not None:
@@ -119,7 +119,7 @@ def dijkstra(graph: OrientedGraph,
             return Path(dist[destination], nodes)
 
         for neighbor in graph.nodes[u].get_exits(prev[u]):
-            log.debug(f"Neighbor Node {neighbor}")
+            # log.debug(f"Neighbor Node {neighbor}")
             if neighbor in vertices:
 
                 # Check if next node mobility service is available for the user
