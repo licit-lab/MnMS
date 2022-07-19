@@ -1,7 +1,8 @@
+import time
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from functools import partial, reduce
-from typing import Literal, List, Tuple
+from typing import Literal, List, Tuple, Dict
 import csv
 from itertools import product
 import multiprocessing
@@ -22,11 +23,11 @@ from hipop.graph import OrientedGraph
 log = create_logger(__name__)
 
 
-def compute_path_length(mlgraph: OrientedGraph, path:List[str]) -> float:
+def compute_path_length(gnodes: Dict, path:List[str]) -> float:
     len_path = 0
     for i in range(len(path) - 1):
         j = i + 1
-        len_path += mlgraph.nodes[path[i]].adj[path[j]].length
+        len_path += gnodes[path[i]].adj[path[j]].length
     return len_path
 
 
@@ -154,6 +155,8 @@ class AbstractDecisionModel(ABC):
 
                         new_path.service_costs = service_costs
                         user_paths.append(new_path)
+                else:
+                    log.warning(f"Path not found for %s", user.id)
 
             if user_paths:
                 path = self.path_choice(user_paths)
@@ -171,17 +174,15 @@ class AbstractDecisionModel(ABC):
                         self._csvhandler.writerow([user.id,
                                                    str(path.path_cost),
                                                    ' '.join(p.nodes),
-                                                   compute_path_length(self._mmgraph.graph, p.nodes),
+                                                   compute_path_length(self._mmgraph.graph.nodes, p.nodes),
                                                    ' '.join(p.mobility_services)])
 
                 elif self._write:
                     self._csvhandler.writerow([user.id,
                                                str(user.path.path_cost),
                                                ' '.join(user.path.nodes),
-                                               compute_path_length(self._mmgraph.graph, user.path.nodes),
+                                               compute_path_length(self._mmgraph.graph.nodes, user.path.nodes),
                                                ' '.join(user.path.mobility_services)])
-
-
 
         # paths = []
         # for p in layer_paths:

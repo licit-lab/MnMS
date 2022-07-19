@@ -4,7 +4,7 @@ from typing import Optional, Dict, Set, List, Type
 
 import numpy as np
 
-from hipop.graph import OrientedGraph, Node, Link
+from hipop.graph import OrientedGraph, Node, node_to_dict, link_to_dict
 
 # from .core import OrientedGraph, Node, ConnectionLink, TransitLink
 from .road import RoadDataBase
@@ -39,6 +39,7 @@ class AbstractLayer(object):
         # self._map_links = dict()
 
         self.map_reference_links = dict()
+        self.map_reference_nodes = dict()
 
         self.mobility_services = dict()
         self._veh_type = veh_type
@@ -76,9 +77,11 @@ class Layer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
         assert dbnode in self._roaddb.nodes
         node_pos = self._roaddb.nodes[dbnode]
-        self.graph.add_node(nid, node_pos[0], node_pos[1], self.id, exclude_movements)
 
-        # self._map_nodes[dbnode] = nid
+        set_exlude_movements = {key: set(val) for key, val in exclude_movements.items()}
+        self.graph.add_node(nid, node_pos[0], node_pos[1], self.id, set_exlude_movements)
+
+        self.map_reference_nodes[nid] = dbnode
 
     def create_link(self, lid, upstream, downstream, costs, reference_links):
         length = sum(self._roaddb.sections[l]['length'] for l in reference_links)
@@ -97,8 +100,10 @@ class Layer(AbstractLayer):
                 'VEH_TYPE': ".".join([self._veh_type.__module__, self._veh_type.__name__]),
                 'DEFAULT_SPEED': self.default_speed,
                 'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
-                'NODES': [n.__dump__() for n in self.graph.nodes.values()],
-                'LINKS': [l.__dump__() for l in self.graph.links.values()]}
+                'NODES': [node_to_dict(n) for n in self.graph.nodes.values()],
+                'LINKS': [link_to_dict(l) for l in self.graph.links.values()],
+                'MAP_ROADDB': {"NODES": self.map_reference_nodes,
+                               "LINKS": self.map_reference_links}}
 
 
 class CarLayer(Layer):
@@ -115,11 +120,14 @@ class CarLayer(Layer):
         new_obj = cls(roaddb,
                       data['DEFAULT_SPEED'])
 
-        for ndata in data['NODES']:
-            new_obj.create_node(ndata['ID'], ndata['REF_NODE'], ndata['EXCLUDE_MOVEMENTS'])
 
+        node_ref = data["MAP_ROADDB"]["NODES"]
+        for ndata in data['NODES']:
+            new_obj.create_node(ndata['ID'], node_ref[ndata["ID"]], ndata['EXCLUDE_MOVEMENTS'])
+
+        link_ref = data["MAP_ROADDB"]["LINKS"]
         for ldata in data['LINKS']:
-            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'], ldata['REF_LINKS'])
+            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'], link_ref[ldata["ID"]])
 
         for sdata in data['SERVICES']:
             serv_type = load_class_by_module_name(sdata['TYPE'])
@@ -143,8 +151,7 @@ class PublicTransportLayer(AbstractLayer):
         assert dbnode in self._roaddb.stops
 
         node_pos = np.array(self._roaddb.stops[dbnode]['absolute_position'])
-        new_node = Node(sid, node_pos[0], node_pos[1], self.id)
-        self.graph.add_node(new_node)
+        self.graph.add_node(sid, node_pos[0], node_pos[1], self.id)
 
     def _connect_stops(self, lid, upstream, downstream, reference_sections):
         line_length = sum(self._roaddb.sections[s]['length'] for s in reference_sections[1:-1])
@@ -152,8 +159,7 @@ class PublicTransportLayer(AbstractLayer):
         line_length += self._roaddb.sections[reference_sections[-1]]['length'] * self._roaddb.stops[downstream]['relative_position']
 
         costs = {'length': line_length}
-        new_link = Link(lid, self.id+'_'+upstream, self.id+'_'+downstream, line_length, costs, self.id)
-        self.graph.add_link(new_link)
+        self.graph.add_link(lid, self.id+'_'+upstream, self.id+'_'+downstream, line_length, costs, self.id)
         self.map_reference_links[lid] = reference_sections
 
 
@@ -297,24 +303,33 @@ class MultiLayerGraph(object):
         odlayer_nodes.update(odlayer.origins.keys())
         odlayer_nodes.update(odlayer.destinations.keys())
 
+        graph_node_ids = np.array([nid for nid in self.graph.nodes])
+        graph_node_pos = np.array([n.position for n in self.graph.nodes.values()])
+
         for nid, node in odlayer.origins.items():
-            npos = node.position
-
-            for layer_nid, lnode in self.graph.nodes.items():
-                dist = _norm(np.array(npos) - np.array(lnode.position))
-                if dist < connection_distance and lnode.id not in odlayer_nodes:
-                    # Create sections
+            npos = np.array(node.position)
+            dist_nodes = _norm(graph_node_pos-npos, axis=1)
+            # nodes_in_radius = filter(lambda x: x not in odlayer_nodes, graph_node_ids[])
+            mask = dist_nodes < connection_distance
+            for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                if layer_nid not in odlayer_nodes:
                     self.graph.add_link(f"{nid}_{layer_nid}", nid, layer_nid, dist, {'length': dist}, "TRANSIT")
-
+                    # print("Connect", nid, layer_nid)
+            # for layer_nid, lnode in self.graph.nodes.items():
+            #     dist = _norm(npos - np.array(lnode.position))
+            #     if dist < connection_distance and lnode.id not in odlayer_nodes:
+            #         # Create sections
+            #         self.graph.add_link(f"{nid}_{layer_nid}", nid, layer_nid, dist, {'length': dist}, "TRANSIT")
+        # print("Done ORIGIN")
         for nid, node in odlayer.destinations.items():
-            npos = node.position
-
-            for layer_nid, lnode in self.graph.nodes.items():
-                dist = _norm(np.array(npos) - np.array(lnode.position))
-                if dist < connection_distance and lnode.id not in odlayer_nodes:
-                    # Create sections
+            npos = np.array(node.position)
+            dist_nodes = _norm(graph_node_pos-npos, axis=1)
+            # nodes_in_radius = filter(lambda x: x not in odlayer_nodes, graph_node_ids[])
+            mask = dist_nodes < connection_distance
+            for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                if layer_nid not in odlayer_nodes:
                     self.graph.add_link(f"{layer_nid}_{nid}", layer_nid, nid, dist, {'length': dist}, "TRANSIT")
-
+        # print("Done DESTINATION")
     def construct_layer_service_mapping(self):
         for layer in self.layers.values():
             for service in layer.mobility_services:

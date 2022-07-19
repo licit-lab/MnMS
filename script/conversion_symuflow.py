@@ -434,7 +434,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None):
 
     roaddb = RoadDataBase()
 
-    mlgraph = MultiLayerGraph()
+
 
     for tr_elem in tron.iterchildren():
         lid = tr_elem.attrib['id']
@@ -511,7 +511,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None):
             map_tr_stops[tr] = {'lines': set(selem.attrib['lignes'].split(' ')),
                                 'stop': selem.attrib['id']}
 
-    mlgraph.roaddb = roaddb
+    # mlgraph.roaddb = roaddb
 
     caf = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/CONNEXIONS/CARREFOURSAFEUX")[0]
     rep = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/CONNEXIONS/REPARTITEURS")[0]
@@ -554,7 +554,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None):
         except AssertionError:
             print(f"Skipping troncon: {trid}, nodes already connected")
 
-    mlgraph.add_layer(car_layer)
+    # mlgraph.add_layer(car_layer)
 
     # -----------------------------------
     # PUBLIC TRANSPORT
@@ -631,8 +631,10 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None):
 
                 public_transport.create_line(line_id, line_stops, sections, line_timetable, bidirectional=False)
 
-        for p in pt_types.values():
-            mlgraph.add_layer(p)
+        mlgraph = MultiLayerGraph([car_layer]+list(pt_types.values()))
+
+        # for p in pt_types.values():
+        #     mlgraph.add_layer(p)
 
     # if zone_file is not None:
     #     zone_dict = defaultdict(set)

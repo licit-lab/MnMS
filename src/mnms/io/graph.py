@@ -36,12 +36,14 @@ def load_graph(filename: Union[str, Path]):
     with open(filename, 'r') as f:
         data = json.load(f)
 
-    mlgraph = MultiLayerGraph()
+
 
     roaddb = RoadDataBase.__load__(data['ROADS'])
-
+    layers = []
     for ldata in data['LAYERS']:
         layer_type = load_class_by_module_name(ldata['TYPE'])
-        mlgraph.add_layer(layer_type.__load__(ldata, roaddb))
+        layers.append(layer_type.__load__(ldata, roaddb))
+
+    mlgraph = MultiLayerGraph(layers)
 
     return mlgraph

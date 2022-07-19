@@ -28,11 +28,12 @@ class Path(object):
         self.service_costs = dict()
 
     def construct_layers(self, graph):
-        layer = graph.nodes[self.nodes[1]].label
+        gnodes = graph.nodes
+        layer = gnodes[self.nodes[1]].label
         start = 1
         nodes_number = len(self.nodes)
         for i in range(2, nodes_number-1):
-            ilayer = graph.nodes[self.nodes[i]].label
+            ilayer = gnodes[self.nodes[i]].label
             if ilayer != layer:
                 self.layers.append((layer, slice(start, i, 1)))
                 layer = ilayer
