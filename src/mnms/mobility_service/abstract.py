@@ -1,5 +1,6 @@
 from abc import ABC,abstractmethod
 from typing import Type, List
+from functools import cached_property
 
 from mnms.demand.user import User
 from hipop.graph import OrientedGraph
@@ -73,6 +74,10 @@ class AbstractMobilityService(ABC):
     def graph(self):
         return self.layer.graph
 
+    @cached_property
+    def graph_nodes(self):
+        return self.graph.nodes
+
     def attach_vehicle_observer(self, observer):
         self._observer = observer
 
@@ -82,7 +87,7 @@ class AbstractMobilityService(ABC):
             unode = upath[i]
             dnode = upath[i+1]
             key = (unode, dnode)
-            link_length = self.graph.nodes[unode].adj[dnode].length
+            link_length = self.graph_nodes[unode].adj[dnode].length
             veh_path.append((key, link_length))
         return veh_path
 

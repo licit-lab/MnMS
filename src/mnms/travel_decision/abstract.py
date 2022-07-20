@@ -128,13 +128,16 @@ class AbstractDecisionModel(ABC):
                                          self._n_shortest_path,
                                          self._thread_number)
 
+        gnodes = self._mmgraph.graph.nodes
+        path_not_found = []
+
         for i, kpath in enumerate(paths):
             user_paths = []
             user = new_users[i]
             for p in kpath:
                 if p[0]:
                     p = Path(p[1], p[0])
-                    p.construct_layers(self._mmgraph.graph)
+                    p.construct_layers(gnodes)
 
                     path_services = []
 
@@ -156,7 +159,8 @@ class AbstractDecisionModel(ABC):
                         new_path.service_costs = service_costs
                         user_paths.append(new_path)
                 else:
-                    log.warning(f"Path not found for %s", user.id)
+                    path_not_found.append(user.id)
+                    # log.warning(f"Path not found for %s", user.id)
 
             if user_paths:
                 path = self.path_choice(user_paths)
@@ -174,16 +178,18 @@ class AbstractDecisionModel(ABC):
                         self._csvhandler.writerow([user.id,
                                                    str(path.path_cost),
                                                    ' '.join(p.nodes),
-                                                   compute_path_length(self._mmgraph.graph.nodes, p.nodes),
+                                                   compute_path_length(gnodes, p.nodes),
                                                    ' '.join(p.mobility_services)])
 
                 elif self._write:
                     self._csvhandler.writerow([user.id,
                                                str(user.path.path_cost),
                                                ' '.join(user.path.nodes),
-                                               compute_path_length(self._mmgraph.graph.nodes, user.path.nodes),
+                                               compute_path_length(gnodes, user.path.nodes),
                                                ' '.join(user.path.mobility_services)])
 
+        if path_not_found:
+            log.warning("Path not found: %s", len(path_not_found))
         # paths = []
         # for p in layer_paths:
         #     path_services = []

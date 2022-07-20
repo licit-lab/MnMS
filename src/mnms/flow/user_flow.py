@@ -67,7 +67,7 @@ class UserFlow(object):
             del self._walking[u.id]
 
     def _process_user(self):
-        graph = self._graph.graph
+        gnodes = self._graph.graph.nodes
         to_del = list()
         arrived_user = list()
         for uid, user in self._transiting.items():
@@ -82,7 +82,7 @@ class UserFlow(object):
                     cnode = user._current_node
                     cnode_ind = upath.index(cnode)
                     # next_link = graph.links[(cnode, upath[cnode_ind+1])]
-                    next_link = graph.nodes[cnode].adj[upath[cnode_ind+1]]
+                    next_link = gnodes[cnode].adj[upath[cnode_ind+1]]
                     if next_link.label == "TRANSIT":
                         log.info(f"{user} enter connection on {next_link}")
                         self._walking[uid] = next_link.costs['travel_time']
@@ -113,7 +113,7 @@ class UserFlow(object):
                 if slice_nodes.start <= ind_node_start < slice_nodes.stop:
                     mservice_id = user.path.mobility_services[ilayer]
                     mservice = self._graph.layers[layer].mobility_services[mservice_id]
-                    log.info(f"Stop {upath[slice_nodes][-1]}, {upath}, {upath[slice_nodes]}")
+                    # log.info(f"Stop {upath[slice_nodes][-1]}, {upath}, {upath[slice_nodes]}")
                     mservice.request_vehicle(user, upath[slice_nodes][-1])
                     break
             else:

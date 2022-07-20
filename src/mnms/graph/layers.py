@@ -72,6 +72,9 @@ class AbstractLayer(object):
     def __load__(cls, data: Dict, roaddb: RoadDataBase):
         pass
 
+    def initialize(self):
+        pass
+
 
 class Layer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
@@ -162,7 +165,6 @@ class PublicTransportLayer(AbstractLayer):
         self.graph.add_link(lid, self.id+'_'+upstream, self.id+'_'+downstream, line_length, costs, self.id)
         self.map_reference_links[lid] = reference_sections
 
-
     def create_line(self,
                     lid: str,
                     stops: List[str],
@@ -202,11 +204,14 @@ class PublicTransportLayer(AbstractLayer):
                                     up,
                                     sections[i][::-1])
 
-        for service in self.mobility_services.values():
-            timetable_iter = iter(timetable.table)
-            service._timetable_iter[lid] = iter(timetable.table)
-            service._current_time_table[lid] = next(timetable_iter)
-            service._next_time_table[lid] = next(timetable_iter)
+    def initialize(self):
+        for lid, line in self.lines.items():
+            timetable = line['table']
+            for service in self.mobility_services.values():
+                timetable_iter = iter(timetable.table)
+                service._timetable_iter[lid] = iter(timetable.table)
+                service._current_time_table[lid] = next(timetable_iter)
+                service._next_time_table[lid] = next(timetable_iter)
 
     def __dump__(self):
         return {'ID': self.id,
@@ -330,6 +335,7 @@ class MultiLayerGraph(object):
                 if layer_nid not in odlayer_nodes:
                     self.graph.add_link(f"{layer_nid}_{nid}", layer_nid, nid, dist, {'length': dist}, "TRANSIT")
         # print("Done DESTINATION")
+
     def construct_layer_service_mapping(self):
         for layer in self.layers.values():
             for service in layer.mobility_services:

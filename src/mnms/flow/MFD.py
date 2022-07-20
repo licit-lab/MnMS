@@ -66,6 +66,8 @@ class MFDFlow(AbstractFlowMotor):
         self.remaining_length = None
 
         self.veh_manager = None
+        self.graph_nodes = None
+
 
     def initialize(self):
 
@@ -79,6 +81,7 @@ class MFDFlow(AbstractFlowMotor):
         self.remaining_length = dict()
 
         self.veh_manager = VehicleManager()
+        self.graph_nodes = self._graph.graph.nodes
 
     def add_reservoir(self, res: Reservoir):
         self.reservoirs.append(res)
@@ -88,8 +91,8 @@ class MFDFlow(AbstractFlowMotor):
         unode, dnode = veh.current_link
         remaining_length = veh.remaining_link_length
 
-        unode_pos = np.array(graph.nodes[unode].position)
-        dnode_pos = np.array(graph.nodes[dnode].position)
+        unode_pos = np.array(self.graph_nodes[unode].position)
+        dnode_pos = np.array(self.graph_nodes[dnode].position)
 
         direction = dnode_pos - unode_pos
         norm_direction = np.linalg.norm(direction)
@@ -103,7 +106,7 @@ class MFDFlow(AbstractFlowMotor):
         graph = self._graph.graph
         for next_pass in list(veh._next_passenger):
             take_node = veh._next_passenger[next_pass][1]._current_node
-            node_pos = graph.nodes[take_node].position
+            node_pos = self.graph_nodes[take_node].position
             # ref_node = self._mobility_nodes[take_node].reference_node
             # ref_node_pos = self._flow_nodes[ref_node].pos
             if take_node == veh._current_link[0]:
@@ -155,7 +158,7 @@ class MFDFlow(AbstractFlowMotor):
 
         while len(self.veh_manager._new_vehicles) > 0:
             new_veh = self.veh_manager._new_vehicles.pop()
-            origin_pos = graph.nodes[new_veh.origin].position
+            origin_pos = self.graph_nodes[new_veh.origin].position
             new_veh.set_position(origin_pos)
             new_veh.notify(self._tcurrent.remove_time(dt))
 
@@ -164,7 +167,7 @@ class MFDFlow(AbstractFlowMotor):
             veh = self.veh_manager._vehicles[veh_id]
             log.info(f"{veh.current_link}, {veh}")
             unode, dnode = veh.current_link
-            curr_link = graph.nodes[unode].adj[dnode]
+            curr_link = self.graph_nodes[unode].adj[dnode]
             lid = self._graph.map_reference_links[curr_link.id][0] # take reservoir of first part of trip
             res_id = self._graph.roaddb.sections[lid]['zone']
             veh_type = veh.type.upper() # dirty
@@ -179,7 +182,7 @@ class MFDFlow(AbstractFlowMotor):
         for veh_id in self.veh_manager._vehicles:
             veh = self.veh_manager._vehicles[veh_id]
             unode, dnode = veh.current_link
-            curr_link = graph.nodes[unode].adj[dnode]
+            curr_link = self.graph_nodes[unode].adj[dnode]
             lid = self._graph.map_reference_links[curr_link.id][0]
             res_id = self._graph.roaddb.sections[lid]['zone']
             veh_type = veh.type.upper()
@@ -220,10 +223,8 @@ class MFDFlow(AbstractFlowMotor):
                     new_speed = self._graph.layers[link.layer].default_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             if new_speed != 0:
-                self._graph.graph.links[tid].update_costs({'travel_time': total_len / new_speed,
-                                                           'speed': new_speed})
-                # self._graph.graph.links[tid].costs['travel_time'] = total_len / new_speed
-                # self._graph.graph.links[tid].costs['speed'] = new_speed
+                self._graph.graph.update_link_costs(tid, {'travel_time': total_len / new_speed,
+                                                          'speed': new_speed})
 
 
     def write_result(self, step_affectation:int, step_flow:int):

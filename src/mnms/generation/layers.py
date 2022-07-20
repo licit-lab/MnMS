@@ -72,6 +72,11 @@ def generate_grid_origin_destination_layer(xmin: float,
     return odlayer
 
 
-def _bounding_box(roaddb: RoadDataBase):
+def get_bounding_box(roaddb: RoadDataBase):
     positions = np.array([n for n in roaddb.nodes.values()])
     return np.min(positions[0, :]), np.min(positions[1, :]), np.max(positions[0, :]), np.max(positions[1, :])
+
+
+def generate_bbox_origin_destination_layer(roaddb: RoadDataBase, nx: int, ny: Optional[int] = None):
+    bbox = get_bounding_box(roaddb)
+    return generate_grid_origin_destination_layer(*bbox, nx, ny)

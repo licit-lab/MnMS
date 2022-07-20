@@ -27,8 +27,7 @@ class Path(object):
         self.nodes: List[str] = nodes
         self.service_costs = dict()
 
-    def construct_layers(self, graph):
-        gnodes = graph.nodes
+    def construct_layers(self, gnodes):
         layer = gnodes[self.nodes[1]].label
         start = 1
         nodes_number = len(self.nodes)

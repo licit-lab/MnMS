@@ -56,6 +56,8 @@ class Supervisor(object):
     def add_graph(self, mmgraph: MultiLayerGraph):
         self._mlgraph = mmgraph
         self._mlgraph.construct_layer_service_mapping()
+        for layer in mmgraph.layers.values():
+            layer.initialize()
 
     def add_flow_motor(self, flow: AbstractFlowMotor):
         self._flow_motor = flow
@@ -104,16 +106,24 @@ class Supervisor(object):
     def update_mobility_services(self, flow_dt:Dt):
         for layer in self._mlgraph.layers.values():
             for mservice in layer.mobility_services.values():
-                log.info(f'Update mobility service {mservice.id}')
+                log.info(f' Update mobility service {mservice.id}')
                 mservice.update(flow_dt)
                 mservice.update_time(flow_dt)
             
     def step_flow(self, flow_dt, users_step):
         # TO CHECK:in the right order ? (if the other direction, there is a time step difference between the moments of creation of the vehicles and the accumulation)
+        log.info(' Step user flow ..')
+        start = time()
         self._user_flow.update_time(flow_dt)
         self._user_flow.step(flow_dt, users_step)
+        end = time()
+        log.info(f' Done [{end - start:.5} s]')
+        log.info(' Step MFD flow ..')
+        start = time()
         self._flow_motor.update_time(flow_dt)
         self._flow_motor.step(flow_dt)
+        end = time()
+        log.info(f' Done [{end - start:.5} s]')
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:
@@ -172,17 +182,17 @@ class Supervisor(object):
             end = time()
             log.info(f'Done [{end-start:.5} s]')
 
-            log.info('Updating graph ...')
+            log.info(' Updating graph ...')
             start = time()
             self._flow_motor.update_graph()
             end = time()
-            log.info(f'Done [{end-start:.5} s]')
+            log.info(f' Done [{end-start:.5} s]')
 
             if self._write:
                 log.info('Writing travel time of each link in graph ...')
                 start = time()
                 t_str = self._flow_motor.time
-                for link in self._mlgraph.mobility_graph.sections.values():
+                for link in self._mlgraph.graph.links.values():
                     self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['travel_time']])
                 end = time()
                 log.info(f'Done [{end - start:.5} s]')
