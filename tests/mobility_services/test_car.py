@@ -13,7 +13,7 @@ class TestCarMobilityService(unittest.TestCase):
     def test_create(self):
         service = CarMobilityGraphLayer("TEST", 1)
         self.assertEqual(service.id, "TEST")
-        self.assertDictEqual({}, service.graph.links)
+        self.assertDictEqual({}, service.graph.sections)
         self.assertDictEqual({}, service.graph.nodes)
 
     def test_fill(self):
@@ -27,10 +27,10 @@ class TestCarMobilityService(unittest.TestCase):
         self.assertListEqual(['0', '1'], [n.id for n in service.graph.nodes.values()])
         self.assertListEqual(['00', '11'], [n.reference_node for n in service.graph.nodes.values()])
 
-        self.assertListEqual(['0_1'], [l.id for l in service.graph.links.values()])
-        self.assertEqual(32, service.graph.links[('0', '1')].costs['test'])
-        self.assertEqual(1, service.graph.links[('0', '1')].costs['_default'])
-        self.assertEqual(0, service.graph.links[('0', '1')].costs['waiting_time'])
+        self.assertListEqual(['0_1'], [l.id for l in service.graph.sections.values()])
+        self.assertEqual(32, service.graph.sections[('0', '1')].costs['test'])
+        self.assertEqual(1, service.graph.sections[('0', '1')].costs['_default'])
+        self.assertEqual(0, service.graph.sections[('0', '1')].costs['waiting_time'])
 
     def test_dump_JSON(self):
         self.maxDiff = None
@@ -74,8 +74,8 @@ class TestCarMobilityService(unittest.TestCase):
         self.assertEqual('TEST', service.id)
         self.assertEqual('1', service.graph.nodes['1'].id)
         self.assertEqual('11', service.graph.nodes['1'].reference_node)
-        self.assertEqual(32, service.graph.links[('0', '1')].costs['test'])
-        self.assertEqual(1, service.graph.links[('0', '1')].costs['_default'])
-        self.assertEqual(0, service.graph.links[('0', '1')].costs['time'])
-        self.assertEqual(0, service.graph.links[('0', '1')].costs['waiting_time'])
-        self.assertListEqual(['0_2', '2_3'], service.graph.links[('0', '1')].reference_links)
+        self.assertEqual(32, service.graph.sections[('0', '1')].costs['test'])
+        self.assertEqual(1, service.graph.sections[('0', '1')].costs['_default'])
+        self.assertEqual(0, service.graph.sections[('0', '1')].costs['time'])
+        self.assertEqual(0, service.graph.sections[('0', '1')].costs['waiting_time'])
+        self.assertListEqual(['0_2', '2_3'], service.graph.sections[('0', '1')].reference_links)

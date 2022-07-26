@@ -1,11 +1,11 @@
 from abc import ABC,abstractmethod
-from typing import Type, List, Dict
+from typing import Type, List
+from functools import cached_property
 
 from mnms.demand.user import User
-from mnms.graph.core import TopoGraph
-from mnms.graph.shortest_path import Path, astar
+from hipop.graph import OrientedGraph
 from mnms.tools.cost import create_service_costs
-from mnms.tools.time import Time, Dt
+from mnms.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle
 
@@ -20,7 +20,7 @@ class AbstractMobilityGraphLayer(ABC):
         self.id = id
         self.default_speed = default_speed
         self.mobility_services = dict()
-        self.graph = TopoGraph()
+        self.graph = OrientedGraph()
         self._veh_type = veh_type
 
         if services is not None:
@@ -33,14 +33,6 @@ class AbstractMobilityGraphLayer(ABC):
         service.layer = self
         service.fleet = FleetManager(self._veh_type)
         self.mobility_services[service.id] = service
-
-    def compute_shortest_path(self, user:User, cost:str, heuristic) -> Path:
-        return astar(self.graph,
-                     user.origin,
-                     user.destination,
-                     cost,
-                     None,
-                     heuristic)
 
     # @abstractmethod
     # def update_costs(self, time: Time):
@@ -82,6 +74,10 @@ class AbstractMobilityService(ABC):
     def graph(self):
         return self.layer.graph
 
+    @cached_property
+    def graph_nodes(self):
+        return self.graph.nodes
+
     def attach_vehicle_observer(self, observer):
         self._observer = observer
 
@@ -91,7 +87,8 @@ class AbstractMobilityService(ABC):
             unode = upath[i]
             dnode = upath[i+1]
             key = (unode, dnode)
-            veh_path.append((key, self.graph.links[key].costs['length']))
+            link_length = self.graph_nodes[unode].adj[dnode].length
+            veh_path.append((key, link_length))
         return veh_path
 
     def service_level_costs(self, nodes:List[str]) -> dict:

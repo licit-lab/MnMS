@@ -13,14 +13,14 @@ def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=2, node_label=Tr
 
     if show_length:
         lengths = list()
-        for (unode, dnode), l in G.links.items():
+        for (unode, dnode), l in G.sections.items():
             lines.append([G.nodes[unode].pos, G.nodes[dnode].pos])
             lengths.append(l.length)
         line_segment = LineCollection(lines, linestyles='solid', array=lengths, linewidths=linkwidth, cmap=cmap)
         ax.add_collection(line_segment)
         plt.colorbar(line_segment)
     else:
-        for unode, dnode in G.links:
+        for unode, dnode in G.sections:
             lines.append([G.nodes[unode].pos, G.nodes[dnode].pos])
         line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
         ax.add_collection(line_segment)
@@ -56,7 +56,7 @@ def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True,
     deformation_matrix = np.array([[1, defo_scale], [0, defo_scale]])
     defo_app = lambda x: deformation_matrix.dot(x)
 
-    for unode, dnode in flow_graph.links:
+    for unode, dnode in flow_graph.sections:
         lines.append([defo_app(flow_graph.nodes[unode].pos), defo_app(flow_graph.nodes[dnode].pos)])
 
     line_segment = LineCollection(lines, linestyles='solid', colors='black', linewidths=linkwidth)
@@ -84,8 +84,8 @@ def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True,
         defo_app = lambda x: deformation_matrix.dot(x) + [0, yshift]
         lines = list()
         nodes = set()
-        for (unode, dnode) in service.graph.links:
-            link = mmgraph.mobility_graph.links[(unode, dnode)]
+        for (unode, dnode) in service.graph.sections:
+            link = mmgraph.mobility_graph.sections[(unode, dnode)]
             nodes.add(unode)
             nodes.add(dnode)
             for lid in link.reference_links:

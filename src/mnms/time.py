@@ -11,10 +11,15 @@ log = create_logger(__name__)
 
 
 class Dt(object):
-    def __init__(self, hours:int=0, minutes:int=0, seconds:float=0):
+    def __init__(self,
+                 hours: int = 0,
+                 minutes: int = 0,
+                 seconds: float = 0):
+
         assert hours >= 0, f"{hours}"
         assert minutes >= 0
         assert seconds >= 0
+
         new_seconds = Decimal(seconds)%60
         new_minutes = minutes + seconds//60
         hours = hours + new_minutes//60
@@ -183,8 +188,8 @@ class Time(object):
         new_minutes = new_minutes%60
         new_seconds = new_seconds%60
         if new_seconds < 0:
-            n = -new_seconds//60
-            new_seconds = 60*n - new_seconds%60
+            n = -new_seconds//60 + 1
+            new_seconds = 60*n + new_seconds%60
             new_minutes -= n
         if new_minutes < 0:
             n = -new_minutes // 60 +1
@@ -241,12 +246,10 @@ class TimeTable(object):
             log.warning("TimeTable has no Time and cant compute a frequency")
             return None
 
+    def __dump__(self):
+        return [time.time for time in self.table]
 
-if __name__ == "__main__":
-    # t = TimeTable.create_table_freq("05:00:00", "22:00:00", Dt(seconds=600))
 
-    t = Time.fromSeconds(0)
-
-    t2 = t.add_time(Dt(seconds=32))
-    t3 = t2.add_time(Dt(seconds=30))
-    print(t3)
+    @classmethod
+    def __load__(cls, data):
+        return cls([Time(t) for t in data])

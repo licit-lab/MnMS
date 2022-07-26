@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import csv
 from typing import List
 
-from mnms.tools.time import Time
+from mnms.time import Time
 from mnms.log import create_logger
 
 log = create_logger(__name__)
@@ -44,7 +44,7 @@ class TimeDependentSubject(ABC):
     def detach(self, obs):
         self._observers.remove(obs)
 
-    def notify(self, time:Time):
+    def notify(self, time: Time):
         for obs in self._observers:
             obs.update(self, time)
 

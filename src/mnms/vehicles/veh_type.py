@@ -4,7 +4,7 @@ import numpy as np
 
 from mnms.tools.observer import TimeDependentSubject
 from mnms.log import create_logger
-from mnms.tools.time import Time
+from mnms.time import Time
 
 log = create_logger(__name__)
 
@@ -48,6 +48,10 @@ class Vehicle(TimeDependentSubject):
     @property
     def is_full(self):
         return len(self._passenger) >= self._capacity
+
+    @property
+    def is_empty(self):
+        return bool(self._passenger)
 
     @property
     def id(self):

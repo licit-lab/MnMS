@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from typing import List
 import csv
 
-from mnms.tools.time import Time, Dt
-from mnms.graph.core import MultiModalGraph
+from mnms.time import Time, Dt
+from mnms.graph.layers import MultiLayerGraph
 
 
 class AbstractFlowMotor(ABC):
@@ -16,7 +16,7 @@ class AbstractFlowMotor(ABC):
         If not `None` store the `User` position at each `step`
     """
     def __init__(self, outfile:str=None):
-        self._graph: MultiModalGraph = None
+        self._graph: MultiLayerGraph = None
         self._mobility_nodes = None
         self._flow_nodes = None
 
@@ -32,8 +32,8 @@ class AbstractFlowMotor(ABC):
 
     def set_graph(self, mmgraph: "MultiModalGraph"):
         self._graph = mmgraph
-        self._mobility_nodes = self._graph.mobility_graph.nodes
-        self._flow_nodes = self._graph.flow_graph.nodes
+        # self._mobility_nodes = self._graph.mobility_graph.nodes
+        # self._flow_nodes = self._graph.flow_graph.nodes
 
     def set_initial_demand(self, demand:List[List]):
         self._demand = demand

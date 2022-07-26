@@ -61,9 +61,9 @@ class TestIO(unittest.TestCase):
         for opos, npos in zip(old_pos, new_pos):
             self.assertCountEqual(opos, npos)
 
-        for l in self.mmgraph.flow_graph.links:
-            old_link = self.mmgraph.flow_graph.links[l]
-            new_link = new_graph.flow_graph.links[l]
+        for l in self.mmgraph.flow_graph.sections:
+            old_link = self.mmgraph.flow_graph.sections[l]
+            new_link = new_graph.flow_graph.sections[l]
             self.assertTrue(old_link.id == new_link.id)
             self.assertTrue(old_link.upstream == new_link.upstream)
             self.assertTrue(old_link.downstream == new_link.downstream)
@@ -73,9 +73,9 @@ class TestIO(unittest.TestCase):
 
         self.assertEqual(self.mmgraph.mobility_graph.nodes.keys(), new_graph.mobility_graph.nodes.keys())
 
-        for l in self.mmgraph.mobility_graph.links:
-            old_link = self.mmgraph.mobility_graph.links[l]
-            new_link = new_graph.mobility_graph.links[l]
+        for l in self.mmgraph.mobility_graph.sections:
+            old_link = self.mmgraph.mobility_graph.sections[l]
+            new_link = new_graph.mobility_graph.sections[l]
             self.assertTrue(old_link.id == new_link.id)
             self.assertTrue(old_link.upstream == new_link.upstream)
             self.assertTrue(old_link.downstream == new_link.downstream)

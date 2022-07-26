@@ -1,6 +1,6 @@
 from typing import Union, List, Tuple
 
-from mnms.tools.time import Time
+from mnms.time import Time
 from mnms.tools.observer import TimeDependentSubject
 
 import numpy as np

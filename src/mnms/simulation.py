@@ -1,19 +1,18 @@
-import json
-import os
-import sys
 from time import time
 import csv
 import traceback
 import random
+from typing import List
 
 import numpy as np
 
-from mnms.graph.core import MultiModalGraph
+from mnms.demand import User
+from mnms.graph.layers import MultiLayerGraph
 from mnms.flow.abstract import AbstractFlowMotor
 from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
-from mnms.travel_decision.model import AbstractDecisionModel
-from mnms.tools.time import Time, Dt
+from mnms.travel_decision.abstract import AbstractDecisionModel
+from mnms.time import Time, Dt
 from mnms.log import create_logger
 from mnms.tools.exceptions import PathNotFound
 
@@ -22,19 +21,23 @@ log = create_logger(__name__)
 
 class Supervisor(object):
     def __init__(self,
-                 graph: MultiModalGraph,
+                 graph: MultiLayerGraph,
                  demand: AbstractDemandManager,
                  flow_motor: AbstractFlowMotor,
                  decision_model: AbstractDecisionModel,
                  outfile: str = None):
 
-        self._graph: MultiModalGraph = graph
+        self._mlgraph: MultiLayerGraph = None
         self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
-        self._flow_motor.set_graph(graph)
+
         self._decision_model:AbstractDecisionModel = decision_model
         self._user_flow = UserFlow()
+
+        self.add_graph(graph)
+        self._flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)
+
         
         self.tcurrent = None
 
@@ -50,12 +53,15 @@ class Supervisor(object):
         random.seed(seed)
         np.random.seed(seed)
 
-    def add_graph(self, mmgraph: MultiModalGraph):
-        self._graph = mmgraph
+    def add_graph(self, mmgraph: MultiLayerGraph):
+        self._mlgraph = mmgraph
+        self._mlgraph.construct_layer_service_mapping()
+        for layer in mmgraph.layers.values():
+            layer.initialize()
 
     def add_flow_motor(self, flow: AbstractFlowMotor):
         self._flow_motor = flow
-        flow.set_graph(self._graph)
+        flow.set_graph(self._mlgraph)
 
     def add_demand(self, demand: AbstractDemandManager):
         self._demand = demand
@@ -70,28 +76,25 @@ class Supervisor(object):
 
         return new_users
 
-    def compute_user_paths(self, new_users):
+    def compute_user_paths(self, new_users: List[User]):
         log.info('Computing paths for new users ..')
         start = time()
-        # for nu in ProgressBar(new_users, "Compute paths"):
-        for nu in new_users:
-            try:
-                self._decision_model(nu)
-            except PathNotFound:
-                pass
-
+        self._decision_model(new_users)
         end = time()
         log.info(f'Done [{end - start:.5} s]')
         
     def initialize(self, tstart:Time):
 
-        # Graph initialization
-        for layer in self._graph.layers.values():
-            for link in layer.graph.links.values():
-                link.costs['speed'] = layer.default_speed
-                link.costs['travel_time'] = link.costs['length'] / link.costs['speed']
+        for link in self._mlgraph.graph.links.values():
+            if link.label == "TRANSIT":
+                speed = self._user_flow._walk_speed
+            else:
+                speed = self._mlgraph.layers[link.label].default_speed
 
-        for layer in self._graph.layers.values():
+            link.update_costs({"speed": speed,
+                              "travel_time": link.length/speed})
+
+        for layer in self._mlgraph.layers.values():
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
         
@@ -99,21 +102,28 @@ class Supervisor(object):
         self._flow_motor.initialize()
 
         self._user_flow.set_time(tstart)
-        self._user_flow.initialize()
-        
+
     def update_mobility_services(self, flow_dt:Dt):
-        for layer in self._graph.layers.values():
+        for layer in self._mlgraph.layers.values():
             for mservice in layer.mobility_services.values():
-                log.info(f'Update mobility service {mservice.id}')
+                log.info(f' Update mobility service {mservice.id}')
                 mservice.update(flow_dt)
                 mservice.update_time(flow_dt)
             
     def step_flow(self, flow_dt, users_step):
         # TO CHECK:in the right order ? (if the other direction, there is a time step difference between the moments of creation of the vehicles and the accumulation)
+        log.info(' Step user flow ..')
+        start = time()
         self._user_flow.update_time(flow_dt)
         self._user_flow.step(flow_dt, users_step)
+        end = time()
+        log.info(f' Done [{end - start:.5} s]')
+        log.info(' Step MFD flow ..')
+        start = time()
         self._flow_motor.update_time(flow_dt)
         self._flow_motor.step(flow_dt)
+        end = time()
+        log.info(f' Done [{end - start:.5} s]')
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:
@@ -159,45 +169,44 @@ class Supervisor(object):
         self.tcurrent = tstart
 
         while self.tcurrent < tend:
-            try:
-                log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
+            # try:
+            log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
-                new_users = self.get_new_users(principal_dt)
+            new_users = self.get_new_users(principal_dt)
 
-                self.compute_user_paths(new_users)
+            self.compute_user_paths(new_users)
 
-                log.info(f'Launching {affectation_factor} step of flow ...')
+            log.info(f'Launching {affectation_factor} step of flow ...')
+            start = time()
+            self.step(affectation_factor, affectation_step, flow_dt, flow_step, new_users)
+            end = time()
+            log.info(f'Done [{end-start:.5} s]')
+
+            log.info(' Updating graph ...')
+            start = time()
+            self._flow_motor.update_graph()
+            end = time()
+            log.info(f' Done [{end-start:.5} s]')
+
+            if self._write:
+                log.info('Writing travel time of each link in graph ...')
                 start = time()
-                self.step(affectation_factor, affectation_step, flow_dt, flow_step, new_users)
+                t_str = self._flow_motor.time
+                for link in self._mlgraph.graph.links.values():
+                    self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['travel_time']])
                 end = time()
-                log.info(f'Done [{end-start:.5} s]')
+                log.info(f'Done [{end - start:.5} s]')
 
-                log.info('Updating graph ...')
-                start = time()
-                self._flow_motor.update_graph()
-                end = time()
-                log.info(f'Done [{end-start:.5} s]')
-
-                if self._write:
-                    log.info('Writing travel time of each link in graph ...')
-                    start = time()
-                    t_str = self._flow_motor.time
-                    for link in self._graph.mobility_graph.links.values():
-                        self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['travel_time']])
-                    end = time()
-                    log.info(f'Done [{end - start:.5} s]')
-
-                log.info('-'*50)
-                affectation_step += 1
-            except Exception as e:
-                cwd = os.getcwd()
-                report_file = cwd+'/'+'report.json'
-                log.error(e)
-                log.error(f"Simulation failed at {self.tcurrent}, writing a report at {report_file}")
-
-                with open(report_file, 'w') as f:
-                    json.dump(self.create_crash_report(affectation_step, flow_step), f, indent=4)
-                sys.exit(-1)
+            log.info('-'*50)
+            affectation_step += 1
+            # except Exception as e:
+                # cwd = os.getcwd()
+                # report_file = cwd+'/'+'report.json'
+                # log.error(e)
+                # log.error(f"Simulation failed at {self.tcurrent}, writing a report at {report_file}")
+                # with open(report_file, 'w') as f:
+                #     json.dump(self.create_crash_report(affectation_step, flow_step), f, indent=4)
+                # sys.exit(-1)
 
         self._flow_motor.finalize()
 

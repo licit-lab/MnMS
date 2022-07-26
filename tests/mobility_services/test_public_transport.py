@@ -1,8 +1,7 @@
 import unittest
 
-from mnms.mobility_service.public_transport import PublicTransportMobilityService, BusMobilityGraphLayer
-from mnms.tools.time import TimeTable, Dt
-from mnms.vehicles.veh_type import Bus
+from mnms.mobility_service.public_transport import BusMobilityGraphLayer
+from mnms.time import TimeTable, Dt
 
 
 class TestPublicTransport(unittest.TestCase):
@@ -16,7 +15,7 @@ class TestPublicTransport(unittest.TestCase):
         service = BusMobilityGraphLayer("TEST", 1)
         self.assertEqual(service.id, "TEST")
         self.assertEqual(1, service.default_speed)
-        self.assertDictEqual({}, service.graph.links)
+        self.assertDictEqual({}, service.graph.sections)
         self.assertDictEqual({}, service.graph.nodes)
 
     def test_fill(self):
@@ -34,14 +33,14 @@ class TestPublicTransport(unittest.TestCase):
         self.assertEqual('00', service.graph.nodes['0'].reference_node)
         self.assertEqual('11', service.graph.nodes['1'].reference_node)
 
-        self.assertListEqual([('0', '1')], list(service.graph.links.keys()))
+        self.assertListEqual([('0', '1')], list(service.graph.sections.keys()))
 
-        self.assertEqual(1, service.graph.links[('0', '1')].costs['_default'])
-        self.assertEqual(10, service.graph.links[('0', '1')].costs['length'])
-        self.assertEqual(32, service.graph.links[('0', '1')].costs['test'])
-        self.assertEqual(0, service.graph.links[('0', '1')].costs['waiting_time'])
-        self.assertEqual(0, service.graph.links[('0', '1')].costs['travel_time'])
-        self.assertListEqual(["0_1"], service.graph.links[('0', '1')].reference_links)
+        self.assertEqual(1, service.graph.sections[('0', '1')].costs['_default'])
+        self.assertEqual(10, service.graph.sections[('0', '1')].costs['length'])
+        self.assertEqual(32, service.graph.sections[('0', '1')].costs['test'])
+        self.assertEqual(0, service.graph.sections[('0', '1')].costs['waiting_time'])
+        self.assertEqual(0, service.graph.sections[('0', '1')].costs['travel_time'])
+        self.assertListEqual(["0_1"], service.graph.sections[('0', '1')].reference_links)
 
     def test_two_lines(self):
         service = BusMobilityGraphLayer("TEST", 10)
@@ -61,13 +60,13 @@ class TestPublicTransport(unittest.TestCase):
 
         self.assertTrue('L0' in service.lines)
         self.assertTrue('TEST2' in service.lines)
-        self.assertEqual(1, service.graph.links[('1', '2')].costs['_default'])
-        self.assertEqual(0, service.graph.links[('1', '2')].costs['length'])
-        self.assertEqual(1800, service.graph.links[('1', '2')].costs['waiting_time'])
-        self.assertEqual(0, service.graph.links[('1', '2')].costs['travel_time'])
-        self.assertEqual(90, service.graph.links[('1', '2')].costs['test'])
+        self.assertEqual(1, service.graph.sections[('1', '2')].costs['_default'])
+        self.assertEqual(0, service.graph.sections[('1', '2')].costs['length'])
+        self.assertEqual(1800, service.graph.sections[('1', '2')].costs['waiting_time'])
+        self.assertEqual(0, service.graph.sections[('1', '2')].costs['travel_time'])
+        self.assertEqual(90, service.graph.sections[('1', '2')].costs['test'])
 
-        self.assertEqual(90, service.graph.links[('2', '1')].costs['test'])
+        self.assertEqual(90, service.graph.sections[('2', '1')].costs['test'])
 
     def test_dump_JSON(self):
         self.maxDiff = None

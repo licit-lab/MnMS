@@ -2,7 +2,7 @@ import unittest
 from tempfile import TemporaryDirectory
 
 from mnms.flow.user_flow import UserFlow
-from mnms.tools.time import Time, Dt, TimeTable
+from mnms.time import Time, Dt, TimeTable
 from mnms.graph.core import MultiModalGraph
 from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService, BusMobilityGraphLayer
@@ -74,7 +74,7 @@ class TestUserFlow(unittest.TestCase):
 
     def test_fill(self):
         self.assertTrue(self.mmgraph is self.user_flow._graph)
-        self.assertTrue(self.mmgraph.mobility_graph is self.user_flow._mobility_graph)
+        self.assertTrue(self.mmgraph.mobility_graph is self.user_flow._graph)
         self.assertEqual(Time('00:01:00'), self.user_flow._tcurrent)
         self.assertEqual(1.42, self.user_flow._walk_speed)
 
