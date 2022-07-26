@@ -2,6 +2,7 @@ from multiprocessing import Process, cpu_count
 from timeit import default_timer as timer
 from typing import Callable, Union, List, Dict, NamedTuple
 
+from hipop import shortest_path
 import pandas as pd
 
 from mnms.demand import User
@@ -317,8 +318,8 @@ def run_on_proc(list_user: List[User],  method: callable,
     return {(key, val) for proc in list_proc
             for key, val in proc.results.items()}
 
-#
-# def dijkstra_cpp(graph, origin: str, destination: str, cost: _WEIGHT_COST_TYPE,
-#                  available_layers):
-#     ret = cppgraph.dijkstra(graph, origin, destination, cost)
-#     return Path(len(ret), ret)
+
+def dijkstra_cpp(graph, origin: str, destination: str, cost: _WEIGHT_COST_TYPE,
+                 available_layers):
+    ret = shortest_path.dijkstra(graph, origin, destination, cost, set())
+    return Path(len(ret), ret)

@@ -11,6 +11,7 @@ from multiprocessing import Process
 from sys import platform
 from typing import NamedTuple, Callable, List
 
+from hipop import graph
 import matplotlib.pyplot as plt
 from timeit import default_timer as timer
 
@@ -24,7 +25,7 @@ from mnms.graph.layers import Layer
 from mnms.graph.shortest_path import dijkstra, astar, _euclidian_dist, \
     bidirectional_dijkstra
 from mnms.graph.shortest_path_test_opti import dijkstra_v2, dijkstra_multi_dest, \
-    run_on_proc
+    run_on_proc, dijkstra_cpp
 from mnms.mobility_service.car import PersonalCarMobilityService
 from mnms.time import Time
 
@@ -51,9 +52,9 @@ def create_graph(graph_size):
     return car_layer.graph, road_db
 
 
-# def create_graph_cpp(graph_size):
-#     g = cppgraph.generate_mahattan(graph_size, LINK_LENGTH)
-#     return g, None
+def create_graph_cpp(graph_size):
+    g = graph.generate_manhattan(graph_size, LINK_LENGTH)
+    return g, None
 
 
 class Method(NamedTuple):
@@ -70,7 +71,7 @@ class EnumMethods(Enum):
     DIJKSTRA_V3 = Method("Dijktra_v3", dijkstra_multi_dest, create_graph)
     ASTAR = Method("Astar", astar, create_graph, True)
     BIDIR_DIJKSTRA = Method("Bidirectional Dijkstra", bidirectional_dijkstra, create_graph)
-    # DIJKSTRA_CPP = Method("Dijkstra cpp", dijkstra_cpp, create_graph_cpp)
+    DIJKSTRA_CPP = Method("Dijkstra cpp", dijkstra_cpp, create_graph_cpp)
 
     def name(self):
         return self.value.name
@@ -128,16 +129,6 @@ def stat_benchmark(list_method: List[EnumMethods], list_graph_size, nb_iter, pri
             res, time = run_for_stat(method.value, graph, nb_iter)
             data.append(time)
 
-            # print(f"{method.value.name} : time = {statistics.mean(time)}")
-
-        # if len(res1.nodes) == len(res2.nodes):
-        #     print("Validé")
-        #     speedup = statistics.mean(time1) / statistics.mean(time2)
-        #     print(f"Speed-up = {speedup}")
-        # else:
-        #     print("ERROR")
-        #     break
-
     if print_df:
         data = np.array(data)
         iterables = [[size**2 for size in list_graph_size], [method.name() for method in list_method]]
@@ -172,16 +163,10 @@ def build_user_list(mmgraph):
             for uid, (origin, destination) in enumerate(list_od)]
 
 
-def multi_proc_benchmark(enum_method: EnumMethods, graph_size, nb_proc = None):
+def multi_proc_benchmark(enum_method: EnumMethods, graph_size, nb_proc=None, nb_iter=1):
     graph, mmgraph = enum_method.value.build_graph(graph_size)
     user_list = build_user_list(graph)
-    # heuristic = partial(_euclidian_dist, mmgraph=mmgraph)
-    od_list = [(user.origin, user.destination) for user in user_list]
-    start = timer()
-    run_method(od_list, enum_method.value, graph)
-    time_seq = timer() - start
-    print(f"time seq = {time_seq}s = {timedelta(seconds=time_seq)}")
-
+    times = []
     list_params = []
     for idx in range(nb_proc):
         graph, mmgraph = enum_method.value.build_graph(graph_size)
@@ -189,10 +174,11 @@ def multi_proc_benchmark(enum_method: EnumMethods, graph_size, nb_proc = None):
                   "cost": "length",
                   "available_layers": ['Car']}
         list_params.append(params)
-    start = timer()
-    run_on_proc(user_list, enum_method.value.func, list_params, nb_proc)
-    time_multi = timer() - start
-    print(f"time multi proc = {time_multi}s = {timedelta(seconds=time_multi)}")
+    for i in range(nb_iter):
+        start = timer()
+        run_on_proc(user_list, enum_method.value.func, list_params, nb_proc)
+        times.append(timer() - start)
+    return times
 
 
 def run_method(od_list, method: Method, graph):
@@ -209,9 +195,35 @@ def run_method(od_list, method: Method, graph):
         # print(ret)
 
 
+def run_multiproc_stat(list_method: List[EnumMethods], list_graph_size, nb_iter, print_df=False, df_path=None):
+    data = []
+    for graph_size in list_graph_size:
+        for method in list_method:
+            time = multi_proc_benchmark(method, graph_size, 8, nb_iter)
+            data.append(time)
+
+    if print_df:
+        data = np.array(data)
+        iterables = [[size**2 for size in list_graph_size], [method.name() for method in list_method]]
+        df = pd.DataFrame(data, index=pd.MultiIndex.from_product(iterables, names=["nodes", "method"]))
+        df = df.assign(min=df.min(axis=1))
+        df = df.assign(max=df.max(axis=1))
+        df = df.assign(mean=df.mean(axis=1))
+        # df = df.assign(tot=df.sum(axis=1))
+        print(df)
+        if df_path:
+            df.to_csv(df_path)
+
+
 if __name__ == '__main__':
-    # simple_benchmark(EnumMethods.DIJKSTRA_CPP, 10)
+    # simple_benchmark(EnumMethods.DIJKSTRA_CPP, 100)
     # stat_benchmark([EnumMethods.DIJKSTRA_V2], [100], 5, True)
-    stat_benchmark([EnumMethods.DIJKSTRA, EnumMethods.DIJKSTRA_V2], [50, 100, 120, 150], 5, True, f"disjktra stat on {platform}_2.csv")
+    # stat_benchmark([EnumMethods.DIJKSTRA, EnumMethods.DIJKSTRA_V2], [50, 100, 120, 150], 5, True, f"disjktra stat on {platform}_2.csv")
     # stat_benchmark([EnumMethods.ASTAR], [50], 5, True)
-    # multi_proc_benchmark(EnumMethods.DIJKSTRA_CPP, 100, 8)
+
+    # Pour Florian :
+    # à tester en 1er si ça tourne bien
+    run_multiproc_stat([EnumMethods.DIJKSTRA_V2, EnumMethods.DIJKSTRA_CPP], [50], 1, True)
+
+    # Si tout va bien, lancer ça
+    # run_multiproc_stat([EnumMethods.DIJKSTRA_V2, EnumMethods.DIJKSTRA_CPP], [50, 100, 120, 150], 5, True, f"multi proc disjktra stat on {platform}.csv")
