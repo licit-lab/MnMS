@@ -62,8 +62,8 @@ def dijkstra_v2(graph,
 
     """
     cost_func = _weight_computation(cost)
-    origin = "CAR_" + origin
-    destination = "CAR_" + destination
+    origin = origin
+    destination = destination
 
     vertices = set()
     dist = dict()

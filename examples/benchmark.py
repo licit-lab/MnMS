@@ -150,8 +150,8 @@ def simple_benchmark(method: EnumMethods, graph_size: int):
 
 
 def build_user_list(mmgraph):
-    origins = [node for node in mmgraph.nodes.keys() if node.startswith("WEST")]
-    destinations = [node for node in mmgraph.nodes.keys() if node.startswith("EAST")]
+    origins = [node for node in mmgraph.nodes.keys() if "WEST" in node]
+    destinations = [node for node in mmgraph.nodes.keys() if "EAST" in node]
     destinations = destinations[:30]
     list_od = list(product(origins, destinations))
     tstart = Time("07:00:00").to_seconds()
