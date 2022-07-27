@@ -2,7 +2,7 @@ from typing import Optional, Type, List
 
 import numpy as np
 
-from mnms.graph.layers import OriginDestinationLayer, Layer
+from mnms.graph.layers import OriginDestinationLayer, SimpleLayer
 from mnms.graph.road import RoadDataBase
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.vehicles.veh_type import Vehicle, Car
@@ -14,7 +14,7 @@ def generate_layer_from_roads(roaddb: RoadDataBase,
                               default_speed: float = 14,
                               mobility_services: Optional[List[AbstractMobilityService]] = None):
 
-    layer = Layer(layer_id, roaddb, veh_type, default_speed, mobility_services)
+    layer = SimpleLayer(layer_id, roaddb, veh_type, default_speed, mobility_services)
 
 
     for n, pos in roaddb.nodes.items():

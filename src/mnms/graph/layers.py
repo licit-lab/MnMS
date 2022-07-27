@@ -7,12 +7,13 @@ import numpy as np
 from hipop.graph import OrientedGraph, Node, node_to_dict, link_to_dict
 
 # from .core import OrientedGraph, Node, ConnectionLink, TransitLink
-from .road import RoadDataBase
-from ..mobility_service.abstract import AbstractMobilityService
+from mnms.graph.abstract import AbstractLayer
+from mnms.graph.road import RoadDataBase
+from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.time import TimeTable
-from ..vehicles.fleet import FleetManager
-from ..vehicles.veh_type import Vehicle, Car
-from ..log import create_logger
+from mnms.vehicles.fleet import FleetManager
+from mnms.vehicles.veh_type import Vehicle, Car
+from mnms.log import create_logger
 from mnms.io.utils import load_class_by_module_name
 
 from hipop.graph import merge_oriented_graph
@@ -20,63 +21,7 @@ from hipop.graph import merge_oriented_graph
 log = create_logger(__name__)
 
 
-class AbstractLayer(object):
-    def __init__(self,
-                 id: str,
-                 roaddb: RoadDataBase,
-                 veh_type: Type[Vehicle],
-                 default_speed: float,
-                 services: Optional[List[AbstractMobilityService]] = None,
-                 observer: Optional = None):
-        self._id = id
-        self.graph = OrientedGraph()
-        self._roaddb = roaddb
-        self._roaddb._layers[id] = self
-
-        self._default_speed = default_speed
-
-        # self._map_nodes = dict()
-        # self._map_links = dict()
-
-        self.map_reference_links = dict()
-        self.map_reference_nodes = dict()
-
-        self.mobility_services = dict()
-        self._veh_type = veh_type
-
-        if services is not None:
-            for s in services:
-                self.add_mobility_service(s)
-                if observer is not None:
-                    s.attach_vehicle_observer(observer)
-
-    def add_mobility_service(self, service: AbstractMobilityService):
-        service.layer = self
-        service.fleet = FleetManager(self._veh_type)
-        self.mobility_services[service.id] = service
-
-    @property
-    def default_speed(self):
-        return self._default_speed
-
-    @property
-    def id(self):
-        return self._id
-
-    @abstractmethod
-    def __dump__(self):
-        pass
-
-    @classmethod
-    @abstractmethod
-    def __load__(cls, data: Dict, roaddb: RoadDataBase):
-        pass
-
-    def initialize(self):
-        pass
-
-
-class Layer(AbstractLayer):
+class SimpleLayer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
         assert dbnode in self._roaddb.nodes
         node_pos = self._roaddb.nodes[dbnode]
@@ -91,32 +36,6 @@ class Layer(AbstractLayer):
         self.graph.add_link(lid, upstream, downstream, length, costs, self.id)
 
         self.map_reference_links[lid] = reference_links
-
-        # for l in reference_links:
-        #     if l not in self._map_links:
-        #         self._map_links[l] = set()
-        #     self._map_links[l].add(lid)
-
-    def __dump__(self):
-        return {'ID': self.id,
-                'TYPE': ".".join([self.__class__.__module__, self.__class__.__name__]),
-                'VEH_TYPE': ".".join([self._veh_type.__module__, self._veh_type.__name__]),
-                'DEFAULT_SPEED': self.default_speed,
-                'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
-                'NODES': [node_to_dict(n) for n in self.graph.nodes.values()],
-                'LINKS': [link_to_dict(l) for l in self.graph.links.values()],
-                'MAP_ROADDB': {"NODES": self.map_reference_nodes,
-                               "LINKS": self.map_reference_links}}
-
-
-class CarLayer(Layer):
-    def __init__(self,
-                 roaddb: RoadDataBase,
-                 default_speed: float = 13.8,
-                 services: Optional[List[AbstractMobilityService]] = None,
-                 observer: Optional = None):
-        super(CarLayer, self).__init__('CAR', roaddb, Car, default_speed, services, observer)
-
 
     @classmethod
     def __load__(cls, data: Dict, roaddb: RoadDataBase):
@@ -137,6 +56,26 @@ class CarLayer(Layer):
             new_obj.add_mobility_service(serv_type.__load__(sdata))
 
         return new_obj
+
+    def __dump__(self):
+        return {'ID': self.id,
+                'TYPE': ".".join([self.__class__.__module__, self.__class__.__name__]),
+                'VEH_TYPE': ".".join([self._veh_type.__module__, self._veh_type.__name__]),
+                'DEFAULT_SPEED': self.default_speed,
+                'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
+                'NODES': [node_to_dict(n) for n in self.graph.nodes.values()],
+                'LINKS': [link_to_dict(l) for l in self.graph.links.values()],
+                'MAP_ROADDB': {"NODES": self.map_reference_nodes,
+                               "LINKS": self.map_reference_links}}
+
+
+class CarLayer(SimpleLayer):
+    def __init__(self,
+                 roaddb: RoadDataBase,
+                 default_speed: float = 13.8,
+                 services: Optional[List[AbstractMobilityService]] = None,
+                 observer: Optional = None):
+        super(CarLayer, self).__init__('CAR', roaddb, Car, default_speed, services, observer)
 
 
 class PublicTransportLayer(AbstractLayer):
@@ -170,7 +109,7 @@ class PublicTransportLayer(AbstractLayer):
                     stops: List[str],
                     sections: List[List[str]],
                     timetable: TimeTable,
-                    bidirectional: bool = True):
+                    bidirectional: bool = False):
 
         assert len(stops) == len(sections)+1
 

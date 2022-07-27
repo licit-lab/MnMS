@@ -60,8 +60,6 @@ class TestDt(unittest.TestCase):
         self.assertEqual(16, dt._minutes)
         self.assertAlmostEqual(Decimal(13.45), dt._seconds)
 
-        dt.__repr__()
-
     def test_to_sec(self):
         dt = Dt(12, 35, 13.45)
         self.assertAlmostEqual(12*3600+35*60+13.45, dt.to_seconds())

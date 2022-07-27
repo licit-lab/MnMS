@@ -84,7 +84,7 @@ class UserFlow(object):
                     # next_link = graph.links[(cnode, upath[cnode_ind+1])]
                     next_link = gnodes[cnode].adj[upath[cnode_ind+1]]
                     if next_link.label == "TRANSIT":
-                        log.info(f"{user} enter connection on {next_link}")
+                        log.info(f"{user} enter connection on {next_link.id}")
                         self._walking[uid] = next_link.costs['travel_time']
                         to_del.append(uid)
                     else:

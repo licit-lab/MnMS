@@ -1,6 +1,6 @@
 import unittest
 
-from mnms.graph.core import MultiModalGraph
+from mnms.graph.zone import MultiModalGraph
 from mnms.mobility_service.car import CarMobilityGraphLayer, PersonalCarMobilityService
 
 

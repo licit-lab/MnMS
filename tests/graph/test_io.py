@@ -2,7 +2,7 @@ import unittest
 
 from tempfile import TemporaryDirectory
 
-from mnms.graph.core import MultiModalGraph
+from mnms.graph.zone import MultiModalGraph
 from mnms.mobility_service.car import CarMobilityGraphLayer
 from mnms.graph.io import save_graph, load_graph
 

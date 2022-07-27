@@ -6,7 +6,8 @@ from importlib import import_module
 from typing import Type, List
 
 from mnms.log import create_logger
-from mnms.mobility_service.abstract import AbstractMobilityService, AbstractMobilityGraphLayer
+from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.graph.abstract import AbstractLayer
 from mnms.tools.cost import create_service_costs
 from mnms.tools.exceptions import VehicleNotFoundError
 from mnms.time import TimeTable, Time, Dt
@@ -100,8 +101,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
         else:
             curr_veh = None
             next_veh = None
-            it_veh = iter(self.vehicles[user_line])
-            ind_start = user_line.stops.index(start)
+            it_veh = iter(self.vehicles[user_line_id])
+            ind_start = user_line["nodes"].index(start)
             try:
                 curr_veh = next(it_veh)
                 next_veh = next(it_veh)
@@ -161,114 +162,3 @@ class PublicTransportMobilityService(AbstractMobilityService):
     def __load__(cls, data):
         new_obj = cls(data['ID'])
         return new_obj
-
-
-class PublicTransportGraphLayer(AbstractMobilityGraphLayer):
-    """Public transport class, manage its lines
-
-    Parameters
-    ----------
-    id: str
-        Id of the public transport class
-    default_speed: float
-        Default speed of the public transport
-
-    """
-    def __init__(self, id:str, veh_type:Type[Vehicle], default_speed:float, services:List[PublicTransportMobilityService]=None, observer=None):
-        assert issubclass(veh_type, Vehicle)
-        super(PublicTransportGraphLayer, self).__init__(id, veh_type, default_speed, services, observer)
-        self.lines = dict()
-        self.line_connections = []
-
-    def add_mobility_service(self, service:"AbstractMobilityService"):
-        assert isinstance(service, PublicTransportMobilityService), f"PublicTransportGraphLayer only accept mobility services with type PublicTransportMobilityService"
-        super(PublicTransportGraphLayer, self).add_mobility_service(service)
-
-    def show_lines(self) -> None:
-        print(self.lines)
-
-    def connect_lines(self, ulineid: str, dlineid: str, unid: str, dnid:str, costs:dict=None, two_ways=True) -> None:
-        assert unid in self.lines[ulineid].stops
-        assert dnid in self.lines[dlineid].stops
-        c = {'waiting_time': self.lines[dlineid]._timetable.get_freq() / 2, "length": 0}
-        if costs is not None:
-            c.update(costs)
-
-        self.graph.create_link('_'.join([unid, dnid]),
-                               unid,
-                               dnid,
-                               c,
-                               [None],
-                               self.id)
-
-        self.line_connections.append('_'.join([unid, dnid]))
-
-        if two_ways:
-            c = {'waiting_time': self.lines[ulineid]._timetable.get_freq() / 2, "length": 0}
-            if costs is not None:
-                c.update(costs)
-            self.graph.create_link('_'.join([dnid, unid]),
-                                   dnid,
-                                   unid,
-                                   c,
-                                   [None],
-                                   self.id)
-
-            self.line_connections.append('_'.join([dnid, unid]))
-
-    def connect_to_service(self, nid) -> dict:
-        for line in self.lines.values():
-            if nid in line.stops:
-                return {"time": line.timetable.get_freq()/2}
-
-    def __dump__(self) -> dict:
-        return {"TYPE": ".".join([PublicTransportGraphLayer.__module__, PublicTransportGraphLayer.__name__]),
-                "ID": self.id,
-                "VEH_TYPE":  ".".join([self._veh_type.__module__, self._veh_type.__name__]),
-                "DEFAULT_SPEED": self.default_speed,
-                "LINES": [l.__dump__() for l in self.lines.values()],
-                "CONNECTIONS": [self.graph.get_link(l).__dump__() for l in self.line_connections],
-                "SERVICES": [s.__dump__() for s in self.mobility_services.values()]}
-
-    @classmethod
-    def __load__(cls, data: dict) -> "PublicTransport":
-        veh_class_name = data['VEH_TYPE'].split('.')[-1]
-        veh_module_name = data['VEH_TYPE'].removesuffix('.'+veh_class_name)
-        veh_module = import_module(veh_module_name)
-        veh_class = getattr(veh_module, veh_class_name)
-
-        new_obj = cls(data['ID'], veh_class, data["DEFAULT_SPEED"])
-        for ldata in data['LINES']:
-            tt = []
-            for time in ldata['TIMETABLE']:
-                new_time = Time(time)
-                tt.append(new_time)
-            new_line = new_obj.add_line(ldata['ID'], TimeTable(tt))
-            [new_line.add_stop(s['ID'], s['REF_NODE']) for s in ldata['STOPS']]
-            [new_line.connect_stops(l['ID'],
-                                    l['UPSTREAM'],
-                                    l['DOWNSTREAM'],
-                                    l['COSTS']['length'],
-                                    l['REF_LINKS'],
-                                    l['COSTS']) for l in ldata['LINKS']]
-        return new_obj
-
-    def construct_veh_path(self, lid: str):
-        veh_path = list()
-        path = self.lines[lid].stops
-        for i in range(len(path) - 1):
-            unode = path[i]
-            dnode = path[i+1]
-            if self._graph.nodes[dnode].layer == self.id:
-                key = (unode, dnode)
-                veh_path.append((key, self._graph.sections[key].costs['length']))
-            else:
-                break
-        return veh_path
-
-    def connect_to_layer(self, nid) -> dict:
-        for line in self.lines.values():
-            if nid in line.stops:
-                return {"wating_time": line._timetable.get_freq() / 2}
-
-

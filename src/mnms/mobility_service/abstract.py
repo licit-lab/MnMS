@@ -8,54 +8,54 @@ from mnms.tools.cost import create_service_costs
 from mnms.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle
+# from mnms.graph.layers import AbstractLayer
 
-
-class AbstractMobilityGraphLayer(ABC):
-    def __init__(self,
-                 id:str,
-                 veh_type:Type[Vehicle],
-                 default_speed:float,
-                 services:List["AbstractMobilityService"]=None,
-                 observer=None):
-        self.id = id
-        self.default_speed = default_speed
-        self.mobility_services = dict()
-        self.graph = OrientedGraph()
-        self._veh_type = veh_type
-
-        if services is not None:
-            for s in services:
-                self.add_mobility_service(s)
-                if observer is not None:
-                    s.attach_vehicle_observer(observer)
-
-    def add_mobility_service(self, service:"AbstractMobilityService"):
-        service.layer = self
-        service.fleet = FleetManager(self._veh_type)
-        self.mobility_services[service.id] = service
-
-    # @abstractmethod
-    # def update_costs(self, time: Time):
-    #     pass
-
-    @abstractmethod
-    def __dump__(self) -> dict:
-        pass
-
-    @classmethod
-    @abstractmethod
-    def __load__(cls, data:dict):
-        pass
-
-    @abstractmethod
-    def connect_to_layer(self, nid) -> dict:
-        pass
+# class AbstractMobilityGraphLayer(ABC):
+#     def __init__(self,
+#                  id:str,
+#                  veh_type:Type[Vehicle],
+#                  default_speed:float,
+#                  services:List["AbstractMobilityService"]=None,
+#                  observer=None):
+#         self.id = id
+#         self.default_speed = default_speed
+#         self.mobility_services = dict()
+#         self.graph = OrientedGraph()
+#         self._veh_type = veh_type
+#
+#         if services is not None:
+#             for s in services:
+#                 self.add_mobility_service(s)
+#                 if observer is not None:
+#                     s.attach_vehicle_observer(observer)
+#
+#     def add_mobility_service(self, service:"AbstractMobilityService"):
+#         service.layer = self
+#         service.fleet = FleetManager(self._veh_type)
+#         self.mobility_services[service.id] = service
+#
+#     # @abstractmethod
+#     # def update_costs(self, time: Time):
+#     #     pass
+#
+#     @abstractmethod
+#     def __dump__(self) -> dict:
+#         pass
+#
+#     @classmethod
+#     @abstractmethod
+#     def __load__(cls, data:dict):
+#         pass
+#
+#     @abstractmethod
+#     def connect_to_layer(self, nid) -> dict:
+#         pass
 
 
 class AbstractMobilityService(ABC):
     def __init__(self, id):
         self._id: str = id
-        self.layer: AbstractMobilityGraphLayer = None
+        self.layer: "AbstractLayer" = None
         self._tcurrent: Time = None
         self.fleet: FleetManager = None
         self._observer = None

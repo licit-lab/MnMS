@@ -1,6 +1,6 @@
 import unittest
 
-from mnms.mobility_service.public_transport import BusMobilityGraphLayer
+from mnms.mobility_service.public_transport import PublicTransportGraphLayer
 from mnms.time import TimeTable, Dt
 
 
@@ -12,14 +12,14 @@ class TestPublicTransport(unittest.TestCase):
         """Concludes and closes the test.
         """
     def test_create(self):
-        service = BusMobilityGraphLayer("TEST", 1)
+        service = PublicTransportGraphLayer("TEST", 1)
         self.assertEqual(service.id, "TEST")
         self.assertEqual(1, service.default_speed)
         self.assertDictEqual({}, service.graph.sections)
         self.assertDictEqual({}, service.graph.nodes)
 
     def test_fill(self):
-        service = BusMobilityGraphLayer("TEST", 10)
+        service = PublicTransportGraphLayer("TEST", 10)
 
         line = service.add_line('L0', TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(hours=1)))
         line.add_stop("0", "00")
