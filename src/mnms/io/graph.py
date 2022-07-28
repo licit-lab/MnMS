@@ -47,3 +47,16 @@ def load_graph(filename: Union[str, Path]):
     mlgraph = MultiLayerGraph(layers)
 
     return mlgraph
+
+
+def save_odlayer(odlayer: OriginDestinationLayer, filename: Union[str, Path], indent=2):
+    d = odlayer.__dump__()
+    with open(filename, 'w') as f:
+        json.dump(d, f, indent=indent, cls=MNMSEncoder)
+
+
+def load_odlayer(filename: Union[str, Path]) -> OriginDestinationLayer:
+    with open(filename, 'r') as f:
+        data = json.load(f)
+
+    return OriginDestinationLayer.__load__(data)

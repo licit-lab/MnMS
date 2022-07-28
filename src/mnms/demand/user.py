@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Union, List, Tuple
 
 from mnms.time import Time
@@ -88,3 +89,35 @@ class User(TimeDependentSubject):
         self._current_link = current_link
         self._remaining_link_length = remaining_length
         self._position = position
+
+
+class Path(object):
+    def __init__(self, cost=None, nodes: List[str] = None):
+        self.path_cost: float = cost
+        self.layers: List[Tuple[str, slice]] = list()
+        self.mobility_services = list()
+        self.nodes: List[str] = nodes
+        self.service_costs = dict()
+
+    def construct_layers(self, gnodes):
+        layer = gnodes[self.nodes[1]].label
+        start = 1
+        nodes_number = len(self.nodes)
+        for i in range(2, nodes_number-1):
+            ilayer = gnodes[self.nodes[i]].label
+            if ilayer != layer:
+                self.layers.append((layer, slice(start, i, 1)))
+                layer = ilayer
+                start = i
+        self.layers.append((layer, slice(start, nodes_number-1, 1)))
+
+    def __repr__(self):
+        return f"Path(path_cost={self.path_cost}, nodes={self.nodes}, layers={self.layers}, services={self.mobility_services})"
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result

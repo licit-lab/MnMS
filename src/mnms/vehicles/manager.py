@@ -8,7 +8,7 @@ log = create_logger(__name__)
 
 
 class VehicleManager(object):
-    _vehicles:Dict[str, Vehicle] = dict()
+    _vehicles: Dict[str, Vehicle] = dict()
     _type_vehicles: Dict[str, Set[str]] = defaultdict(set)
     _new_vehicles: List[Vehicle] = list()
 
@@ -29,7 +29,8 @@ class VehicleManager(object):
         del VehicleManager._vehicles[veh._global_id]
         VehicleManager._type_vehicles[veh.type].remove(veh._global_id)
 
-    def empty(self):
+    @classmethod
+    def empty(cls):
         VehicleManager._vehicles = dict()
         VehicleManager._type_vehicles = dict()
         VehicleManager._new_vehicles = list()

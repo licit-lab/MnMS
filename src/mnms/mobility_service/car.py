@@ -2,9 +2,12 @@ from random import sample
 
 import numpy as np
 
+
+from hipop.shortest_path import dijkstra
+
 from mnms import create_logger
 from mnms.demand import User
-from mnms.graph.shortest_path import bidirectional_dijkstra
+# from mnms.graph.shortest_path import bidirectional_dijkstra
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.time import Dt
 from mnms.tools.exceptions import PathNotFound
@@ -96,7 +99,9 @@ class OnDemandCarMobilityService(AbstractMobilityService):
                 if choosen_veh.is_empty:
                     nearest_veh.destination = user.current_node
                     log.info(f"Compute veh path to user {nearest_veh.origin} -> {user.current_node}")
-                    veh_path = bidirectional_dijkstra(self.graph, nearest_veh.origin, user.current_node, 'time', None)
+                    available_services = user.available_mobility_service
+                    available_services = set() if available_services is None else available_services
+                    veh_path = dijkstra(self.graph, nearest_veh.origin, user.current_node, 'travel_time', available_services)
                     if veh_path.path_cost == float('inf'):
                         raise PathNotFound(nearest_veh.origin, user.current_node)
                     veh_path = self._construct_veh_path(list(veh_path.nodes)[:-1]+upath[upath.index(user._current_node):upath.index(drop_node)+1])

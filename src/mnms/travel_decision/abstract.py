@@ -10,9 +10,8 @@ import multiprocessing
 import numpy as np
 from numpy.linalg import norm as _norm
 
-from mnms.demand.user import User
+from mnms.demand.user import User, Path
 from mnms.graph.layers import MultiLayerGraph
-from mnms.graph.shortest_path import compute_k_shortest_path, Path
 from mnms.log import create_logger
 from mnms.tools.dict_tools import sum_cost_dict
 from mnms.tools.exceptions import PathNotFound

@@ -82,6 +82,14 @@ class BaseDemandManager(AbstractDemandManager):
         for u in self._users:
             print(u)
 
+    def to_csv(self, file: Union[Path, str], delimiter=";"):
+        with open(file, 'w') as f:
+            writer = csv.writer(f, delimiter=delimiter)
+            writer.writerow(["ID","DEPARTURE","ORIGIN","DESTINATION"])
+
+            for u in self._users:
+                writer.writerow([u.id, u.departure_time, u.origin, u.destination])
+
 
 class CSVDemandManager(AbstractDemandManager):
     """Read a demand from a CSV file

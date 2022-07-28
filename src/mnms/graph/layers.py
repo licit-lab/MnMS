@@ -39,8 +39,11 @@ class SimpleLayer(AbstractLayer):
 
     @classmethod
     def __load__(cls, data: Dict, roaddb: RoadDataBase):
-        new_obj = cls(roaddb,
+        new_obj = cls(data['ID'],
+                      roaddb,
+                      load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
+
 
 
         node_ref = data["MAP_ROADDB"]["NODES"]
@@ -77,6 +80,24 @@ class CarLayer(SimpleLayer):
                  observer: Optional = None):
         super(CarLayer, self).__init__('CAR', roaddb, Car, default_speed, services, observer)
 
+    @classmethod
+    def __load__(cls, data: Dict, roaddb: RoadDataBase):
+        new_obj = cls(roaddb,
+                      data['DEFAULT_SPEED'])
+
+        node_ref = data["MAP_ROADDB"]["NODES"]
+        for ndata in data['NODES']:
+            new_obj.create_node(ndata['ID'], node_ref[ndata["ID"]], ndata['EXCLUDE_MOVEMENTS'])
+
+        link_ref = data["MAP_ROADDB"]["LINKS"]
+        for ldata in data['LINKS']:
+            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'], link_ref[ldata["ID"]])
+
+        for sdata in data['SERVICES']:
+            serv_type = load_class_by_module_name(sdata['TYPE'])
+            new_obj.add_mobility_service(serv_type.__load__(sdata))
+
+        return new_obj
 
 class PublicTransportLayer(AbstractLayer):
     def __init__(self,
@@ -202,9 +223,9 @@ class OriginDestinationLayer(object):
     @classmethod
     def __load__(cls, data) -> "OriginDestinationLayer":
         new_obj = cls()
-        for nid, pos in data['ORIGINS'].values():
+        for nid, pos in data['ORIGINS'].items():
             new_obj.create_origin_node(nid, pos)
-        for nid, pos in data['DESTINATIONS'].values():
+        for nid, pos in data['DESTINATIONS'].items():
             new_obj.create_destination_node(nid, pos)
 
         return new_obj

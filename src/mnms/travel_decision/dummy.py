@@ -1,7 +1,7 @@
 from typing import List
 
 from mnms.graph.layers import MultiLayerGraph
-from mnms.graph.shortest_path import Path
+from mnms.demand.user import Path
 from mnms.travel_decision.abstract import AbstractDecisionModel
 
 

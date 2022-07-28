@@ -5,7 +5,7 @@ from typing import List, Tuple
 from numpy.random import choice as _choice
 
 from mnms import create_logger
-from mnms.graph.shortest_path import Path
+from mnms.demand.user import Path
 from mnms.travel_decision.abstract import AbstractDecisionModel
 from mnms.graph.layers import MultiLayerGraph
 
