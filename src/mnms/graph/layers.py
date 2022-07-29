@@ -21,8 +21,12 @@ class SimpleLayer(AbstractLayer):
         assert dbnode in self._roaddb.nodes
         node_pos = self._roaddb.nodes[dbnode]
 
-        set_exlude_movements = {key: set(val) for key, val in exclude_movements.items()}
-        self.graph.add_node(nid, node_pos[0], node_pos[1], self.id, set_exlude_movements)
+        if exclude_movements is not None:
+            exclude_movements = {key: set(val) for key, val in exclude_movements.items()}
+        else:
+            exclude_movements = dict()
+
+        self.graph.add_node(nid, node_pos[0], node_pos[1], self.id, exclude_movements)
 
         self.map_reference_nodes[nid] = dbnode
 
@@ -112,13 +116,13 @@ class PublicTransportLayer(AbstractLayer):
         node_pos = np.array(self._roaddb.stops[dbnode]['absolute_position'])
         self.graph.add_node(sid, node_pos[0], node_pos[1], self.id)
 
-    def _connect_stops(self, lid, upstream, downstream, reference_sections):
+    def _connect_stops(self, lid, line_id, upstream, downstream, reference_sections):
         line_length = sum(self._roaddb.sections[s]['length'] for s in reference_sections[1:-1])
         line_length += self._roaddb.sections[reference_sections[0]]['length']*(1-self._roaddb.stops[upstream]['relative_position'])
         line_length += self._roaddb.sections[reference_sections[-1]]['length'] * self._roaddb.stops[downstream]['relative_position']
 
         costs = {'length': line_length}
-        self.graph.add_link(lid, self.id+'_'+upstream, self.id+'_'+downstream, line_length, costs, self.id)
+        self.graph.add_link(lid, line_id+'_'+upstream, line_id+'_'+downstream, line_length, costs, self.id)
         self.map_reference_links[lid] = reference_sections
 
     def create_line(self,
@@ -138,16 +142,17 @@ class PublicTransportLayer(AbstractLayer):
                            'links': []}
 
         for s in stops:
-            nid = self.id+'_'+s
+            nid = lid+'_'+s
             self.lines[lid]['nodes'].append(nid)
             self._create_stop(nid, s)
 
         for i in range(len(stops)-1):
             up = stops[i]
             down = stops[i+1]
-            link_id = '_'.join([self.id, up, down])
+            link_id = '_'.join([lid, up, down])
             self.lines[lid]['links'].append(link_id)
             self._connect_stops(link_id,
+                                lid,
                                 up,
                                 down,
                                 sections[i])
@@ -281,34 +286,25 @@ class MultiLayerGraph(object):
         for nid, node in odlayer.origins.items():
             npos = np.array(node.position)
             dist_nodes = _norm(graph_node_pos-npos, axis=1)
-            # nodes_in_radius = filter(lambda x: x not in odlayer_nodes, graph_node_ids[])
             mask = dist_nodes < connection_distance
             for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                 if layer_nid not in odlayer_nodes:
                     self.graph.add_link(f"{nid}_{layer_nid}", nid, layer_nid, dist, {'length': dist}, "TRANSIT")
-                    # print("Connect", nid, layer_nid)
-            # for layer_nid, lnode in self.graph.nodes.items():
-            #     dist = _norm(npos - np.array(lnode.position))
-            #     if dist < connection_distance and lnode.id not in odlayer_nodes:
-            #         # Create sections
-            #         self.graph.add_link(f"{nid}_{layer_nid}", nid, layer_nid, dist, {'length': dist}, "TRANSIT")
-        # print("Done ORIGIN")
         for nid, node in odlayer.destinations.items():
             npos = np.array(node.position)
             dist_nodes = _norm(graph_node_pos-npos, axis=1)
-            # nodes_in_radius = filter(lambda x: x not in odlayer_nodes, graph_node_ids[])
             mask = dist_nodes < connection_distance
             for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                 if layer_nid not in odlayer_nodes:
                     self.graph.add_link(f"{layer_nid}_{nid}", layer_nid, nid, dist, {'length': dist}, "TRANSIT")
-        # print("Done DESTINATION")
 
     def construct_layer_service_mapping(self):
         for layer in self.layers.values():
             for service in layer.mobility_services:
                 self.mapping_layer_services[service] = layer
 
-
+    def connect_layers(self, lid: str, upstream: str, downstream: str, length: float, costs: Dict[str, float]):
+        self.graph.add_link(lid, upstream, downstream, length, costs, "TRANSIT")
 
 
 if __name__ == "__main__":

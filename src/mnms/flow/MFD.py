@@ -39,17 +39,17 @@ class Reservoir(object):
         self.dict_speeds.update(self.compute_MFD_speed(self.dict_accumulations))
         return self.dict_speeds
 
-    @classmethod
-    def fromZone(cls, mmgraph:"MultiModalGraph", zid:str, fct_MFD_speed):
-        modes = set()
-        for lid in mmgraph.zones[zid].sections:
-            nodes = mmgraph.flow_graph._map_lid_nodes[lid]
-            for mobility_node in mmgraph.mobility_graph.get_node_references(nodes[0]) + mmgraph.mobility_graph.get_node_references(nodes[1]):
-                mservice_id = mmgraph.mobility_graph.nodes[mobility_node].layer
-                modes.add(mmgraph.layers[mservice_id]._veh_type.__name__.upper())
-
-        new_res = Reservoir(zid, modes, fct_MFD_speed)
-        return new_res
+    # @classmethod
+    # def fromZone(cls, mmgraph:"MultiModalGraph", zid:str, fct_MFD_speed):
+    #     modes = set()
+    #     for lid in mmgraph.zones[zid].sections:
+    #         nodes = mmgraph.flow_graph._map_lid_nodes[lid]
+    #         for mobility_node in mmgraph.mobility_graph.get_node_references(nodes[0]) + mmgraph.mobility_graph.get_node_references(nodes[1]):
+    #             mservice_id = mmgraph.mobility_graph.nodes[mobility_node].layer
+    #             modes.add(mmgraph.layers[mservice_id]._veh_type.__name__.upper())
+    #
+    #     new_res = Reservoir(zid, modes, fct_MFD_speed)
+    #     return new_res
 
 
 class MFDFlow(AbstractFlowMotor):
