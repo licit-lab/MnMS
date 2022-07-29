@@ -32,7 +32,7 @@ class VehicleManager(object):
     @classmethod
     def empty(cls):
         VehicleManager._vehicles = dict()
-        VehicleManager._type_vehicles = dict()
+        VehicleManager._type_vehicles = defaultdict(set)
         VehicleManager._new_vehicles = list()
 
 
