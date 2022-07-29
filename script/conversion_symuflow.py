@@ -13,7 +13,7 @@ from typing import Dict
 
 import numpy as np
 
-from mnms.graph.road import RoadDataBase
+from mnms.graph.road import RoadDescription
 from mnms.graph.layers import MultiLayerGraph, CarLayer, PublicTransportLayer
 from mnms.io.graph import save_graph
 from mnms.time import TimeTable, Time, Dt
@@ -48,7 +48,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
 
     tron = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/TRONCONS")[0]
 
-    roaddb = RoadDataBase()
+    roads = RoadDescription()
 
 
 
@@ -104,13 +104,13 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
 
 
     for nid, pos in nodes.items():
-        roaddb.register_node(nid, pos)
+        roads.register_node(nid, pos)
 
     for tid, tdata in troncons.items():
         if zone_dict is None:
-            roaddb.register_section(tid, tdata['up'], tdata['down'], tdata['length'])
+            roads.register_section(tid, tdata['up'], tdata['down'], tdata['length'])
         else:
-            roaddb.register_section(tid, tdata['up'], tdata['down'], tdata['length'], zone_dict[tid])
+            roads.register_section(tid, tdata['up'], tdata['down'], tdata['length'], zone_dict[tid])
 
     stop_elem = root.xpath('/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/ARRETS')
     map_tr_stops = dict()
@@ -123,11 +123,11 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
             link_length = np.linalg.norm(troncons[tr]['length'])
 
             rel_dist = stop_dist/link_length
-            roaddb.register_stop(selem.attrib['id'], tr, rel_dist)
+            roads.register_stop(selem.attrib['id'], tr, rel_dist)
             map_tr_stops[tr] = {'lines': set(selem.attrib['lignes'].split(' ')),
                                 'stop': selem.attrib['id']}
 
-    # mlgraph.roaddb = roaddb
+    # mlgraph.roads = roads
 
     caf = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/CONNEXIONS/CARREFOURSAFEUX")[0]
     rep = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/CONNEXIONS/REPARTITEURS")[0]
@@ -160,7 +160,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
                         exclude_movements[nid][move_up].add(node_adj)
 
 
-    car_layer = CarLayer(roaddb)
+    car_layer = CarLayer(roads)
     for n in node_car:
         car_layer.create_node(n, n, exclude_movements.get(n, None))
 
@@ -200,7 +200,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
 
                 if pt_type+'Layer' not in pt_types:
                     public_transport = PublicTransportLayer(pt_type+'Layer',
-                                                            roaddb,
+                                                            roads,
                                                             _veh_type_convertor[pt_type],
                                                             veh_speeds[pt_type],
                                                             services=[])

@@ -46,7 +46,7 @@ mlgraph = MultiLayerGraph([car_layer],
 
 # Demand
 
-demand = CSVDemandManager(cwd, demand_type='coordinate')
+demand = CSVDemandManager(cwd)
 demand.add_user_observer(CSVUserObserver('user.csv'))
 
 # Decison Model

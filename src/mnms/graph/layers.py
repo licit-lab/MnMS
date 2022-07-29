@@ -1,22 +1,17 @@
-from abc import abstractmethod
 from collections import ChainMap
 from typing import Optional, Dict, Set, List, Type
 
 import numpy as np
+from hipop.graph import Node, node_to_dict, link_to_dict
+from hipop.graph import merge_oriented_graph
 
-from hipop.graph import OrientedGraph, Node, node_to_dict, link_to_dict
-
-# from .core import OrientedGraph, Node, ConnectionLink, TransitLink
 from mnms.graph.abstract import AbstractLayer
-from mnms.graph.road import RoadDataBase
+from mnms.graph.road import RoadDescription
+from mnms.io.utils import load_class_by_module_name
+from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.time import TimeTable
-from mnms.vehicles.fleet import FleetManager
-from mnms.vehicles.veh_type import Vehicle, Car
-from mnms.log import create_logger
-from mnms.io.utils import load_class_by_module_name
-
-from hipop.graph import merge_oriented_graph
+from mnms.vehicles.veh_type import Vehicle, Car, Bus
 
 log = create_logger(__name__)
 
@@ -38,9 +33,9 @@ class SimpleLayer(AbstractLayer):
         self.map_reference_links[lid] = reference_links
 
     @classmethod
-    def __load__(cls, data: Dict, roaddb: RoadDataBase):
+    def __load__(cls, data: Dict, roads: RoadDescription):
         new_obj = cls(data['ID'],
-                      roaddb,
+                      roads,
                       load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
 
@@ -74,15 +69,15 @@ class SimpleLayer(AbstractLayer):
 
 class CarLayer(SimpleLayer):
     def __init__(self,
-                 roaddb: RoadDataBase,
+                 roads: RoadDescription,
                  default_speed: float = 13.8,
                  services: Optional[List[AbstractMobilityService]] = None,
                  observer: Optional = None):
-        super(CarLayer, self).__init__('CAR', roaddb, Car, default_speed, services, observer)
+        super(CarLayer, self).__init__('CAR', roads, Car, default_speed, services, observer)
 
     @classmethod
-    def __load__(cls, data: Dict, roaddb: RoadDataBase):
-        new_obj = cls(roaddb,
+    def __load__(cls, data: Dict, roads: RoadDescription):
+        new_obj = cls(roads,
                       data['DEFAULT_SPEED'])
 
         node_ref = data["MAP_ROADDB"]["NODES"]
@@ -99,15 +94,16 @@ class CarLayer(SimpleLayer):
 
         return new_obj
 
+
 class PublicTransportLayer(AbstractLayer):
     def __init__(self,
                  id: str,
-                 roaddb: RoadDataBase,
+                 roads: RoadDescription,
                  veh_type: Type[Vehicle],
                  default_speed: float,
                  services: Optional[List[AbstractMobilityService]] = None,
                  observer: Optional = None):
-        super(PublicTransportLayer, self).__init__(id, roaddb, veh_type, default_speed, services, observer)
+        super(PublicTransportLayer, self).__init__(id, roads, veh_type, default_speed, services, observer)
         self.lines = dict()
 
     def _create_stop(self, sid, dbnode):
@@ -185,9 +181,9 @@ class PublicTransportLayer(AbstractLayer):
                            'TIMETABLE': ldata['table'].__dump__()} for lid, ldata in self.lines.items()]}
 
     @classmethod
-    def __load__(cls, data: Dict, roaddb: RoadDataBase):
+    def __load__(cls, data: Dict, roads: RoadDescription):
         new_obj = cls(data['ID'],
-                      roaddb,
+                      roads,
                       load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
 
@@ -199,6 +195,17 @@ class PublicTransportLayer(AbstractLayer):
             new_obj.add_mobility_service(serv_type.__load__(sdata))
 
         return new_obj
+
+
+class BusLayer(PublicTransportLayer):
+    def __init__(self,
+                 roads: RoadDescription,
+                 veh_type: Type[Vehicle] = Bus,
+                 default_speed: float = 6.5,
+                 services: Optional[List[AbstractMobilityService]] = None,
+                 observer: Optional = None,
+                 _id: str = "BUS"):
+        super(BusLayer, self).__init__(_id, roads, veh_type, default_speed, services, observer)
 
 
 class OriginDestinationLayer(object):
@@ -247,7 +254,7 @@ class MultiLayerGraph(object):
             self.map_reference_links.maps.append(l.map_reference_links)
 
         self.odlayer = None
-        self.roaddb = layers[0]._roaddb
+        self.roads = layers[0]._roaddb
 
         for l in layers:
             self.layers[l.id] = l

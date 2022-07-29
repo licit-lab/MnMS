@@ -5,12 +5,12 @@ from mnms.graph.layers import MultiLayerGraph
 
 
 def generate_manhattan_passenger_car(n, link_length, resid="RES") -> MultiLayerGraph:
-    roaddb = generate_manhattan_road(n, link_length, resid)
-    layer_car = generate_layer_from_roads(roaddb,
+    roads = generate_manhattan_road(n, link_length, resid)
+    layer_car = generate_layer_from_roads(roads,
                                           "CAR",
                                           mobility_services=[PersonalCarMobilityService()])
 
-    odlayer = generate_matching_origin_destination_layer(roaddb)
+    odlayer = generate_matching_origin_destination_layer(roads)
 
     mlgraph = MultiLayerGraph([layer_car],
                               odlayer,

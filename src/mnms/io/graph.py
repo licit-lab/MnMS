@@ -3,7 +3,7 @@ from typing import Union
 from pathlib import Path
 
 from mnms.graph.layers import MultiLayerGraph, OriginDestinationLayer
-from mnms.graph.road import RoadDataBase
+from mnms.graph.road import RoadDescription
 from mnms.io.utils import MNMSEncoder, load_class_by_module_name
 
 
@@ -25,7 +25,7 @@ def save_graph(mlgraph: MultiLayerGraph, filename: Union[str, Path], indent=2):
 
     """
 
-    d = {'ROADS': mlgraph.roaddb.__dump__(),
+    d = {'ROADS': mlgraph.roads.__dump__(),
          'LAYERS': [l.__dump__() for l in mlgraph.layers.values()]}
 
     with open(filename, 'w') as f:
@@ -38,11 +38,11 @@ def load_graph(filename: Union[str, Path]):
 
 
 
-    roaddb = RoadDataBase.__load__(data['ROADS'])
+    roads = RoadDescription.__load__(data['ROADS'])
     layers = []
     for ldata in data['LAYERS']:
         layer_type = load_class_by_module_name(ldata['TYPE'])
-        layers.append(layer_type.__load__(ldata, roaddb))
+        layers.append(layer_type.__load__(ldata, roads))
 
     mlgraph = MultiLayerGraph(layers)
 

@@ -23,6 +23,6 @@ class VehicleNotFoundError(Exception):
 
 
 class CSVDemandParseError(Exception):
-    def __init__(self, file, demand_type):
-        msg = f"Cannot parse the origin or destination for demand_type '{demand_type}' for the file {file}"
+    def __init__(self, file):
+        msg = f"Cannot parse the origin or destination for demand_type for the file {file}"
         super(CSVDemandParseError, self).__init__(msg)

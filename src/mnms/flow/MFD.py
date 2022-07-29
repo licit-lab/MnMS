@@ -169,7 +169,7 @@ class MFDFlow(AbstractFlowMotor):
             unode, dnode = veh.current_link
             curr_link = self.graph_nodes[unode].adj[dnode]
             lid = self._graph.map_reference_links[curr_link.id][0] # take reservoir of first part of trip
-            res_id = self._graph.roaddb.sections[lid]['zone']
+            res_id = self._graph.roads.sections[lid]['zone']
             veh_type = veh.type.upper() # dirty
             self.dict_accumulations[res_id][veh_type] += 1
 
@@ -184,7 +184,7 @@ class MFDFlow(AbstractFlowMotor):
             unode, dnode = veh.current_link
             curr_link = self.graph_nodes[unode].adj[dnode]
             lid = self._graph.map_reference_links[curr_link.id][0]
-            res_id = self._graph.roaddb.sections[lid]['zone']
+            res_id = self._graph.roads.sections[lid]['zone']
             veh_type = veh.type.upper()
             speed = self.dict_speeds[res_id][veh_type]
             veh.speed = speed
@@ -192,7 +192,7 @@ class MFDFlow(AbstractFlowMotor):
 
     def update_graph(self):
         topolink_lengths = dict()
-        res_links = {res.id: self._graph.roaddb.zones[res.id] for res in self.reservoirs}
+        res_links = {res.id: self._graph.roads.zones[res.id] for res in self.reservoirs}
         res_dict = {res.id: res for res in self.reservoirs}
 
         for tid, topolink in self._graph.graph.links.items():
@@ -201,7 +201,7 @@ class MFDFlow(AbstractFlowMotor):
                 topolink_lengths[tid] = {'lengths': {},
                                          'speeds': {}}
                 for l in self._graph.map_reference_links[tid]:
-                    topolink_lengths[tid]['lengths'][l] = self._graph.roaddb.sections[l]['length']
+                    topolink_lengths[tid]['lengths'][l] = self._graph.roads.sections[l]['length']
                     topolink_lengths[tid]['speeds'][l] = None
                     for resid, reslinks in res_links.items():
                         res = res_dict[resid]
@@ -219,7 +219,7 @@ class MFDFlow(AbstractFlowMotor):
                 if speed is not None:
                     new_speed += length * speed
                 else:
-                    link = self._graph.roaddb.sections[tid]
+                    link = self._graph.roads.sections[tid]
                     new_speed = self._graph.layers[link.layer].default_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             if new_speed != 0:

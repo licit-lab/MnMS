@@ -1,17 +1,17 @@
 import csv
-import sys
-from typing import List, Literal, Union
-from abc import ABC, abstractmethod
 import re
+import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import List, Literal, Union
 
 import numpy as np
 
 from mnms.demand.user import User
-from mnms.tools.exceptions import CSVDemandParseError
-from mnms.time import Time
-from mnms.tools.observer import Observer
 from mnms.log import create_logger
+from mnms.time import Time
+from mnms.tools.exceptions import CSVDemandParseError
+from mnms.tools.observer import Observer
 
 log = create_logger(__name__)
 
@@ -103,14 +103,12 @@ class CSVDemandManager(AbstractDemandManager):
     delimiter: str
         Delimiter for the CSV file
     """
-    def __init__(self, csvfile: Union[Path, str], demand_type:Literal['node', 'coordinate']='node', delimiter=';'):
+    def __init__(self, csvfile: Union[Path, str], delimiter=';'):
         super(CSVDemandManager, self).__init__()
-        assert demand_type == 'coordinate' or demand_type == 'node', f"demand_type must be 'node' or 'coordinate' not '{demand_type}'"
-
         self._filename = csvfile
         self._file = open(self._filename, 'r')
         self._reader = csv.reader(self._file, delimiter=delimiter, quotechar='|')
-        self._demand_type = demand_type
+        self._demand_type = None
 
         try:
             next(self._reader)
@@ -119,16 +117,17 @@ class CSVDemandManager(AbstractDemandManager):
             sys.exit(-1)
 
         first_line = next(self._reader)
-        if demand_type == "coordinate":
-            match_x=re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[2])
-            match_y=re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[3])
-            if match_x is None or match_y is None:
-                raise CSVDemandParseError(csvfile, demand_type)
-        elif demand_type == "node":
+        match_x=re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[2])
+        match_y=re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[3])
+        if match_x is not None and match_y is not None:
+            self._demand_type = 'coordinate'
+        else:
             match_x = re.match(r'^\w+$', first_line[2].strip())
             match_y = re.match(r'^\w+$', first_line[3].strip())
-            if match_x is None or match_y is None:
-                raise CSVDemandParseError(csvfile, demand_type)
+            if match_x is not None and match_y is not None:
+                self._demand_type = 'node'
+            else:
+                raise CSVDemandParseError(csvfile)
 
         self._current_user = self.construct_user(first_line)
 
