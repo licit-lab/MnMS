@@ -35,11 +35,7 @@ roads.register_stop('S1', '1_2', 0.50)
 roads.register_stop('S2', '2_3', 0.99)
 
 bus_service = PublicTransportMobilityService('B0')
-pblayer = PublicTransportLayer('BUS',
-                               roads,
-                               Bus,
-                               13,
-                               services=[bus_service])
+pblayer = PublicTransportLayer(roads, 'BUS', Bus, 13, services=[bus_service])
 
 pblayer.create_line('L0',
                     ['S0', 'S1', 'S2'],

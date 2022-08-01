@@ -166,7 +166,8 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
 
     for trid in link_car:
         try:
-            car_layer.create_link(trid, troncons[trid]['up'], troncons[trid]['down'], {'length': troncons[trid]['length']}, reference_links=[trid])
+            car_layer.create_link(trid, troncons[trid]['up'], troncons[trid]['down'],
+                                  {'length': troncons[trid]['length']}, road_links=[trid])
         except AssertionError:
             print(f"Skipping troncon: {trid}, nodes already connected")
 
@@ -199,11 +200,8 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
                 pt_type=veh_type_ids[ss.index(1)]
 
                 if pt_type+'Layer' not in pt_types:
-                    public_transport = PublicTransportLayer(pt_type+'Layer',
-                                                            roads,
-                                                            _veh_type_convertor[pt_type],
-                                                            veh_speeds[pt_type],
-                                                            services=[])
+                    public_transport = PublicTransportLayer(roads, pt_type + 'Layer', _veh_type_convertor[pt_type],
+                                                            veh_speeds[pt_type], services=[])
                     pt_types[pt_type+'Layer'] = public_transport
                 else:
                     public_transport = pt_types[pt_type+'Layer']

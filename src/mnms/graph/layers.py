@@ -30,11 +30,11 @@ class SimpleLayer(AbstractLayer):
 
         self.map_reference_nodes[nid] = dbnode
 
-    def create_link(self, lid, upstream, downstream, costs, reference_links):
-        length = sum(self._roaddb.sections[l]['length'] for l in reference_links)
+    def create_link(self, lid, upstream, downstream, costs, road_links):
+        length = sum(self._roaddb.sections[l]['length'] for l in road_links)
         self.graph.add_link(lid, upstream, downstream, length, costs, self.id)
 
-        self.map_reference_links[lid] = reference_links
+        self.map_reference_links[lid] = road_links
 
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescription):
@@ -51,7 +51,8 @@ class SimpleLayer(AbstractLayer):
 
         link_ref = data["MAP_ROADDB"]["LINKS"]
         for ldata in data['LINKS']:
-            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'], link_ref[ldata["ID"]])
+            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'],
+                                link_ref[ldata["ID"]])
 
         for sdata in data['SERVICES']:
             serv_type = load_class_by_module_name(sdata['TYPE'])
@@ -77,7 +78,7 @@ class CarLayer(SimpleLayer):
                  default_speed: float = 13.8,
                  services: Optional[List[AbstractMobilityService]] = None,
                  observer: Optional = None):
-        super(CarLayer, self).__init__('CAR', roads, Car, default_speed, services, observer)
+        super(CarLayer, self).__init__(roads, 'CAR', Car, default_speed, services, observer)
 
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescription):
@@ -90,7 +91,8 @@ class CarLayer(SimpleLayer):
 
         link_ref = data["MAP_ROADDB"]["LINKS"]
         for ldata in data['LINKS']:
-            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'], link_ref[ldata["ID"]])
+            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'],
+                                link_ref[ldata["ID"]])
 
         for sdata in data['SERVICES']:
             serv_type = load_class_by_module_name(sdata['TYPE'])
@@ -101,13 +103,13 @@ class CarLayer(SimpleLayer):
 
 class PublicTransportLayer(AbstractLayer):
     def __init__(self,
-                 id: str,
                  roads: RoadDescription,
+                 _id: str,
                  veh_type: Type[Vehicle],
                  default_speed: float,
                  services: Optional[List[AbstractMobilityService]] = None,
                  observer: Optional = None):
-        super(PublicTransportLayer, self).__init__(id, roads, veh_type, default_speed, services, observer)
+        super(PublicTransportLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
         self.lines = dict()
 
     def _create_stop(self, sid, dbnode):
@@ -158,9 +160,10 @@ class PublicTransportLayer(AbstractLayer):
                                 sections[i])
 
             if bidirectional:
-                link_id = '_'.join([self.id, down, up])
+                link_id = '_'.join([lid, down, up])
                 self.lines[lid]['links'].append(link_id)
                 self._connect_stops(link_id,
+                                    lid,
                                     down,
                                     up,
                                     sections[i][::-1])
@@ -183,17 +186,18 @@ class PublicTransportLayer(AbstractLayer):
                 'LINES': [{'ID': lid,
                            'STOPS': ldata['stops'],
                            'SECTIONS': ldata['sections'],
-                           'TIMETABLE': ldata['table'].__dump__()} for lid, ldata in self.lines.items()]}
+                           'TIMETABLE': ldata['table'].__dump__(),
+                           'BIDIRECTIONAL': ldata['bidirectional']} for lid, ldata in self.lines.items()]}
 
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescription):
-        new_obj = cls(data['ID'],
-                      roads,
+        new_obj = cls(roads,
+                      data['ID'],
                       load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
 
         for ldata in data['LINES']:
-            new_obj.create_line(ldata['ID'], ldata['STOPS'], ldata['SECTIONS'], TimeTable.__load__(ldata['TIMETABLE']))
+            new_obj.create_line(ldata['ID'], ldata['STOPS'], ldata['SECTIONS'], TimeTable.__load__(ldata['TIMETABLE']), ldata['BIDIRECTIONAL'])
 
         for sdata in data['SERVICES']:
             serv_type = load_class_by_module_name(sdata['TYPE'])
@@ -205,12 +209,12 @@ class PublicTransportLayer(AbstractLayer):
 class BusLayer(PublicTransportLayer):
     def __init__(self,
                  roads: RoadDescription,
+                 _id: str = "BUS",
                  veh_type: Type[Vehicle] = Bus,
                  default_speed: float = 6.5,
                  services: Optional[List[AbstractMobilityService]] = None,
-                 observer: Optional = None,
-                 _id: str = "BUS"):
-        super(BusLayer, self).__init__(_id, roads, veh_type, default_speed, services, observer)
+                 observer: Optional = None):
+        super(BusLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
 
 
 class OriginDestinationLayer(object):

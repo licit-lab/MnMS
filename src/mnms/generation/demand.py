@@ -11,7 +11,7 @@ from mnms.demand.manager import BaseDemandManager
 from mnms.tools.exceptions import PathNotFound
 
 
-def generate_random_demand(mmgraph: "MultiLayerGraph",
+def generate_random_demand(mlgraph: "MultiLayerGraph",
                            nb_user: int,
                            tstart="07:00:00",
                            tend="18:00:00",
@@ -60,7 +60,7 @@ def generate_random_demand(mmgraph: "MultiLayerGraph",
     destinations = list(mlgraph.odlayer.destinations.keys())
     uid = count(0)
 
-    graph = mmgraph.graph
+    graph = mlgraph.graph
     user_count = 0
     while user_count <= nb_user:
         unode = choice(origins)
@@ -78,19 +78,3 @@ def generate_random_demand(mmgraph: "MultiLayerGraph",
     for u in demand:
         u.id = str(next(uid))
     return BaseDemandManager(demand)
-
-
-if __name__ == "__main__":
-
-    from mnms.generation.mlgraph import generate_manhattan_passenger_car
-    from mnms.io.graph import save_odlayer, save_graph
-
-    mlgraph = generate_manhattan_passenger_car(20, 100)
-
-    demand = generate_random_demand(mlgraph,
-                                    500,
-                                    min_cost=300)
-
-    demand.to_csv("random_demand_20x20.csv")
-    save_odlayer(mlgraph.odlayer, "odlayer_20x20.csv")
-    save_graph(mlgraph, "manhattan_20x20.csv")

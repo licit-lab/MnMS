@@ -220,7 +220,7 @@ class TimeTable(object):
         self.table:List[Time] = times if times is not None else []
 
     @classmethod
-    def create_table_freq(cls, start, end, dt:Dt):
+    def create_table_freq(cls, start: str, end: str, dt:Dt):
         assert dt._hours!=0 or dt._minutes!=0 or dt._seconds!=0
         table = []
         current_time = Time(start)

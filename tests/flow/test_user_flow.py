@@ -39,8 +39,8 @@ class TestUserFlow(unittest.TestCase):
         car_layer.create_node('C1', '1')
         car_layer.create_node('C2', '2')
 
-        car_layer.create_link('C0_C1', 'C0', 'C1', costs={'length': 40000}, reference_links=['0_1'])
-        car_layer.create_link('C0_C2', 'C0', 'C2', costs={'length': 1200}, reference_links=['0_2'])
+        car_layer.create_link('C0_C1', 'C0', 'C1', costs={'length': 40000}, road_links=['0_1'])
+        car_layer.create_link('C0_C2', 'C0', 'C2', costs={'length': 1200}, road_links=['0_2'])
 
         bus_layer = BusLayer(roads,
                        services=[PublicTransportMobilityService('Bus')])

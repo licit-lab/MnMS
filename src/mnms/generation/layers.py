@@ -14,18 +14,15 @@ def generate_layer_from_roads(roads: RoadDescription,
                               default_speed: float = 14,
                               mobility_services: Optional[List[AbstractMobilityService]] = None):
 
-    layer = SimpleLayer(layer_id, roads, veh_type, default_speed, mobility_services)
+    layer = SimpleLayer(roads, layer_id, veh_type, default_speed, mobility_services)
 
 
     for n, pos in roads.nodes.items():
         layer.create_node(f"{layer_id}_{n}", n, {})
 
     for lid, data in roads.sections.items():
-        layer.create_link(f"{layer_id}_{lid}",
-                          f"{layer_id}_{data['upstream']}",
-                          f"{layer_id}_{data['downstream']}",
-                          {'length': data['length']},
-                          [lid])
+        layer.create_link(f"{layer_id}_{lid}", f"{layer_id}_{data['upstream']}", f"{layer_id}_{data['downstream']}",
+                          {'length': data['length']}, [lid])
     return layer
 
 

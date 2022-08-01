@@ -11,8 +11,8 @@ from mnms.vehicles.veh_type import Vehicle, Car
 
 class AbstractLayer(object):
     def __init__(self,
-                 id: str,
                  roads: RoadDescription,
+                 id: str,
                  veh_type: Type[Vehicle],
                  default_speed: float,
                  services: Optional[List[AbstractMobilityService]] = None,

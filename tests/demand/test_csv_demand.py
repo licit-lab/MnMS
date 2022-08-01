@@ -1,5 +1,5 @@
 import unittest
-
+from pathlib import Path
 from mnms.demand.manager import CSVDemandManager, CSVDemandParseError
 from mnms.time import Time
 
@@ -11,9 +11,11 @@ class TestCSVDemand(unittest.TestCase):
         """Initiates the test.
         """
 
-        self.file_node = "data_demand/test_demand_node.csv"
-        self.file_coordinate = "data_demand/test_demand_coordinate.csv"
-        self.file_bad_type = "data_demand/test_demand_bad_type.csv"
+        self.cwd = Path(__file__).parent.resolve()
+
+        self.file_node = self.cwd.joinpath("data_demand/test_demand_node.csv")
+        self.file_coordinate = self.cwd.joinpath("data_demand/test_demand_coordinate.csv")
+        self.file_bad_type = self.cwd.joinpath("data_demand/test_demand_bad_type.csv")
 
     def tearDown(self):
         """Concludes and closes the test.
