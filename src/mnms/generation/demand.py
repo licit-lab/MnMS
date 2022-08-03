@@ -78,3 +78,18 @@ def generate_random_demand(mlgraph: "MultiLayerGraph",
     for u in demand:
         u.id = str(next(uid))
     return BaseDemandManager(demand)
+
+if __name__ == "__main__":
+
+    from mnms.generation.mlgraph import generate_manhattan_passenger_car
+    from mnms.io.graph import save_odlayer, save_graph
+
+    mlgraph = generate_manhattan_passenger_car(20, 100)
+
+    demand = generate_random_demand(mlgraph,
+                                    500,
+                                    min_cost=300)
+
+    demand.to_csv("random_demand_20x20.csv")
+    save_odlayer(mlgraph.odlayer, "odlayer_20x20.json")
+    save_graph(mlgraph, "manhattan_20x20.json")

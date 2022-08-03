@@ -54,8 +54,8 @@ decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
 # Flow Motor
 
 def mfdspeed(dacc):
-    dacc['CAR'] = 3
-    return dacc
+    dspeed = {'CAR': 3}
+    return dspeed
 
 flow_motor = MFDFlow()
 flow_motor.add_reservoir(Reservoir('RES', 'CAR', mfdspeed))

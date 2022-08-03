@@ -38,8 +38,8 @@ class SimpleLayer(AbstractLayer):
 
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescription):
-        new_obj = cls(data['ID'],
-                      roads,
+        new_obj = cls(roads,
+                      data['ID'],
                       load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
 

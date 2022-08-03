@@ -177,8 +177,6 @@ class Supervisor(object):
 
             new_users = self.get_new_users(principal_dt)
 
-
-
             self.compute_user_paths(new_users)
 
             log.info(f'Launching {affectation_factor} step of flow ...')
@@ -192,9 +190,6 @@ class Supervisor(object):
             self._flow_motor.update_graph()
             end = time()
             log.info(f' Done [{end-start:.5} s]')
-
-
-
 
             if self._write:
                 log.info('Writing travel time of each link in graph ...')
