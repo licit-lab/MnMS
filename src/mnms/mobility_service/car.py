@@ -1,4 +1,5 @@
 from random import sample
+from typing import List, Tuple, Dict, Optional
 
 import numpy as np
 
@@ -7,32 +8,48 @@ from hipop.shortest_path import dijkstra
 
 from mnms import create_logger
 from mnms.demand import User
-# from mnms.graph.shortest_path import bidirectional_dijkstra
+from mnms.demand.horizon import AbstractDemandHorizon
 from mnms.mobility_service.abstract import AbstractMobilityService
-from mnms.time import Dt
+from mnms.time import Dt, Time
 from mnms.tools.exceptions import PathNotFound
+from mnms.vehicles.veh_type import VehicleActivity, VehicleState, VehicleActivityServing, VehicleActivityStop, Vehicle
 
 log = create_logger(__name__)
 
 
 class PersonalCarMobilityService(AbstractMobilityService):
-    def __init__(self, id:str='PersonalCar'):
-        super(PersonalCarMobilityService, self).__init__(id)
+    def __init__(self, _id: str = 'PersonalCar', dt_matching=1):
+        super(PersonalCarMobilityService, self).__init__(_id, dt_matching, veh_capacity=1)
 
-    def request_vehicle(self, user: "User", drop_node:str) -> None:
-        upath = list(user.path.nodes)
-        upath = upath[upath.index(user._current_node):upath.index(drop_node)+1]
-        veh_path = self._construct_veh_path(upath)
-        new_veh = self.fleet.create_vehicle(upath[0], upath[-1], veh_path, capacity=1)
-        new_veh.take_next_user(user, drop_node)
-        new_veh.start_user_trip(user.id, user.path.nodes[0])
-        if self._observer is not None:
-            new_veh.attach(self._observer)
+    def matching(self, users: Dict[str, Tuple[User, str]]):
 
-    def update(self, dt:Dt):
+        user_matched = list()
+        for uid, (user, drop_node) in users.items():
+            upath = list(user.path.nodes)
+            upath = upath[upath.index(user._current_node):upath.index(drop_node)+1]
+            veh_path = self._construct_veh_path(upath)
+            new_veh = self.fleet.create_vehicle(upath[0],
+                                                capacity=self._veh_capacity,
+                                                activities=[VehicleActivityServing(node=user.current_node,
+                                                                                   path=veh_path,
+                                                                                   user=user)])
+            if self._observer is not None:
+                new_veh.attach(self._observer)
+
+            user_matched.append(uid)
+
+        return user_matched
+
+    def maintenance(self, dt: Dt):
         for veh in list(self.fleet.vehicles.values()):
-            if veh.is_arrived:
+            if veh.state is VehicleState.STOP:
                 self.fleet.delete_vehicle(veh.id)
+
+    def replaning(self):
+        pass
+
+    def rebalancing(self, next_demand: List[User], stop_veh: List[Vehicle]):
+        pass
 
     def __dump__(self):
         return {"TYPE": ".".join([PersonalCarMobilityService.__module__, PersonalCarMobilityService.__name__]),
@@ -45,8 +62,11 @@ class PersonalCarMobilityService(AbstractMobilityService):
 
 
 class OnDemandCarMobilityService(AbstractMobilityService):
-    def __init__(self, id:str):
-        super(OnDemandCarMobilityService, self).__init__(id)
+    def __init__(self,
+                 _id: str,
+                 dt_matching: int,
+                 demand_horizon: AbstractDemandHorizon):
+        super(OnDemandCarMobilityService, self).__init__(_id, dt_matching, demand_horizon)
         self._is_duplicate = True
         self.depots = {}
         self._waiting_vehicle = dict()
@@ -61,10 +81,12 @@ class OnDemandCarMobilityService(AbstractMobilityService):
 
     def create_waiting_vehicle(self, node: str):
         assert node in self.graph.nodes
-        veh = self.fleet.create_waiting_vehicle(self._prefix(node), None, [])
+        # veh = self.fleet.create_waiting_vehicle(self._prefix(node), None, [])
+        new_veh = self.fleet.create_vehicle(activity=VehicleActivityStop(node=node))
+
         if self._observer is not None:
-            veh.attach(self._observer)
-        self._waiting_vehicle[veh.id] = veh
+            new_veh.attach(self._observer)
+        self._waiting_vehicle[new_veh.id] = new_veh
 
     def update(self, dt:Dt):
         for veh in list(self.fleet.vehicles.values()):

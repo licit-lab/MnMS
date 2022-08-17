@@ -78,6 +78,13 @@ class Dt(object):
     def to_seconds(self):
         return float(int(self._hours * 3600) + int(self._minutes * 60) + self._seconds)
 
+    def copy(self):
+        copy = Dt()
+        copy._hours = self._hours
+        copy._minutes = self._minutes
+        copy._seconds = self._seconds
+        return copy
+
 
 class Time(object):
     def __init__(self, strdate="00:00:00"):
@@ -105,6 +112,15 @@ class Time(object):
         time._seconds = s
         time._minutes = int(m)
         time._hours = int(h)
+
+        return time
+
+    @classmethod
+    def from_dt(cls, dt: Dt):
+        time = cls('')
+        time._seconds = dt._seconds
+        time._minutes = dt._minutes
+        time._hours = dt._hours
 
         return time
 

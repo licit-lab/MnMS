@@ -7,6 +7,7 @@ from mnms.log import create_logger
 
 log = create_logger(__name__)
 
+
 class Observer(ABC):
     @abstractmethod
     def update(self, subject:'Subject'):
@@ -51,7 +52,7 @@ class TimeDependentSubject(ABC):
 
 class CSVUserObserver(TimeDependentObserver):
     def __init__(self, filename: str, prec:int=3):
-        self._header = ["TIME", "ID", "LINK", "POSITION", "VEHICLE"]
+        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "VEHICLE"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -62,18 +63,21 @@ class CSVUserObserver(TimeDependentObserver):
         self._file.close()
 
     def update(self, subject: 'User', time: Time):
-        log.info(f"OBS {time}")
         row = [str(time),
                subject.id,
                f"{subject._current_link[0]} {subject._current_link[1]}",
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
-               subject._vehicle]
+               f"{subject.distance:.{self._prec}f}",
+               subject.state.name,
+               subject._vehicle.id if subject._vehicle is not None else None]
+        log.info(f"OBS {time}: {row}")
+
         self._csvhandler.writerow(row)
 
 
 class CSVVehicleObserver(TimeDependentObserver):
     def __init__(self, filename: str, prec:int=3):
-        self._header = ["TIME", "ID", "TYPE", "LINK", "POSITION", "SPEED", "PASSENGERS"]
+        self._header = ["TIME", "ID", "TYPE", "LINK", "POSITION", "SPEED", "STATE", "DISTANCE", "PASSENGERS"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -87,8 +91,11 @@ class CSVVehicleObserver(TimeDependentObserver):
         row = [str(time),
                subject.id,
                subject.type,
-               f"{subject.current_link[0]} {subject.current_link[1]}",
+               f"{subject.current_link[0]} {subject.current_link[1]}" if subject.current_link is not None else None,
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
-               f"{subject.speed:.{self._prec}f}" if subject.speed is not None else None,
-               ' '.join(p for p in subject._passenger)]
+               f"{subject.speed:.{self._prec}f}",
+               subject.state.name,
+               f"{subject.distance:.{self._prec}f}",
+               ' '.join(p for p in subject.passenger)]
+        log.info(f"OBS {time}: {row}")
         self._csvhandler.writerow(row)

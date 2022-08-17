@@ -52,6 +52,7 @@ def _process_shortest_path_inputs(odlayer, users):
 
     return origins, destinations, available_mobility_services
 
+
 class AbstractDecisionModel(ABC):
     """Base class for a travel decision model
 
@@ -97,6 +98,8 @@ class AbstractDecisionModel(ABC):
         self._cost = cost
         self._verbose_file = verbose_file
         self._mandatory_mobility_services = []
+        self._users = dict()
+
         if outfile is None:
             self._write = False
             self._verbose_file = False
@@ -161,6 +164,8 @@ class AbstractDecisionModel(ABC):
                     path_not_found.append(user.id)
                     # log.warning(f"Path not found for %s", user.id)
 
+            self._users[user.id] = kpath
+
             if user_paths:
                 path = self.path_choice(user_paths)
                 if len(path.nodes) > 1:
@@ -188,7 +193,7 @@ class AbstractDecisionModel(ABC):
                                                ' '.join(user.path.mobility_services)])
 
         if path_not_found:
-            log.warning("Path not found: %s", len(path_not_found))
+            log.warning("Paths not found: %s", len(path_not_found))
         # paths = []
         # for p in layer_paths:
         #     path_services = []

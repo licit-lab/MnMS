@@ -19,13 +19,13 @@ log = create_logger(__name__)
 class AbstractDemandManager(ABC):
     """Abstract class for loading a User demand
     """
+
     def __init__(self):
         self._observers = []
         self._user_to_attach = []
 
-
     @abstractmethod
-    def get_next_departures(self, tstart:Time, tend: Time) -> List[User]:
+    def get_next_departures(self, tstart: Time, tend: Time) -> List[User]:
         """Return the Users with a departure time between tstart and tend
 
         Parameters
@@ -42,7 +42,11 @@ class AbstractDemandManager(ABC):
         """
         pass
 
-    def add_user_observer(self, obs:Observer, user_ids:Union[Literal['all'], List[str]]="all"):
+    @abstractmethod
+    def copy(self):
+        pass
+
+    def add_user_observer(self, obs: Observer, user_ids: Union[Literal['all'], List[str]] = "all"):
         self._observers.append(obs)
         self._user_to_attach.append(user_ids)
 
@@ -55,6 +59,7 @@ class BaseDemandManager(AbstractDemandManager):
     users: List[User]
         list of User to manage
     """
+
     def __init__(self, users):
         super(BaseDemandManager, self).__init__()
         self._users = users
@@ -63,7 +68,7 @@ class BaseDemandManager(AbstractDemandManager):
 
         self.nb_users = len(self._users)
 
-    def get_next_departures(self, tstart:Time, tend:Time) -> List[User]:
+    def get_next_departures(self, tstart: Time, tend: Time) -> List[User]:
         departure = list()
         while tstart <= self._current_user.departure_time < tend:
             # Attaching observers to Users
@@ -78,6 +83,11 @@ class BaseDemandManager(AbstractDemandManager):
                 return departure
         return departure
 
+    def copy(self):
+        cls = self.__class__
+        copy = cls(self._users)
+        return copy
+
     def show_users(self):
         for u in self._users:
             print(u)
@@ -85,7 +95,7 @@ class BaseDemandManager(AbstractDemandManager):
     def to_csv(self, file: Union[Path, str], delimiter=";"):
         with open(file, 'w') as f:
             writer = csv.writer(f, delimiter=delimiter)
-            writer.writerow(["ID","DEPARTURE","ORIGIN","DESTINATION"])
+            writer.writerow(["ID", "DEPARTURE", "ORIGIN", "DESTINATION"])
 
             for u in self._users:
                 writer.writerow([u.id, u.departure_time, u.origin, u.destination])
@@ -103,11 +113,13 @@ class CSVDemandManager(AbstractDemandManager):
     delimiter: str
         Delimiter for the CSV file
     """
+
     def __init__(self, csvfile: Union[Path, str], delimiter=';'):
         super(CSVDemandManager, self).__init__()
         self._filename = csvfile
+        self._delimiter = delimiter
         self._file = open(self._filename, 'r')
-        self._reader = csv.reader(self._file, delimiter=delimiter, quotechar='|')
+        self._reader = csv.reader(self._file, delimiter=self._delimiter, quotechar='|')
         self._demand_type = None
 
         try:
@@ -117,8 +129,8 @@ class CSVDemandManager(AbstractDemandManager):
             sys.exit(-1)
 
         first_line = next(self._reader)
-        match_x=re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[2])
-        match_y=re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[3])
+        match_x = re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[2])
+        match_y = re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[3])
         if match_x is not None and match_y is not None:
             self._demand_type = 'coordinate'
         else:
@@ -131,7 +143,7 @@ class CSVDemandManager(AbstractDemandManager):
 
         self._current_user = self.construct_user(first_line)
 
-    def get_next_departures(self, tstart:Time, tend:Time) -> List[User]:
+    def get_next_departures(self, tstart: Time, tend: Time) -> List[User]:
         departure = list()
 
         # If the lower bound of next departures is after the fist departure in the demand, we skip the first users until
@@ -156,7 +168,12 @@ class CSVDemandManager(AbstractDemandManager):
 
         return departure
 
-    def construct_user(self, row):
+    def copy(self):
+        cls = self.__class__
+        copy = cls(self._filename, self._delimiter)
+        return copy
+
+    def construct_user(self, row) -> User:
         if self._demand_type == 'node':
             origin = row[2]
             destination = row[3]
@@ -165,7 +182,8 @@ class CSVDemandManager(AbstractDemandManager):
             destination = np.fromstring(row[3], sep=' ')
         else:
             raise TypeError(f"demand_type must be either 'node' or 'coordinate'")
-        return User(row[0], origin, destination, Time(row[1]), available_mobility_services=None if len(row) == 4 else row[4].split(' '))
+        return User(row[0], origin, destination, Time(row[1]),
+                    available_mobility_services=None if len(row) == 4 else row[4].split(' '))
 
     def __del__(self):
         self._file.close()

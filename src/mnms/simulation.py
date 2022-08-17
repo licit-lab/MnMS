@@ -2,7 +2,7 @@ from time import time
 import csv
 import traceback
 import random
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
@@ -14,7 +14,6 @@ from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.abstract import AbstractDecisionModel
 from mnms.time import Time, Dt
 from mnms.log import create_logger
-from mnms.tools.exceptions import PathNotFound
 from mnms.vehicles.manager import VehicleManager
 
 log = create_logger(__name__)
@@ -33,14 +32,13 @@ class Supervisor(object):
         self._flow_motor: AbstractFlowMotor = flow_motor
 
         self._decision_model:AbstractDecisionModel = decision_model
-        self._user_flow = UserFlow()
+        self._user_flow: UserFlow = UserFlow()
 
         self.add_graph(graph)
         self._flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)
 
-        
-        self.tcurrent = None
+        self.tcurrent: Optional[Time] = None
 
         if outfile is None:
             self._write = False
@@ -117,14 +115,21 @@ class Supervisor(object):
         # TO CHECK:in the right order ? (if the other direction, there is a time step difference between the moments of creation of the vehicles and the accumulation)
         log.info(' Step user flow ..')
         start = time()
-        self._user_flow.update_time(flow_dt)
         self._user_flow.step(flow_dt, users_step)
+        self._user_flow.update_time(flow_dt)
+        end = time()
+        log.info(f' Done [{end - start:.5} s]')
+        log.info(f' Perform matching for mobility services ...')
+        start = time()
+        for layer in self._mlgraph.layers.values():
+            for ms in layer.mobility_services.values():
+                ms.launch_matching()
         end = time()
         log.info(f' Done [{end - start:.5} s]')
         log.info(' Step MFD flow ..')
         start = time()
-        self._flow_motor.update_time(flow_dt)
         self._flow_motor.step(flow_dt)
+        self._flow_motor.update_time(flow_dt)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
 

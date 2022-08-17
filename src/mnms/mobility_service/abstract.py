@@ -1,70 +1,40 @@
 from abc import ABC,abstractmethod
-from typing import Type, List
+from typing import List, Tuple, Optional, Dict
 from functools import cached_property
 
+from mnms.demand.horizon import AbstractDemandHorizon
 from mnms.demand.user import User
-from hipop.graph import OrientedGraph
 from mnms.tools.cost import create_service_costs
 from mnms.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle
-# from mnms.graph.layers import AbstractLayer
-
-# class AbstractMobilityGraphLayer(ABC):
-#     def __init__(self,
-#                  id:str,
-#                  veh_type:Type[Vehicle],
-#                  default_speed:float,
-#                  services:List["AbstractMobilityService"]=None,
-#                  observer=None):
-#         self.id = id
-#         self.default_speed = default_speed
-#         self.mobility_services = dict()
-#         self.graph = OrientedGraph()
-#         self._veh_type = veh_type
-#
-#         if services is not None:
-#             for s in services:
-#                 self.add_mobility_service(s)
-#                 if observer is not None:
-#                     s.attach_vehicle_observer(observer)
-#
-#     def add_mobility_service(self, service:"AbstractMobilityService"):
-#         service.layer = self
-#         service.fleet = FleetManager(self._veh_type)
-#         self.mobility_services[service.id] = service
-#
-#     # @abstractmethod
-#     # def update_costs(self, time: Time):
-#     #     pass
-#
-#     @abstractmethod
-#     def __dump__(self) -> dict:
-#         pass
-#
-#     @classmethod
-#     @abstractmethod
-#     def __load__(cls, data:dict):
-#         pass
-#
-#     @abstractmethod
-#     def connect_to_layer(self, nid) -> dict:
-#         pass
 
 
 class AbstractMobilityService(ABC):
-    def __init__(self, id):
-        self._id: str = id
+    def __init__(self,
+                 _id: str,
+                 dt_matching: int,
+                 veh_capacity: int,
+                 demand_horizon: Optional[AbstractDemandHorizon] = None):
+        self._id: str = _id
         self.layer: "AbstractLayer" = None
         self._tcurrent: Time = None
         self.fleet: FleetManager = None
         self._observer = None
+        self._dt_matching: int = dt_matching
+        self._horizon: Optional[AbstractDemandHorizon] = demand_horizon
+        self._counter_matching: int = 0
+        self._user_buffer: Dict[str, Tuple[User, str]] = dict()
+        self._veh_capacity: int = veh_capacity
 
     def set_time(self, time:Time):
         self._tcurrent = time.copy()
 
     def update_time(self, dt:Dt):
         self._tcurrent = self._tcurrent.add_time(dt)
+
+    def set_demand_horizon(self, horizon: AbstractDemandHorizon):
+        self._horizon = horizon
 
     @property
     def id(self):
@@ -104,25 +74,36 @@ class AbstractMobilityService(ABC):
         """
         return create_service_costs()
 
+    def request_vehicle(self, user: "User", drop_node:str) -> None:
+        self._user_buffer[user.id] = (user, drop_node)
+
+    def update(self, dt: Dt):
+        self.maintenance(dt)
+        self._counter_matching += 1
+
+    def launch_matching(self):
+        if self._counter_matching == self._dt_matching:
+            self._counter_matching = 0
+            user_matched = self.matching(self._user_buffer)
+
+            for u in user_matched:
+                del self._user_buffer[u]
+
 
     @abstractmethod
-    def request_vehicle(self, user: "User", drop_node:str) -> None:
-        """This method must be implemented by any subclass of AbstractMobilityService.
-        It must found a vehicle and call the take_next_user of the vehicle on the user.
-
-        Parameters
-        ----------
-        user: User
-
-        Returns
-        -------
-        None
-
-        """
+    def maintenance(self, dt: Dt):
         pass
 
     @abstractmethod
-    def update(self, dt:Dt):
+    def matching(self, users: List[Tuple[User, str]]):
+        pass
+
+    @abstractmethod
+    def rebalancing(self, next_demand: List[User], stop_veh: List[Vehicle]):
+        pass
+
+    @abstractmethod
+    def replaning(self):
         pass
 
     @classmethod

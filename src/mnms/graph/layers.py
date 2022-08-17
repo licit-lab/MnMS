@@ -10,6 +10,7 @@ from mnms.graph.road import RoadDescription
 from mnms.io.utils import load_class_by_module_name
 from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable
 from mnms.vehicles.veh_type import Vehicle, Car, Bus
 
@@ -107,7 +108,7 @@ class PublicTransportLayer(AbstractLayer):
                  _id: str,
                  veh_type: Type[Vehicle],
                  default_speed: float,
-                 services: Optional[List[AbstractMobilityService]] = None,
+                 services: Optional[List[PublicTransportMobilityService]] = None,
                  observer: Optional = None):
         super(PublicTransportLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
         self.lines = dict()
@@ -173,7 +174,7 @@ class PublicTransportLayer(AbstractLayer):
             timetable = line['table']
             for service in self.mobility_services.values():
                 timetable_iter = iter(timetable.table)
-                service._timetable_iter[lid] = iter(timetable.table)
+                service._timetable_iter[lid] = timetable_iter
                 service._current_time_table[lid] = next(timetable_iter)
                 service._next_time_table[lid] = next(timetable_iter)
 

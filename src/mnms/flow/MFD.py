@@ -1,15 +1,16 @@
-from typing import List
+from typing import List, Optional
 from typing import Callable, Dict
 from collections import defaultdict
 
 import numpy as np
 
+from mnms.demand import User
 from mnms.flow.abstract import AbstractFlowMotor
 # from mnms.graph.core import ConnectionLink
 from mnms.log import create_logger
 from mnms.time import Dt, Time
 from mnms.vehicles.manager import VehicleManager
-from mnms.vehicles.veh_type import Vehicle
+from mnms.vehicles.veh_type import Vehicle, VehicleState
 
 log = create_logger(__name__)
 
@@ -59,18 +60,16 @@ class MFDFlow(AbstractFlowMotor):
             self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'MODE', 'SPEED', 'ACCUMULATION'])
 
         self.reservoirs: List[Reservoir] = list()
-        self.users = dict()
+        self.users: Optional[Dict[str, User]] = dict()
 
-        self.dict_accumulations = None
-        self.dict_speeds = None
-        self.remaining_length = None
+        self.dict_accumulations: Optional[Dict] = None
+        self.dict_speeds: Optional[Dict] = None
+        self.remaining_length: Optional[Dict] = None
 
-        self.veh_manager = None
+        self.veh_manager: Optional[VehicleManager] = None
         self.graph_nodes = None
 
-
     def initialize(self):
-
         self.dict_accumulations = {}
         self.dict_speeds = {}
         for res in self.reservoirs:
@@ -86,8 +85,7 @@ class MFDFlow(AbstractFlowMotor):
     def add_reservoir(self, res: Reservoir):
         self.reservoirs.append(res)
 
-    def set_vehicle_position(self, veh:Vehicle):
-        graph = self._graph.graph
+    def set_vehicle_position(self, veh: Vehicle):
         unode, dnode = veh.current_link
         remaining_length = veh.remaining_link_length
 
@@ -100,78 +98,70 @@ class MFDFlow(AbstractFlowMotor):
         travelled = norm_direction - remaining_length
         veh.set_position(unode_pos+normalized_direction*travelled)
 
-    def move_veh(self, veh:Vehicle, tcurrent: Time, dt:Dt, speed:float):
+    def move_veh(self, veh: Vehicle, tcurrent: Time, dt: Dt, speed: float):
         veh.started = True
         dist_travelled = dt.to_seconds()*speed
-        graph = self._graph.graph
-        for next_pass in list(veh._next_passenger):
-            take_node = veh._next_passenger[next_pass][1]._current_node
-            node_pos = self.graph_nodes[take_node].position
-            # ref_node = self._mobility_nodes[take_node].reference_node
-            # ref_node_pos = self._flow_nodes[ref_node].pos
-            if take_node == veh._current_link[0]:
-                veh.start_user_trip(next_pass, take_node)
-                _, user = veh._passenger[next_pass]
-                user._position = node_pos
-                user.notify(tcurrent)
 
-        if dist_travelled > veh._remaining_link_length:
-            elapsed_time = Dt(seconds=veh._remaining_link_length / speed)
+        if dist_travelled > veh.remaining_link_length:
+            elapsed_time = Dt(seconds=veh.remaining_link_length / speed)
             try:
-                veh._current_link, veh._remaining_link_length = next(veh._iter_path)
+                current_link, remaining_link_length = next(veh.activity.iter_path)
+                veh.update_distance(veh.remaining_link_length)
+                veh._current_link = current_link
+                veh._remaining_link_length = remaining_link_length
                 new_dt = dt - elapsed_time
                 self.move_veh(veh, tcurrent.add_time(elapsed_time), new_dt, speed)
             except StopIteration:
-                log.info(f"{veh} is arrived")
+                log.info(f"{veh} finished its activity {veh.state}")
+                veh.update_distance(veh.remaining_link_length)
                 veh._remaining_link_length = 0
-                veh.is_arrived = True
+                veh._current_node = veh._current_link[1]
                 self.set_vehicle_position(veh)
-                veh.notify(tcurrent.add_time(elapsed_time))
-                veh.drop_all_passengers(tcurrent.add_time(elapsed_time))
+                veh.next_activity()
+                new_time = tcurrent.add_time(elapsed_time)
+                veh.notify(new_time)
+                veh.notify_passengers(new_time)
                 return
         else:
             elapsed_time = dt
             veh._remaining_link_length -= dist_travelled
+            veh.update_distance(dist_travelled)
             self.set_vehicle_position(veh)
 
-            user_to_drop = list()
-            for passenger_id, (drop_node, passenger) in veh._passenger.items():
-                if drop_node == veh._current_link[0]:
-                    ref_node = self._mobility_nodes[drop_node].reference_node
-                    ref_node_pos = self._flow_nodes[ref_node].pos
-                    user_to_drop.append((passenger, ref_node_pos))
-                else:
-                    passenger.set_position(veh._current_link, veh._remaining_link_length, veh.position)
-                    passenger.notify(tcurrent.add_time(elapsed_time))
-            [veh.drop_user(tcurrent, passenger, pos) for passenger, pos in user_to_drop]
-            veh.notify(tcurrent.add_time(elapsed_time))
+            for passenger_id, passenger in veh.passenger.items():
+                passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
+            new_time = tcurrent.add_time(elapsed_time)
+            veh.notify(new_time)
+            veh.notify_passengers(new_time)
 
     def step(self, dt: Dt):
         
         log.info(f'MFD step {self._tcurrent}')
-        log.info(f"Moving {len(self.veh_manager._vehicles)} vehicles")
-        graph = self._graph.graph
 
         for res in self.reservoirs:
             for mode in res.modes:
                 res.dict_accumulations[mode] = 0
 
-        while len(self.veh_manager._new_vehicles) > 0:
+        while self.veh_manager.has_new_vehicles:
             new_veh = self.veh_manager._new_vehicles.pop()
-            origin_pos = self.graph_nodes[new_veh.origin].position
-            new_veh.set_position(origin_pos)
-            new_veh.notify(self._tcurrent.remove_time(dt))
+            new_veh.notify(self._tcurrent)
 
         # Calculate accumulations
-        for veh_id in self.veh_manager._vehicles:
-            veh = self.veh_manager._vehicles[veh_id]
-            log.info(f"{veh.current_link}, {veh}")
-            unode, dnode = veh.current_link
-            curr_link = self.graph_nodes[unode].adj[dnode]
-            lid = self._graph.map_reference_links[curr_link.id][0] # take reservoir of first part of trip
-            res_id = self._graph.roads.sections[lid]['zone']
-            veh_type = veh.type.upper() # dirty
-            self.dict_accumulations[res_id][veh_type] += 1
+        current_vehicles = dict()
+        for veh_id, veh in self.veh_manager._vehicles.items():
+            if veh.activity is None or veh.activity.is_done:
+                veh.next_activity()
+            if veh.state is not VehicleState.STOP:
+                log.info(f"{veh} -> {veh.current_link}")
+                unode, dnode = veh.current_link
+                curr_link = self.graph_nodes[unode].adj[dnode]
+                lid = self._graph.map_reference_links[curr_link.id][0] # take reservoir of first part of trip
+                res_id = self._graph.roads.sections[lid]['zone']
+                veh_type = veh.type.upper() # dirty
+                self.dict_accumulations[res_id][veh_type] += 1
+                current_vehicles[veh_id] = veh
+
+        log.info(f"Moving {len(current_vehicles)} vehicles")
 
         # Update the traffic conditions
         for i_res, res in enumerate(self.reservoirs):
@@ -179,8 +169,7 @@ class MFDFlow(AbstractFlowMotor):
             self.dict_speeds[res.id] = res.update_speeds()
 
         # Move the vehicles
-        for veh_id in self.veh_manager._vehicles:
-            veh = self.veh_manager._vehicles[veh_id]
+        for veh_id, veh in current_vehicles.items():
             unode, dnode = veh.current_link
             curr_link = self.graph_nodes[unode].adj[dnode]
             lid = self._graph.map_reference_links[curr_link.id][0]
@@ -188,7 +177,7 @@ class MFDFlow(AbstractFlowMotor):
             veh_type = veh.type.upper()
             speed = self.dict_speeds[res_id][veh_type]
             veh.speed = speed
-            self.move_veh(veh, self._tcurrent.remove_time(dt), dt, speed)
+            self.move_veh(veh, self._tcurrent, dt, speed)
 
     def update_graph(self):
         topolink_lengths = dict()
@@ -225,7 +214,6 @@ class MFDFlow(AbstractFlowMotor):
             if new_speed != 0:
                 self._graph.graph.update_link_costs(tid, {'travel_time': total_len / new_speed,
                                                           'speed': new_speed})
-
 
     def write_result(self, step_affectation:int, step_flow:int):
         tcurrent = self._tcurrent.time

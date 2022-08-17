@@ -79,6 +79,7 @@ def generate_random_demand(mlgraph: "MultiLayerGraph",
         u.id = str(next(uid))
     return BaseDemandManager(demand)
 
+
 if __name__ == "__main__":
 
     from mnms.generation.mlgraph import generate_manhattan_passenger_car

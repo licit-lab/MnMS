@@ -17,18 +17,18 @@ class AbstractLayer(object):
                  default_speed: float,
                  services: Optional[List[AbstractMobilityService]] = None,
                  observer: Optional = None):
-        self._id = id
-        self.graph = OrientedGraph()
-        self._roaddb = roads
+        self._id: str = id
+        self.graph: OrientedGraph = OrientedGraph()
+        self._roaddb: RoadDescription = roads
         self._roaddb._layers[id] = self
 
-        self._default_speed = default_speed
+        self._default_speed: float = default_speed
 
-        self.map_reference_links = dict()
-        self.map_reference_nodes = dict()
+        self.map_reference_links: Dict[str, str] = dict()
+        self.map_reference_nodes: Dict[str, str] = dict()
 
-        self.mobility_services = dict()
-        self._veh_type = veh_type
+        self.mobility_services: Dict[str, AbstractMobilityService] = dict()
+        self._veh_type: Type[Vehicle] = veh_type
 
         if services is not None:
             for s in services:
