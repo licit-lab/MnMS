@@ -1,7 +1,7 @@
 import unittest
 
 from mnms.graph.layers import CarLayer, BusLayer
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.car import PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable, Dt
@@ -12,7 +12,7 @@ class TestLayers(unittest.TestCase):
         """Initiates the test.
         """
 
-        self.roads = RoadDescription()
+        self.roads = RoadDescriptor()
         self.roads.register_node("0", [0, 0])
         self.roads.register_node("1", [1, 0])
         self.roads.register_node("2", [2, 0])
@@ -86,7 +86,7 @@ class TestSerializationLayers(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
-        self.roads = RoadDescription()
+        self.roads = RoadDescriptor()
         self.roads.register_node("0", [0, 0])
         self.roads.register_node("1", [1, 0])
         self.roads.register_node("2", [2, 0])

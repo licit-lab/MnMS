@@ -3,12 +3,12 @@ from typing import Optional, Type, List
 import numpy as np
 
 from mnms.graph.layers import OriginDestinationLayer, SimpleLayer
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.vehicles.veh_type import Vehicle, Car
 
 
-def generate_layer_from_roads(roads: RoadDescription,
+def generate_layer_from_roads(roads: RoadDescriptor,
                               layer_id: str,
                               veh_type:Type[Vehicle] = Car,
                               default_speed: float = 14,
@@ -26,7 +26,7 @@ def generate_layer_from_roads(roads: RoadDescription,
     return layer
 
 
-def generate_matching_origin_destination_layer(roads: RoadDescription, with_stops: bool = True):
+def generate_matching_origin_destination_layer(roads: RoadDescriptor, with_stops: bool = True):
 
     odlayer = OriginDestinationLayer()
 
@@ -69,11 +69,11 @@ def generate_grid_origin_destination_layer(xmin: float,
     return odlayer
 
 
-def get_bounding_box(roads: RoadDescription):
+def get_bounding_box(roads: RoadDescriptor):
     positions = np.array([n for n in roads.nodes.values()])
     return np.min(positions[0, :]), np.min(positions[1, :]), np.max(positions[0, :]), np.max(positions[1, :])
 
 
-def generate_bbox_origin_destination_layer(roads: RoadDescription, nx: int, ny: Optional[int] = None):
+def generate_bbox_origin_destination_layer(roads: RoadDescriptor, nx: int, ny: Optional[int] = None):
     bbox = get_bounding_box(roads)
     return generate_grid_origin_destination_layer(*bbox, nx, ny)

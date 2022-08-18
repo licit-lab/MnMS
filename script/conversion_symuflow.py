@@ -13,7 +13,7 @@ from typing import Dict
 
 import numpy as np
 
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.graph.layers import MultiLayerGraph, CarLayer, PublicTransportLayer
 from mnms.io.graph import save_graph
 from mnms.time import TimeTable, Time, Dt
@@ -48,7 +48,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
 
     tron = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/TRONCONS")[0]
 
-    roads = RoadDescription()
+    roads = RoadDescriptor()
 
 
 

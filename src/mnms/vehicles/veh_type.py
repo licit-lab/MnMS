@@ -186,7 +186,7 @@ class Vehicle(TimeDependentSubject):
 
     @property
     def state(self) -> VehicleState:
-        return self.activity.state
+        return self.activity.state if self.activity is not None else None
 
     def add_activities(self, activities:List[VehicleActivity]):
         for a in activities:

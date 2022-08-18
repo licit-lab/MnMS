@@ -5,7 +5,7 @@ from mnms.demand import User
 from mnms.demand.user import Path
 from mnms.flow.MFD import MFDFlow, Reservoir
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.car import PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import Dt, TimeTable, Time
@@ -19,7 +19,7 @@ class TestMFDFlow(unittest.TestCase):
         self.tempfile = TemporaryDirectory()
         self.pathdir = self.tempfile.name+'/'
 
-        roads = RoadDescription()
+        roads = RoadDescriptor()
 
         roads.register_node('0', [0, 0])
         roads.register_node('1', [0, 40000])

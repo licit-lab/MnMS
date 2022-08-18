@@ -129,7 +129,6 @@ class AbstractDecisionModel(ABC):
                                          self._max_diff_dist,
                                          self._n_shortest_path,
                                          self._thread_number)
-
         gnodes = self._mmgraph.graph.nodes
         path_not_found = []
 

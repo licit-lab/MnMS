@@ -1,6 +1,6 @@
 import unittest
 
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 
 
 class TestLayers(unittest.TestCase):
@@ -8,7 +8,7 @@ class TestLayers(unittest.TestCase):
         """Initiates the test.
         """
 
-        self.roads = RoadDescription()
+        self.roads = RoadDescriptor()
         self.roads.register_node("0", [0, 0])
         self.roads.register_node("1", [1, 0])
         self.roads.register_node("2", [2, 0])
@@ -46,7 +46,7 @@ class TestLayers(unittest.TestCase):
 
     def test_serialization(self):
         data_dict = self.roads.__dump__()
-        new_roads = RoadDescription.__load__(data_dict)
+        new_roads = RoadDescriptor.__load__(data_dict)
 
         self.assertDictEqual(data_dict["NODES"], new_roads.nodes)
         self.assertDictEqual(data_dict["SECTIONS"], new_roads.sections)

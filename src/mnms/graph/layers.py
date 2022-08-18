@@ -6,7 +6,7 @@ from hipop.graph import Node, node_to_dict, link_to_dict
 from hipop.graph import merge_oriented_graph
 
 from mnms.graph.abstract import AbstractLayer
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.io.utils import load_class_by_module_name
 from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService
@@ -38,7 +38,7 @@ class SimpleLayer(AbstractLayer):
         self.map_reference_links[lid] = road_links
 
     @classmethod
-    def __load__(cls, data: Dict, roads: RoadDescription):
+    def __load__(cls, data: Dict, roads: RoadDescriptor):
         new_obj = cls(roads,
                       data['ID'],
                       load_class_by_module_name(data['VEH_TYPE']),
@@ -75,14 +75,15 @@ class SimpleLayer(AbstractLayer):
 
 class CarLayer(SimpleLayer):
     def __init__(self,
-                 roads: RoadDescription,
+                 roads: RoadDescriptor,
                  default_speed: float = 13.8,
                  services: Optional[List[AbstractMobilityService]] = None,
-                 observer: Optional = None):
-        super(CarLayer, self).__init__(roads, 'CAR', Car, default_speed, services, observer)
+                 observer: Optional = None,
+                 _id: str = "CAR"):
+        super(CarLayer, self).__init__(roads, _id, Car, default_speed, services, observer)
 
     @classmethod
-    def __load__(cls, data: Dict, roads: RoadDescription):
+    def __load__(cls, data: Dict, roads: RoadDescriptor):
         new_obj = cls(roads,
                       data['DEFAULT_SPEED'])
 
@@ -104,7 +105,7 @@ class CarLayer(SimpleLayer):
 
 class PublicTransportLayer(AbstractLayer):
     def __init__(self,
-                 roads: RoadDescription,
+                 roads: RoadDescriptor,
                  _id: str,
                  veh_type: Type[Vehicle],
                  default_speed: float,
@@ -191,7 +192,7 @@ class PublicTransportLayer(AbstractLayer):
                            'BIDIRECTIONAL': ldata['bidirectional']} for lid, ldata in self.lines.items()]}
 
     @classmethod
-    def __load__(cls, data: Dict, roads: RoadDescription):
+    def __load__(cls, data: Dict, roads: RoadDescriptor):
         new_obj = cls(roads,
                       data['ID'],
                       load_class_by_module_name(data['VEH_TYPE']),
@@ -209,7 +210,7 @@ class PublicTransportLayer(AbstractLayer):
 
 class BusLayer(PublicTransportLayer):
     def __init__(self,
-                 roads: RoadDescription,
+                 roads: RoadDescriptor,
                  _id: str = "BUS",
                  veh_type: Type[Vehicle] = Bus,
                  default_speed: float = 6.5,

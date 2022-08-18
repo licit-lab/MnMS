@@ -41,9 +41,10 @@ class UserFlow(object):
 
         direction = dnode_pos - unode_pos
         norm_direction = np.linalg.norm(direction)
-        normalized_direction = direction / norm_direction
-        travelled = norm_direction - remaining_length
-        user._position = unode_pos+normalized_direction*travelled
+        if norm_direction > 0:
+            normalized_direction = direction / norm_direction
+            travelled = norm_direction - remaining_length
+            user._position = unode_pos+normalized_direction*travelled
 
     def _user_walking(self, dt:Dt):
         finish_walk = list()
@@ -89,12 +90,12 @@ class UserFlow(object):
                 user.update_distance(dist_travelled)
 
         for user in finish_walk:
-            upath = user.path.nodes
-            cnode = user._current_node
-            cnode_ind = upath.index(cnode)
-            user._current_node = graph.nodes[upath[cnode_ind+1]].id
-            user._current_link = (user._current_node, upath[upath.index(user._current_node)+1])
-            user._remaining_link_length = 0
+            # upath = user.path.nodes
+            # cnode = user._current_node
+            # cnode_ind = upath.index(cnode)
+            # user._current_node = graph.nodes[upath[cnode_ind+1]].id
+            # user._current_link = (user._current_node, upath[upath.index(user._current_node)+1])
+            # user._remaining_link_length = 0
             del self._walking[user.id]
             # self._transiting[user.id] = user
 

@@ -15,12 +15,37 @@ from mnms.vehicles.veh_type import VehicleActivityServing, Vehicle, VehicleActiv
 log = create_logger(__name__)
 
 
+def _insert_in_activity(curr_activity, activity_pos, drop_node, drop_node_ind, take_node_ind, user, veh, veh_node_ind):
+    if veh_node_ind == take_node_ind:
+        serving_path = curr_activity.path[take_node_ind:drop_node_ind]
+        serving_activity = VehicleActivityServing(node=drop_node,
+                                                  path=serving_path,
+                                                  user=user)
+        new_activities = [serving_activity]
 
-def _predicate_is_inside(start1, end1, start2, end2):
-    return start1 < start2 and end2 < end1
+    else:
+        pickup_path = curr_activity.path[veh_node_ind:take_node_ind]
+        serving_path = curr_activity.path[take_node_ind:drop_node_ind]
+        pickup_activity = VehicleActivityPickup(node=user._current_node,
+                                                path=pickup_path,
+                                                user=user)
+        serving_activity = VehicleActivityServing(node=drop_node,
+                                                  path=serving_path,
+                                                  user=user)
 
-def _predicate_overlap_right(start1, end1, start2, end2):
-    return start1 < start2 < end1 < end2
+        new_activities = [pickup_activity, serving_activity]
+    curr_activity.modify_path(curr_activity.path[drop_node_ind + 1:])
+
+    # Check if vehicle is stopped
+    if veh.activity.state is not VehicleState.STOP:
+        veh.activity = None
+        for a in reversed(new_activities + [curr_activity]):
+            veh.activities.insert(activity_pos, a)
+        # veh.add_activities(new_activities + [curr_activity])
+    else:
+        for a in reversed(new_activities):
+            veh.activities.insert(activity_pos, a)
+        # veh.add_activities([new_activities])
 
 
 class PublicTransportMobilityService(AbstractMobilityService):
@@ -114,30 +139,24 @@ class PublicTransportMobilityService(AbstractMobilityService):
         curr_activity = veh.activity
         next_node = curr_activity.node
 
-
         take_node_ind = line_nodes.index(user._current_node)
         drop_node_ind = line_nodes.index(drop_node)
         next_node_ind = line_nodes.index(next_node)
+        veh_node_ind = line_nodes.index(veh._current_node)
+
+        user.set_state_waiting_vehicle()
 
         if drop_node_ind <= next_node_ind:
-            activity_path = curr_activity.path[:drop_node_ind+1]
-            new_activity = VehicleActivityServing(node=drop_node,
-                                                  path=activity_path,
-                                                  user=user)
+            _insert_in_activity(curr_activity, 0, drop_node, drop_node_ind, take_node_ind, user, veh, veh_node_ind)
 
-            curr_activity.modify_path(curr_activity.path[drop_node_ind + 1:])
+        else:
+            for ind, curr_activity in enumerate(veh.activities):
+                curr_activity = veh.activity
+                next_node = curr_activity.node
+                if drop_node_ind <= next_node_ind:
+                    _insert_in_activity(curr_activity, ind+1, drop_node, drop_node_ind, take_node_ind, user, veh, veh_node_ind)
+                    break
 
-            # Check if vehicle is stopped
-            if curr_activity.state is not VehicleState.STOP:
-                # new_activity.start(veh)
-                veh.activity = None
-
-                # curr_activity.modify_path(curr_activity.path[drop_node_ind+1:])
-
-                veh.add_activities([new_activity, curr_activity])
-
-            else:
-                veh.add_activities([new_activity])
 
     def matching(self, users: Dict[str, Tuple[User, str]]) -> List[str]:
         graph_nodes = self.graph.nodes

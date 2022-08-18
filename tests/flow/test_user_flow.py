@@ -2,7 +2,7 @@ import unittest
 from tempfile import TemporaryDirectory
 
 from mnms.flow.user_flow import UserFlow
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.time import Time, Dt, TimeTable
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
 from mnms.mobility_service.car import PersonalCarMobilityService
@@ -17,7 +17,7 @@ class TestUserFlow(unittest.TestCase):
         self.tempfile = TemporaryDirectory()
         self.pathdir = self.tempfile.name+'/'
 
-        roads = RoadDescription()
+        roads = RoadDescriptor()
 
         roads.register_node('0', [0, 0])
         roads.register_node('1', [0, 40000])

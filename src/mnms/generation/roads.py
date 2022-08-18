@@ -2,11 +2,11 @@ from typing import List
 
 import numpy as np
 
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 
 
 def generate_line_road(start: List[float], end: List[float], n: int, resid: str = 'RES', bothways: bool = True):
-    roads = RoadDescription()
+    roads = RoadDescriptor()
 
     start = np.array(start)
     end = np.array(end)
@@ -33,7 +33,7 @@ def generate_line_road(start: List[float], end: List[float], n: int, resid: str 
 
 
 def generate_square_road(link_length=None, resid='RES'):
-    roads = RoadDescription()
+    roads = RoadDescriptor()
 
     roads.register_node('0', [0, 0])
     roads.register_node('1', [1, 0])
@@ -59,7 +59,7 @@ def generate_square_road(link_length=None, resid='RES'):
 
 
 def generate_manhattan_road(n, link_length, resid='RES'):
-    roads = RoadDescription()
+    roads = RoadDescriptor()
 
     for i in range(n):
         for j in range(n):

@@ -3,7 +3,7 @@ from typing import Optional, Dict, List, Type
 
 from hipop.graph import OrientedGraph
 
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle, Car
@@ -11,7 +11,7 @@ from mnms.vehicles.veh_type import Vehicle, Car
 
 class AbstractLayer(object):
     def __init__(self,
-                 roads: RoadDescription,
+                 roads: RoadDescriptor,
                  id: str,
                  veh_type: Type[Vehicle],
                  default_speed: float,
@@ -19,7 +19,7 @@ class AbstractLayer(object):
                  observer: Optional = None):
         self._id: str = id
         self.graph: OrientedGraph = OrientedGraph()
-        self._roaddb: RoadDescription = roads
+        self._roaddb: RoadDescriptor = roads
         self._roaddb._layers[id] = self
 
         self._default_speed: float = default_speed
@@ -55,7 +55,7 @@ class AbstractLayer(object):
 
     @classmethod
     @abstractmethod
-    def __load__(cls, data: Dict, roads: RoadDescription):
+    def __load__(cls, data: Dict, roads: RoadDescriptor):
         pass
 
     def initialize(self):

@@ -8,7 +8,7 @@ def _compute_dist(pos1: np.ndarray, pos2: np.ndarray):
     return np.linalg.norm(pos2-pos1)
 
 
-class RoadDescription(object):
+class RoadDescriptor(object):
     __slots__ = ('nodes', 'sections', 'zones', 'stops', '_layers')
 
     def __init__(self):
