@@ -1,4 +1,4 @@
-from abc import ABC,abstractmethod
+from abc import ABC, abstractmethod, ABCMeta
 from typing import List, Tuple, Optional, Dict
 from functools import cached_property
 
@@ -14,18 +14,20 @@ class AbstractMobilityService(ABC):
     def __init__(self,
                  _id: str,
                  dt_matching: int,
-                 veh_capacity: int,
-                 demand_horizon: Optional[AbstractDemandHorizon] = None):
+                 veh_capacity: int):
+
         self._id: str = _id
         self.layer: "AbstractLayer" = None
         self._tcurrent: Time = None
         self.fleet: FleetManager = None
         self._observer = None
         self._dt_matching: int = dt_matching
-        self._horizon: Optional[AbstractDemandHorizon] = demand_horizon
-        self._counter_matching: int = 0
         self._user_buffer: Dict[str, Tuple[User, str]] = dict()
         self._veh_capacity: int = veh_capacity
+
+        self._counter_matching: int = 0
+        # self._counter_rebalancing: int = 0
+        # self._step_rebalancing: int = step_rebalancing
 
     def set_time(self, time:Time):
         self._tcurrent = time.copy()
@@ -80,6 +82,16 @@ class AbstractMobilityService(ABC):
     def update(self, dt: Dt):
         self.maintenance(dt)
         self._counter_matching += 1
+        # self._counter_rebalancing += 1
+
+        # if self._counter_rebalancing == self._step_rebalancing:
+        #     if self._horizon is None:
+        #         next_demand = []
+        #         dt =
+        #     else:
+        #         next_demand = self._horizon.get(self._tcurrent.add_time(dt))
+        #     self.rebalancing(next_demand, self._horizon.dt)
+        #     self._counter_rebalancing = 0
 
     def launch_matching(self):
         if self._counter_matching == self._dt_matching:
@@ -99,10 +111,6 @@ class AbstractMobilityService(ABC):
         pass
 
     @abstractmethod
-    def rebalancing(self, next_demand: List[User], stop_veh: List[Vehicle]):
-        pass
-
-    @abstractmethod
     def replaning(self):
         pass
 
@@ -116,4 +124,29 @@ class AbstractMobilityService(ABC):
         pass
 
 
+class AbstractOnDemandMobilityService(AbstractMobilityService, metaclass=ABCMeta):
+    def __init__(self,
+                 _id: str,
+                 dt_matching: int,
+                 veh_capacity: int,
+                 horizon: AbstractDemandHorizon,
+                 step_rebalancing: int):
 
+        super(AbstractOnDemandMobilityService, self).__init__(_id, dt_matching, veh_capacity)
+
+        self._step_rebalancing: int = step_rebalancing
+        self._counter_rebalancing: int = 0
+        self._horizon: AbstractDemandHorizon = horizon
+
+    @abstractmethod
+    def rebalancing(self, next_demand: List[User], horizon: Dt):
+        pass
+
+    def update(self, dt: Dt):
+        super(AbstractOnDemandMobilityService, self).update(dt)
+
+        self._counter_rebalancing += 1
+        if self._counter_rebalancing == self._step_rebalancing:
+            next_demand = self._horizon.get(self._tcurrent.add_time(dt))
+            self.rebalancing(next_demand, self._horizon.dt)
+            self._counter_rebalancing = 0

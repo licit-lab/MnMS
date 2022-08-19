@@ -22,7 +22,7 @@ class User(TimeDependentSubject):
 
     Parameters
     ----------
-    id: str
+    _id: str
         Id of the User
     origin: str
         Origin of the User
@@ -42,9 +42,9 @@ class User(TimeDependentSubject):
     default_pickup_dt = Dt(minutes=5)
 
     def __init__(self,
-                 id: str,
-                 origin: Union[str, np.ndarray],
-                 destination: Union[str, np.ndarray],
+                 _id: str,
+                 origin: Union[str, Union[np.ndarray, List]],
+                 destination: Union[str, Union[np.ndarray, List]],
                  departure_time: Time,
                  available_mobility_services=None,
                  scale_factor=1,
@@ -52,9 +52,9 @@ class User(TimeDependentSubject):
                  response_dt: Optional[Dt] = None,
                  pickup_dt: Optional[Dt] = None):
         super(User, self).__init__()
-        self.id = id
-        self.origin = origin
-        self.destination = destination
+        self.id = _id
+        self.origin = origin if not isinstance(origin, list) else np.array(origin)
+        self.destination = destination if not isinstance(destination, list) else np.array(destination)
         self.departure_time = departure_time
         self.arrival_time = None
         self.available_mobility_service = available_mobility_services if available_mobility_services is None else set(available_mobility_services)

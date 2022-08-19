@@ -89,6 +89,7 @@ class TestMFDFlow(unittest.TestCase):
         user.set_path(Path(3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
         self.personal_car.request_vehicle(user, 'C2')
+        self.personal_car.matching({user.id: (user, "C2")})
         self.flow.step(Dt(seconds=1))
         self.assertDictEqual({'CAR': 1, 'BUS': 0}, self.flow.dict_accumulations['res1'])
         self.assertDictEqual({'BUS': 42, 'CAR': 42}, self.flow.dict_speeds['res1'])

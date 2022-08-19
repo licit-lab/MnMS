@@ -240,7 +240,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
     def replaning(self):
         pass
 
-    def rebalancing(self, next_demand: List[User], stop_veh: List[Vehicle]):
+    def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
         pass
 
     def service_level_costs(self, nodes: List[str]) -> dict:

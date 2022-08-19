@@ -48,7 +48,7 @@ class PersonalCarMobilityService(AbstractMobilityService):
     def replaning(self):
         pass
 
-    def rebalancing(self, next_demand: List[User], stop_veh: List[Vehicle]):
+    def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
         pass
 
     def __dump__(self):
@@ -88,50 +88,90 @@ class OnDemandCarMobilityService(AbstractMobilityService):
             new_veh.attach(self._observer)
         self._waiting_vehicle[new_veh.id] = new_veh
 
-    def update(self, dt:Dt):
-        for veh in list(self.fleet.vehicles.values()):
-            if veh.is_arrived:
-                log.info(f'Make vehicle {veh.id} waits at {veh.current_link[1]}')
-                veh.origin = veh.current_link[1]
-                veh.is_arrived = False
-                self.fleet.make_vehicle_wait(veh)
+    def maintenance(self, dt: Dt):
+        pass
+        # for veh in list(self.fleet.vehicles.values()):
+        #     if veh.is_arrived:
+        #         log.info(f'Make vehicle {veh.id} waits at {veh.current_link[1]}')
+        #         veh.origin = veh.current_link[1]
+        #         veh.is_arrived = False
+        #         self.fleet.make_vehicle_wait(veh)
+
+    def rebalancing(self, next_demand: List[User], horizon: Dt):
+        pass
+
+    def replaning(self):
+        pass
+
+    def matching(self, users: List[Tuple[User, str]]):
+        for user in users:
+            user.available_mobility_service = frozenset([self.id])
+
+            upos = user.position
+            upath = list(user.path.nodes)
+
+            vehs = list(self.fleet.vehicles.keys())
+
+            while vehs:
+                veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
+                dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
+                nearest_veh_index = np.argmin(dist_vector)
+                nearest_veh = vehs[nearest_veh_index]
+
+                vehs.remove(nearest_veh)
+                choosen_veh = self.fleet.vehicles[nearest_veh]
+                if not choosen_veh.is_full:
+                    if choosen_veh.is_empty:
+                        nearest_veh.destination = user.current_node
+                        log.info(f"Compute veh path to user {nearest_veh.origin} -> {user.current_node}")
+                        available_services = user.available_mobility_service
+                        available_services = set() if available_services is None else available_services
+                        veh_path = dijkstra(self.graph, nearest_veh.origin, user.current_node, 'travel_time', available_services)
+                        if veh_path.path_cost == float('inf'):
+                            raise PathNotFound(nearest_veh.origin, user.current_node)
+                        veh_path = self._construct_veh_path(list(veh_path.nodes)[:-1]+upath[upath.index(user._current_node):upath.index(drop_node)+1])
+                        nearest_veh.set_path(veh_path)
+                        nearest_veh.take_next_user(user, drop_node)
+                        return
+
+            log.warning(f"No vehicule available for {user}")
 
     def create_depot(self, id, position, capacity):
-        self.depots[id] = {'postion': position,
+        self.depots[id] = {'position': position,
                            'capacity': capacity,
                            'veh': set()}
 
-    def request_vehicle(self, user: User, drop_node:str) -> None:
-        user.available_mobility_service = frozenset([self.id])
-
-        upos = user.position
-        upath = list(user.path.nodes)
-
-        vehs = list(self.fleet.vehicles.keys())
-
-        while vehs:
-            veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
-            dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
-            nearest_veh_index = np.argmin(dist_vector)
-            nearest_veh = vehs[nearest_veh_index]
-
-            vehs.remove(nearest_veh)
-            choosen_veh = self.fleet.vehicles[nearest_veh]
-            if not choosen_veh.is_full:
-                if choosen_veh.is_empty:
-                    nearest_veh.destination = user.current_node
-                    log.info(f"Compute veh path to user {nearest_veh.origin} -> {user.current_node}")
-                    available_services = user.available_mobility_service
-                    available_services = set() if available_services is None else available_services
-                    veh_path = dijkstra(self.graph, nearest_veh.origin, user.current_node, 'travel_time', available_services)
-                    if veh_path.path_cost == float('inf'):
-                        raise PathNotFound(nearest_veh.origin, user.current_node)
-                    veh_path = self._construct_veh_path(list(veh_path.nodes)[:-1]+upath[upath.index(user._current_node):upath.index(drop_node)+1])
-                    nearest_veh.set_path(veh_path)
-                    nearest_veh.take_next_user(user, drop_node)
-                    return
-
-        log.warning(f"No vehicule available for {user}")
+    # def request_vehicle(self, user: User, drop_node:str) -> None:
+    #     user.available_mobility_service = frozenset([self.id])
+    #
+    #     upos = user.position
+    #     upath = list(user.path.nodes)
+    #
+    #     vehs = list(self.fleet.vehicles.keys())
+    #
+    #     while vehs:
+    #         veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
+    #         dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
+    #         nearest_veh_index = np.argmin(dist_vector)
+    #         nearest_veh = vehs[nearest_veh_index]
+    #
+    #         vehs.remove(nearest_veh)
+    #         choosen_veh = self.fleet.vehicles[nearest_veh]
+    #         if not choosen_veh.is_full:
+    #             if choosen_veh.is_empty:
+    #                 nearest_veh.destination = user.current_node
+    #                 log.info(f"Compute veh path to user {nearest_veh.origin} -> {user.current_node}")
+    #                 available_services = user.available_mobility_service
+    #                 available_services = set() if available_services is None else available_services
+    #                 veh_path = dijkstra(self.graph, nearest_veh.origin, user.current_node, 'travel_time', available_services)
+    #                 if veh_path.path_cost == float('inf'):
+    #                     raise PathNotFound(nearest_veh.origin, user.current_node)
+    #                 veh_path = self._construct_veh_path(list(veh_path.nodes)[:-1]+upath[upath.index(user._current_node):upath.index(drop_node)+1])
+    #                 nearest_veh.set_path(veh_path)
+    #                 nearest_veh.take_next_user(user, drop_node)
+    #                 return
+    #
+    #     log.warning(f"No vehicule available for {user}")
 
 
 
