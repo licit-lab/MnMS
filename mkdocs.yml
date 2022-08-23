@@ -1,0 +1,19 @@
+site_name: MnMS
+site_url: https://mnms.com/
+nav:
+    - Home: index.md
+    - About: about.md
+    - Tutorials:
+        - Graph: TutorialGraph.ipynb
+        - Demand and Decision Model: TutorialDemandTravelDecision.ipynb
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: black
+
+plugins:
+  - search
+  - mkdocstrings
+  - mkdocs-jupyter:
+      execute: true
