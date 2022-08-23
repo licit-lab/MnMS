@@ -74,6 +74,23 @@ class RoadDescriptor(object):
         for l in zone.sections:
             self.sections[l].zone = zid
 
+    def delete_nodes(self, nids: List[str]):
+        for nid in nids:
+            assert nid in list(self.nodes.keys()), f'Node {nid} does not exists in RoadDescriptor'
+            # Remove node and all links from and to this node
+            del self.nodes[nid]
+            links_to_remove = []
+            for lid, rsect in self.sections.items():
+                if rsect.upstream == nid or rsect.downstream == nid:
+                    links_to_remove.append(lid)
+            for lid in links_to_remove:
+                 del self.sections[lid]
+
+    def translate(self, v: List[float]):
+        for n in self.nodes.keys():
+            self.nodes[n].position = np.add(self.nodes[n].position, v)
+
+
     def __dump__(self):
         return {'NODES': {key: asdict(val) for key, val in self.nodes.items()},
                 'STOPS': {key: asdict(val) for key, val in self.stops.items()},
@@ -91,5 +108,6 @@ class RoadDescriptor(object):
 
         for z in data["ZONES"].values():
             new_obj.add_zone(Zone(z["id"], set(z["sections"])))
+
 
         return new_obj
