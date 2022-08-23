@@ -1,5 +1,6 @@
 import pathlib
 
+from mnms.demand.horizon import DemandHorizon
 from mnms.generation.roads import generate_manhattan_road
 from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer
 from mnms.graph.layers import MultiLayerGraph
@@ -23,11 +24,17 @@ set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation',
 
 cwd = pathlib.Path(__file__).parent.joinpath('demand.csv').resolve()
 
+# Demand
+
+demand = CSVDemandManager(cwd)
+demand.add_user_observer(CSVUserObserver('user.csv'))
+
+
 # Graph
 
 road_db = generate_manhattan_road(3, 100)
 
-uber = OnDemandCarMobilityService("UBER")
+uber = OnDemandCarMobilityService("UBER",1 , DemandHorizon(demand, Dt(minutes=2)))
 uber.attach_vehicle_observer(CSVVehicleObserver("veh.csv"))
 
 
@@ -35,7 +42,7 @@ car_layer = generate_layer_from_roads(road_db,
                                       'CAR',
                                       mobility_services=[uber])
 
-uber.create_waiting_vehicle("CAR_0")
+uber.create_waiting_vehicle("CAR_1")
 
 odlayer = generate_grid_origin_destination_layer(0, 0, 300, 300, 3, 3)
 #
@@ -49,10 +56,7 @@ mlgraph = MultiLayerGraph([car_layer],
 # load_graph(cwd.parent.joinpath('graph.json'))
 
 
-# Demand
 
-demand = CSVDemandManager(cwd)
-demand.add_user_observer(CSVUserObserver('user.csv'))
 
 # Decison Model
 
@@ -65,7 +69,7 @@ def mfdspeed(dacc):
     return dspeed
 
 flow_motor = MFDFlow()
-flow_motor.add_reservoir(Reservoir('RES', 'CAR', mfdspeed))
+flow_motor.add_reservoir(Reservoir('RES', ['CAR'], mfdspeed))
 
 supervisor = Supervisor(mlgraph,
                         demand,

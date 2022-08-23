@@ -84,14 +84,24 @@ class Supervisor(object):
         
     def initialize(self, tstart:Time):
 
+        link_layers = list()
+        for lid, layer in self._mlgraph.layers.items():
+            link_layers.append(layer.graph.links)
+
         for link in self._mlgraph.graph.links.values():
             if link.label == "TRANSIT":
                 speed = self._user_flow._walk_speed
             else:
                 speed = self._mlgraph.layers[link.label].default_speed
 
-            link.update_costs({"speed": speed,
-                              "travel_time": link.length/speed})
+            costs = {"speed": speed,
+                     "travel_time": link.length/speed}
+            link.update_costs(costs)
+
+            for links in link_layers:
+                link = links.get(link.id, None)
+                if link is not None:
+                    link.update_costs(costs)
 
         for layer in self._mlgraph.layers.values():
             for service in layer.mobility_services.values():
@@ -102,7 +112,7 @@ class Supervisor(object):
 
         self._user_flow.set_time(tstart)
 
-        VehicleManager.empty()
+        # VehicleManager.empty()
 
     def update_mobility_services(self, flow_dt:Dt):
         for layer in self._mlgraph.layers.values():

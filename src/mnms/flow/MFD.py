@@ -21,7 +21,7 @@ class Reservoir(object):
     # fct_MFD_speed is the function returning the mean speeds as a function of the accumulations
     def __init__(self,
                  id: str,
-                 modes,
+                 modes: List[str],
                  fct_MFD_speed: Callable[[Dict[str, float]], Dict[str, float]]):
         self.id = id
         self.modes = modes
@@ -184,6 +184,10 @@ class MFDFlow(AbstractFlowMotor):
         res_links = {res.id: self._graph.roads.zones[res.id] for res in self.reservoirs}
         res_dict = {res.id: res for res in self.reservoirs}
 
+        link_layers = list()
+        for lid, layer in self._graph.layers.items():
+            link_layers.append(layer.graph.links)
+
         for tid, topolink in self._graph.graph.links.items():
             if topolink.label != "TRANSIT":
                 link_service = topolink.label
@@ -212,8 +216,13 @@ class MFDFlow(AbstractFlowMotor):
                     new_speed = self._graph.layers[link.layer].default_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             if new_speed != 0:
-                self._graph.graph.update_link_costs(tid, {'travel_time': total_len / new_speed,
-                                                          'speed': new_speed})
+                costs = {'travel_time': total_len / new_speed,
+                         'speed': new_speed}
+                self._graph.graph.update_link_costs(tid, costs)
+                for links in link_layers:
+                    link = links.get(tid, None)
+                    if link is not None:
+                        link.update_costs(costs)
 
     def write_result(self, step_affectation:int, step_flow:int):
         tcurrent = self._tcurrent.time

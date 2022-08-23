@@ -162,7 +162,7 @@ class Vehicle(TimeDependentSubject):
 
     @property
     def is_empty(self):
-        return bool(self.passenger)
+        return not bool(self.passenger)
 
     @property
     def id(self):
