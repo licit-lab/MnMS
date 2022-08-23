@@ -16,7 +16,7 @@ def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=Tru
     x, y = zip(*[pos.tolist() for pos in roads.nodes.values()])
     ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
 
-    if draw_stops:
+    if draw_stops and roads.stops:
         x, y = zip(*[data["absolute_position"].tolist() for data in roads.stops.values()])
         ax.plot(x, y, 'o', markerfacecolor='red', markeredgecolor=color, fillstyle='full', markersize=nodesize)
 
