@@ -3,6 +3,7 @@ from tempfile import TemporaryDirectory
 
 from mnms.flow.user_flow import UserFlow
 from mnms.graph.road import RoadDescriptor
+from mnms.graph.zone import Zone
 from mnms.time import Time, Dt, TimeTable
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
 from mnms.mobility_service.car import PersonalCarMobilityService
@@ -25,14 +26,17 @@ class TestUserFlow(unittest.TestCase):
         roads.register_node('3', [1400, 0])
         roads.register_node('4', [3400, 0])
 
-        roads.register_section('0_1', '0', '1', zone="res1")
-        roads.register_section('0_2', '0', '2', zone="res1")
-        roads.register_section('2_3', '2', '3', zone="res1")
-        roads.register_section('3_4', '3', '4', zone="res2")
+        roads.register_section('0_1', '0', '1')
+        roads.register_section('0_2', '0', '2')
+        roads.register_section('2_3', '2', '3')
+        roads.register_section('3_4', '3', '4')
 
         roads.register_stop("B2", "2_3", 0)
         roads.register_stop("B3", "3_4", 0)
         roads.register_stop("B4", "3_4", 1)
+
+        roads.add_zone(Zone("res1", {"0_1", "0_2", "2_3"}))
+        roads.add_zone(Zone("res2", {"3_4"}))
 
         car_layer = CarLayer(roads, services=[PersonalCarMobilityService()])
         car_layer.create_node('C0', '0')

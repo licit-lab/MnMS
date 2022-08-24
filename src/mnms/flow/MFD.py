@@ -156,7 +156,7 @@ class MFDFlow(AbstractFlowMotor):
                 unode, dnode = veh.current_link
                 curr_link = self.graph_nodes[unode].adj[dnode]
                 lid = self._graph.map_reference_links[curr_link.id][0] # take reservoir of first part of trip
-                res_id = self._graph.roads.sections[lid]['zone']
+                res_id = self._graph.roads.sections[lid].zone
                 veh_type = veh.type.upper() # dirty
                 self.dict_accumulations[res_id][veh_type] += 1
                 current_vehicles[veh_id] = veh
@@ -173,7 +173,7 @@ class MFDFlow(AbstractFlowMotor):
             unode, dnode = veh.current_link
             curr_link = self.graph_nodes[unode].adj[dnode]
             lid = self._graph.map_reference_links[curr_link.id][0]
-            res_id = self._graph.roads.sections[lid]['zone']
+            res_id = self._graph.roads.sections[lid].zone
             veh_type = veh.type.upper()
             speed = self.dict_speeds[res_id][veh_type]
             veh.speed = speed
@@ -194,11 +194,11 @@ class MFDFlow(AbstractFlowMotor):
                 topolink_lengths[tid] = {'lengths': {},
                                          'speeds': {}}
                 for l in self._graph.map_reference_links[tid]:
-                    topolink_lengths[tid]['lengths'][l] = self._graph.roads.sections[l]['length']
+                    topolink_lengths[tid]['lengths'][l] = self._graph.roads.sections[l].length
                     topolink_lengths[tid]['speeds'][l] = None
-                    for resid, reslinks in res_links.items():
+                    for resid, zone in res_links.items():
                         res = res_dict[resid]
-                        if l in reslinks:
+                        if l in zone.sections:
                             mspeed = res.dict_speeds[link_service.upper()]
                             topolink_lengths[tid]['speeds'][l] = mspeed
                             break

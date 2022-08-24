@@ -1,3 +1,3 @@
 # About
 
-::: mnms.simulation.Supervisor
+::: mnms.generation.roads.generate_one_zone

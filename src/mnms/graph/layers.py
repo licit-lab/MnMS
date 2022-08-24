@@ -20,7 +20,7 @@ log = create_logger(__name__)
 class SimpleLayer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
         assert dbnode in self._roaddb.nodes
-        node_pos = self._roaddb.nodes[dbnode]
+        node_pos = self._roaddb.nodes[dbnode].position
 
         if exclude_movements is not None:
             exclude_movements = {key: set(val) for key, val in exclude_movements.items()}
@@ -32,7 +32,7 @@ class SimpleLayer(AbstractLayer):
         self.map_reference_nodes[nid] = dbnode
 
     def create_link(self, lid, upstream, downstream, costs, road_links):
-        length = sum(self._roaddb.sections[l]['length'] for l in road_links)
+        length = sum(self._roaddb.sections[l].length for l in road_links)
         self.graph.add_link(lid, upstream, downstream, length, costs, self.id)
 
         self.map_reference_links[lid] = road_links
@@ -43,8 +43,6 @@ class SimpleLayer(AbstractLayer):
                       data['ID'],
                       load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
-
-
 
         node_ref = data["MAP_ROADDB"]["NODES"]
         for ndata in data['NODES']:
@@ -117,13 +115,13 @@ class PublicTransportLayer(AbstractLayer):
     def _create_stop(self, sid, dbnode):
         assert dbnode in self._roaddb.stops
 
-        node_pos = np.array(self._roaddb.stops[dbnode]['absolute_position'])
+        node_pos = self._roaddb.stops[dbnode].absolute_position
         self.graph.add_node(sid, node_pos[0], node_pos[1], self.id)
 
     def _connect_stops(self, lid, line_id, upstream, downstream, reference_sections):
-        line_length = sum(self._roaddb.sections[s]['length'] for s in reference_sections[1:-1])
-        line_length += self._roaddb.sections[reference_sections[0]]['length']*(1-self._roaddb.stops[upstream]['relative_position'])
-        line_length += self._roaddb.sections[reference_sections[-1]]['length'] * self._roaddb.stops[downstream]['relative_position']
+        line_length = sum(self._roaddb.sections[s].length for s in reference_sections[1:-1])
+        line_length += self._roaddb.sections[reference_sections[0]].length*(1-self._roaddb.stops[upstream].relative_position)
+        line_length += self._roaddb.sections[reference_sections[-1]].length * self._roaddb.stops[downstream].relative_position
 
         costs = {'length': line_length}
         self.graph.add_link(lid, line_id+'_'+upstream, line_id+'_'+downstream, line_length, costs, self.id)

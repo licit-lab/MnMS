@@ -16,13 +16,12 @@ def generate_layer_from_roads(roads: RoadDescriptor,
 
     layer = SimpleLayer(roads, layer_id, veh_type, default_speed, mobility_services)
 
-
-    for n, pos in roads.nodes.items():
+    for n in roads.nodes:
         layer.create_node(f"{layer_id}_{n}", n, {})
 
     for lid, data in roads.sections.items():
-        layer.create_link(f"{layer_id}_{lid}", f"{layer_id}_{data['upstream']}", f"{layer_id}_{data['downstream']}",
-                          {'length': data['length']}, [lid])
+        layer.create_link(f"{layer_id}_{lid}", f"{layer_id}_{data.upstream}", f"{layer_id}_{data.downstream}",
+                          {'length': data.length}, [lid])
     return layer
 
 
@@ -30,15 +29,14 @@ def generate_matching_origin_destination_layer(roads: RoadDescriptor, with_stops
 
     odlayer = OriginDestinationLayer()
 
-    for nid, pos in roads.nodes.items():
-        odlayer.create_origin_node(f"ORIGIN_{nid}", pos)
-        odlayer.create_destination_node(f"DESTINATION_{nid}", pos)
+    for node in roads.nodes.values():
+        odlayer.create_origin_node(f"ORIGIN_{node.id}", node.position)
+        odlayer.create_destination_node(f"DESTINATION_{node.id}", node.position)
 
     if with_stops:
-        for sid, d in roads.stops.items():
-            pos = d['absolute_position']
-            odlayer.create_origin_node(f"ORIGIN_{sid}", pos)
-            odlayer.create_destination_node(f"DESTINATION_{sid}", pos)
+        for stop in roads.stops.values():
+            odlayer.create_origin_node(f"ORIGIN_{stop.id}", stop.absolute_position)
+            odlayer.create_destination_node(f"DESTINATION_{stop.id}", stop.absolute_position)
 
     return odlayer
 
