@@ -25,7 +25,17 @@ class Supervisor(object):
                  demand: AbstractDemandManager,
                  flow_motor: AbstractFlowMotor,
                  decision_model: AbstractDecisionModel,
-                 outfile: str = None):
+                 outfile: Optional[str] = None):
+        """
+        Main class to launch a simulation
+
+        Args:
+            graph: The multi layer graph
+            demand: The demand manager
+            flow_motor: The flow motor
+            decision_model: The decision model
+            outfile: If not None write in the outfile at each time step the cost of each link in the multi layer graph
+        """
 
         self._mlgraph: MultiLayerGraph = None
         self._demand: AbstractDemandManager = demand

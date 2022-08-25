@@ -99,6 +99,14 @@ class AbstractMobilityService(ABC):
             self._counter_matching += 1
 
     def periodic_maintenance(self, dt: Dt):
+        """
+        This method is called every n step to perform maintenance
+        Args:
+            dt:
+
+        Returns:
+            None
+        """
         pass
 
     def step_maintenance(self, dt: Dt):

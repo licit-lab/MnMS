@@ -252,6 +252,14 @@ class MultiLayerGraph(object):
                  layers:List[AbstractLayer] = [],
                  odlayer:Optional[OriginDestinationLayer] = None,
                  connection_distance:Optional[float] = None):
+        """
+        Multi layer graph class, the graph representation is based on hipop
+
+        Args:
+            layers:
+            odlayer:
+            connection_distance:
+        """
 
         self.graph = merge_oriented_graph([l.graph for l in layers])
 

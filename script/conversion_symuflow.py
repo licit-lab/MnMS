@@ -15,6 +15,7 @@ import numpy as np
 
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.layers import MultiLayerGraph, CarLayer, PublicTransportLayer
+from mnms.graph.zone import Zone
 from mnms.io.graph import save_graph
 from mnms.time import TimeTable, Time, Dt
 from mnms.vehicles.veh_type import Bus, Metro, Tram
@@ -106,11 +107,17 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
     for nid, pos in nodes.items():
         roads.register_node(nid, pos)
 
+    zones = defaultdict(set)
     for tid, tdata in troncons.items():
-        if zone_dict is None:
-            roads.register_section(tid, tdata['up'], tdata['down'], tdata['length'])
-        else:
-            roads.register_section(tid, tdata['up'], tdata['down'], tdata['length'], zone_dict[tid])
+        roads.register_section(tid, tdata['up'], tdata['down'], tdata['length'])
+        if zone_dict is not None:
+            zones[zone_dict[tid]].add(tid)
+
+    if zones:
+        for zid, section in zones.items():
+            roads.add_zone(Zone(zid, section))
+
+
 
     stop_elem = root.xpath('/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/ARRETS')
     map_tr_stops = dict()
@@ -248,7 +255,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
 
                     public_transport.create_line(line_id, line_stops, sections, line_timetable, bidirectional=False)
 
-        mlgraph = MultiLayerGraph([car_layer]+list(pt_types.values()))
+                mlgraph = MultiLayerGraph([car_layer]+list(pt_types.values()))
 
     else:
 

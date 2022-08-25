@@ -280,12 +280,18 @@ class Bus(Vehicle):
                  capacity: int,
                  activity: Optional[VehicleActivity] = None):
         super(Bus, self).__init__(node, capacity, activity)
-#
-# class Metro(Vehicle):
-#     def __init__(self, origin:str, destination:str, path: List[Tuple[Tuple[str, str], float]] = None, capacity:int=500):
-#         super(Metro, self).__init__(origin, destination, path, capacity)
-#
-#
-# class Tram(Vehicle):
-#     def __init__(self, origin: str, destination: str, path: List[Tuple[Tuple[str, str], float]] = None, capacity: int = 100):
-#         super(Tram, self).__init__(origin, destination, path, capacity)
+
+class Tram(Vehicle):
+    def __init__(self,
+                 node: str,
+                 capacity: int,
+                 activity: Optional[VehicleActivity] = None):
+        super(Tram, self).__init__(node, capacity, activity)
+
+
+class Metro(Vehicle):
+    def __init__(self,
+                 node: str,
+                 capacity: int,
+                 activity: Optional[VehicleActivity] = None):
+        super(Metro, self).__init__(node, capacity, activity)

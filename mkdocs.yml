@@ -1,11 +1,14 @@
 site_name: MnMS
-site_url: https://mnms.com/
+site_url: ""
+use_directory_urls: false
 nav:
     - Home: index.md
-    - About: about.md
     - Tutorials:
         - Graph: TutorialGraph.ipynb
         - Demand and Decision Model: TutorialDemandTravelDecision.ipynb
+    - Code Reference:
+        - mnms: reference/SUMMARY.md
+
 theme:
   name: material
   palette:
@@ -14,6 +17,13 @@ theme:
 
 plugins:
   - search
-  - mkdocstrings
+  - gen-files:
+      scripts:
+      - docs/gen_ref_pages.py  #
+  - mkdocstrings:
+      watch:
+      - src/mnms  #
   - mkdocs-jupyter:
-      execute: true
+      include: ["*.ipynb"]
+#      execute: true
+      include_source: True
