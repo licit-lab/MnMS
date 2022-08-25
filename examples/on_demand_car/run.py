@@ -34,7 +34,7 @@ demand.add_user_observer(CSVUserObserver('user.csv'))
 
 road_db = generate_manhattan_road(3, 100)
 
-uber = OnDemandCarDepotMobilityService("UBER", 1)
+uber = OnDemandCarDepotMobilityService("UBER", 0)
 uber.attach_vehicle_observer(CSVVehicleObserver("veh.csv"))
 
 

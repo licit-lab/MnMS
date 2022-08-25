@@ -18,8 +18,8 @@ log = create_logger(__name__)
 
 
 class PersonalCarMobilityService(AbstractMobilityService):
-    def __init__(self, _id: str = 'PersonalCar', dt_matching=1):
-        super(PersonalCarMobilityService, self).__init__(_id, dt_matching, veh_capacity=1)
+    def __init__(self, _id: str = 'PersonalCar'):
+        super(PersonalCarMobilityService, self).__init__(_id, veh_capacity=1, dt_matching=0, dt_periodic_maintenance=0)
 
     def matching(self, users: Dict[str, Tuple[User, str]]) -> List[str]:
         user_matched = list()
@@ -39,12 +39,12 @@ class PersonalCarMobilityService(AbstractMobilityService):
 
         return user_matched
 
-    def maintenance(self, dt: Dt):
+    def step_maintenance(self, dt: Dt):
         for veh in list(self.fleet.vehicles.values()):
             if veh.state is VehicleState.STOP:
                 self.fleet.delete_vehicle(veh.id)
 
-    def replaning(self):
+    def replanning(self):
         pass
 
     def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
@@ -64,9 +64,8 @@ class OnDemandCarMobilityService(AbstractMobilityService):
     def __init__(self,
                  _id: str,
                  dt_matching: int,
-                 veh_capacity=1):
-        super(OnDemandCarMobilityService, self).__init__(_id, dt_matching, veh_capacity)
-        self._is_duplicate = True
+                 dt_step_maintenance: int = 0):
+        super(OnDemandCarMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
 
     def create_waiting_vehicle(self, node: str):
         assert node in self.graph.nodes
@@ -77,15 +76,6 @@ class OnDemandCarMobilityService(AbstractMobilityService):
 
         if self._observer is not None:
             new_veh.attach(self._observer)
-
-    def maintenance(self, dt: Dt):
-        pass
-
-    def rebalancing(self, next_demand: List[User], horizon: Dt):
-        pass
-
-    def replaning(self):
-        pass
 
     def matching(self, users: Dict[str, Tuple[User, str]]):
         user_matched = list()
@@ -151,9 +141,8 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
     def __init__(self,
                  _id: str,
                  dt_matching: int,
-                 veh_capacity=1):
-        super(OnDemandCarDepotMobilityService, self).__init__(_id, dt_matching, veh_capacity)
-        self._is_duplicate = True
+                 dt_step_maintenance: int = 0):
+        super(OnDemandCarDepotMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
         self.depot = dict()
 
     def _create_waiting_vehicle(self, node: str):
@@ -179,7 +168,7 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
     def is_depot_full(self, node: str):
         return self.depot[node]["capacity"] == len(self.depot[node]["vehicles"])
 
-    def maintenance(self, dt: Dt):
+    def step_maintenance(self, dt: Dt):
         depot = list(self.depot.keys())
         depot_pos = np.array([self.graph_nodes[d].position for d in self.depot.keys()])
 
@@ -208,12 +197,6 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
                     veh.add_activities([repositioning])
                 else:
                     self.depot[veh._current_node]["vehicles"].add(veh.id)
-
-    def rebalancing(self, next_demand: List[User], horizon: Dt):
-        pass
-
-    def replaning(self):
-        pass
 
     def matching(self, users: Dict[str, Tuple[User, str]]):
         user_matched = list()

@@ -119,4 +119,5 @@ class RoadDescriptor(object):
         for z in data["ZONES"].values():
             new_obj.add_zone(Zone(z["id"], set(z["sections"])))
 
+
         return new_obj

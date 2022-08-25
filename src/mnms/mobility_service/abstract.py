@@ -7,27 +7,27 @@ from mnms.demand.user import User
 from mnms.tools.cost import create_service_costs
 from mnms.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
-from mnms.vehicles.veh_type import Vehicle
 
 
 class AbstractMobilityService(ABC):
     def __init__(self,
                  _id: str,
+                 veh_capacity: int,
                  dt_matching: int,
-                 veh_capacity: int):
-
+                 dt_periodic_maintenance: int):
         self._id: str = _id
         self.layer: "AbstractLayer" = None
-        self._tcurrent: Time = None
-        self.fleet: FleetManager = None
-        self._observer = None
-        self._dt_matching: int = dt_matching
+        self._tcurrent: Optional[Time] = None
+        self.fleet: Optional[FleetManager] = None
+        self._observer: Optional = None
         self._user_buffer: Dict[str, Tuple[User, str]] = dict()
         self._veh_capacity: int = veh_capacity
 
+        self._counter_maintenance: int = 0
+        self._dt_periodic_maintenance: int = dt_periodic_maintenance
+
         self._counter_matching: int = 0
-        # self._counter_rebalancing: int = 0
-        # self._step_rebalancing: int = step_rebalancing
+        self._dt_matching: int = dt_matching
 
     def set_time(self, time:Time):
         self._tcurrent = time.copy()
@@ -80,18 +80,13 @@ class AbstractMobilityService(ABC):
         self._user_buffer[user.id] = (user, drop_node)
 
     def update(self, dt: Dt):
-        self.maintenance(dt)
-        self._counter_matching += 1
-        # self._counter_rebalancing += 1
+        self.step_maintenance(dt)
 
-        # if self._counter_rebalancing == self._step_rebalancing:
-        #     if self._horizon is None:
-        #         next_demand = []
-        #         dt =
-        #     else:
-        #         next_demand = self._horizon.get(self._tcurrent.add_time(dt))
-        #     self.rebalancing(next_demand, self._horizon.dt)
-        #     self._counter_rebalancing = 0
+        if self._counter_maintenance == self._dt_periodic_maintenance:
+            self._counter_maintenance = 0
+            self.periodic_maintenance(dt)
+        else:
+            self._counter_maintenance += 1
 
     def launch_matching(self):
         if self._counter_matching == self._dt_matching:
@@ -100,18 +95,20 @@ class AbstractMobilityService(ABC):
 
             for u in user_matched:
                 del self._user_buffer[u]
+        else:
+            self._counter_matching += 1
 
+    def periodic_maintenance(self, dt: Dt):
+        pass
 
-    @abstractmethod
-    def maintenance(self, dt: Dt):
+    def step_maintenance(self, dt: Dt):
         pass
 
     @abstractmethod
-    def matching(self, users: List[Tuple[User, str]]):
+    def matching(self, users: Dict[str, Tuple[User, str]]):
         pass
 
-    @abstractmethod
-    def replaning(self):
+    def replanning(self):
         pass
 
     @classmethod
@@ -128,14 +125,10 @@ class AbstractOnDemandMobilityService(AbstractMobilityService, metaclass=ABCMeta
     def __init__(self,
                  _id: str,
                  dt_matching: int,
+                 dt_rebalancing: int,
                  veh_capacity: int,
-                 horizon: AbstractDemandHorizon,
-                 step_rebalancing: int):
-
-        super(AbstractOnDemandMobilityService, self).__init__(_id, dt_matching, veh_capacity)
-
-        self._step_rebalancing: int = step_rebalancing
-        self._counter_rebalancing: int = 0
+                 horizon: AbstractDemandHorizon):
+        super(AbstractOnDemandMobilityService, self).__init__(_id, veh_capacity, dt_matching, dt_rebalancing)
         self._horizon: AbstractDemandHorizon = horizon
 
     @abstractmethod
@@ -143,10 +136,14 @@ class AbstractOnDemandMobilityService(AbstractMobilityService, metaclass=ABCMeta
         pass
 
     def update(self, dt: Dt):
-        super(AbstractOnDemandMobilityService, self).update(dt)
+        self.step_maintenance(dt)
 
-        self._counter_rebalancing += 1
-        if self._counter_rebalancing == self._step_rebalancing:
+        if self._counter_maintenance == self._dt_periodic_maintenance:
+            self._counter_maintenance = 0
+            self.periodic_maintenance(dt)
+
             next_demand = self._horizon.get(self._tcurrent.add_time(dt))
             self.rebalancing(next_demand, self._horizon.dt)
-            self._counter_rebalancing = 0
+        else:
+            self._counter_maintenance += 1
+

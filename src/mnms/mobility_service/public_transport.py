@@ -50,7 +50,8 @@ def _insert_in_activity(curr_activity, activity_pos, drop_node, drop_node_ind, t
 
 class PublicTransportMobilityService(AbstractMobilityService):
     def __init__(self, _id: str, veh_capacity=50):
-        super(PublicTransportMobilityService, self).__init__(_id, veh_capacity=veh_capacity, dt_matching=1)
+        super(PublicTransportMobilityService, self).__init__(_id, veh_capacity=veh_capacity, dt_matching=0,
+                                                             dt_periodic_maintenance=0)
         self.vehicles: Dict[str, Deque[Vehicle]] = defaultdict(deque)
         self._timetable_iter: Dict[str, Generator[Time, None, None]] = dict()
         self._current_time_table: Dict[str, Time] = dict()
@@ -157,7 +158,6 @@ class PublicTransportMobilityService(AbstractMobilityService):
                     _insert_in_activity(curr_activity, ind+1, drop_node, drop_node_ind, take_node_ind, user, veh, veh_node_ind)
                     break
 
-
     def matching(self, users: Dict[str, Tuple[User, str]]) -> List[str]:
         graph_nodes = self.graph.nodes
         matched_user = []
@@ -215,7 +215,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
                             raise VehicleNotFoundError(user, self)
         return matched_user
 
-    def maintenance(self, dt: Dt):
+    def step_maintenance(self, dt: Dt):
         for lid in self.lines:
             for new_veh in self.new_departures(self._tcurrent, dt, lid):
                 # Mark the Stop state to done to start vehicle journey
@@ -237,7 +237,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
             self.clean_arrived_vehicles(lid)
 
-    def replaning(self):
+    def replanning(self):
         pass
 
     def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
