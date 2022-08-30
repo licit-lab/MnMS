@@ -68,7 +68,7 @@ def generate_random_demand(mlgraph: "MultiLayerGraph",
 
         _, path_cost = dijkstra(graph, unode, dnode, cost_path)
         if min_cost <= path_cost < float('inf'):
-            demand.extend([User(str(next(uid)), unode, dnode, Time.fromSeconds(distrib_time(tstart, tend))) for _ in
+            demand.extend([User(str(next(uid)), unode, dnode, Time.from_seconds(distrib_time(tstart, tend))) for _ in
                            range(repeat)])
             user_count+=repeat
 

@@ -18,7 +18,7 @@ class TestTime(unittest.TestCase):
         self.assertAlmostEqual(23.67, t.seconds)
 
     def test_time_from_seconds(self):
-        t = Time.fromSeconds(12345)
+        t = Time.from_seconds(12345)
         self.assertEqual(3, t.hours)
         self.assertEqual(25, t.minutes)
         self.assertAlmostEqual(45, t.seconds)

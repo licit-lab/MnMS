@@ -113,7 +113,7 @@ class AbstractMobilityService(ABC):
         pass
 
     @abstractmethod
-    def matching(self, users: Dict[str, Tuple[User, str]]):
+    def matching(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
         pass
 
     def replanning(self):

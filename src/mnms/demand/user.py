@@ -50,7 +50,8 @@ class User(TimeDependentSubject):
                  scale_factor=1,
                  path: Optional["Path"] = None,
                  response_dt: Optional[Dt] = None,
-                 pickup_dt: Optional[Dt] = None):
+                 pickup_dt: Optional[Dt] = None,
+                 continuous_journey: Optional[str] = None):
         super(User, self).__init__()
         self.id = _id
         self.origin = origin if not isinstance(origin, list) else np.array(origin)
@@ -73,6 +74,8 @@ class User(TimeDependentSubject):
 
         self.response_dt = User.default_response_dt.copy() if response_dt is None else response_dt
         self.pickup_dt = User.default_pickup_dt.copy() if response_dt is None else pickup_dt
+
+        self._continuous_journey = continuous_journey
 
         if path is None:
             self.path: Optional[Path] = None

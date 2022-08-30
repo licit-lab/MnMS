@@ -21,8 +21,8 @@ class PersonalCarMobilityService(AbstractMobilityService):
     def __init__(self, _id: str = 'PersonalCar'):
         super(PersonalCarMobilityService, self).__init__(_id, veh_capacity=1, dt_matching=0, dt_periodic_maintenance=0)
 
-    def matching(self, users: Dict[str, Tuple[User, str]]) -> List[str]:
-        user_matched = list()
+    def matching(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
+        user_matched = dict()
         for uid, (user, drop_node) in users.items():
             upath = list(user.path.nodes)
             upath = upath[upath.index(user._current_node):upath.index(drop_node)+1]
@@ -35,7 +35,7 @@ class PersonalCarMobilityService(AbstractMobilityService):
             if self._observer is not None:
                 new_veh.attach(self._observer)
 
-            user_matched.append(uid)
+            user_matched[uid] = Dt()
 
         return user_matched
 

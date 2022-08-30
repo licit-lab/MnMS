@@ -16,10 +16,12 @@ class UserFlow(object):
     def __init__(self, walk_speed=1.42):
         self._graph: Optional[MultiLayerGraph] = None
         self.users:Dict[str, User] = dict()
-        # self._transiting: Dict = dict()
         self._walking: Dict = dict()
         self._walk_speed: float = walk_speed
         self._tcurrent: Optional[Time] = None
+
+        self._waiting_answer: Dict[str, Time] = dict()
+        self._waiting_vehicle: Dict[str, Time] = dict()
 
         self._gnodes = None
 
@@ -209,9 +211,35 @@ class UserFlow(object):
             self.users.pop(uid)
 
     def check_user_waiting_answers(self, dt: Dt):
+        to_del = list()
         for uid, time in self._waiting_answer.items():
             # user = self.users[uid]
-            new_time = time.to_seconds() - dt.to_seconds()
+            if self.users[uid].state is UserState.WAITING_ANSWER:
+                new_time = time.to_seconds() - dt.to_seconds()
+                if new_time < 0:
+                    log.info(f"{uid} waited answer to long")
+                else:
+                    self._waiting_answer[uid] = Time.from_seconds(new_time)
+            else:
+                to_del.append(uid)
 
-            if new_time < 0:
-                log.info(f"")
+        for uid in to_del:
+            self._waiting_answer.pop(uid)
+
+    def check_user_waiting_vehicles(self, dt: Dt):
+        to_del = list()
+        for uid, time in self._waiting_vehicle.items():
+            # user = self.users[uid]
+
+            if self.users[uid].state is UserState.WAITING_VEHICLE:
+                new_time = time.to_seconds() - dt.to_seconds()
+                if new_time < 0:
+                    log.info(f"{uid} waited vehicle to long")
+                else:
+                    self._waiting_vehicle[uid] = Time.from_seconds(new_time)
+            else:
+                to_del.append(uid)
+
+        for uid in to_del:
+            self._waiting_vehicle.pop(uid)
+

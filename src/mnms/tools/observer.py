@@ -52,7 +52,7 @@ class TimeDependentSubject(ABC):
 
 class CSVUserObserver(TimeDependentObserver):
     def __init__(self, filename: str, prec:int=3):
-        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "VEHICLE"]
+        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "VEHICLE", "CONTINUOUS_JOURNEY"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -69,7 +69,8 @@ class CSVUserObserver(TimeDependentObserver):
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
                f"{subject.distance:.{self._prec}f}",
                subject.state.name,
-               subject._vehicle.id if subject._vehicle is not None else None]
+               subject._vehicle.id if subject._vehicle is not None else None,
+               subject._continous_journey]
         log.info(f"OBS {time}: {row}")
 
         self._csvhandler.writerow(row)
