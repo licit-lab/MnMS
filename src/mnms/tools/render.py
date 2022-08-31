@@ -7,13 +7,13 @@ def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=Tru
     lines = list()
 
     for section_data in roads.sections.values():
-        unode = section_data['upstream']
-        dnode = section_data['downstream']
-        lines.append([roads.nodes[unode], roads.nodes[dnode]])
+        unode = section_data.upstream
+        dnode = section_data.downstream
+        lines.append([roads.nodes[unode].position, roads.nodes[dnode].position])
     line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
     ax.add_collection(line_segment)
 
-    x, y = zip(*[pos.tolist() for pos in roads.nodes.values()])
+    x, y = zip(*[rn.position.tolist() for rn in roads.nodes.values()])
     ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
 
     if draw_stops and roads.stops:
@@ -22,7 +22,7 @@ def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=Tru
 
 
     if node_label:
-        [ax.annotate(n, pos, size=label_size) for n, pos in roads.nodes.items()]
+        [ax.annotate(n, rn.position, size=label_size) for n, rn in roads.nodes.items()]
         if draw_stops:
             [ax.annotate(n, data['absolute_position'], size=label_size, color="red") for n, data in roads.stops.items()]
 
