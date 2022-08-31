@@ -109,9 +109,9 @@ class Supervisor(object):
             link.update_costs(costs)
 
             for links in link_layers:
-                link = links.get(link.id, None)
-                if link is not None:
-                    link.update_costs(costs)
+                layer_link = links.get(link.id, None)
+                if layer_link is not None:
+                    layer_link.update_costs(costs)
 
         for layer in self._mlgraph.layers.values():
             for service in layer.mobility_services.values():
@@ -251,4 +251,3 @@ class Supervisor(object):
                     error=traceback.format_exc())
 
         return data
-
