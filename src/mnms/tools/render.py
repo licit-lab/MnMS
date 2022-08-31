@@ -17,14 +17,13 @@ def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=Tru
     ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
 
     if draw_stops and roads.stops:
-        x, y = zip(*[data["absolute_position"].tolist() for data in roads.stops.values()])
+        x, y = zip(*[stop.absolute_position.tolist() for stop in roads.stops.values()])
         ax.plot(x, y, 'o', markerfacecolor='red', markeredgecolor=color, fillstyle='full', markersize=nodesize)
-
 
     if node_label:
         [ax.annotate(n, rn.position, size=label_size) for n, rn in roads.nodes.items()]
         if draw_stops:
-            [ax.annotate(n, data['absolute_position'], size=label_size, color="red") for n, data in roads.stops.items()]
+            [ax.annotate(s, data.absolute_position, size=label_size, color="red") for s, data in roads.stops.items()]
 
     ax.margins(0.05, 0.05)
     ax.axis("equal")

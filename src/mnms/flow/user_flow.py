@@ -21,7 +21,6 @@ class UserFlow(object):
         self._tcurrent: Optional[Time] = None
 
         self._waiting_answer: Dict[str, Time] = dict()
-        self._waiting_vehicle: Dict[str, Time] = dict()
 
         self._gnodes = None
 
@@ -171,6 +170,8 @@ class UserFlow(object):
         log.info(f"Step User Flow {self._tcurrent}")
         self._gnodes = self._graph.graph.nodes
 
+        self.check_user_waiting_answers(dt)
+
         for u in new_users:
             if u.path is not None:
                 self.users[u.id] = u
@@ -205,7 +206,11 @@ class UserFlow(object):
                     u.set_state_waiting_answer()
                     self._request_user_vehicles(u)
 
+
                 u.notify(self._tcurrent)
+
+            if u.state is UserState.WAITING_ANSWER:
+                self._waiting_answer.setdefault(u.id, self._tcurrent.copy())
 
         for uid in to_del:
             self.users.pop(uid)
@@ -225,21 +230,4 @@ class UserFlow(object):
 
         for uid in to_del:
             self._waiting_answer.pop(uid)
-
-    def check_user_waiting_vehicles(self, dt: Dt):
-        to_del = list()
-        for uid, time in self._waiting_vehicle.items():
-            # user = self.users[uid]
-
-            if self.users[uid].state is UserState.WAITING_VEHICLE:
-                new_time = time.to_seconds() - dt.to_seconds()
-                if new_time < 0:
-                    log.info(f"{uid} waited vehicle to long")
-                else:
-                    self._waiting_vehicle[uid] = Time.from_seconds(new_time)
-            else:
-                to_del.append(uid)
-
-        for uid in to_del:
-            self._waiting_vehicle.pop(uid)
 

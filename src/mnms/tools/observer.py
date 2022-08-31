@@ -13,10 +13,18 @@ class Observer(ABC):
     def update(self, subject:'Subject'):
         pass
 
+    @abstractmethod
+    def finish(self):
+        pass
+
 
 class TimeDependentObserver(ABC):
     @abstractmethod
     def update(self, subject:'TimeDependentSubject', time:Time):
+        pass
+
+    @abstractmethod
+    def finish(self):
         pass
 
 
@@ -52,14 +60,14 @@ class TimeDependentSubject(ABC):
 
 class CSVUserObserver(TimeDependentObserver):
     def __init__(self, filename: str, prec:int=3):
-        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "VEHICLE", "CONTINUOUS_JOURNEY"]
+        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "STATE", "VEHICLE", "CONTINUOUS_JOURNEY"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
         self._csvhandler.writerow(self._header)
         self._prec = prec
 
-    def __del__(self):
+    def finish(self):
         self._file.close()
 
     def update(self, subject: 'User', time: Time):
@@ -70,7 +78,7 @@ class CSVUserObserver(TimeDependentObserver):
                f"{subject.distance:.{self._prec}f}",
                subject.state.name,
                subject._vehicle.id if subject._vehicle is not None else None,
-               subject._continous_journey]
+               subject._continuous_journey]
         log.info(f"OBS {time}: {row}")
 
         self._csvhandler.writerow(row)
@@ -85,7 +93,7 @@ class CSVVehicleObserver(TimeDependentObserver):
         self._csvhandler.writerow(self._header)
         self._prec = prec
 
-    def __del__(self):
+    def finish(self):
         self._file.close()
 
     def update(self, subject: 'Vehicle', time:Time):

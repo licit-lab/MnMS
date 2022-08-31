@@ -30,7 +30,7 @@ cwd = pathlib.Path(__file__).parent.joinpath('demand.csv').resolve()
 
 road_db = generate_manhattan_road(3, 100)
 
-personal_car = PersonalCarMobilityService(dt_matching=1)
+personal_car = PersonalCarMobilityService()
 personal_car.attach_vehicle_observer(CSVVehicleObserver("veh.csv"))
 
 car_layer = generate_layer_from_roads(road_db,

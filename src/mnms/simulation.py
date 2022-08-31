@@ -132,20 +132,23 @@ class Supervisor(object):
                 mservice.update_time(flow_dt)
             
     def step_flow(self, flow_dt, users_step):
-        # TO CHECK:in the right order ? (if the other direction, there is a time step difference between the moments of creation of the vehicles and the accumulation)
         log.info(' Step user flow ..')
         start = time()
         self._user_flow.step(flow_dt, users_step)
         self._user_flow.update_time(flow_dt)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
+
         log.info(f' Perform matching for mobility services ...')
         start = time()
+        refuse_user = list()
         for layer in self._mlgraph.layers.values():
             for ms in layer.mobility_services.values():
-                ms.launch_matching()
+                user_refuse_service = ms.launch_matching()
+                refuse_user.extend(user_refuse_service)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
+
         log.info(' Step MFD flow ..')
         start = time()
         self._flow_motor.step(flow_dt)
@@ -243,6 +246,13 @@ class Supervisor(object):
 
         if self._write:
             self._outfile.close()
+
+        for obs in self._demand._observers:
+            obs.finish()
+
+        for layer in self._mlgraph.layers.values():
+            for mservice in layer.mobility_services.values():
+                mservice._observer.finish()
 
     def create_crash_report(self, affectation_step, flow_step) -> dict:
         data = dict(time=str(self.tcurrent),

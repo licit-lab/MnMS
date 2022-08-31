@@ -2,11 +2,14 @@ from abc import ABC, abstractmethod, ABCMeta
 from typing import List, Tuple, Optional, Dict
 from functools import cached_property
 
+from mnms.log import create_logger
 from mnms.demand.horizon import AbstractDemandHorizon
 from mnms.demand.user import User
 from mnms.tools.cost import create_service_costs
 from mnms.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
+
+log = create_logger(__name__)
 
 
 class AbstractMobilityService(ABC):
@@ -34,9 +37,6 @@ class AbstractMobilityService(ABC):
 
     def update_time(self, dt:Dt):
         self._tcurrent = self._tcurrent.add_time(dt)
-
-    def set_demand_horizon(self, horizon: AbstractDemandHorizon):
-        self._horizon = horizon
 
     @property
     def id(self):
@@ -89,14 +89,29 @@ class AbstractMobilityService(ABC):
             self._counter_maintenance += 1
 
     def launch_matching(self):
+        refuse_user = list()
+
         if self._counter_matching == self._dt_matching:
             self._counter_matching = 0
-            user_matched = self.matching(self._user_buffer)
+            negotiation = self.request(self._user_buffer)
+            matched_user = dict()
 
-            for u in user_matched:
+            for uid, service_dt in negotiation.items():
+                u = self._user_buffer[uid][0]
+                if u.pickup_dt > service_dt:
+                    matched_user[uid] = self._user_buffer[uid]
+                else:
+                    log.info(f"{uid} refused {self.id} offer (pickup too long)")
+                    refuse_user.append(uid)
+
+            self.matching(matched_user)
+
+            for u in negotiation:
                 del self._user_buffer[u]
         else:
             self._counter_matching += 1
+
+        return refuse_user
 
     def periodic_maintenance(self, dt: Dt):
         """
@@ -114,6 +129,10 @@ class AbstractMobilityService(ABC):
 
     @abstractmethod
     def matching(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
+        pass
+
+    @abstractmethod
+    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
         pass
 
     def replanning(self):
