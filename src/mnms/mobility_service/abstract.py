@@ -99,15 +99,16 @@ class AbstractMobilityService(ABC):
             for uid, service_dt in negotiation.items():
                 u = self._user_buffer[uid][0]
                 if u.pickup_dt > service_dt:
-                    matched_user[uid] = self._user_buffer[uid]
+                    matched_user[uid] = u
                 else:
-                    log.info(f"{uid} refused {self.id} offer (pickup too long)")
-                    refuse_user.append(uid)
+                    log.info(f"{uid} refused {self.id} offer (predicted pickup time too long)")
+                    u.set_state_stop()
+                    u.notify(self._tcurrent)
+                    refuse_user.append(u)
 
             self.matching(matched_user)
 
-            for u in negotiation:
-                del self._user_buffer[u]
+            self._user_buffer = dict()
         else:
             self._counter_matching += 1
 

@@ -134,18 +134,23 @@ class Supervisor(object):
     def step_flow(self, flow_dt, users_step):
         log.info(' Step user flow ..')
         start = time()
-        self._user_flow.step(flow_dt, users_step)
+        user_reach_dt_answer = self._user_flow.step(flow_dt, users_step)
         self._user_flow.update_time(flow_dt)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
 
         log.info(f' Perform matching for mobility services ...')
         start = time()
-        refuse_user = list()
+        user_reach_dt_pickup = list()
         for layer in self._mlgraph.layers.values():
             for ms in layer.mobility_services.values():
                 user_refuse_service = ms.launch_matching()
-                refuse_user.extend(user_refuse_service)
+                user_reach_dt_pickup.extend(user_refuse_service)
+
+        all_refused_user = user_reach_dt_pickup + user_reach_dt_answer
+        self._decision_model.set_refused_users(all_refused_user)
+        for u in all_refused_user:
+            del self._user_flow.users[u.id]
         end = time()
         log.info(f' Done [{end - start:.5} s]')
 
@@ -155,6 +160,8 @@ class Supervisor(object):
         self._flow_motor.update_time(flow_dt)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
+
+
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:

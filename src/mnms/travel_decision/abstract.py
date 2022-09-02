@@ -71,7 +71,7 @@ class AbstractDecisionModel(ABC):
     scale_factor_sp: int
         Scale factor for the increase of link costs in the compute_n_best_shortest_path
     algorithm: str
-        Shortest path algorithm
+        The shortest path algorithm
     heuristic: function
         Function to use as heuristic of astar is the sortest path algorithm
     outfile: str
@@ -100,6 +100,8 @@ class AbstractDecisionModel(ABC):
         self._mandatory_mobility_services = []
         self._users = dict()
 
+        self._refused_user: List[User] = list()
+
         if outfile is None:
             self._write = False
             self._verbose_file = False
@@ -115,6 +117,9 @@ class AbstractDecisionModel(ABC):
 
     def set_mandatory_mobility_services(self, services:List[str]):
         self._mandatory_mobility_services = services
+
+    def set_refused_users(self, users: List[User]):
+        self._refused_user = users
 
     # TODO: restrict combination of paths (ex: we dont want Uber->Bus)
     def __call__(self, new_users: List[User]):
@@ -135,11 +140,12 @@ class AbstractDecisionModel(ABC):
         for i, kpath in enumerate(paths):
             user_paths = []
             user = new_users[i]
+            path_index = 0
             for p in kpath:
                 if p[0]:
-                    p = Path(p[1], p[0])
+                    p = Path(path_index, p[1], p[0])
                     p.construct_layers(gnodes)
-
+                    path_index += 1
                     path_services = []
 
                     for layer, node_inds in p.layers:
@@ -163,7 +169,7 @@ class AbstractDecisionModel(ABC):
                     path_not_found.append(user.id)
                     # log.warning(f"Path not found for %s", user.id)
 
-            self._users[user.id] = kpath
+            self._users[user.id] = user_paths
 
             if user_paths:
                 path = self.path_choice(user_paths)
@@ -193,54 +199,8 @@ class AbstractDecisionModel(ABC):
 
         if path_not_found:
             log.warning("Paths not found: %s", len(path_not_found))
-        # paths = []
-        # for p in layer_paths:
-        #     path_services = []
-        #     p.construct_layers(self._mmgraph)
-        #
-        #     for layer, node_inds in p.layers:
-        #         if layer != "_ODLAYER":
-        #             layer_services = []
-        #             path_services.append(layer_services)
-        #             for service in self._mmgraph.layers[layer].mobility_services:
-        #                 if user.available_mobility_service is None or service in user.available_mobility_service:
-        #                     layer_services.append(service)
-        #
-        #     for ls in product(*path_services):
-        #         new_path = deepcopy(p)
-        #         services = ls if len(ls) > 1 else ls[0]
-        #         new_path.mobility_services =[]
-        #         new_path.mobility_services.append(services)
-        #
-        #         service_costs = sum_cost_dict(*(self._mmgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services) ))
-        #
-        #         new_path.service_costs = service_costs
-        #         paths.append(new_path)
-        #
-        #
-        # path = self.path_choice(paths)
-        # if len(path.nodes) > 1:
-        #     user.set_path(path)
-        #     user._remaining_link_length = self._mmgraph.links[(path.nodes[0], path.nodes[1])].costs['length']
-        # else:
-        #     log.warning(f"Path {path} is not valid for {user}")
-        #     raise PathNotFound(user.origin, user.destination)
-        #
-        # log.info(f"Computed path for {user}")
-        #
-        # if self._verbose_file:
-        #     for p in paths:
-        #         self._csvhandler.writerow([user.id,
-        #                                    str(path.cost),
-        #                                    ' '.join(p),
-        #                                    compute_path_length(self._mmgraph, p),
-        #                                    ' '.join(compute_path_modes(self._mmgraph, p))])
-        #
-        # elif self._write:
-        #     self._csvhandler.writerow([user.id,
-        #                                str(user.path.cost),
-        #                                ' '.join(user.path.nodes),
-        #                                compute_path_length(self._mmgraph, user.path.nodes),
-        #                                ' '.join(compute_path_modes(self._mmgraph, user.path.nodes))])
 
-
+        for u in self._refused_user:
+            other_paths = [p for p in self._users[u.id] if p.ind != u.path.ind]
+            if other_paths:
+                self.path_choice(other_paths)

@@ -22,7 +22,7 @@ class PersonalCarMobilityService(AbstractMobilityService):
         super(PersonalCarMobilityService, self).__init__(_id, veh_capacity=1, dt_matching=0, dt_periodic_maintenance=0)
 
     def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
-        return {u: Dt() for u in users}
+        return {u: Dt(hours=1) for u in users}
 
     def matching(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
         user_matched = dict()

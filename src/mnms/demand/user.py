@@ -144,8 +144,10 @@ class User(TimeDependentSubject):
     def set_state_stop(self):
         self._state = UserState.STOP
 
+
 class Path(object):
-    def __init__(self, cost=None, nodes: Union[List[str], Tuple[str]] = None):
+    def __init__(self, ind: int, cost=None, nodes: Union[List[str], Tuple[str]] = None):
+        self.ind = ind
         self.path_cost: float = cost
         self.layers: List[Tuple[str, slice]] = list()
         self.mobility_services = list()

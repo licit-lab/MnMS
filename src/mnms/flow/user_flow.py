@@ -170,7 +170,7 @@ class UserFlow(object):
         log.info(f"Step User Flow {self._tcurrent}")
         self._gnodes = self._graph.graph.nodes
 
-        self.check_user_waiting_answers(dt)
+        refused_user = self.check_user_waiting_answers(dt)
 
         for u in new_users:
             if u.path is not None:
@@ -179,6 +179,8 @@ class UserFlow(object):
         self.determine_user_states()
 
         self._user_walking(dt)
+
+        return refused_user
         # self._request_user_vehicles(new_users)
 
     def determine_user_states(self):
@@ -206,7 +208,6 @@ class UserFlow(object):
                     u.set_state_waiting_answer()
                     self._request_user_vehicles(u)
 
-
                 u.notify(self._tcurrent)
 
             if u.state is UserState.WAITING_ANSWER:
@@ -217,12 +218,18 @@ class UserFlow(object):
 
     def check_user_waiting_answers(self, dt: Dt):
         to_del = list()
+        refused_users = list()
+
         for uid, time in self._waiting_answer.items():
-            # user = self.users[uid]
             if self.users[uid].state is UserState.WAITING_ANSWER:
                 new_time = time.to_seconds() - dt.to_seconds()
                 if new_time < 0:
                     log.info(f"{uid} waited answer to long")
+                    refused_users.append(self.users[uid])
+                    self.users[uid].set_state_stop()
+                    self.users[uid].notify(self._tcurrent)
+                    del self.users[uid]
+                    to_del.append(uid)
                 else:
                     self._waiting_answer[uid] = Time.from_seconds(new_time)
             else:
@@ -231,3 +238,4 @@ class UserFlow(object):
         for uid in to_del:
             self._waiting_answer.pop(uid)
 
+        return refused_users

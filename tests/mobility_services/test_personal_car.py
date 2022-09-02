@@ -58,7 +58,7 @@ class TestSerializationLayers(unittest.TestCase):
             return dspeed
 
         flow_motor = MFDFlow()
-        flow_motor.add_reservoir(Reservoir('RES', 'CAR', mfdspeed))
+        flow_motor.add_reservoir(Reservoir('RES', ['CAR'], mfdspeed))
 
         supervisor = Supervisor(mlgraph,
                                 demand,

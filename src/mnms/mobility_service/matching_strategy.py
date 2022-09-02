@@ -16,6 +16,39 @@ class AbstractStrategy(ABC):
     def __call__(self, users: List[User], vehicles: List[Vehicle]) -> Dict[str, str]:
         pass
 
+    def __or__(self, other):
+        return ComposedStrategy(self.graph, self, other)
+
+
+class ComposedStrategy(AbstractStrategy):
+    def __init__(self, graph: MultiLayerGraph, *strategies: "AbstractStrategy"):
+        super(ComposedStrategy, self).__init__(graph)
+        self.strategies: List["AbstractStrategy"] = list(strategies)
+
+    def add_strategy(self, strategy):
+        self.strategies.append(strategy)
+
+    def __or__(self, other: "AbstractStrategy"):
+        self.add_strategy(other)
+
+    def __call__(self, users: List[User], vehicles: List[Vehicle]) -> Dict[str, str]:
+        matching = dict()
+
+        for strat in self.strategies:
+            strat_res = strat(users, vehicles)
+            matching.update(strat_res)
+
+            user_sets = set(strat_res.keys())
+            veh_sets = set(strat_res.values())
+
+            users = [u for u in users if u.id not in user_sets]
+            vehicles = [v for v in vehicles if v.id not in veh_sets]
+
+            if not users:
+                break
+
+        return matching
+
 
 class NearestVehicleStrategy(AbstractStrategy):
 
