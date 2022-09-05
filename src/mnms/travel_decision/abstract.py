@@ -13,6 +13,7 @@ from numpy.linalg import norm as _norm
 from mnms.demand.user import User, Path
 from mnms.graph.layers import MultiLayerGraph
 from mnms.log import create_logger
+from mnms.time import Time
 from mnms.tools.dict_tools import sum_cost_dict
 from mnms.tools.exceptions import PathNotFound
 
@@ -98,7 +99,6 @@ class AbstractDecisionModel(ABC):
         self._cost = cost
         self._verbose_file = verbose_file
         self._mandatory_mobility_services = []
-        self._users = dict()
 
         self._refused_user: List[User] = list()
 
@@ -121,8 +121,30 @@ class AbstractDecisionModel(ABC):
     def set_refused_users(self, users: List[User]):
         self._refused_user = users
 
+    def _check_refused_users(self) -> List[User]:
+        new_users = []
+        gnodes = self._mmgraph.graph.nodes
+        for u in self._refused_user:
+            cnode = u._current_node
+            refused_mservice = gnodes[cnode].label
+
+            if u.available_mobility_service is not None and len(u.available_mobility_service) > 1:
+                u.available_mobility_service.remove(refused_mservice)
+                u._continuous_journey = u.id
+                u.id = f"{u.id}_CONTINUOUS"
+                new_users.append(u)
+                u.origin = np.array(gnodes[u._current_node].position)
+
+        self._refused_user = list()
+        return new_users
+
     # TODO: restrict combination of paths (ex: we dont want Uber->Bus)
-    def __call__(self, new_users: List[User]):
+    def __call__(self, new_users: List[User], tcurrent: Time):
+        refused_user = self._check_refused_users()
+        for u in refused_user:
+           u.departure_time = tcurrent.copy()
+        new_users.extend(refused_user)
+
         origins, destinations, available_mobility_services = _process_shortest_path_inputs(self._mmgraph.odlayer, new_users)
         # print(origins, destinations, available_mobility_services)
         paths = parallel_k_shortest_path(self._mmgraph.graph,
@@ -169,8 +191,6 @@ class AbstractDecisionModel(ABC):
                     path_not_found.append(user.id)
                     # log.warning(f"Path not found for %s", user.id)
 
-            self._users[user.id] = user_paths
-
             if user_paths:
                 path = self.path_choice(user_paths)
                 if len(path.nodes) > 1:
@@ -200,7 +220,3 @@ class AbstractDecisionModel(ABC):
         if path_not_found:
             log.warning("Paths not found: %s", len(path_not_found))
 
-        for u in self._refused_user:
-            other_paths = [p for p in self._users[u.id] if p.ind != u.path.ind]
-            if other_paths:
-                self.path_choice(other_paths)

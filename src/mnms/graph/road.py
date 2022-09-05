@@ -110,8 +110,8 @@ class RoadDescriptor(object):
     @classmethod
     def __load__(cls, data):
         new_obj = cls()
-        new_obj.nodes = {key: RoadNode(**val) for key, val in data['NODES'].items()}
-        new_obj.stops = {key: RoadStop(**val) for key, val in data['STOPS'].items()}
+        new_obj.nodes = {key: RoadNode(val["id"], np.array(val["position"])) for key, val in data['NODES'].items()}
+        new_obj.stops = {key: RoadStop(val["id"], val["section"], val["relative_position"], np.array(val["absolute_position"])) for key, val in data['STOPS'].items()}
 
         for lid, d in data['SECTIONS'].items():
             new_obj.register_section(lid, d['upstream'], d['downstream'], d['length'])

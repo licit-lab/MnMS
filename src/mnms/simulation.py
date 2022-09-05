@@ -88,7 +88,7 @@ class Supervisor(object):
     def compute_user_paths(self, new_users: List[User]):
         log.info('Computing paths for new users ..')
         start = time()
-        self._decision_model(new_users)
+        self._decision_model(new_users, self.tcurrent)
         end = time()
         log.info(f'Done [{end - start:.5} s]')
         
@@ -150,7 +150,7 @@ class Supervisor(object):
         all_refused_user = user_reach_dt_pickup + user_reach_dt_answer
         self._decision_model.set_refused_users(all_refused_user)
         for u in all_refused_user:
-            del self._user_flow.users[u.id]
+            self._user_flow.users.pop(u.id, None)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
 
@@ -160,8 +160,6 @@ class Supervisor(object):
         self._flow_motor.update_time(flow_dt)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
-
-
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:
@@ -259,7 +257,8 @@ class Supervisor(object):
 
         for layer in self._mlgraph.layers.values():
             for mservice in layer.mobility_services.values():
-                mservice._observer.finish()
+                if mservice._observer is not None:
+                    mservice._observer.finish()
 
     def create_crash_report(self, affectation_step, flow_step) -> dict:
         data = dict(time=str(self.tcurrent),
