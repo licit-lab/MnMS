@@ -77,8 +77,9 @@ class TestUserFlow(unittest.TestCase):
     def test_request_veh(self):
         user = User('U0', '0', '4', Time('00:01:00'))
         user._current_node = 'C0'
-        user.set_path(Path(3400,
-                           ['C0', 'C1', 'C2', 'B2', 'B3', 'B4']))
+        user.set_path(Path(0,
+                           cost=3400,
+                           nodes=['C0', 'C1', 'C2', 'B2', 'B3', 'B4']))
         self.user_flow.step(Dt(minutes=1), [user])
 
         self.assertIn('U0', self.user_flow.users)

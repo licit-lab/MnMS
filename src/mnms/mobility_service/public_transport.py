@@ -97,6 +97,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
                                                     capacity=self._veh_capacity,
                                                     activities=[VehicleActivityStop(node=end_node,
                                                                                     path=veh_path)])
+                new_veh._current_link = veh_path[0][0]
+                new_veh._remaining_link_length = veh_path[0][1]
                 self._next_veh_departure[lid] = (self._current_time_table[lid], new_veh)
                 log.info(f"Next departure {new_veh}")
             all_departures = list()
@@ -130,6 +132,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
                                                     capacity=self._veh_capacity,
                                                     activities=[VehicleActivityStop(node=end_node,
                                                                                     path=veh_path)])
+                new_veh._current_link = veh_path[0][0]
+                new_veh._remaining_link_length = veh_path[0][1]
                 self._next_veh_departure[lid] = (self._next_time_table[lid], new_veh)
                 log.info(f"Next departure {new_veh}")
             except StopIteration:

@@ -178,9 +178,8 @@ class AbstractDecisionModel(ABC):
 
                     for ls in product(*path_services):
                         new_path = deepcopy(p)
-                        services = ls if len(ls) > 1 else ls[0]
-                        new_path.mobility_services =[]
-                        new_path.mobility_services.append(services)
+                        services = list(ls)
+                        new_path.mobility_services = services
 
                         service_costs = sum_cost_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services)))
 

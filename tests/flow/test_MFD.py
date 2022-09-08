@@ -90,7 +90,8 @@ class TestMFDFlow(unittest.TestCase):
 
     def test_accumulation_speed(self):
         user = User('U0', '0', '4', Time('00:01:00'))
-        user.set_path(Path(3400,
+        user.set_path(Path(0,
+                           3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
         self.personal_car.request_vehicle(user, 'C2')
         self.personal_car.matching({user.id: (user, "C2")})
