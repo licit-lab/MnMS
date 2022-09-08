@@ -24,12 +24,11 @@ class PersonalCarMobilityService(AbstractMobilityService):
     def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
         return {u: Dt() for u in users}
 
-    def matching(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
-        user_matched = dict()
+    def matching(self, users: Dict[str, Tuple[User, str]]):
         for uid, user_drop_node in users.items():
             user, drop_node = user_drop_node
             upath = list(user.path.nodes)
-            upath = upath[upath.index(user._current_node):upath.index(drop_node)+1]
+            upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
             veh_path = self._construct_veh_path(upath)
             new_veh = self.fleet.create_vehicle(upath[0],
                                                 capacity=self._veh_capacity,
@@ -38,10 +37,6 @@ class PersonalCarMobilityService(AbstractMobilityService):
                                                                                    user=user)])
             if self._observer is not None:
                 new_veh.attach(self._observer)
-
-            user_matched[uid] = Dt()
-
-        return user_matched
 
     def step_maintenance(self, dt: Dt):
         for veh in list(self.fleet.vehicles.values()):
@@ -70,26 +65,28 @@ class OnDemandCarMobilityService(AbstractMobilityService):
                  dt_matching: int,
                  dt_step_maintenance: int = 0):
         super(OnDemandCarMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
+        self._cache_request_vehicles = dict()
+
+        self.gnodes = dict()
 
     def create_waiting_vehicle(self, node: str):
         assert node in self.graph.nodes
         new_veh = self.fleet.create_vehicle(node,
                                             capacity=self._veh_capacity,
                                             activities=[VehicleActivityStop(node=node)])
-        new_veh.set_position(self.graph_nodes[node].position)
+        new_veh.set_position(self.graph.nodes[node].position)
 
         if self._observer is not None:
             new_veh.attach(self._observer)
 
-    def matching(self, users: Dict[str, Tuple[User, str]]):
-        user_matched = list()
+    def step_maintenance(self, dt: Dt):
+        self._cache_request_vehicles = dict()
+        self.gnodes = self.graph.nodes
+
+    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
+        user_matched = dict()
         for uid, (user, drop_node) in users.items():
-            # user.available_mobility_service = frozenset([self.id])
-
             upos = user.position
-            upath = list(user.path.nodes)
-            upath = upath[upath.index(user._current_node):upath.index(drop_node)+1]
-
             vehs = list(self.fleet.vehicles.keys())
 
             while vehs:
@@ -102,32 +99,44 @@ class OnDemandCarMobilityService(AbstractMobilityService):
                 choosen_veh = self.fleet.vehicles[nearest_veh]
                 if not choosen_veh.is_full:
                     if choosen_veh.is_empty:
-                        veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else choosen_veh.activities[-1].node
-                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', set([self.layer.id]))
+                        veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
+                        choosen_veh.activities[-1].node
+                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time',
+                                                  {self.layer.id})
                         if cost == float('inf'):
-                            raise PathNotFound(nearest_veh.origin, user.current_node)
+                            raise PathNotFound(choosen_veh._current_node, user.current_node)
 
-                        user_path = self._construct_veh_path(upath)
-                        veh_path = self._construct_veh_path(veh_path)
-                        activities = [
-                            VehicleActivityPickup(node=user._current_node,
-                                                  path=veh_path,
-                                                  user=user),
-                            VehicleActivityServing(node=user.destination,
-                                                   path=user_path,
-                                                   user=user)
-                        ]
+                        len_path = 0
+                        for i in range(len(veh_path) - 1):
+                            j = i + 1
+                            len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
 
-                        choosen_veh.add_activities(activities)
-                        user_matched.append(uid)
-                        user.set_state_waiting_vehicle()
-
-                        if choosen_veh.state is VehicleState.STOP:
-                            choosen_veh.activity.is_done = True
-
-                        continue
+                        user_matched[uid] = Dt(seconds=len_path / choosen_veh.speed)
+                        self._cache_request_vehicles[uid] = choosen_veh, veh_path
 
         return user_matched
+
+    def matching(self, users: Dict[str, Tuple[User, str]]):
+        for uid, (user, drop_node) in users.items():
+            veh, veh_path = self._cache_request_vehicles[uid]
+            upath = list(user.path.nodes)
+            upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
+            user_path = self._construct_veh_path(upath)
+            veh_path = self._construct_veh_path(veh_path)
+            activities = [
+                VehicleActivityPickup(node=user._current_node,
+                                      path=veh_path,
+                                      user=user),
+                VehicleActivityServing(node=user.destination,
+                                       path=user_path,
+                                       user=user)
+            ]
+
+            veh.add_activities(activities)
+            user.set_state_waiting_vehicle()
+
+            if veh.state is VehicleState.STOP:
+                veh.activity.is_done = True
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandCarMobilityService.__module__, OnDemandCarMobilityService.__name__]),
@@ -147,6 +156,8 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
                  dt_matching: int,
                  dt_step_maintenance: int = 0):
         super(OnDemandCarDepotMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
+        self.gnodes = None
+        self._cache_request_vehicles = None
         self.depot = dict()
 
     def _create_waiting_vehicle(self, node: str):
@@ -154,7 +165,7 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
         new_veh = self.fleet.create_vehicle(node,
                                             capacity=self._veh_capacity,
                                             activities=[VehicleActivityStop(node=node)])
-        new_veh.set_position(self.graph_nodes[node].position)
+        new_veh.set_position(self.graph.nodes[node].position)
 
         if self._observer is not None:
             new_veh.attach(self._observer)
@@ -173,8 +184,11 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
         return self.depot[node]["capacity"] == len(self.depot[node]["vehicles"])
 
     def step_maintenance(self, dt: Dt):
+        self._cache_request_vehicles = dict()
+        self.gnodes = self.graph.nodes
+
         depot = list(self.depot.keys())
-        depot_pos = np.array([self.graph_nodes[d].position for d in self.depot.keys()])
+        depot_pos = np.array([self.gnodes[d].position for d in self.depot.keys()])
 
         for veh in self.fleet.vehicles.values():
             if veh.state is VehicleState.STOP:
@@ -190,7 +204,8 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
                             nearest_depot = current_depot
                             break
 
-                    veh_path, cost = dijkstra(self.graph, veh._current_node, nearest_depot, 'travel_time', {self.layer.id})
+                    veh_path, cost = dijkstra(self.graph, veh._current_node, nearest_depot, 'travel_time',
+                                              {self.layer.id})
                     if cost == float('inf'):
                         raise PathNotFound(veh._current_node, depot)
 
@@ -202,14 +217,12 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
                 else:
                     self.depot[veh._current_node]["vehicles"].add(veh.id)
 
-    def matching(self, users: Dict[str, Tuple[User, str]]):
-        user_matched = list()
+    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
+        user_matched = dict()
         for uid, (user, drop_node) in users.items():
             # user.available_mobility_service = frozenset([self.id])
 
             upos = user.position
-            upath = list(user.path.nodes)
-            upath = upath[upath.index(user._current_node):upath.index(drop_node)+1]
 
             vehs = list(self.fleet.vehicles.keys())
 
@@ -223,34 +236,47 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
                 choosen_veh = self.fleet.vehicles[nearest_veh]
                 if not choosen_veh.is_full:
                     if choosen_veh.is_empty:
-                        veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else choosen_veh.activities[-1].node
-                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id})
+                        veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
+                        choosen_veh.activities[-1].node
+                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time',
+                                                  {self.layer.id})
                         if cost == float('inf'):
                             raise PathNotFound(nearest_veh.origin, user.current_node)
 
-                        user_path = self._construct_veh_path(upath)
-                        veh_path = self._construct_veh_path(veh_path)
-                        activities = [
-                            VehicleActivityPickup(node=user._current_node,
-                                                  path=veh_path,
-                                                  user=user),
-                            VehicleActivityServing(node=user.destination,
-                                                   path=user_path,
-                                                   user=user)
-                        ]
+                        len_path = 0
+                        for i in range(len(veh_path) - 1):
+                            j = i + 1
+                            len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
 
-                        choosen_veh.add_activities(activities)
-                        user_matched.append(uid)
-                        user.set_state_waiting_vehicle()
-
-                        if choosen_veh.state is VehicleState.STOP:
-                            choosen_veh.activity.is_done = True
-                            if choosen_veh._current_node in self.depot:
-                                self.depot[choosen_veh._current_node]["vehicles"].remove(choosen_veh.id)
-
-                        continue
+                        user_matched[uid] = Dt(seconds=len_path / choosen_veh.speed)
+                        self._cache_request_vehicles[uid] = choosen_veh, veh_path
 
         return user_matched
+
+    def matching(self, users: Dict[str, Tuple[User, str]]):
+        for uid, (user, drop_node) in users.items():
+            veh, veh_path = self._cache_request_vehicles[uid]
+            upath = list(user.path.nodes)
+            upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
+
+            user_path = self._construct_veh_path(upath)
+            veh_path = self._construct_veh_path(veh_path)
+            activities = [
+                VehicleActivityPickup(node=user._current_node,
+                                      path=veh_path,
+                                      user=user),
+                VehicleActivityServing(node=user.destination,
+                                       path=user_path,
+                                       user=user)
+            ]
+
+            veh.add_activities(activities)
+            user.set_state_waiting_vehicle()
+
+            if veh.state is VehicleState.STOP:
+                veh.activity.is_done = True
+                if veh._current_node in self.depot:
+                    self.depot[veh._current_node]["vehicles"].remove(veh.id)
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandCarMobilityService.__module__, OnDemandCarMobilityService.__name__]),

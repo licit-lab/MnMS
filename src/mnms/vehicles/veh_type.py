@@ -124,6 +124,7 @@ class Vehicle(TimeDependentSubject):
     def __init__(self,
                  node: str,
                  capacity: int,
+                 initial_speed: float = 13.8,
                  activities: Optional[List[VehicleActivity]] = None):
 
         super(Vehicle, self).__init__()
@@ -138,7 +139,7 @@ class Vehicle(TimeDependentSubject):
         self._remaining_link_length = None
         self._position = None
         self._distance = 0
-        self.speed = 0
+        self.speed = initial_speed
 
         self.activities: Deque[VehicleActivity] = deque([])
         self.activity = None
@@ -150,7 +151,7 @@ class Vehicle(TimeDependentSubject):
             self.activity: VehicleActivity = self.default_activity()
 
     def __repr__(self):
-        return f"{self.__class__.__name__}('{self._global_id}', '{self.state.name}')"
+        return f"{self.__class__.__name__}('{self._global_id}', '{self.state.name if self.state is not None else None}')"
 
     @property
     def distance(self):
@@ -270,28 +271,32 @@ class Car(Vehicle):
     def __init__(self,
                  node: str,
                  capacity: int,
-                 activity: Optional[VehicleActivity] = None):
-        super(Car, self).__init__(node, capacity, activity)
+                 initial_speed=13.8,
+                 activities: Optional[VehicleActivity] = None):
+        super(Car, self).__init__(node, capacity, initial_speed, activities)
 
 
 class Bus(Vehicle):
     def __init__(self,
                  node: str,
                  capacity: int,
-                 activity: Optional[VehicleActivity] = None):
-        super(Bus, self).__init__(node, capacity, activity)
+                 initial_speed=13.8,
+                 activities: Optional[VehicleActivity] = None):
+        super(Bus, self).__init__(node, capacity, initial_speed, activities)
 
 class Tram(Vehicle):
     def __init__(self,
                  node: str,
                  capacity: int,
-                 activity: Optional[VehicleActivity] = None):
-        super(Tram, self).__init__(node, capacity, activity)
+                 initial_speed=13.8,
+                 activities: Optional[VehicleActivity] = None):
+        super(Tram, self).__init__(node, capacity, initial_speed, activities)
 
 
 class Metro(Vehicle):
     def __init__(self,
                  node: str,
                  capacity: int,
-                 activity: Optional[VehicleActivity] = None):
-        super(Metro, self).__init__(node, capacity, activity)
+                 initial_speed=13.8,
+                 activities: Optional[VehicleActivity] = None):
+        super(Metro, self).__init__(node, capacity, initial_speed, activities)

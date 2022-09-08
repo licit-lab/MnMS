@@ -48,6 +48,7 @@ def _insert_in_activity(curr_activity, activity_pos, drop_node, drop_node_ind, t
         # veh.add_activities([new_activities])
 
 
+
 class PublicTransportMobilityService(AbstractMobilityService):
     def __init__(self, _id: str, veh_capacity=50):
         super(PublicTransportMobilityService, self).__init__(_id, veh_capacity=veh_capacity, dt_matching=0,
@@ -57,6 +58,9 @@ class PublicTransportMobilityService(AbstractMobilityService):
         self._current_time_table: Dict[str, Time] = dict()
         self._next_time_table: Dict[str, Time] = dict()
         self._next_veh_departure: Dict[str, Optional[Tuple[Time, Vehicle]]] = defaultdict(lambda: None)
+
+        self.gnodes = None
+        self._cache_request_vehicles = dict()
 
     @cached_property
     def lines(self):
@@ -158,9 +162,30 @@ class PublicTransportMobilityService(AbstractMobilityService):
                     _insert_in_activity(curr_activity, ind+1, drop_node, drop_node_ind, take_node_ind, user, veh, veh_node_ind)
                     break
 
-    def matching(self, users: Dict[str, Tuple[User, str]]) -> List[str]:
-        graph_nodes = self.graph.nodes
-        matched_user = []
+    def estimation_pickup_time(self, user: User, veh: Vehicle, line: dict):
+        user_node = user._current_node
+        veh_node = veh._current_node
+        veh_link_borders = veh.current_link
+        veh_link_length = self.gnodes[veh_link_borders[0]].adj[veh_link_borders[1]].length
+        veh_remaining_length = veh.remaining_link_length
+        veh_traveled_dist_link = veh_link_length - veh_remaining_length
+
+        line_stops = line["nodes"]
+        ind_user = line_stops.index(user_node)
+        ind_veh = line_stops.index(veh_node)
+
+        path = line_stops[ind_veh:ind_user+1]
+        dist = 0
+        for i in range(len(path)-1):
+            dist += self.gnodes[path[i]].adj[path[i+1]].length
+        dist -= veh_traveled_dist_link
+
+        dt = Dt(seconds=dist/veh.speed)
+
+        return dt
+
+    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
+        matched_user = dict()
         for user, drop_node in users.values():
             start = user._current_node
 
@@ -173,10 +198,10 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 log.error(f'{user} start is not in the PublicTransport mobility service {self.id}')
                 sys.exit(-1)
 
-            if not graph_nodes[start].radj:
+            if not self.gnodes[start].radj:
                 departure_time, waiting_veh = self._next_veh_departure[user_line_id]
-                matched_user.append(user.id)
-                self.add_passenger(user, drop_node, waiting_veh, user_line["nodes"])
+                matched_user[user.id] = (waiting_veh, user_line)
+                # self.add_passenger(user, drop_node, waiting_veh, user_line["nodes"])
                 continue
             else:
                 curr_veh = None
@@ -188,8 +213,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
                     next_veh = next(it_veh)
                 except StopIteration:
                     if curr_veh is not None:
-                        self.add_passenger(user, drop_node, curr_veh, user_line["nodes"])
-                        matched_user.append(user.id)
+                        matched_user[user.id] = (curr_veh, user_line)
+                        # self.add_passenger(user, drop_node, curr_veh, user_line["nodes"])
                         # curr_veh.take_next_user(user, drop_node)
                         continue
                     else:
@@ -213,9 +238,20 @@ class PublicTransportMobilityService(AbstractMobilityService):
                             log.info(f"{user}, {user._current_node}")
                             log.info(f"{curr_veh.current_link}")
                             raise VehicleNotFoundError(user, self)
-        return matched_user
+
+        estimation_pickup = {u: self.estimation_pickup_time(users[u][0], veh, line) for u, (veh, line) in matched_user.items()}
+        self._cache_request_vehicles = matched_user
+
+        return estimation_pickup
+
+    def matching(self, users: Dict[str, Tuple[User, str]]):
+        for uid, (user, drop_node) in users.items():
+            veh, line = self._cache_request_vehicles[uid]
+            self.add_passenger(user, drop_node, veh, line["nodes"])
 
     def step_maintenance(self, dt: Dt):
+        self._cache_request_vehicles = dict()
+        self.gnodes = self.graph.nodes
         for lid in self.lines:
             for new_veh in self.new_departures(self._tcurrent, dt, lid):
                 # Mark the Stop state to done to start vehicle journey

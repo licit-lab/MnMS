@@ -18,12 +18,12 @@ from mnms.tools.dict_tools import sum_cost_dict
 from mnms.tools.exceptions import PathNotFound
 
 from hipop.shortest_path import parallel_k_shortest_path
-from hipop.graph import OrientedGraph
+from hipop.graph import Node
 
 log = create_logger(__name__)
 
 
-def compute_path_length(gnodes: Dict, path:List[str]) -> float:
+def compute_path_length(gnodes: Dict[str, Node], path: List[str]) -> float:
     len_path = 0
     for i in range(len(path) - 1):
         j = i + 1
@@ -59,10 +59,10 @@ class AbstractDecisionModel(ABC):
 
     Parameters
     ----------
-    mmgraph: MultiModalGraph
+    mlgraph: MultiModalGraph
         The graph on which the model compute the path
     n_shortest_path: int
-        Number of shortest path top compute
+        The number of shortest paths to compute
     radius_sp: float
         Radius of search if the User as coordinates as origin/destination
     radius_growth_sp: float
@@ -81,13 +81,13 @@ class AbstractDecisionModel(ABC):
         Name of the cost to use in the shortest path algorithm
     """
     def __init__(self,
-                 mmgraph:MultiLayerGraph,
-                 n_shortest_path: int=3,
-                 min_diff_dist: float=-100,
-                 max_diff_dist: float=100,
-                 outfile: str=None,
-                 verbose_file: bool=False,
-                 cost: str='travel_time',
+                 mlgraph: MultiLayerGraph,
+                 n_shortest_path: int = 3,
+                 min_diff_dist: float = -100,
+                 max_diff_dist: float = 100,
+                 outfile: str = None,
+                 verbose_file: bool = False,
+                 cost: str = 'travel_time',
                  thread_number: int = multiprocessing.cpu_count()):
 
         self._n_shortest_path = n_shortest_path
@@ -95,7 +95,7 @@ class AbstractDecisionModel(ABC):
         self._max_diff_dist = max_diff_dist
         self._thread_number = thread_number
 
-        self._mmgraph = mmgraph
+        self._mlgraph = mlgraph
         self._cost = cost
         self._verbose_file = verbose_file
         self._mandatory_mobility_services = []
@@ -123,7 +123,7 @@ class AbstractDecisionModel(ABC):
 
     def _check_refused_users(self) -> List[User]:
         new_users = []
-        gnodes = self._mmgraph.graph.nodes
+        gnodes = self._mlgraph.graph.nodes
         for u in self._refused_user:
             cnode = u._current_node
             refused_mservice = gnodes[cnode].label
@@ -145,9 +145,8 @@ class AbstractDecisionModel(ABC):
            u.departure_time = tcurrent.copy()
         new_users.extend(refused_user)
 
-        origins, destinations, available_mobility_services = _process_shortest_path_inputs(self._mmgraph.odlayer, new_users)
-        # print(origins, destinations, available_mobility_services)
-        paths = parallel_k_shortest_path(self._mmgraph.graph,
+        origins, destinations, available_mobility_services = _process_shortest_path_inputs(self._mlgraph.odlayer, new_users)
+        paths = parallel_k_shortest_path(self._mlgraph.graph,
                                          origins,
                                          destinations,
                                          self._cost,
@@ -156,7 +155,7 @@ class AbstractDecisionModel(ABC):
                                          self._max_diff_dist,
                                          self._n_shortest_path,
                                          self._thread_number)
-        gnodes = self._mmgraph.graph.nodes
+        gnodes = self._mlgraph.graph.nodes
         path_not_found = []
 
         for i, kpath in enumerate(paths):
@@ -173,7 +172,7 @@ class AbstractDecisionModel(ABC):
                     for layer, node_inds in p.layers:
                         layer_services = []
                         path_services.append(layer_services)
-                        for service in self._mmgraph.layers[layer].mobility_services:
+                        for service in self._mlgraph.layers[layer].mobility_services:
                             if user.available_mobility_service is None or service in user.available_mobility_service:
                                 layer_services.append(service)
 
@@ -183,7 +182,7 @@ class AbstractDecisionModel(ABC):
                         new_path.mobility_services =[]
                         new_path.mobility_services.append(services)
 
-                        service_costs = sum_cost_dict(*(self._mmgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services) ))
+                        service_costs = sum_cost_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services)))
 
                         new_path.service_costs = service_costs
                         user_paths.append(new_path)
@@ -195,7 +194,7 @@ class AbstractDecisionModel(ABC):
                 path = self.path_choice(user_paths)
                 if len(path.nodes) > 1:
                     user.set_path(path)
-                    user._remaining_link_length = self._mmgraph.graph.nodes[path.nodes[0]].adj[path.nodes[1]].length
+                    user._remaining_link_length = self._mlgraph.graph.nodes[path.nodes[0]].adj[path.nodes[1]].length
                 else:
                     log.warning(f"Path %s is not valid for %s", str(path), user.id)
                     raise PathNotFound(user.origin, user.destination)

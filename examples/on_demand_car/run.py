@@ -42,14 +42,16 @@ car_layer = generate_layer_from_roads(road_db,
                                       'CAR',
                                       mobility_services=[uber])
 
-uber.add_depot("CAR_1", capacity=1)
-
 odlayer = generate_grid_origin_destination_layer(0, 0, 300, 300, 3, 3)
 #
 
 mlgraph = MultiLayerGraph([car_layer],
                           odlayer,
                           1e-3)
+
+# uber.create_waiting_vehicle("CAR_1")
+uber.add_depot("CAR_1", capacity=1)
+
 #
 # save_graph(mlgraph, cwd.parent.joinpath('graph.json'))
 #

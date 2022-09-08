@@ -24,7 +24,7 @@ class AbstractLayer(object):
 
         self._default_speed: float = default_speed
 
-        self.map_reference_links: Dict[str, str] = dict()
+        self.map_reference_links: Dict[str, List[str]] = dict()
         self.map_reference_nodes: Dict[str, str] = dict()
 
         self.mobility_services: Dict[str, AbstractMobilityService] = dict()

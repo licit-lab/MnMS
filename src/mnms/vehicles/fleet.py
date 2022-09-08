@@ -11,7 +11,7 @@ class FleetManager(object):
         self._constructor: Type[Vehicle] = veh_type
 
     def create_vehicle(self, node: str, capacity: int, activities: Optional[List[VehicleActivity]]):
-        new_veh = self._constructor(node, capacity, activities)
+        new_veh = self._constructor(node, capacity, activities=activities)
         self.vehicles[new_veh.id] = new_veh
         self.__veh_manager.add_vehicle(new_veh)
         return new_veh

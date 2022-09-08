@@ -31,7 +31,7 @@ class SimpleLayer(AbstractLayer):
 
         self.map_reference_nodes[nid] = dbnode
 
-    def create_link(self, lid, upstream, downstream, costs, road_links):
+    def create_link(self, lid: str, upstream: str, downstream: str, costs: Dict[str, float], road_links: List[str]):
         length = sum(self._roaddb.sections[l].length for l in road_links)
         self.graph.add_link(lid, upstream, downstream, length, costs, self.id)
 

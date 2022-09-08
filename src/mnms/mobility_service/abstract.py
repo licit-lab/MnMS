@@ -46,10 +46,6 @@ class AbstractMobilityService(ABC):
     def graph(self):
         return self.layer.graph
 
-    @cached_property
-    def graph_nodes(self):
-        return self.graph.nodes
-
     def attach_vehicle_observer(self, observer):
         self._observer = observer
 
@@ -59,7 +55,7 @@ class AbstractMobilityService(ABC):
             unode = upath[i]
             dnode = upath[i+1]
             key = (unode, dnode)
-            link_length = self.graph_nodes[unode].adj[dnode].length
+            link_length = self.graph.nodes[unode].adj[dnode].length
             veh_path.append((key, link_length))
         return veh_path
 
@@ -129,7 +125,7 @@ class AbstractMobilityService(ABC):
         pass
 
     @abstractmethod
-    def matching(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
+    def matching(self, users: Dict[str, Tuple[User, str]]):
         pass
 
     @abstractmethod

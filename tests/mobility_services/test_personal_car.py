@@ -15,7 +15,7 @@ from mnms.time import Time, Dt
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 
 
-class TestSerializationLayers(unittest.TestCase):
+class TestPersonalCar(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """

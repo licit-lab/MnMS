@@ -15,7 +15,7 @@ from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.vehicles.veh_type import Bus
 
 
-class TestSerializationLayers(unittest.TestCase):
+class TestPublicTransport(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
