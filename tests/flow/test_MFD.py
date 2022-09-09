@@ -7,7 +7,7 @@ from mnms.flow.MFD import MFDFlow, Reservoir
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import Zone
-from mnms.mobility_service.car import PersonalCarMobilityService
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import Dt, TimeTable, Time
 from mnms.vehicles.veh_type import Vehicle
@@ -40,7 +40,7 @@ class TestMFDFlow(unittest.TestCase):
         roads.add_zone(Zone("res1", {"0_1", "0_2", "2_3"}))
         roads.add_zone(Zone("res2", {"3_4"}))
 
-        self.personal_car = PersonalCarMobilityService()
+        self.personal_car = PersonalMobilityService()
         car_layer = CarLayer(roads, services=[self.personal_car])
         car_layer.create_node('C0', '0')
         car_layer.create_node('C1', '1')

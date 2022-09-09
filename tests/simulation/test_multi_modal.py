@@ -10,7 +10,7 @@ from mnms.graph.layers import MultiLayerGraph, PublicTransportLayer, CarLayer
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 
 from mnms.travel_decision.dummy import DummyDecisionModel
-from mnms.mobility_service.car import PersonalCarMobilityService
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.flow.MFD import MFDFlow, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt, TimeTable
@@ -30,8 +30,7 @@ class TestMultoModal(unittest.TestCase):
         roads.register_stop('S1', '3_4', 1)
         roads.register_stop('S2', '4_5', 1)
 
-
-        personal_car = PersonalCarMobilityService()
+        personal_car = PersonalMobilityService()
         personal_car.attach_vehicle_observer(CSVVehicleObserver(self.dir_results / "veh_car.csv"))
         car_layer = CarLayer(roads, services=[personal_car])
 

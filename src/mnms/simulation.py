@@ -13,8 +13,8 @@ from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.abstract import AbstractDecisionModel
 from mnms.time import Time, Dt
-from mnms.log import create_logger
-from mnms.vehicles.manager import VehicleManager
+from mnms.log import create_logger, attach_log_file, LOGLEVEL
+from mnms.tools.progress import ProgressBar
 
 log = create_logger(__name__)
 
@@ -25,7 +25,9 @@ class Supervisor(object):
                  demand: AbstractDemandManager,
                  flow_motor: AbstractFlowMotor,
                  decision_model: AbstractDecisionModel,
-                 outfile: Optional[str] = None):
+                 outfile: Optional[str] = None,
+                 logfile: Optional[str] = None,
+                 loglevel: LOGLEVEL = LOGLEVEL.WARNING):
         """
         Main class to launch a simulation
 
@@ -57,6 +59,9 @@ class Supervisor(object):
             self._outfile = open(outfile, "w")
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
             self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'TRAVEL_TIME'])
+
+        if logfile is not None:
+            attach_log_file(logfile, loglevel)
 
     def set_random_seed(self, seed):
         random.seed(seed)
@@ -204,7 +209,11 @@ class Supervisor(object):
 
         self.tcurrent = tstart
 
+        progress = ProgressBar((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor) - 1)
+
         while self.tcurrent < tend:
+            progress.update()
+            progress.show()
             # try:
             log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
@@ -235,14 +244,6 @@ class Supervisor(object):
 
             log.info('-'*50)
             affectation_step += 1
-            # except Exception as e:
-                # cwd = os.getcwd()
-                # report_file = cwd+'/'+'report.json'
-                # log.error(e)
-                # log.error(f"Simulation failed at {self.tcurrent}, writing a report at {report_file}")
-                # with open(report_file, 'w') as f:
-                #     json.dump(self.create_crash_report(affectation_step, flow_step), f, indent=4)
-                # sys.exit(-1)
 
         self._flow_motor.finalize()
 

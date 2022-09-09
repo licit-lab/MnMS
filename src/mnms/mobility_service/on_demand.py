@@ -1,5 +1,4 @@
-from random import sample
-from typing import List, Tuple, Dict
+from typing import Tuple, Dict
 
 import numpy as np
 
@@ -7,64 +6,21 @@ from hipop.shortest_path import dijkstra
 
 from mnms import create_logger
 from mnms.demand import User
-from mnms.demand.horizon import AbstractDemandHorizon
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.time import Dt
 from mnms.tools.exceptions import PathNotFound
-from mnms.vehicles.veh_type import VehicleState, VehicleActivityServing, VehicleActivityStop, Vehicle, \
+from mnms.vehicles.veh_type import VehicleState, VehicleActivityServing, VehicleActivityStop, \
     VehicleActivityPickup, VehicleActivityRepositioning
 
 log = create_logger(__name__)
 
 
-class PersonalCarMobilityService(AbstractMobilityService):
-    def __init__(self, _id: str = 'PersonalCar'):
-        super(PersonalCarMobilityService, self).__init__(_id, veh_capacity=1, dt_matching=0, dt_periodic_maintenance=0)
-
-    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
-        return {u: Dt() for u in users}
-
-    def matching(self, users: Dict[str, Tuple[User, str]]):
-        for uid, user_drop_node in users.items():
-            user, drop_node = user_drop_node
-            upath = list(user.path.nodes)
-            upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
-            veh_path = self._construct_veh_path(upath)
-            new_veh = self.fleet.create_vehicle(upath[0],
-                                                capacity=self._veh_capacity,
-                                                activities=[VehicleActivityServing(node=user.destination,
-                                                                                   path=veh_path,
-                                                                                   user=user)])
-            if self._observer is not None:
-                new_veh.attach(self._observer)
-
-    def step_maintenance(self, dt: Dt):
-        for veh in list(self.fleet.vehicles.values()):
-            if veh.state is VehicleState.STOP:
-                self.fleet.delete_vehicle(veh.id)
-
-    def replanning(self):
-        pass
-
-    def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
-        pass
-
-    def __dump__(self):
-        return {"TYPE": ".".join([PersonalCarMobilityService.__module__, PersonalCarMobilityService.__name__]),
-                "ID": self.id}
-
-    @classmethod
-    def __load__(cls, data):
-        new_obj = cls(data['ID'])
-        return new_obj
-
-
-class OnDemandCarMobilityService(AbstractMobilityService):
+class OnDemandMobilityService(AbstractMobilityService):
     def __init__(self,
                  _id: str,
                  dt_matching: int,
                  dt_step_maintenance: int = 0):
-        super(OnDemandCarMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
+        super(OnDemandMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
         self._cache_request_vehicles = dict()
 
         self.gnodes = dict()
@@ -139,7 +95,7 @@ class OnDemandCarMobilityService(AbstractMobilityService):
                 veh.activity.is_done = True
 
     def __dump__(self):
-        return {"TYPE": ".".join([OnDemandCarMobilityService.__module__, OnDemandCarMobilityService.__name__]),
+        return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
                 "DT_MATCHING": self._dt_matching,
                 "VEH_CAPACITY": self._veh_capacity,
                 "ID": self.id}
@@ -150,12 +106,12 @@ class OnDemandCarMobilityService(AbstractMobilityService):
         return new_obj
 
 
-class OnDemandCarDepotMobilityService(AbstractMobilityService):
+class OnDemandDepotMobilityService(AbstractMobilityService):
     def __init__(self,
                  _id: str,
                  dt_matching: int,
                  dt_step_maintenance: int = 0):
-        super(OnDemandCarDepotMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
+        super(OnDemandDepotMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
         self.gnodes = None
         self._cache_request_vehicles = None
         self.depot = dict()
@@ -279,7 +235,7 @@ class OnDemandCarDepotMobilityService(AbstractMobilityService):
                     self.depot[veh._current_node]["vehicles"].remove(veh.id)
 
     def __dump__(self):
-        return {"TYPE": ".".join([OnDemandCarMobilityService.__module__, OnDemandCarMobilityService.__name__]),
+        return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
                 "DT_MATCHING": self._dt_matching,
                 "VEH_CAPACITY": self._veh_capacity,
                 "ID": self.id}

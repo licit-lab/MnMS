@@ -55,31 +55,7 @@ def _process_shortest_path_inputs(odlayer, users):
 
 
 class AbstractDecisionModel(ABC):
-    """Base class for a travel decision model
 
-    Parameters
-    ----------
-    mlgraph: MultiModalGraph
-        The graph on which the model compute the path
-    n_shortest_path: int
-        The number of shortest paths to compute
-    radius_sp: float
-        Radius of search if the User as coordinates as origin/destination
-    radius_growth_sp: float
-        Growth rate if no path is found for the User
-    walk_speed: float
-        Walk speed
-    scale_factor_sp: int
-        Scale factor for the increase of link costs in the compute_n_best_shortest_path
-    algorithm: str
-        The shortest path algorithm
-    heuristic: function
-        Function to use as heuristic of astar is the sortest path algorithm
-    outfile: str
-        Path to result CSV file, nothing is written if None
-    cost: str
-        Name of the cost to use in the shortest path algorithm
-    """
     def __init__(self,
                  mlgraph: MultiLayerGraph,
                  n_shortest_path: int = 3,
@@ -89,6 +65,20 @@ class AbstractDecisionModel(ABC):
                  verbose_file: bool = False,
                  cost: str = 'travel_time',
                  thread_number: int = multiprocessing.cpu_count()):
+
+        """
+        Base class for a travel decision model
+
+        Args:
+            mlgraph: The multi layer graph on which the model compute the path
+            n_shortest_path: The number of shortest path computed for one user
+            min_diff_dist: The min distance between the n computed shortest path and the first one that is required to accept the n shortest path
+            max_diff_dist: The max distance between the n computed shortest path and the first one that is required to accept the n shortest path
+            outfile: If specified the file in which compute path are written
+            verbose_file: If true write all the computed shortest path, not only the one that is selected
+            cost: The name of the cost to consider for the shortest path
+            thread_number: The number of thread to user fot parallel shortest path computation
+        """
 
         self._n_shortest_path = n_shortest_path
         self._min_diff_dist = min_diff_dist

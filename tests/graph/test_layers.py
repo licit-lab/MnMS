@@ -3,7 +3,7 @@ import unittest
 from mnms.graph.layers import CarLayer, BusLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import Zone
-from mnms.mobility_service.car import PersonalCarMobilityService
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable, Dt
 
@@ -33,7 +33,7 @@ class TestLayers(unittest.TestCase):
 
     def test_car_layer(self):
         car_layer = CarLayer(self.roads,
-                             services=[PersonalCarMobilityService()])
+                             services=[PersonalMobilityService()])
 
         self.assertEqual(car_layer.id, "CAR")
         self.assertEqual(car_layer.default_speed, 13.8)
@@ -110,7 +110,7 @@ class TestSerializationLayers(unittest.TestCase):
 
     def test_serialization_car(self):
         car_layer = CarLayer(self.roads,
-                             services=[PersonalCarMobilityService()])
+                             services=[PersonalMobilityService()])
 
         self.assertEqual(car_layer.id, "CAR")
         self.assertEqual(car_layer.default_speed, 13.8)

@@ -5,6 +5,7 @@ from hipop.graph import OrientedGraph
 
 from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.tools.observer import CSVVehicleObserver
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle, Car
 
@@ -16,7 +17,18 @@ class AbstractLayer(object):
                  veh_type: Type[Vehicle],
                  default_speed: float,
                  services: Optional[List[AbstractMobilityService]] = None,
-                 observer: Optional = None):
+                 observer: Optional[CSVVehicleObserver] = None):
+        """
+        The base class for implementation of a layer graph
+
+        Args:
+            roads: The road object used to construct the graph
+            id: The id of the layer
+            veh_type: The type of the vehicle on the layer
+            default_speed: The default speed of the vehicle on the layer
+            services: The services that used the layer
+            observer: An observer to write information about the vehicles in the layer
+        """
         self._id: str = id
         self.graph: OrientedGraph = OrientedGraph()
         self._roaddb: RoadDescriptor = roads

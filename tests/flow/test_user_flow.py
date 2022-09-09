@@ -6,7 +6,7 @@ from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import Zone
 from mnms.time import Time, Dt, TimeTable
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
-from mnms.mobility_service.car import PersonalCarMobilityService
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.demand.user import User, Path
 
@@ -38,7 +38,7 @@ class TestUserFlow(unittest.TestCase):
         roads.add_zone(Zone("res1", {"0_1", "0_2", "2_3"}))
         roads.add_zone(Zone("res2", {"3_4"}))
 
-        car_layer = CarLayer(roads, services=[PersonalCarMobilityService()])
+        car_layer = CarLayer(roads, services=[PersonalMobilityService()])
         car_layer.create_node('C0', '0')
         car_layer.create_node('C1', '1')
         car_layer.create_node('C2', '2')

@@ -1,26 +1,26 @@
 import pathlib
 
-from mnms.demand.horizon import DemandHorizon
 from mnms.generation.roads import generate_manhattan_road
 from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer
 from mnms.graph.layers import MultiLayerGraph
 from mnms.demand.manager import CSVDemandManager
-from mnms.log import set_mnms_logger_level, LOGLEVEL
+from mnms.log import set_mnms_logger_level, LOGLEVEL, attach_log_file
 from mnms.travel_decision.dummy import DummyDecisionModel
-from mnms.mobility_service.car import OnDemandCarMobilityService, OnDemandCarDepotMobilityService
+from mnms.mobility_service.on_demand import OnDemandMobilityService, OnDemandDepotMobilityService
 from mnms.flow.MFD import MFDFlow, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 
 
-set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation',
-                                      'mnms.vehicles.veh_type',
-                                      'mnms.flow.user_flow',
-                                      'mnms.flow.MFD',
-                                      'mnms.layer.public_transport',
-                                      'mnms.travel_decision.model',
-                                      'mnms.tools.observer'])
+set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation'])
+                                      # 'mnms.vehicles.veh_type',
+                                      # 'mnms.flow.user_flow',
+                                      # 'mnms.flow.MFD',
+                                      # 'mnms.layer.public_transport',
+                                      # 'mnms.travel_decision.model',
+                                      # 'mnms.tools.observer'])
+
 
 cwd = pathlib.Path(__file__).parent.joinpath('demand.csv').resolve()
 
@@ -34,7 +34,7 @@ demand.add_user_observer(CSVUserObserver('user.csv'))
 
 road_db = generate_manhattan_road(3, 100)
 
-uber = OnDemandCarDepotMobilityService("UBER", 0)
+uber = OnDemandDepotMobilityService("UBER", 0)
 uber.attach_vehicle_observer(CSVVehicleObserver("veh.csv"))
 
 
@@ -70,15 +70,18 @@ def mfdspeed(dacc):
     dspeed = {'CAR': 3}
     return dspeed
 
+
 flow_motor = MFDFlow()
 flow_motor.add_reservoir(Reservoir('RES', ['CAR'], mfdspeed))
 
 supervisor = Supervisor(mlgraph,
                         demand,
                         flow_motor,
-                        decision_model)
+                        decision_model,
+                        logfile="sim.log",
+                        loglevel=LOGLEVEL.INFO)
 
 supervisor.run(Time("07:00:00"),
-               Time("08:00:00"),
-               Dt(seconds=10),
+               Time("18:00:00"),
+               Dt(seconds=1),
                10)

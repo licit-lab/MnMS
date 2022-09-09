@@ -41,16 +41,20 @@ def _insert_in_activity(curr_activity, activity_pos, drop_node, drop_node_ind, t
         veh.activity = None
         for a in reversed(new_activities + [curr_activity]):
             veh.activities.insert(activity_pos, a)
-        # veh.add_activities(new_activities + [curr_activity])
     else:
         for a in reversed(new_activities):
             veh.activities.insert(activity_pos, a)
-        # veh.add_activities([new_activities])
-
 
 
 class PublicTransportMobilityService(AbstractMobilityService):
     def __init__(self, _id: str, veh_capacity=50):
+        """
+        Implement a public transport mobility service, it can create lines
+
+        Args:
+            _id: The id of the service
+            veh_capacity: The capacity of the vehicle using this service
+        """
         super(PublicTransportMobilityService, self).__init__(_id, veh_capacity=veh_capacity, dt_matching=0,
                                                              dt_periodic_maintenance=0)
         self.vehicles: Dict[str, Deque[Vehicle]] = defaultdict(deque)
@@ -278,9 +282,6 @@ class PublicTransportMobilityService(AbstractMobilityService):
             self.clean_arrived_vehicles(lid)
 
     def replanning(self):
-        pass
-
-    def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
         pass
 
     def service_level_costs(self, nodes: List[str]) -> dict:
