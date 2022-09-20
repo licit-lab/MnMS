@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from collections import deque
 from copy import deepcopy
 from typing import List, Tuple, Deque, Optional, Generator, Callable
@@ -26,7 +27,7 @@ class VehicleState(Enum):
 
 
 @dataclass(slots=True)
-class VehicleActivity(object):
+class VehicleActivity(ABC):
     state: VehicleState
     node: str
     path: _TYPE_PATH = field(default_factory=list)
@@ -44,18 +45,19 @@ class VehicleActivity(object):
         self.path = new_path
         self.reset_path_iterator()
 
+    @abstractmethod
     def done(self, veh: "Vehicle"):
         return None
 
+    @abstractmethod
     def start(self, veh: "Vehicle"):
         return None
 
     def copy(self):
-        self.__class__
         return self.__class__(deepcopy(self.node),
-                               deepcopy(self.path),
-                               self.user,
-                               self.is_done)
+                              deepcopy(self.path),
+                              self.user,
+                              self.is_done)
 
 
 @dataclass(slots=True)
@@ -123,7 +125,6 @@ class VehicleActivityServing(VehicleActivity):
         # self.user._vehicle = None
         # self.user.notify(tcurrent)
         self.user.set_state_stop()
-
 
 
 class Vehicle(TimeDependentSubject):

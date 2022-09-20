@@ -21,12 +21,13 @@ set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation',
                                       'mnms.tools.observer'])
 
 
-demand = BaseDemandManager([User("U0", "ORIGIN_0", "DESTINATION_40", Time("07:00:00")),
-                            User("U1", "ORIGIN_11", "DESTINATION_60", Time("07:00:10"))],
-                            # User("U2", "ORIGIN_32", "DESTINATION_90", Time("07:00:00"))],
-                           lambda x: {"detour": 0,
-                                      "max_detour_ratio": 2,
-                                      "distance_value": 1})
+demand = BaseDemandManager([User("U0", "ORIGIN_0", "DESTINATION_41", Time("07:00:00")),
+                            User("U1", "ORIGIN_11", "DESTINATION_60", Time("07:00:10")),
+                            User("U2", "ORIGIN_32", "DESTINATION_90", Time("07:00:20"))],
+                            lambda x: {"detour": 0,
+                                       "max_detour_ratio": 1,
+                                       "distance_value": 1})
+
 demand.add_user_observer(CSVUserObserver('user.csv'))
 
 horizon = DemandHorizon(demand, Dt(minutes=5))

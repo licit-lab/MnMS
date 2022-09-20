@@ -248,7 +248,7 @@ class ParkingService(AbstractOnDemandMobilityService):
             nodes = user.path.nodes[parking_service_slice]
             shortest_path_dist = compute_path_length(self.graph, nodes)
 
-        potential_detour_ratio = shortest_path_dist/potential_detour
+        potential_detour_ratio = potential_detour/shortest_path_dist
         if potential_detour_ratio > user.parameters["max_detour_ratio"]:
             return float("inf")
         else:
