@@ -8,7 +8,7 @@ from mnms.graph.layers import MultiLayerGraph
 
 class AbstractFlowMotor(ABC):
     """Abstraction of a flow motor, two methods must be overridden `step` and `update_graph`.
-    `step` define the core of the motor, i.e. the way `User` move. `update_graph` must update the cost of the graph.
+    `step` define the core of the motor, i.e. the way `Vehicle` move. `update_graph` must update the cost of the graph.
 
     Parameters
     ----------
@@ -30,10 +30,8 @@ class AbstractFlowMotor(ABC):
             self._outfile = open(outfile, "w")
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
 
-    def set_graph(self, mmgraph: "MultiModalGraph"):
-        self._graph = mmgraph
-        # self._mobility_nodes = self._graph.mobility_graph.nodes
-        # self._flow_nodes = self._graph.flow_graph.nodes
+    def set_graph(self, mlgraph: MultiLayerGraph):
+        self._graph = mlgraph
 
     def set_initial_demand(self, demand:List[List]):
         self._demand = demand

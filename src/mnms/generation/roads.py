@@ -17,7 +17,13 @@ def generate_one_zone(roads: RoadDescriptor, zone_id: str) -> Zone:
     Returns:
         The generated Zone
     """
-    return Zone(zone_id, {s for s in roads.sections})
+    nodes = np.array([node.position for node in roads.nodes.values()])
+
+    min_x, min_y = np.min(nodes, axis=0)
+    max_x, max_y = np.max(nodes, axis=0)
+    bbox = [[min_x, min_y], [max_x, min_y], [max_x, max_y], [min_x, max_y]]
+
+    return Zone(zone_id, {s for s in roads.sections}, bbox)
 
 
 def generate_line_road(start: List[float], end: List[float], n: int, zone_id: Optional[str] = "RES", bothways: bool = True):

@@ -10,13 +10,13 @@ def _compute_dist(pos1: np.ndarray, pos2: np.ndarray):
     return np.linalg.norm(pos2-pos1)
 
 
-@dataclass
+@dataclass(slots=True)
 class RoadNode:
     id: str
     position: np.ndarray
 
 
-@dataclass
+@dataclass(slots=True)
 class RoadSection:
     id: str
     upstream: str
@@ -25,7 +25,7 @@ class RoadSection:
     zone: Optional[str] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class RoadStop:
     id: str
     section: str
@@ -34,7 +34,7 @@ class RoadStop:
 
 
 class RoadDescriptor(object):
-    __slots__ = ('nodes', 'sections', 'zones', 'stops', '_layers')
+    __slots__ = ('nodes', 'sections', 'zones', 'stops')
 
     def __init__(self):
         self.nodes: Dict[str, RoadNode] = dict()
@@ -42,7 +42,6 @@ class RoadDescriptor(object):
         self.sections: Dict[str, RoadSection] = dict()
 
         self.zones = dict()
-        self._layers = dict()
 
     def register_node(self, nid: str, pos: List[float]):
         self.nodes[nid] = RoadNode(nid, np.array(pos))
@@ -69,37 +68,11 @@ class RoadDescriptor(object):
                                          downstream,
                                          section_length)
 
-    def add_zone_from_polygons(self, polygonal_envelopes: Dict[str, List[List[float]]]):
-        section_centers = [0 for _ in range(len(self.sections))]
-        section_ids = np.array([s for s in self.sections])
-
-        for i, data in enumerate(self.sections.values()):
-            up_pos = self.nodes[data.upstream].position
-            down_pos = self.nodes[data.downstream].position
-            section_centers[i] = np.array([(up_pos[0] + down_pos[0]) / 2., (up_pos[1] + down_pos[1]) / 2.])
-
-        section_centers = np.array(section_centers)
-
-        for zid, z in polygonal_envelopes.items():
-            z = np.array(z)
-            mask = points_in_polygon(z, section_centers)
-            zone_links = section_ids[mask].tolist()
-            self.add_zone(Zone(zid, zone_links))
-
     def add_zone(self, zone: Zone):
         self.zones[zone.id] = zone
         zid = zone.id
         for l in zone.sections:
             self.sections[l].zone = zid
-
-    # TODO
-    def delete_link(self, lid: str, layers: Optional[List[str]] = None):
-        if layers is not None:
-            for layer_id in layers:
-                pass
-        else:
-            for layer in self._layers.values():
-                pass
 
     def __dump__(self):
         return {'NODES': {key: asdict(val) for key, val in self.nodes.items()},
@@ -118,6 +91,5 @@ class RoadDescriptor(object):
 
         for z in data["ZONES"].values():
             new_obj.add_zone(Zone(z["id"], set(z["sections"])))
-
 
         return new_obj

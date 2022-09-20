@@ -8,6 +8,7 @@ from mnms.demand.user import User
 from mnms.tools.cost import create_service_costs
 from mnms.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
+from mnms.vehicles.veh_type import Vehicle, VehicleActivity
 
 log = create_logger(__name__)
 
@@ -132,7 +133,7 @@ class AbstractMobilityService(ABC):
     def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
         pass
 
-    def replanning(self):
+    def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
         pass
 
     @classmethod

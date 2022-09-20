@@ -1,4 +1,5 @@
 from collections import deque
+from copy import deepcopy
 from typing import List, Tuple, Deque, Optional, Generator, Callable
 from enum import Enum
 from dataclasses import dataclass, field
@@ -24,7 +25,7 @@ class VehicleState(Enum):
     SERVING = 3
 
 
-@dataclass
+@dataclass(slots=True)
 class VehicleActivity(object):
     state: VehicleState
     node: str
@@ -49,8 +50,15 @@ class VehicleActivity(object):
     def start(self, veh: "Vehicle"):
         return None
 
+    def copy(self):
+        self.__class__
+        return self.__class__(deepcopy(self.node),
+                               deepcopy(self.path),
+                               self.user,
+                               self.is_done)
 
-@dataclass
+
+@dataclass(slots=True)
 class VehicleActivityStop(VehicleActivity):
     state: VehicleState = field(default=VehicleState.STOP, init=False)
 
@@ -64,7 +72,7 @@ class VehicleActivityStop(VehicleActivity):
             veh._vehicle = veh
 
 
-@dataclass
+@dataclass(slots=True)
 class VehicleActivityRepositioning(VehicleActivity):
     state: VehicleState = field(default=VehicleState.REPOSITIONING, init=False)
 
@@ -75,7 +83,7 @@ class VehicleActivityRepositioning(VehicleActivity):
         return None
 
 
-@dataclass
+@dataclass(slots=True)
 class VehicleActivityPickup(VehicleActivity):
     state: VehicleState = field(default=VehicleState.PICKUP, init=False)
 
@@ -90,7 +98,7 @@ class VehicleActivityPickup(VehicleActivity):
         self.user.set_state_inside_vehicle()
 
 
-@dataclass
+@dataclass(slots=True)
 class VehicleActivityServing(VehicleActivity):
     state: VehicleState = field(default=VehicleState.SERVING, init=False)
 
@@ -212,6 +220,19 @@ class Vehicle(TimeDependentSubject):
                 activity.is_done = True
 
             # self._current_node = self._current_link[0]
+
+    def override_current_activity(self):
+        next_activity = self.activities.popleft()
+        last_activity = self.activity
+        self.activity = next_activity
+        self.activity.start(self)
+
+        if last_activity.state is VehicleState.STOP:
+            if next_activity.path:
+                self._current_link, self._remaining_link_length = next(next_activity.iter_path)
+                assert self._current_node == self._current_link[0]
+            else:
+                next_activity.is_done = True
 
     def set_path(self, path: List[Tuple[Tuple[str, str], float]]):
         self._iter_path = iter(path)

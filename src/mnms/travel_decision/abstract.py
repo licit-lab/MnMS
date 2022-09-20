@@ -17,18 +17,10 @@ from mnms.time import Time
 from mnms.tools.dict_tools import sum_cost_dict
 from mnms.tools.exceptions import PathNotFound
 
-from hipop.shortest_path import parallel_k_shortest_path
+from hipop.shortest_path import parallel_k_shortest_path, compute_path_length
 from hipop.graph import Node
 
 log = create_logger(__name__)
-
-
-def compute_path_length(gnodes: Dict[str, Node], path: List[str]) -> float:
-    len_path = 0
-    for i in range(len(path) - 1):
-        j = i + 1
-        len_path += gnodes[path[i]].adj[path[j]].length
-    return len_path
 
 
 def _process_shortest_path_inputs(odlayer, users):
@@ -195,14 +187,14 @@ class AbstractDecisionModel(ABC):
                         self._csvhandler.writerow([user.id,
                                                    str(path.path_cost),
                                                    ' '.join(p.nodes),
-                                                   compute_path_length(gnodes, p.nodes),
+                                                   compute_path_length(self._mlgraph.graph, p.nodes),
                                                    ' '.join(p.mobility_services)])
 
                 elif self._write:
                     self._csvhandler.writerow([user.id,
                                                str(user.path.path_cost),
                                                ' '.join(user.path.nodes),
-                                               compute_path_length(gnodes, user.path.nodes),
+                                               compute_path_length(self._mlgraph.graph, user.path.nodes),
                                                ' '.join(user.path.mobility_services)])
 
         if path_not_found:

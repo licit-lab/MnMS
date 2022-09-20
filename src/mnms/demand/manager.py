@@ -3,7 +3,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Literal, Union
+from typing import List, Literal, Union, Dict, Callable
 
 import numpy as np
 
@@ -20,9 +20,10 @@ class AbstractDemandManager(ABC):
     """Abstract class for loading a User demand
     """
 
-    def __init__(self):
+    def __init__(self, user_parameters: Callable[[User], Dict] = lambda x: {}):
         self._observers = []
         self._user_to_attach = []
+        self._user_parameter = user_parameters
 
     @abstractmethod
     def get_next_departures(self, tstart: Time, tend: Time) -> List[User]:
@@ -42,6 +43,10 @@ class AbstractDemandManager(ABC):
         """
         pass
 
+    def construct_user_parameters(self, users: List[User]) -> None:
+        for u in users:
+            u.parameters = self._user_parameter(u)
+
     @abstractmethod
     def copy(self):
         pass
@@ -60,8 +65,8 @@ class BaseDemandManager(AbstractDemandManager):
         list of User to manage
     """
 
-    def __init__(self, users):
-        super(BaseDemandManager, self).__init__()
+    def __init__(self, users, user_parameters: Callable[[User], Dict] = lambda x: {}):
+        super(BaseDemandManager, self).__init__(user_parameters)
         self._users = users
         self._iter_demand = iter(self._users)
         self._current_user = next(self._iter_demand)
@@ -114,8 +119,8 @@ class CSVDemandManager(AbstractDemandManager):
         Delimiter for the CSV file
     """
 
-    def __init__(self, csvfile: Union[Path, str], delimiter=';'):
-        super(CSVDemandManager, self).__init__()
+    def __init__(self, csvfile: Union[Path, str], delimiter=';', user_parameters: Callable[[User], Dict] = lambda x: {}):
+        super(CSVDemandManager, self).__init__(user_parameters)
         self._filename = csvfile
         self._delimiter = delimiter
         self._file = open(self._filename, 'r')

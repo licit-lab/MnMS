@@ -1,6 +1,6 @@
 from copy import deepcopy
 from enum import Enum
-from typing import Union, List, Tuple, Optional
+from typing import Union, List, Tuple, Optional, Dict
 
 from mnms.time import Time, Dt
 from mnms.tools.observer import TimeDependentSubject
@@ -76,6 +76,7 @@ class User(TimeDependentSubject):
         self.pickup_dt = User.default_pickup_dt.copy() if response_dt is None else pickup_dt
 
         self._continuous_journey = continuous_journey
+        self.parameters: Dict = dict()
 
         if path is None:
             self.path: Optional[Path] = None
@@ -172,7 +173,7 @@ class Path(object):
     def __eq__(self, other: "Path"):
         return self.nodes == other.nodes
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo={}):
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result

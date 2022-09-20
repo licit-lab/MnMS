@@ -86,6 +86,7 @@ class Supervisor(object):
     def get_new_users(self, principal_dt):
         log.info(f'Getting next departures {self.tcurrent}->{self.tcurrent.add_time(principal_dt)} ..')
         new_users = self._demand.get_next_departures(self.tcurrent, self.tcurrent.add_time(principal_dt))
+        self._demand.construct_user_parameters(new_users)
         log.info(f'Done, {len(new_users)} new departure')
 
         return new_users
@@ -127,7 +128,6 @@ class Supervisor(object):
 
         self._user_flow.set_time(tstart)
 
-        # VehicleManager.empty()
 
     def update_mobility_services(self, flow_dt:Dt):
         for layer in self._mlgraph.layers.values():
@@ -260,6 +260,8 @@ class Supervisor(object):
             for mservice in layer.mobility_services.values():
                 if mservice._observer is not None:
                     mservice._observer.finish()
+
+        progress.end()
 
     def create_crash_report(self, affectation_step, flow_step) -> dict:
         data = dict(time=str(self.tcurrent),

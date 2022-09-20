@@ -31,8 +31,7 @@ class AbstractLayer(object):
         """
         self._id: str = id
         self.graph: OrientedGraph = OrientedGraph()
-        self._roaddb: RoadDescriptor = roads
-        self._roaddb._layers[id] = self
+        self.roads: RoadDescriptor = roads
 
         self._default_speed: float = default_speed
 

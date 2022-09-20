@@ -44,6 +44,9 @@ class ProgressBar(object):
     def show(self):
         print(self._bar, end='', flush=True)
 
+    def end(self) -> None:
+        print("")
+
     def execute(self, func, *args, **kwargs):
         func(*args, **kwargs)
         self.update()
