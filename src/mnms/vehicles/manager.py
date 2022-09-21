@@ -19,7 +19,7 @@ class VehicleManager(object):
     def add_vehicle(self, veh:Vehicle) -> None:
         self.add_new_vehicle(veh)
         VehicleManager._vehicles[veh._global_id] = veh
-        VehicleManager._type_vehicles[veh.__class__.__name__].add(veh._global_id)
+        VehicleManager._type_vehicles[veh.type].add(veh._global_id)
 
     def add_new_vehicle(self, veh):
         VehicleManager._new_vehicles.append(veh)
@@ -28,6 +28,10 @@ class VehicleManager(object):
         log.info(f"Deleting {veh}")
         del VehicleManager._vehicles[veh._global_id]
         VehicleManager._type_vehicles[veh.type].remove(veh._global_id)
+
+    @property
+    def has_new_vehicles(self):
+        return bool(VehicleManager._new_vehicles)
 
     @classmethod
     def empty(cls):

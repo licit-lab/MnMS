@@ -13,21 +13,14 @@ from numpy.linalg import norm as _norm
 from mnms.demand.user import User, Path
 from mnms.graph.layers import MultiLayerGraph
 from mnms.log import create_logger
+from mnms.time import Time
 from mnms.tools.dict_tools import sum_cost_dict
 from mnms.tools.exceptions import PathNotFound
 
-from hipop.shortest_path import parallel_k_shortest_path
-from hipop.graph import OrientedGraph
+from hipop.shortest_path import parallel_k_shortest_path, compute_path_length
+from hipop.graph import Node
 
 log = create_logger(__name__)
-
-
-def compute_path_length(gnodes: Dict, path:List[str]) -> float:
-    len_path = 0
-    for i in range(len(path) - 1):
-        j = i + 1
-        len_path += gnodes[path[i]].adj[path[j]].length
-    return len_path
 
 
 def _process_shortest_path_inputs(odlayer, users):
@@ -52,51 +45,45 @@ def _process_shortest_path_inputs(odlayer, users):
 
     return origins, destinations, available_mobility_services
 
-class AbstractDecisionModel(ABC):
-    """Base class for a travel decision model
 
-    Parameters
-    ----------
-    mmgraph: MultiModalGraph
-        The graph on which the model compute the path
-    n_shortest_path: int
-        Number of shortest path top compute
-    radius_sp: float
-        Radius of search if the User as coordinates as origin/destination
-    radius_growth_sp: float
-        Growth rate if no path is found for the User
-    walk_speed: float
-        Walk speed
-    scale_factor_sp: int
-        Scale factor for the increase of link costs in the compute_n_best_shortest_path
-    algorithm: str
-        Shortest path algorithm
-    heuristic: function
-        Function to use as heuristic of astar is the sortest path algorithm
-    outfile: str
-        Path to result CSV file, nothing is written if None
-    cost: str
-        Name of the cost to use in the shortest path algorithm
-    """
+class AbstractDecisionModel(ABC):
+
     def __init__(self,
-                 mmgraph:MultiLayerGraph,
-                 n_shortest_path: int=3,
-                 min_diff_dist: float=-100,
-                 max_diff_dist: float=100,
-                 outfile: str=None,
-                 verbose_file: bool=False,
-                 cost: str='travel_time',
+                 mlgraph: MultiLayerGraph,
+                 n_shortest_path: int = 3,
+                 min_diff_dist: float = -100,
+                 max_diff_dist: float = 100,
+                 outfile: str = None,
+                 verbose_file: bool = False,
+                 cost: str = 'travel_time',
                  thread_number: int = multiprocessing.cpu_count()):
+
+        """
+        Base class for a travel decision model
+
+        Args:
+            mlgraph: The multi layer graph on which the model compute the path
+            n_shortest_path: The number of shortest path computed for one user
+            min_diff_dist: The min distance between the n computed shortest path and the first one that is required to accept the n shortest path
+            max_diff_dist: The max distance between the n computed shortest path and the first one that is required to accept the n shortest path
+            outfile: If specified the file in which compute path are written
+            verbose_file: If true write all the computed shortest path, not only the one that is selected
+            cost: The name of the cost to consider for the shortest path
+            thread_number: The number of thread to user fot parallel shortest path computation
+        """
 
         self._n_shortest_path = n_shortest_path
         self._min_diff_dist = min_diff_dist
         self._max_diff_dist = max_diff_dist
         self._thread_number = thread_number
 
-        self._mmgraph = mmgraph
+        self._mlgraph = mlgraph
         self._cost = cost
         self._verbose_file = verbose_file
         self._mandatory_mobility_services = []
+
+        self._refused_user: List[User] = list()
+
         if outfile is None:
             self._write = False
             self._verbose_file = False
@@ -113,11 +100,35 @@ class AbstractDecisionModel(ABC):
     def set_mandatory_mobility_services(self, services:List[str]):
         self._mandatory_mobility_services = services
 
+    def set_refused_users(self, users: List[User]):
+        self._refused_user = users
+
+    def _check_refused_users(self) -> List[User]:
+        new_users = []
+        gnodes = self._mlgraph.graph.nodes
+        for u in self._refused_user:
+            cnode = u._current_node
+            refused_mservice = gnodes[cnode].label
+
+            if u.available_mobility_service is not None and len(u.available_mobility_service) > 1:
+                u.available_mobility_service.remove(refused_mservice)
+                u._continuous_journey = u.id
+                u.id = f"{u.id}_CONTINUOUS"
+                new_users.append(u)
+                u.origin = np.array(gnodes[u._current_node].position)
+
+        self._refused_user = list()
+        return new_users
+
     # TODO: restrict combination of paths (ex: we dont want Uber->Bus)
-    def __call__(self, new_users: List[User]):
-        origins, destinations, available_mobility_services = _process_shortest_path_inputs(self._mmgraph.odlayer, new_users)
-        # print(origins, destinations, available_mobility_services)
-        paths = parallel_k_shortest_path(self._mmgraph.graph,
+    def __call__(self, new_users: List[User], tcurrent: Time):
+        refused_user = self._check_refused_users()
+        for u in refused_user:
+           u.departure_time = tcurrent.copy()
+        new_users.extend(refused_user)
+
+        origins, destinations, available_mobility_services = _process_shortest_path_inputs(self._mlgraph.odlayer, new_users)
+        paths = parallel_k_shortest_path(self._mlgraph.graph,
                                          origins,
                                          destinations,
                                          self._cost,
@@ -126,34 +137,33 @@ class AbstractDecisionModel(ABC):
                                          self._max_diff_dist,
                                          self._n_shortest_path,
                                          self._thread_number)
-
-        gnodes = self._mmgraph.graph.nodes
+        gnodes = self._mlgraph.graph.nodes
         path_not_found = []
 
         for i, kpath in enumerate(paths):
             user_paths = []
             user = new_users[i]
+            path_index = 0
             for p in kpath:
                 if p[0]:
-                    p = Path(p[1], p[0])
+                    p = Path(path_index, p[1], p[0])
                     p.construct_layers(gnodes)
-
+                    path_index += 1
                     path_services = []
 
                     for layer, node_inds in p.layers:
                         layer_services = []
                         path_services.append(layer_services)
-                        for service in self._mmgraph.layers[layer].mobility_services:
+                        for service in self._mlgraph.layers[layer].mobility_services:
                             if user.available_mobility_service is None or service in user.available_mobility_service:
                                 layer_services.append(service)
 
                     for ls in product(*path_services):
                         new_path = deepcopy(p)
-                        services = ls if len(ls) > 1 else ls[0]
-                        new_path.mobility_services =[]
-                        new_path.mobility_services.append(services)
+                        services = list(ls)
+                        new_path.mobility_services = services
 
-                        service_costs = sum_cost_dict(*(self._mmgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services) ))
+                        service_costs = sum_cost_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services)))
 
                         new_path.service_costs = service_costs
                         user_paths.append(new_path)
@@ -165,7 +175,7 @@ class AbstractDecisionModel(ABC):
                 path = self.path_choice(user_paths)
                 if len(path.nodes) > 1:
                     user.set_path(path)
-                    user._remaining_link_length = self._mmgraph.graph.nodes[path.nodes[0]].adj[path.nodes[1]].length
+                    user._remaining_link_length = self._mlgraph.graph.nodes[path.nodes[0]].adj[path.nodes[1]].length
                 else:
                     log.warning(f"Path %s is not valid for %s", str(path), user.id)
                     raise PathNotFound(user.origin, user.destination)
@@ -177,66 +187,16 @@ class AbstractDecisionModel(ABC):
                         self._csvhandler.writerow([user.id,
                                                    str(path.path_cost),
                                                    ' '.join(p.nodes),
-                                                   compute_path_length(gnodes, p.nodes),
+                                                   compute_path_length(self._mlgraph.graph, p.nodes),
                                                    ' '.join(p.mobility_services)])
 
                 elif self._write:
                     self._csvhandler.writerow([user.id,
                                                str(user.path.path_cost),
                                                ' '.join(user.path.nodes),
-                                               compute_path_length(gnodes, user.path.nodes),
+                                               compute_path_length(self._mlgraph.graph, user.path.nodes),
                                                ' '.join(user.path.mobility_services)])
 
         if path_not_found:
-            log.warning("Path not found: %s", len(path_not_found))
-        # paths = []
-        # for p in layer_paths:
-        #     path_services = []
-        #     p.construct_layers(self._mmgraph)
-        #
-        #     for layer, node_inds in p.layers:
-        #         if layer != "_ODLAYER":
-        #             layer_services = []
-        #             path_services.append(layer_services)
-        #             for service in self._mmgraph.layers[layer].mobility_services:
-        #                 if user.available_mobility_service is None or service in user.available_mobility_service:
-        #                     layer_services.append(service)
-        #
-        #     for ls in product(*path_services):
-        #         new_path = deepcopy(p)
-        #         services = ls if len(ls) > 1 else ls[0]
-        #         new_path.mobility_services =[]
-        #         new_path.mobility_services.append(services)
-        #
-        #         service_costs = sum_cost_dict(*(self._mmgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services) ))
-        #
-        #         new_path.service_costs = service_costs
-        #         paths.append(new_path)
-        #
-        #
-        # path = self.path_choice(paths)
-        # if len(path.nodes) > 1:
-        #     user.set_path(path)
-        #     user._remaining_link_length = self._mmgraph.links[(path.nodes[0], path.nodes[1])].costs['length']
-        # else:
-        #     log.warning(f"Path {path} is not valid for {user}")
-        #     raise PathNotFound(user.origin, user.destination)
-        #
-        # log.info(f"Computed path for {user}")
-        #
-        # if self._verbose_file:
-        #     for p in paths:
-        #         self._csvhandler.writerow([user.id,
-        #                                    str(path.cost),
-        #                                    ' '.join(p),
-        #                                    compute_path_length(self._mmgraph, p),
-        #                                    ' '.join(compute_path_modes(self._mmgraph, p))])
-        #
-        # elif self._write:
-        #     self._csvhandler.writerow([user.id,
-        #                                str(user.path.cost),
-        #                                ' '.join(user.path.nodes),
-        #                                compute_path_length(self._mmgraph, user.path.nodes),
-        #                                ' '.join(compute_path_modes(self._mmgraph, user.path.nodes))])
-
+            log.warning("Paths not found: %s", len(path_not_found))
 

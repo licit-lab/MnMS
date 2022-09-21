@@ -2,8 +2,11 @@ channels:
   - conda-forge
   - anaconda
 dependencies:
-  - sphinx
-  - sphinx-book-theme
-  - nbsphinx
-  - pandoc
   - notebook
+  - mkdocs
+  - pip:
+      - mkdocstrings
+      - mkdocs-jupyter
+      - mkdocs-gen-files
+
+

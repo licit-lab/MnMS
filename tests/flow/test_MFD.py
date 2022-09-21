@@ -5,8 +5,9 @@ from mnms.demand import User
 from mnms.demand.user import Path
 from mnms.flow.MFD import MFDFlow, Reservoir
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
-from mnms.graph.road import RoadDescription
-from mnms.mobility_service.car import PersonalCarMobilityService
+from mnms.graph.road import RoadDescriptor
+from mnms.graph.zone import Zone
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import Dt, TimeTable, Time
 from mnms.vehicles.veh_type import Vehicle
@@ -19,7 +20,7 @@ class TestMFDFlow(unittest.TestCase):
         self.tempfile = TemporaryDirectory()
         self.pathdir = self.tempfile.name+'/'
 
-        roads = RoadDescription()
+        roads = RoadDescriptor()
 
         roads.register_node('0', [0, 0])
         roads.register_node('1', [0, 40000])
@@ -27,16 +28,19 @@ class TestMFDFlow(unittest.TestCase):
         roads.register_node('3', [1400, 0])
         roads.register_node('4', [3400, 0])
 
-        roads.register_section('0_1', '0', '1', zone="res1")
-        roads.register_section('0_2', '0', '2', zone="res1")
-        roads.register_section('2_3', '2', '3', zone="res1")
-        roads.register_section('3_4', '3', '4', zone="res2")
+        roads.register_section('0_1', '0', '1')
+        roads.register_section('0_2', '0', '2')
+        roads.register_section('2_3', '2', '3')
+        roads.register_section('3_4', '3', '4')
 
         roads.register_stop("B2", "2_3", 0)
         roads.register_stop("B3", "3_4", 0)
         roads.register_stop("B4", "3_4", 1)
 
-        self.personal_car = PersonalCarMobilityService()
+        roads.add_zone(Zone("res1", {"0_1", "0_2", "2_3"}))
+        roads.add_zone(Zone("res2", {"3_4"}))
+
+        self.personal_car = PersonalMobilityService()
         car_layer = CarLayer(roads, services=[self.personal_car])
         car_layer.create_node('C0', '0')
         car_layer.create_node('C1', '1')
@@ -86,9 +90,11 @@ class TestMFDFlow(unittest.TestCase):
 
     def test_accumulation_speed(self):
         user = User('U0', '0', '4', Time('00:01:00'))
-        user.set_path(Path(3400,
+        user.set_path(Path(0,
+                           3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
         self.personal_car.request_vehicle(user, 'C2')
+        self.personal_car.matching({user.id: (user, "C2")})
         self.flow.step(Dt(seconds=1))
         self.assertDictEqual({'CAR': 1, 'BUS': 0}, self.flow.dict_accumulations['res1'])
         self.assertDictEqual({'BUS': 42, 'CAR': 42}, self.flow.dict_speeds['res1'])

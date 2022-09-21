@@ -3,7 +3,7 @@ from typing import Union
 from pathlib import Path
 
 from mnms.graph.layers import MultiLayerGraph, OriginDestinationLayer
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.io.utils import MNMSEncoder, load_class_by_module_name
 
 
@@ -38,7 +38,7 @@ def load_graph(filename: Union[str, Path]):
 
 
 
-    roads = RoadDescription.__load__(data['ROADS'])
+    roads = RoadDescriptor.__load__(data['ROADS'])
     layers = []
     for ldata in data['LAYERS']:
         layer_type = load_class_by_module_name(ldata['TYPE'])

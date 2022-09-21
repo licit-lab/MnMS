@@ -2,14 +2,14 @@ from collections import ChainMap
 from typing import Optional, Dict, Set, List, Type
 
 import numpy as np
-from hipop.graph import Node, node_to_dict, link_to_dict
-from hipop.graph import merge_oriented_graph
+from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph
 
 from mnms.graph.abstract import AbstractLayer
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.io.utils import load_class_by_module_name
 from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable
 from mnms.vehicles.veh_type import Vehicle, Car, Bus
 
@@ -18,8 +18,8 @@ log = create_logger(__name__)
 
 class SimpleLayer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
-        assert dbnode in self._roaddb.nodes
-        node_pos = self._roaddb.nodes[dbnode]
+        assert dbnode in self.roads.nodes
+        node_pos = self.roads.nodes[dbnode].position
 
         if exclude_movements is not None:
             exclude_movements = {key: set(val) for key, val in exclude_movements.items()}
@@ -30,20 +30,18 @@ class SimpleLayer(AbstractLayer):
 
         self.map_reference_nodes[nid] = dbnode
 
-    def create_link(self, lid, upstream, downstream, costs, road_links):
-        length = sum(self._roaddb.sections[l]['length'] for l in road_links)
+    def create_link(self, lid: str, upstream: str, downstream: str, costs: Dict[str, float], road_links: List[str]):
+        length = sum(self.roads.sections[l].length for l in road_links)
         self.graph.add_link(lid, upstream, downstream, length, costs, self.id)
 
         self.map_reference_links[lid] = road_links
 
     @classmethod
-    def __load__(cls, data: Dict, roads: RoadDescription):
+    def __load__(cls, data: Dict, roads: RoadDescriptor):
         new_obj = cls(roads,
                       data['ID'],
                       load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
-
-
 
         node_ref = data["MAP_ROADDB"]["NODES"]
         for ndata in data['NODES']:
@@ -74,14 +72,15 @@ class SimpleLayer(AbstractLayer):
 
 class CarLayer(SimpleLayer):
     def __init__(self,
-                 roads: RoadDescription,
+                 roads: RoadDescriptor,
                  default_speed: float = 13.8,
                  services: Optional[List[AbstractMobilityService]] = None,
-                 observer: Optional = None):
-        super(CarLayer, self).__init__(roads, 'CAR', Car, default_speed, services, observer)
+                 observer: Optional = None,
+                 _id: str = "CAR"):
+        super(CarLayer, self).__init__(roads, _id, Car, default_speed, services, observer)
 
     @classmethod
-    def __load__(cls, data: Dict, roads: RoadDescription):
+    def __load__(cls, data: Dict, roads: RoadDescriptor):
         new_obj = cls(roads,
                       data['DEFAULT_SPEED'])
 
@@ -103,25 +102,25 @@ class CarLayer(SimpleLayer):
 
 class PublicTransportLayer(AbstractLayer):
     def __init__(self,
-                 roads: RoadDescription,
+                 roads: RoadDescriptor,
                  _id: str,
                  veh_type: Type[Vehicle],
                  default_speed: float,
-                 services: Optional[List[AbstractMobilityService]] = None,
+                 services: Optional[List[PublicTransportMobilityService]] = None,
                  observer: Optional = None):
         super(PublicTransportLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
         self.lines = dict()
 
     def _create_stop(self, sid, dbnode):
-        assert dbnode in self._roaddb.stops
+        assert dbnode in self.roads.stops
 
-        node_pos = np.array(self._roaddb.stops[dbnode]['absolute_position'])
+        node_pos = self.roads.stops[dbnode].absolute_position
         self.graph.add_node(sid, node_pos[0], node_pos[1], self.id)
 
     def _connect_stops(self, lid, line_id, upstream, downstream, reference_sections):
-        line_length = sum(self._roaddb.sections[s]['length'] for s in reference_sections[1:-1])
-        line_length += self._roaddb.sections[reference_sections[0]]['length']*(1-self._roaddb.stops[upstream]['relative_position'])
-        line_length += self._roaddb.sections[reference_sections[-1]]['length'] * self._roaddb.stops[downstream]['relative_position']
+        line_length = sum(self.roads.sections[s].length for s in reference_sections[1:-1])
+        line_length += self.roads.sections[reference_sections[0]].length * (1 - self.roads.stops[upstream].relative_position)
+        line_length += self.roads.sections[reference_sections[-1]].length * self.roads.stops[downstream].relative_position
 
         costs = {'length': line_length}
         self.graph.add_link(lid, line_id+'_'+upstream, line_id+'_'+downstream, line_length, costs, self.id)
@@ -173,7 +172,7 @@ class PublicTransportLayer(AbstractLayer):
             timetable = line['table']
             for service in self.mobility_services.values():
                 timetable_iter = iter(timetable.table)
-                service._timetable_iter[lid] = iter(timetable.table)
+                service._timetable_iter[lid] = timetable_iter
                 service._current_time_table[lid] = next(timetable_iter)
                 service._next_time_table[lid] = next(timetable_iter)
 
@@ -190,7 +189,7 @@ class PublicTransportLayer(AbstractLayer):
                            'BIDIRECTIONAL': ldata['bidirectional']} for lid, ldata in self.lines.items()]}
 
     @classmethod
-    def __load__(cls, data: Dict, roads: RoadDescription):
+    def __load__(cls, data: Dict, roads: RoadDescriptor):
         new_obj = cls(roads,
                       data['ID'],
                       load_class_by_module_name(data['VEH_TYPE']),
@@ -208,7 +207,7 @@ class PublicTransportLayer(AbstractLayer):
 
 class BusLayer(PublicTransportLayer):
     def __init__(self,
-                 roads: RoadDescription,
+                 roads: RoadDescriptor,
                  _id: str = "BUS",
                  veh_type: Type[Vehicle] = Bus,
                  default_speed: float = 6.5,
@@ -252,8 +251,16 @@ class MultiLayerGraph(object):
                  layers:List[AbstractLayer] = [],
                  odlayer:Optional[OriginDestinationLayer] = None,
                  connection_distance:Optional[float] = None):
+        """
+        Multi layer graph class, the graph representation is based on hipop
 
-        self.graph = merge_oriented_graph([l.graph for l in layers])
+        Args:
+            layers:
+            odlayer:
+            connection_distance:
+        """
+
+        self.graph: OrientedGraph = merge_oriented_graph([l.graph for l in layers])
 
         self.layers = dict()
         self.mapping_layer_services = dict()
@@ -263,7 +270,7 @@ class MultiLayerGraph(object):
             self.map_reference_links.maps.append(l.map_reference_links)
 
         self.odlayer = None
-        self.roads = layers[0]._roaddb
+        self.roads = layers[0].roads
 
         for l in layers:
             self.layers[l.id] = l

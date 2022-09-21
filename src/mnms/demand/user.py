@@ -1,10 +1,20 @@
 from copy import deepcopy
-from typing import Union, List, Tuple
+from enum import Enum
+from typing import Union, List, Tuple, Optional, Dict
 
-from mnms.time import Time
+from mnms.time import Time, Dt
 from mnms.tools.observer import TimeDependentSubject
 
 import numpy as np
+
+
+class UserState(Enum):
+    ARRIVED = 0
+    WAITING_ANSWER = 1
+    WAITING_VEHICLE = 2
+    WALKING = 3
+    INSIDE_VEHICLE = 4
+    STOP = 5
 
 
 class User(TimeDependentSubject):
@@ -12,7 +22,7 @@ class User(TimeDependentSubject):
 
     Parameters
     ----------
-    id: str
+    _id: str
         Id of the User
     origin: str
         Origin of the User
@@ -28,18 +38,24 @@ class User(TimeDependentSubject):
         Path from origin to destination
 
     """
+    default_response_dt = Dt(minutes=2)
+    default_pickup_dt = Dt(minutes=5)
+
     def __init__(self,
-                 id: str,
-                 origin: Union[str, np.ndarray],
-                 destination: Union[str, np.ndarray],
+                 _id: str,
+                 origin: Union[str, Union[np.ndarray, List]],
+                 destination: Union[str, Union[np.ndarray, List]],
                  departure_time: Time,
                  available_mobility_services=None,
                  scale_factor=1,
-                 path=None):
+                 path: Optional["Path"] = None,
+                 response_dt: Optional[Dt] = None,
+                 pickup_dt: Optional[Dt] = None,
+                 continuous_journey: Optional[str] = None):
         super(User, self).__init__()
-        self.id = id
-        self.origin = origin
-        self.destination = destination
+        self.id = _id
+        self.origin = origin if not isinstance(origin, list) else np.array(origin)
+        self.destination = destination if not isinstance(destination, list) else np.array(destination)
         self.departure_time = departure_time
         self.arrival_time = None
         self.available_mobility_service = available_mobility_services if available_mobility_services is None else set(available_mobility_services)
@@ -52,13 +68,31 @@ class User(TimeDependentSubject):
         self._vehicle = None
         self._waiting_vehicle = False
         self._current_node = None
+        self._distance = 0
+
+        self._state = UserState.STOP
+
+        self.response_dt = User.default_response_dt.copy() if response_dt is None else response_dt
+        self.pickup_dt = User.default_pickup_dt.copy() if response_dt is None else pickup_dt
+
+        self._continuous_journey = continuous_journey
+        self.parameters: Dict = dict()
+
         if path is None:
-            self.path = None
+            self.path: Optional[Path] = None
         else:
             self.set_path(path)
 
     def __repr__(self):
         return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"
+
+    @property
+    def state(self):
+        return self._state
+
+    @property
+    def distance(self):
+        return self._distance
 
     @property
     def position(self):
@@ -80,8 +114,8 @@ class User(TimeDependentSubject):
         self.arrival_time = arrival_time
         # self.notify()
 
-    def set_path(self, path:"Path"):
-        self.path = path
+    def set_path(self, path: "Path"):
+        self.path: Path = path
         self._current_node = path.nodes[0]
         self._current_link = (path.nodes[0], path.nodes[1])
 
@@ -90,13 +124,35 @@ class User(TimeDependentSubject):
         self._remaining_link_length = remaining_length
         self._position = position
 
+    def update_distance(self, dist: float):
+        self._distance += dist
+
+    def set_state_arrived(self):
+        self._state = UserState.ARRIVED
+
+    def set_state_walking(self):
+        self._state = UserState.WALKING
+
+    def set_state_inside_vehicle(self):
+        self._state = UserState.INSIDE_VEHICLE
+
+    def set_state_waiting_vehicle(self):
+        self._state = UserState.WAITING_ANSWER
+
+    def set_state_waiting_answer(self):
+        self._state = UserState.WAITING_ANSWER
+
+    def set_state_stop(self):
+        self._state = UserState.STOP
+
 
 class Path(object):
-    def __init__(self, cost=None, nodes: List[str] = None):
+    def __init__(self, ind: int, cost=None, nodes: Union[List[str], Tuple[str]] = None):
+        self.ind = ind
         self.path_cost: float = cost
         self.layers: List[Tuple[str, slice]] = list()
         self.mobility_services = list()
-        self.nodes: List[str] = nodes
+        self.nodes: Tuple[str] = nodes
         self.service_costs = dict()
 
     def construct_layers(self, gnodes):
@@ -114,7 +170,10 @@ class Path(object):
     def __repr__(self):
         return f"Path(path_cost={self.path_cost}, nodes={self.nodes}, layers={self.layers}, services={self.mobility_services})"
 
-    def __deepcopy__(self, memo):
+    def __eq__(self, other: "Path"):
+        return self.nodes == other.nodes
+
+    def __deepcopy__(self, memo={}):
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result

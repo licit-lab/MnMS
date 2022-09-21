@@ -28,7 +28,8 @@ class LogitDecisionModel(AbstractDecisionModel):
         outfile: str
             Path to result CSV file, nothing is written if None
         """
-        super(LogitDecisionModel, self).__init__(mmgraph, outfile=outfile, n_shortest_path=n_shortest_path, verbose_file=verbose_file, cost=cost)
+        super(LogitDecisionModel, self).__init__(mmgraph, n_shortest_path=n_shortest_path, outfile=outfile,
+                                                 verbose_file=verbose_file, cost=cost)
         self._theta = theta
 
     def path_choice(self, paths:List[Path]) -> Path:

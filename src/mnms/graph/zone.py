@@ -1,40 +1,53 @@
-from copy import deepcopy
-from typing import List, FrozenSet, Dict, Set, Optional, Tuple, Union
+from typing import Set, List, Annotated
+from dataclasses import dataclass, field
 
-from mnms.log import create_logger
+import numpy as np
 
-log = create_logger(__name__)
+Point = Annotated[List[float], 2]
+PointList = List[Point]
 
 
+@dataclass(slots=True)
 class Zone(object):
-    """Set of sections that define a geographic zone
+    id: str
+    sections: Set[str]
+    contour: PointList
 
-    Parameters
-    ----------
-    resid: str
-        id of the zone
-    links: list
-        list of sections id
-    mobility_services:
-        list of mobility services present in the zone
-    """
-    __slots__ = ('mobility_services', 'links')
+    def is_inside(self, point: Point):
+        return points_in_polygon(self.contour, [point])[0]
 
-    def __init__(self, resid: str, links:List[str]=[], mobility_services:List[str]=[]):
-        self.id = resid
-        self.mobility_services = frozenset(mobility_services)
-        self.links: FrozenSet[str] = frozenset(links)
 
-    def __dump__(self) -> dict:
-        return {'ID': self.id, 'MOBILITY_SERVICES': list(self.mobility_services), 'LINKS': list(self.links)}
+def points_in_polygon(polygon, pts):
+    pts = np.asarray(pts, dtype='float32')
+    polygon = np.asarray(polygon, dtype='float32')
+    contour2 = np.vstack((polygon[1:], polygon[:1]))
+    test_diff = contour2 - polygon
+    mask1 = (pts[:, None] == polygon).all(-1).any(-1)
+    m1 = (polygon[:, 1] > pts[:, None, 1]) != (contour2[:, 1] > pts[:, None, 1])
+    slope = ((pts[:, None, 0] - polygon[:, 0]) * test_diff[:, 1]) - (
+                test_diff[:, 0] * (pts[:, None, 1] - polygon[:, 1]))
+    m2 = slope == 0
+    mask2 = (m1 & m2).any(-1)
+    m3 = (slope < 0) != (contour2[:, 1] < polygon[:, 1])
+    m4 = m1 & m3
+    count = np.count_nonzero(m4, axis=-1)
+    mask3 = ~(count % 2 == 0)
+    mask = mask1 | mask2 | mask3
+    return mask
 
-    @classmethod
-    def __load__(cls, data: dict):
-        return Zone(data['ID'], data['LINKS'], data['MOBILITY_SERVICES'])
 
-    def __deepcopy__(self, memodict={}):
-        cls = self.__class__
-        result = cls(self.id,
-                     deepcopy(self.links))
-        return result
+def construct_zone(roads: "RoadDescriptor", _id: str, contour: PointList):
+    section_centers = [0 for _ in range(len(roads.sections))]
+    section_ids = np.array([s for s in roads.sections])
 
+    for i, data in enumerate(roads.sections.values()):
+        up_pos = roads.nodes[data.upstream].position
+        down_pos = roads.nodes[data.downstream].position
+        section_centers[i] = np.array([(up_pos[0] + down_pos[0]) / 2., (up_pos[1] + down_pos[1]) / 2.])
+
+    section_centers = np.array(section_centers)
+
+    contour_array = np.array(contour)
+    mask = points_in_polygon(contour_array, section_centers)
+    zone_links = section_ids[mask].tolist()
+    return Zone(_id, zone_links, contour)

@@ -78,9 +78,22 @@ class Dt(object):
     def to_seconds(self):
         return float(int(self._hours * 3600) + int(self._minutes * 60) + self._seconds)
 
+    def copy(self):
+        copy = Dt()
+        copy._hours = self._hours
+        copy._minutes = self._minutes
+        copy._seconds = self._seconds
+        return copy
+
 
 class Time(object):
-    def __init__(self, strdate="00:00:00"):
+    def __init__(self, strdate: str = "00:00:00"):
+        """
+        Class representing time in mnms
+
+        Args:
+            strdate: A string representing a time with the format HH:MM:SS
+        """
         self._hours = None
         self._minutes = None
         self._seconds = None
@@ -94,17 +107,50 @@ class Time(object):
         self._minutes = Decimal(split_string[1])
         self._seconds = Decimal(split_string[2])
 
-    def to_seconds(self):
+    def to_seconds(self) -> float:
+        """
+        Convert the Time class to seconds
+
+        Returns:
+            Seconds
+
+        """
         return float(self._hours*3600+self._minutes*60+self._seconds)
 
     @classmethod
-    def fromSeconds(cls, seconds:float):
+    def from_seconds(cls, seconds: float) -> "Time":
+        """
+        Build a Time instance from seconds
+        Args:
+            seconds: The number of seconds
+
+        Returns:
+            Time instance
+
+        """
         time = cls('')
         m, s = divmod(seconds, 60)
         h, m = divmod(m, 60)
         time._seconds = s
         time._minutes = int(m)
         time._hours = int(h)
+
+        return time
+
+    @classmethod
+    def from_dt(cls, dt: Dt) -> "Time":
+        """
+        Create Time instance from Dt instance
+        Args:
+            dt: The Dt instance
+
+        Returns:
+            Time instance
+        """
+        time = cls('')
+        time._seconds = dt._seconds
+        time._minutes = dt._minutes
+        time._hours = dt._hours
 
         return time
 

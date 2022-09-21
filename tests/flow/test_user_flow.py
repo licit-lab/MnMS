@@ -2,10 +2,11 @@ import unittest
 from tempfile import TemporaryDirectory
 
 from mnms.flow.user_flow import UserFlow
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
+from mnms.graph.zone import Zone
 from mnms.time import Time, Dt, TimeTable
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
-from mnms.mobility_service.car import PersonalCarMobilityService
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.demand.user import User, Path
 
@@ -17,7 +18,7 @@ class TestUserFlow(unittest.TestCase):
         self.tempfile = TemporaryDirectory()
         self.pathdir = self.tempfile.name+'/'
 
-        roads = RoadDescription()
+        roads = RoadDescriptor()
 
         roads.register_node('0', [0, 0])
         roads.register_node('1', [0, 40000])
@@ -25,16 +26,19 @@ class TestUserFlow(unittest.TestCase):
         roads.register_node('3', [1400, 0])
         roads.register_node('4', [3400, 0])
 
-        roads.register_section('0_1', '0', '1', zone="res1")
-        roads.register_section('0_2', '0', '2', zone="res1")
-        roads.register_section('2_3', '2', '3', zone="res1")
-        roads.register_section('3_4', '3', '4', zone="res2")
+        roads.register_section('0_1', '0', '1')
+        roads.register_section('0_2', '0', '2')
+        roads.register_section('2_3', '2', '3')
+        roads.register_section('3_4', '3', '4')
 
         roads.register_stop("B2", "2_3", 0)
         roads.register_stop("B3", "3_4", 0)
         roads.register_stop("B4", "3_4", 1)
 
-        car_layer = CarLayer(roads, services=[PersonalCarMobilityService()])
+        roads.add_zone(Zone("res1", {"0_1", "0_2", "2_3"}))
+        roads.add_zone(Zone("res2", {"3_4"}))
+
+        car_layer = CarLayer(roads, services=[PersonalMobilityService()])
         car_layer.create_node('C0', '0')
         car_layer.create_node('C1', '1')
         car_layer.create_node('C2', '2')
@@ -73,8 +77,9 @@ class TestUserFlow(unittest.TestCase):
     def test_request_veh(self):
         user = User('U0', '0', '4', Time('00:01:00'))
         user._current_node = 'C0'
-        user.set_path(Path(3400,
-                           ['C0', 'C1', 'C2', 'B2', 'B3', 'B4']))
+        user.set_path(Path(0,
+                           cost=3400,
+                           nodes=['C0', 'C1', 'C2', 'B2', 'B3', 'B4']))
         self.user_flow.step(Dt(minutes=1), [user])
 
         self.assertIn('U0', self.user_flow.users)

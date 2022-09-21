@@ -2,7 +2,7 @@ from time import time
 import csv
 import traceback
 import random
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
@@ -13,9 +13,8 @@ from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.abstract import AbstractDecisionModel
 from mnms.time import Time, Dt
-from mnms.log import create_logger
-from mnms.tools.exceptions import PathNotFound
-from mnms.vehicles.manager import VehicleManager
+from mnms.log import create_logger, attach_log_file, LOGLEVEL
+from mnms.tools.progress import ProgressBar
 
 log = create_logger(__name__)
 
@@ -26,21 +25,32 @@ class Supervisor(object):
                  demand: AbstractDemandManager,
                  flow_motor: AbstractFlowMotor,
                  decision_model: AbstractDecisionModel,
-                 outfile: str = None):
+                 outfile: Optional[str] = None,
+                 logfile: Optional[str] = None,
+                 loglevel: LOGLEVEL = LOGLEVEL.WARNING):
+        """
+        Main class to launch a simulation
+
+        Args:
+            graph: The multi layer graph
+            demand: The demand manager
+            flow_motor: The flow motor
+            decision_model: The decision model
+            outfile: If not None write in the outfile at each time step the cost of each link in the multi layer graph
+        """
 
         self._mlgraph: MultiLayerGraph = None
         self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
 
         self._decision_model:AbstractDecisionModel = decision_model
-        self._user_flow = UserFlow()
+        self._user_flow: UserFlow = UserFlow()
 
         self.add_graph(graph)
         self._flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)
 
-        
-        self.tcurrent = None
+        self.tcurrent: Optional[Time] = None
 
         if outfile is None:
             self._write = False
@@ -49,6 +59,9 @@ class Supervisor(object):
             self._outfile = open(outfile, "w")
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
             self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'TRAVEL_TIME'])
+
+        if logfile is not None:
+            attach_log_file(logfile, loglevel)
 
     def set_random_seed(self, seed):
         random.seed(seed)
@@ -73,6 +86,7 @@ class Supervisor(object):
     def get_new_users(self, principal_dt):
         log.info(f'Getting next departures {self.tcurrent}->{self.tcurrent.add_time(principal_dt)} ..')
         new_users = self._demand.get_next_departures(self.tcurrent, self.tcurrent.add_time(principal_dt))
+        self._demand.construct_user_parameters(new_users)
         log.info(f'Done, {len(new_users)} new departure')
 
         return new_users
@@ -80,11 +94,15 @@ class Supervisor(object):
     def compute_user_paths(self, new_users: List[User]):
         log.info('Computing paths for new users ..')
         start = time()
-        self._decision_model(new_users)
+        self._decision_model(new_users, self.tcurrent)
         end = time()
         log.info(f'Done [{end - start:.5} s]')
         
     def initialize(self, tstart:Time):
+
+        link_layers = list()
+        for lid, layer in self._mlgraph.layers.items():
+            link_layers.append(layer.graph.links)
 
         for link in self._mlgraph.graph.links.values():
             if link.label == "TRANSIT":
@@ -92,8 +110,14 @@ class Supervisor(object):
             else:
                 speed = self._mlgraph.layers[link.label].default_speed
 
-            link.update_costs({"speed": speed,
-                              "travel_time": link.length/speed})
+            costs = {"speed": speed,
+                     "travel_time": link.length/speed}
+            link.update_costs(costs)
+
+            for links in link_layers:
+                layer_link = links.get(link.id, None)
+                if layer_link is not None:
+                    layer_link.update_costs(costs)
 
         for layer in self._mlgraph.layers.values():
             for service in layer.mobility_services.values():
@@ -104,7 +128,6 @@ class Supervisor(object):
 
         self._user_flow.set_time(tstart)
 
-        VehicleManager.empty()
 
     def update_mobility_services(self, flow_dt:Dt):
         for layer in self._mlgraph.layers.values():
@@ -114,17 +137,32 @@ class Supervisor(object):
                 mservice.update_time(flow_dt)
             
     def step_flow(self, flow_dt, users_step):
-        # TO CHECK:in the right order ? (if the other direction, there is a time step difference between the moments of creation of the vehicles and the accumulation)
         log.info(' Step user flow ..')
         start = time()
+        user_reach_dt_answer = self._user_flow.step(flow_dt, users_step)
         self._user_flow.update_time(flow_dt)
-        self._user_flow.step(flow_dt, users_step)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
+
+        log.info(f' Perform matching for mobility services ...')
+        start = time()
+        user_reach_dt_pickup = list()
+        for layer in self._mlgraph.layers.values():
+            for ms in layer.mobility_services.values():
+                user_refuse_service = ms.launch_matching()
+                user_reach_dt_pickup.extend(user_refuse_service)
+
+        all_refused_user = user_reach_dt_pickup + user_reach_dt_answer
+        self._decision_model.set_refused_users(all_refused_user)
+        for u in all_refused_user:
+            self._user_flow.users.pop(u.id, None)
+        end = time()
+        log.info(f' Done [{end - start:.5} s]')
+
         log.info(' Step MFD flow ..')
         start = time()
-        self._flow_motor.update_time(flow_dt)
         self._flow_motor.step(flow_dt)
+        self._flow_motor.update_time(flow_dt)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
 
@@ -171,7 +209,11 @@ class Supervisor(object):
 
         self.tcurrent = tstart
 
+        progress = ProgressBar((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor) - 1)
+
         while self.tcurrent < tend:
+            progress.update()
+            progress.show()
             # try:
             log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
@@ -202,14 +244,6 @@ class Supervisor(object):
 
             log.info('-'*50)
             affectation_step += 1
-            # except Exception as e:
-                # cwd = os.getcwd()
-                # report_file = cwd+'/'+'report.json'
-                # log.error(e)
-                # log.error(f"Simulation failed at {self.tcurrent}, writing a report at {report_file}")
-                # with open(report_file, 'w') as f:
-                #     json.dump(self.create_crash_report(affectation_step, flow_step), f, indent=4)
-                # sys.exit(-1)
 
         self._flow_motor.finalize()
 
@@ -219,6 +253,16 @@ class Supervisor(object):
         if self._write:
             self._outfile.close()
 
+        for obs in self._demand._observers:
+            obs.finish()
+
+        for layer in self._mlgraph.layers.values():
+            for mservice in layer.mobility_services.values():
+                if mservice._observer is not None:
+                    mservice._observer.finish()
+
+        progress.end()
+
     def create_crash_report(self, affectation_step, flow_step) -> dict:
         data = dict(time=str(self.tcurrent),
                     affectation_step=affectation_step,
@@ -226,4 +270,3 @@ class Supervisor(object):
                     error=traceback.format_exc())
 
         return data
-

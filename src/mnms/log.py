@@ -12,16 +12,16 @@ class LOGLEVEL():
 
 def create_logger(logname,
                   base_level=LOGLEVEL.WARNING,
-                  stream_level=LOGLEVEL.INFO,
+                  # stream_level=LOGLEVEL.INFO,
                   ):
-    format = f'%(levelname)s(%(name)s): %(message)s'
+    # format = f'%(levelname)s(%(name)s): %(message)s'
     logger = logging.getLogger(logname)
     logger.setLevel(base_level)
-    formatter = logging.Formatter(format)
-    stream = logging.StreamHandler()
-    stream.setLevel(stream_level)
-    stream.setFormatter(formatter)
-    logger.addHandler(stream)
+    # formatter = logging.Formatter(format)
+    # stream = logging.StreamHandler()
+    # stream.setLevel(stream_level)
+    # stream.setFormatter(formatter)
+    # logger.addHandler(stream)
     logger.propagate = False
     return logger
 

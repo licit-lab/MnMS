@@ -3,32 +3,43 @@ from typing import Optional, Dict, List, Type
 
 from hipop.graph import OrientedGraph
 
-from mnms.graph.road import RoadDescription
+from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.tools.observer import CSVVehicleObserver
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle, Car
 
 
 class AbstractLayer(object):
     def __init__(self,
-                 roads: RoadDescription,
+                 roads: RoadDescriptor,
                  id: str,
                  veh_type: Type[Vehicle],
                  default_speed: float,
                  services: Optional[List[AbstractMobilityService]] = None,
-                 observer: Optional = None):
-        self._id = id
-        self.graph = OrientedGraph()
-        self._roaddb = roads
-        self._roaddb._layers[id] = self
+                 observer: Optional[CSVVehicleObserver] = None):
+        """
+        The base class for implementation of a layer graph
 
-        self._default_speed = default_speed
+        Args:
+            roads: The road object used to construct the graph
+            id: The id of the layer
+            veh_type: The type of the vehicle on the layer
+            default_speed: The default speed of the vehicle on the layer
+            services: The services that used the layer
+            observer: An observer to write information about the vehicles in the layer
+        """
+        self._id: str = id
+        self.graph: OrientedGraph = OrientedGraph()
+        self.roads: RoadDescriptor = roads
 
-        self.map_reference_links = dict()
-        self.map_reference_nodes = dict()
+        self._default_speed: float = default_speed
 
-        self.mobility_services = dict()
-        self._veh_type = veh_type
+        self.map_reference_links: Dict[str, List[str]] = dict()
+        self.map_reference_nodes: Dict[str, str] = dict()
+
+        self.mobility_services: Dict[str, AbstractMobilityService] = dict()
+        self._veh_type: Type[Vehicle] = veh_type
 
         if services is not None:
             for s in services:
@@ -55,7 +66,7 @@ class AbstractLayer(object):
 
     @classmethod
     @abstractmethod
-    def __load__(cls, data: Dict, roads: RoadDescription):
+    def __load__(cls, data: Dict, roads: RoadDescriptor):
         pass
 
     def initialize(self):

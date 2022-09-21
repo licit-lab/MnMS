@@ -1,8 +1,9 @@
 import unittest
 
 from mnms.graph.layers import CarLayer, BusLayer
-from mnms.graph.road import RoadDescription
-from mnms.mobility_service.car import PersonalCarMobilityService
+from mnms.graph.road import RoadDescriptor
+from mnms.graph.zone import Zone
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable, Dt
 
@@ -12,16 +13,19 @@ class TestLayers(unittest.TestCase):
         """Initiates the test.
         """
 
-        self.roads = RoadDescription()
+        self.roads = RoadDescriptor()
         self.roads.register_node("0", [0, 0])
         self.roads.register_node("1", [1, 0])
         self.roads.register_node("2", [2, 0])
 
-        self.roads.register_section("0_1", "0", "1", 1, zone="Z0")
-        self.roads.register_section("1_2", "1", "2", 1, zone="Z1")
+        self.roads.register_section("0_1", "0", "1", 1)
+        self.roads.register_section("1_2", "1", "2", 1)
 
         self.roads.register_stop("S0", "0_1", 0.4)
         self.roads.register_stop("S1", "1_2", 0.9)
+
+        self.roads.add_zone(Zone("Z0", {"0_1"}))
+        self.roads.add_zone(Zone("Z1", {"1_2"}))
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -29,7 +33,7 @@ class TestLayers(unittest.TestCase):
 
     def test_car_layer(self):
         car_layer = CarLayer(self.roads,
-                             services=[PersonalCarMobilityService()])
+                             services=[PersonalMobilityService()])
 
         self.assertEqual(car_layer.id, "CAR")
         self.assertEqual(car_layer.default_speed, 13.8)
@@ -86,16 +90,19 @@ class TestSerializationLayers(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
-        self.roads = RoadDescription()
+        self.roads = RoadDescriptor()
         self.roads.register_node("0", [0, 0])
         self.roads.register_node("1", [1, 0])
         self.roads.register_node("2", [2, 0])
 
-        self.roads.register_section("0_1", "0", "1", 1, zone="Z0")
-        self.roads.register_section("1_2", "1", "2", 1, zone="Z1")
+        self.roads.register_section("0_1", "0", "1", 1)
+        self.roads.register_section("1_2", "1", "2", 1)
 
         self.roads.register_stop("S0", "0_1", 0.4)
         self.roads.register_stop("S1", "1_2", 0.9)
+
+        self.roads.add_zone(Zone("Z0", {"0_1"}))
+        self.roads.add_zone(Zone("Z1", {"1_2"}))
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -103,7 +110,7 @@ class TestSerializationLayers(unittest.TestCase):
 
     def test_serialization_car(self):
         car_layer = CarLayer(self.roads,
-                             services=[PersonalCarMobilityService()])
+                             services=[PersonalMobilityService()])
 
         self.assertEqual(car_layer.id, "CAR")
         self.assertEqual(car_layer.default_speed, 13.8)
