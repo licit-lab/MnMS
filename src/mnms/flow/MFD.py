@@ -188,7 +188,8 @@ class MFDFlow(AbstractFlowMotor):
         for lid, layer in self._graph.layers.items():
             link_layers.append(layer.graph.links)
 
-        for tid, topolink in self._graph.graph.links.items():
+        graph = self._graph.graph
+        for tid, topolink in graph.links.items():
             if topolink.label != "TRANSIT":
                 link_service = topolink.label
                 topolink_lengths[tid] = {'lengths': {},
@@ -212,13 +213,13 @@ class MFDFlow(AbstractFlowMotor):
                 if speed is not None:
                     new_speed += length * speed
                 else:
-                    link = self._graph.roads.sections[tid]
-                    new_speed = self._graph.layers[link.layer].default_speed
+                    tid_layer = graph.links[tid].label
+                    new_speed = self._graph.layers[tid_layer].default_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             if new_speed != 0:
                 costs = {'travel_time': total_len / new_speed,
                          'speed': new_speed}
-                self._graph.graph.update_link_costs(tid, costs)
+                graph.update_link_costs(tid, costs)
                 for links in link_layers:
                     link = links.get(tid, None)
                     if link is not None:

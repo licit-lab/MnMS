@@ -82,7 +82,7 @@ def generate_square_road(link_length=None, zone_id='RES'):
     return roads
 
 
-def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, prefix=None):
+def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, prefix=""):
     roads = RoadDescriptor()
 
     for i in range(n):
@@ -141,6 +141,7 @@ def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, prefix
         roads.add_zone(generate_one_zone(roads, zone_id))
 
     return roads
+
 
 def generate_nested_manhattan_road(n_list, link_length_list, zone_id='RES'):
     # Check quality of parameters

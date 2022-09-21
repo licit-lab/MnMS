@@ -2,8 +2,7 @@ from collections import ChainMap
 from typing import Optional, Dict, Set, List, Type
 
 import numpy as np
-from hipop.graph import Node, node_to_dict, link_to_dict
-from hipop.graph import merge_oriented_graph
+from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph
 
 from mnms.graph.abstract import AbstractLayer
 from mnms.graph.road import RoadDescriptor
@@ -261,7 +260,7 @@ class MultiLayerGraph(object):
             connection_distance:
         """
 
-        self.graph = merge_oriented_graph([l.graph for l in layers])
+        self.graph: OrientedGraph = merge_oriented_graph([l.graph for l in layers])
 
         self.layers = dict()
         self.mapping_layer_services = dict()
