@@ -213,8 +213,7 @@ class MFDFlow(AbstractFlowMotor):
                 if speed is not None:
                     new_speed += length * speed
                 else:
-                    tid_layer = graph.links[tid].label
-                    new_speed = self._graph.layers[tid_layer].default_speed
+                    new_speed = graph.links[tid].cost["speed"]
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             if new_speed != 0:
                 costs = {'travel_time': total_len / new_speed,
