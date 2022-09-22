@@ -85,6 +85,7 @@ class AbstractMobilityService(ABC):
         else:
             self._counter_maintenance += 1
 
+    # TODO: match just after request
     def launch_matching(self):
         refuse_user = list()
 

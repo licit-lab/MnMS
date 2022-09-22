@@ -6,6 +6,7 @@ from queue import PriorityQueue
 import numpy as np
 from hipop.shortest_path import dijkstra, compute_path_length
 
+from mnms import create_logger
 from mnms.demand import User
 from mnms.demand.horizon import AbstractDemandHorizon
 from mnms.graph.zone import Zone
@@ -17,16 +18,17 @@ from mnms.tools.exceptions import PathNotFound
 from mnms.vehicles.veh_type import Vehicle, VehicleActivity, VehicleState, VehicleActivityStop, VehicleActivityPickup, \
     VehicleActivityServing
 
+log = create_logger(__name__)
 
 @dataclass
 class UserInfo:
     user: User
     initial_distance: float
     initial_path_distance: float
-    travelled_distance: float = field(default=0, init=False)
+    traveled_distance: float = field(default=0, init=False)
 
     def update_distance(self):
-        self.travelled_distance = self.user.distance - self.initial_distance
+        self.traveled_distance = self.user.distance - self.initial_distance
 
 
 def pre_compute_feasibility(vehicle: Vehicle) -> bool:
@@ -50,6 +52,21 @@ def truncate_plan(user: User, vehicleplan: List[VehicleActivity]) -> List[Vehicl
 
 def get_discount() -> float:
     return 0
+
+
+def get_remaining_distance(veh: Vehicle, plan: List[VehicleActivity]) -> float:
+    # user = plan[-1].user
+    # distance = sum([sum([path[1] for path in act.path]) for act in plan]) + vehicle.remaining_link_length
+    # if user.id in self.users:
+    #     distance -= self.users[user.id].traveled_distance
+    # return distance
+
+    flatten_path_link = [p[0] for activity in plan for p in activity.path]
+    flatten_path_dist = [p[1] for activity in plan for p in activity.path]
+    index_current_link = flatten_path_link.index(veh.current_link)
+    remaining_dist = sum(flatten_path_dist[index_current_link+1:]) + veh.remaining_link_length
+
+    return remaining_dist
 
 
 class ParkingService(AbstractOnDemandMobilityService):
@@ -111,9 +128,10 @@ class ParkingService(AbstractOnDemandMobilityService):
             if cost_pickup == float('inf'):
                 raise PathNotFound(veh_next_node, user.current_node)
 
-            first_link = veh.activity.path[0]
+            # first_link = veh.activity.path[0]
+            pickup_path = [veh.current_link[0]] + pickup_path
             pickup_activity.modify_path(self._construct_veh_path(pickup_path))
-            pickup_activity.path.insert(0, first_link)
+            # pickup_activity.path.insert(0, first_link)
             next(pickup_activity.iter_path)
 
 
@@ -237,39 +255,33 @@ class ParkingService(AbstractOnDemandMobilityService):
         return total_disutility
 
     def get_disutility(self, user: User, vehicle: Vehicle, new_plan: List[VehicleActivity]) -> float:
-        marginal_cost, marginal_detour = self.get_cost(user, vehicle, new_plan)
-        potential_detour = user.parameters["detour"] + marginal_detour
+        marginal_cost, detour_ratio = self.get_cost(user, vehicle, new_plan)
+
+        if detour_ratio > user.parameters["max_detour_ratio"]:
+            return float("inf")
+        return marginal_cost
+
+    def get_cost(self, user: User, vehicle: Vehicle, new_plan: List[VehicleActivity]) -> Tuple[float, float]:
+        current_plan_truncated = truncate_plan(user, [vehicle.activity] + list(vehicle.activities))
+        current_remaining_distance = get_remaining_distance(vehicle, current_plan_truncated)
+        new_plan_truncated = truncate_plan(user, new_plan)
+        new_remaining_distance = get_remaining_distance(vehicle, new_plan_truncated)
+
+        marginal_cost = user.parameters["distance_value"] * (new_remaining_distance - current_remaining_distance) - get_discount()
+        traveled_distance = self.users[user.id].traveled_distance if user.id in self.users else 0
+
+        total_distance = traveled_distance + new_remaining_distance
 
         if user.id in self.users:
-            shortest_path_dist = self.users[user.id].initial_path_distance
+            initial_path_distance = self.users[user.id].initial_path_distance
         else:
             parking_service_index = user.path.mobility_services.index(self.id)
             parking_service_slice = user.path.layers[parking_service_index][1]
             nodes = user.path.nodes[parking_service_slice]
-            shortest_path_dist = compute_path_length(self.graph, nodes)
+            initial_path_distance = compute_path_length(self.graph, nodes)
+        detour_ratio = total_distance / initial_path_distance
 
-        potential_detour_ratio = potential_detour/shortest_path_dist
-        if potential_detour_ratio > user.parameters["max_detour_ratio"]:
-            return float("inf")
-        else:
-            return marginal_cost
-
-    def get_remaining_distance(self, vehicle: Vehicle, plan: List[VehicleActivity]) -> float:
-        user = plan[-1].user
-        distance = sum([sum([path[1] for path in act.path]) for act in plan])
-        if user.id in self.users:
-            distance -= self.users[user.id].travelled_distance
-        return distance
-
-    def get_cost(self, user: User, vehicle: Vehicle, new_plan: List[VehicleActivity]) -> Tuple[float, float]:
-        current_plan_truncated = truncate_plan(user, [vehicle.activity] + list(vehicle.activities))
-        current_remaining_distance = self.get_remaining_distance(vehicle, current_plan_truncated)
-        new_plan_truncated = truncate_plan(user, new_plan)
-        new_remaining_distance = self.get_remaining_distance(vehicle, new_plan_truncated)
-        marginal_cost = user.parameters["distance_value"] * (new_remaining_distance - current_remaining_distance) - get_discount()
-        marginal_detour = abs(new_remaining_distance-current_remaining_distance)
-
-        return marginal_cost, marginal_detour
+        return marginal_cost, detour_ratio
 
     def __load__(cls, data):
         pass

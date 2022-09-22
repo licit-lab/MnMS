@@ -112,9 +112,6 @@ class InRadiusFilter(VehicleFilter):
 
 
 class IsNearestFilter(VehicleFilter):
-    def __init__(self, multiple: bool):
-        self.multiple = multiple
-
     def get_mask(self,
                  layer: AbstractLayer,
                  vehicles: Iterable[Vehicle],

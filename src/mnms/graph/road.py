@@ -90,7 +90,6 @@ class RoadDescriptor(object):
         for n in self.nodes.keys():
             self.nodes[n].position = np.add(self.nodes[n].position, v)
 
-
     def __dump__(self):
         return {'NODES': {key: asdict(val) for key, val in self.nodes.items()},
                 'STOPS': {key: asdict(val) for key, val in self.stops.items()},
@@ -107,7 +106,7 @@ class RoadDescriptor(object):
             new_obj.register_section(lid, d['upstream'], d['downstream'], d['length'])
 
         for z in data["ZONES"].values():
-            new_obj.add_zone(Zone(z["id"], set(z["sections"])))
+            new_obj.add_zone(Zone(z["id"], set(z["sections"]), z["contour"]))
 
 
         return new_obj

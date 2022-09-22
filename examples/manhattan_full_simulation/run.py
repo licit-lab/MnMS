@@ -1,7 +1,5 @@
 import pathlib
-from copy import deepcopy
 
-from hipop.cpp import Node
 
 from mnms.generation.roads import generate_manhattan_road
 from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer
