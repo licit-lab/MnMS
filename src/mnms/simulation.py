@@ -97,34 +97,14 @@ class Supervisor(object):
         self._decision_model(new_users, self.tcurrent)
         end = time()
         log.info(f'Done [{end - start:.5} s]')
-        
+
     def initialize(self, tstart:Time):
-
-        link_layers = list()
-        for lid, layer in self._mlgraph.layers.items():
-            link_layers.append(layer.graph.links)
-
-        for link in self._mlgraph.graph.links.values():
-            if link.label == "TRANSIT":
-                speed = self._user_flow._walk_speed
-            else:
-                speed = self._mlgraph.layers[link.label].default_speed
-
-            costs = {"speed": speed,
-                     "travel_time": link.length/speed}
-            link.update_costs(costs)
-
-            for links in link_layers:
-                layer_link = links.get(link.id, None)
-                if layer_link is not None:
-                    layer_link.update_costs(costs)
-
         for layer in self._mlgraph.layers.values():
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
-        
+
         self._flow_motor.set_time(tstart)
-        self._flow_motor.initialize()
+        self._flow_motor.initialize(self._user_flow._walk_speed)
 
         self._user_flow.set_time(tstart)
 
@@ -135,7 +115,7 @@ class Supervisor(object):
                 log.info(f' Update mobility service {mservice.id}')
                 mservice.update(flow_dt)
                 mservice.update_time(flow_dt)
-            
+
     def step_flow(self, flow_dt, users_step):
         log.info(' Step user flow ..')
         start = time()
@@ -200,7 +180,7 @@ class Supervisor(object):
 
     def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
         log.info(f'Start run from {tstart} to {tend}')
-        
+
         self.initialize(tstart)
 
         affectation_step = 0
