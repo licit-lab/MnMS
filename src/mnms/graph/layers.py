@@ -118,10 +118,12 @@ class PublicTransportLayer(AbstractLayer):
         self.graph.add_node(sid, node_pos[0], node_pos[1], self.id)
 
     def _connect_stops(self, lid, line_id, upstream, downstream, reference_sections):
-        line_length = sum(self.roads.sections[s].length for s in reference_sections[1:-1])
-        line_length += self.roads.sections[reference_sections[0]].length * (1 - self.roads.stops[upstream].relative_position)
-        line_length += self.roads.sections[reference_sections[-1]].length * self.roads.stops[downstream].relative_position
-
+        if len(reference_sections) > 1:
+            line_length = sum(self.roads.sections[s].length for s in reference_sections[1:-1])
+            line_length += self.roads.sections[reference_sections[0]].length * (1 - self.roads.stops[upstream].relative_position)
+            line_length += self.roads.sections[reference_sections[-1]].length * self.roads.stops[downstream].relative_position
+        else:
+            line_length = self.roads.sections[reference_sections[0]].length * (self.roads.stops[downstream].relative_position - self.roads.stops[upstream].relative_position)
         costs = {'length': line_length}
         self.graph.add_link(lid, line_id+'_'+upstream, line_id+'_'+downstream, line_length, costs, self.id)
         self.map_reference_links[lid] = reference_sections
