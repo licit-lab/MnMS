@@ -227,6 +227,6 @@ def generate_nested_manhattan_road(n_list, link_length_list, zone_id='RES'):
     for sec, rsect in unique_sections.items():
         merged_road.register_section(sec, rsect.upstream, rsect.downstream, rsect.length)
 
-    roads.add_zone(generate_one_zone(roads, zone_id))
+    merged_road.add_zone(generate_one_zone(merged_road, zone_id))
 
     return merged_road
