@@ -72,27 +72,26 @@ class OnDemandMobilityService(AbstractMobilityService):
 
         return user_matched
 
-    def matching(self, users: Dict[str, Tuple[User, str]]):
-        for uid, (user, drop_node) in users.items():
-            veh, veh_path = self._cache_request_vehicles[uid]
-            upath = list(user.path.nodes)
-            upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
-            user_path = self._construct_veh_path(upath)
-            veh_path = self._construct_veh_path(veh_path)
-            activities = [
-                VehicleActivityPickup(node=user._current_node,
-                                      path=veh_path,
-                                      user=user),
-                VehicleActivityServing(node=user.destination,
-                                       path=user_path,
-                                       user=user)
-            ]
+    def matching(self, user: User, drop_node: str):
+        veh, veh_path = self._cache_request_vehicles[user.id]
+        upath = list(user.path.nodes)
+        upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
+        user_path = self._construct_veh_path(upath)
+        veh_path = self._construct_veh_path(veh_path)
+        activities = [
+            VehicleActivityPickup(node=user._current_node,
+                                  path=veh_path,
+                                  user=user),
+            VehicleActivityServing(node=user.destination,
+                                   path=user_path,
+                                   user=user)
+        ]
 
-            veh.add_activities(activities)
-            user.set_state_waiting_vehicle()
+        veh.add_activities(activities)
+        user.set_state_waiting_vehicle()
 
-            if veh.state is VehicleState.STOP:
-                veh.activity.is_done = True
+        if veh.state is VehicleState.STOP:
+            veh.activity.is_done = True
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
@@ -209,30 +208,29 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
 
         return user_matched
 
-    def matching(self, users: Dict[str, Tuple[User, str]]):
-        for uid, (user, drop_node) in users.items():
-            veh, veh_path = self._cache_request_vehicles[uid]
-            upath = list(user.path.nodes)
-            upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
+    def matching(self, user: User, drop_node: str):
+        veh, veh_path = self._cache_request_vehicles[user.id]
+        upath = list(user.path.nodes)
+        upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
 
-            user_path = self._construct_veh_path(upath)
-            veh_path = self._construct_veh_path(veh_path)
-            activities = [
-                VehicleActivityPickup(node=user._current_node,
-                                      path=veh_path,
-                                      user=user),
-                VehicleActivityServing(node=user.destination,
-                                       path=user_path,
-                                       user=user)
-            ]
+        user_path = self._construct_veh_path(upath)
+        veh_path = self._construct_veh_path(veh_path)
+        activities = [
+            VehicleActivityPickup(node=user._current_node,
+                                  path=veh_path,
+                                  user=user),
+            VehicleActivityServing(node=user.destination,
+                                   path=user_path,
+                                   user=user)
+        ]
 
-            veh.add_activities(activities)
-            user.set_state_waiting_vehicle()
+        veh.add_activities(activities)
+        user.set_state_waiting_vehicle()
 
-            if veh.state is VehicleState.STOP:
-                veh.activity.is_done = True
-                if veh._current_node in self.depot:
-                    self.depot[veh._current_node]["vehicles"].remove(veh.id)
+        if veh.state is VehicleState.STOP:
+            veh.activity.is_done = True
+            if veh._current_node in self.depot:
+                self.depot[veh._current_node]["vehicles"].remove(veh.id)
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),

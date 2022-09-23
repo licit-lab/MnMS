@@ -19,5 +19,7 @@ class MNMSEncoder(JSONEncoder):
             return list(obj)
         if isinstance(obj, np.ndarray):
             return obj.tolist()
+        if isinstance(obj, np.int64):
+            return int(obj)
 
         return super().default(obj)

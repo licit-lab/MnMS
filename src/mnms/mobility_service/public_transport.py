@@ -252,10 +252,9 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         return estimation_pickup
 
-    def matching(self, users: Dict[str, Tuple[User, str]]):
-        for uid, (user, drop_node) in users.items():
-            veh, line = self._cache_request_vehicles[uid]
-            self.add_passenger(user, drop_node, veh, line["nodes"])
+    def matching(self, user: User, drop_node: str):
+        veh, line = self._cache_request_vehicles[user.id]
+        self.add_passenger(user, drop_node, veh, line["nodes"])
 
     def step_maintenance(self, dt: Dt):
         self._cache_request_vehicles = dict()

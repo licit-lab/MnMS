@@ -13,19 +13,17 @@ class PersonalMobilityService(AbstractMobilityService):
     def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
         return {u: Dt() for u in users}
 
-    def matching(self, users: Dict[str, Tuple[User, str]]):
-        for uid, user_drop_node in users.items():
-            user, drop_node = user_drop_node
-            upath = list(user.path.nodes)
-            upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
-            veh_path = self._construct_veh_path(upath)
-            new_veh = self.fleet.create_vehicle(upath[0],
-                                                capacity=self._veh_capacity,
-                                                activities=[VehicleActivityServing(node=user.destination,
-                                                                                   path=veh_path,
-                                                                                   user=user)])
-            if self._observer is not None:
-                new_veh.attach(self._observer)
+    def matching(self, user: User, drop_node: str):
+        upath = list(user.path.nodes)
+        upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
+        veh_path = self._construct_veh_path(upath)
+        new_veh = self.fleet.create_vehicle(upath[0],
+                                            capacity=self._veh_capacity,
+                                            activities=[VehicleActivityServing(node=user.destination,
+                                                                               path=veh_path,
+                                                                               user=user)])
+        if self._observer is not None:
+            new_veh.attach(self._observer)
 
     def step_maintenance(self, dt: Dt):
         for veh in list(self.fleet.vehicles.values()):

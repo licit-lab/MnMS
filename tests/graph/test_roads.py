@@ -21,8 +21,8 @@ class TestLayers(unittest.TestCase):
         self.roads.register_stop("S0", "0_1", 0.4)
         self.roads.register_stop("S1", "1_2", 0.9)
 
-        self.roads.add_zone(Zone("Z0", {"0_1"}))
-        self.roads.add_zone(Zone("Z1", {"1_2"}))
+        self.roads.add_zone(Zone("Z0", {"0_1"}, []))
+        self.roads.add_zone(Zone("Z1", {"1_2"}, []))
 
     def tearDown(self):
         """Concludes and closes the test.

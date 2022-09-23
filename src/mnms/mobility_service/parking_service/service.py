@@ -191,19 +191,18 @@ class ParkingService(AbstractOnDemandMobilityService):
 
         return new_plan, Dt(seconds=cost_pickup)
 
-    def matching(self, users: Dict[str, Tuple[User, str]]):
-        for uid, (user, drop_node) in users.items():
-            veh, new_plan = self._cache_request_vehicles[uid]
-            veh.activities = deque(new_plan)
-            veh.override_current_activity()
-            user.set_state_waiting_vehicle()
+    def matching(self, user: User, drop_node: str):
+        veh, new_plan = self._cache_request_vehicles[user.id]
+        veh.activities = deque(new_plan)
+        veh.override_current_activity()
+        user.set_state_waiting_vehicle()
 
-            parking_service_index = user.path.mobility_services.index(self.id)
-            parking_service_slice = user.path.layers[parking_service_index][1]
-            nodes = user.path.nodes[parking_service_slice]
-            initial_path_dist = compute_path_length(self.graph, nodes)
+        parking_service_index = user.path.mobility_services.index(self.id)
+        parking_service_slice = user.path.layers[parking_service_index][1]
+        nodes = user.path.nodes[parking_service_slice]
+        initial_path_dist = compute_path_length(self.graph, nodes)
 
-            self.users[uid] = UserInfo(user, user.distance, initial_path_dist)
+        self.users[user.id] = UserInfo(user, user.distance, initial_path_dist)
 
     def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
         user_matched = dict()
