@@ -7,7 +7,7 @@ from mnms.io.graph import load_graph
 from mnms.travel_decision.logit import LogitDecisionModel
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 from mnms.generation.layers import generate_matching_origin_destination_layer
-from mnms.mobility_service.car import PersonalCarMobilityService
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 
 
@@ -38,8 +38,8 @@ if __name__ == '__main__':
     odlayer = generate_matching_origin_destination_layer(mmgraph.roads)
     mmgraph.connect_origin_destination_layer(odlayer, 1e-3)
 
-    personal_car = PersonalCarMobilityService()
-    personal_car.attach_vehicle_observer(CSVVehicleObserver(outdir+"/veh.csv"))
+    personal_car = PersonalMobilityService()
+    personal_car.attach_vehicle_observer(CSVUserObserver(outdir+"/veh.csv"))
     mmgraph.layers["CAR"].add_mobility_service(personal_car)
 
     demand_file_name = indir + "/demand_coords.csv"
