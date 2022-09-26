@@ -3,7 +3,7 @@ from collections import ChainMap, defaultdict
 from typing import Optional, Dict, Set, List, Type, Callable
 
 import numpy as np
-from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph
+from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph, Link
 
 from mnms.graph.abstract import AbstractLayer
 from mnms.graph.road import RoadDescriptor
@@ -223,14 +223,15 @@ class OriginDestinationLayer(object):
     def __init__(self):
         self.origins = dict()
         self.destinations = dict()
+        self.id = "ODLAYER"
 
     def create_origin_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, pos[0], pos[1], "ODLAYER")
+        new_node = Node(nid, pos[0], pos[1], self.id)
 
         self.origins[nid] = new_node
 
     def create_destination_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, pos[0], pos[1], "ODLAYER")
+        new_node = Node(nid, pos[0], pos[1], self.id)
 
         self.destinations[nid] = new_node
 
@@ -248,10 +249,11 @@ class OriginDestinationLayer(object):
 
         return new_obj
 
+
 class TransitLayer(object):
     def __init__(self):
-        self._costs_functions: Dict[str, function] = dict()
-        self.links: defaultdict[str, defaultdict[str,List[str]]] = defaultdict(lambda: defaultdict(list))
+        self._costs_functions: Dict[str, Callable[[Link], float]] = dict()
+        self.links: defaultdict[str, defaultdict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
 
     def add_cost_function(self, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
         self._costs_functions[cost_name] = cost_function
@@ -263,6 +265,45 @@ class TransitLayer(object):
         dlayer: name of the layer destination node of link belongs to
         """
         self.links[olayer][dlayer].append(lid)
+
+    def iter_links(self):
+        """
+        Iter through all links that connects different layer including the origin destination layer
+
+        Yields:
+            str: The id of the transit link
+
+        """
+        for olayer in self.links:
+            for links in self.links[olayer].values():
+                for lid in links:
+                    yield lid
+
+    def iter_inter_links(self):
+        """
+        Iter through all links that connects different layer except the origin destination layer
+
+        Yields:
+            str: The id of the transit link
+
+        """
+        for olayer in self.links:
+            for dlayer, links in self.links[olayer].items():
+                if "ODLAYER" not in (olayer, dlayer):
+                    for lid in links:
+                        yield lid
+
+    def __dump__(self):
+        return dict(self.links)
+
+    @classmethod
+    def __load__(cls, data):
+        new_obj = cls()
+        for olayer in data:
+            for dlayer, lid in data[olayer].items():
+                new_obj.add_link(lid, olayer, dlayer)
+
+        return new_obj
 
 
 class MultiLayerGraph(object):
