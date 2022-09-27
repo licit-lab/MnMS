@@ -11,6 +11,7 @@ from mnms.log import create_logger
 from mnms.time import Dt, Time
 from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Vehicle, VehicleState
+from mnms.graph.layers import PublicTransportLayer
 
 log = create_logger(__name__)
 
@@ -69,7 +70,43 @@ class MFDFlow(AbstractFlowMotor):
         self.veh_manager: Optional[VehicleManager] = None
         self.graph_nodes = None
 
-    def initialize(self):
+    def initialize(self, walk_speed):
+        # Check consistency of costs functions definition
+        if len(self._graph.layers) > 0:
+            costs_names = set(list(self._graph.layers.values())[0]._costs_functions.keys())
+            for layer in self._graph.layers.values():
+                if set(layer._costs_functions.keys()) != costs_names:
+                    log.error("Each cost function should be defined on all layers.")
+                    sys.exit()
+            if set(self._graph.transitlayer._costs_functions) != costs_names:
+                log.error("Each cost function should be defined on all layers, including transit layer.")
+                sys.exit()
+
+        # initialize costs on links
+        link_layers = list()
+        for lid, layer in self._graph.layers.items():
+            link_layers.append(layer.graph.links) # only non transit links concerned
+
+        for link in self._graph.graph.links.values():
+            if link.label == "TRANSIT":
+                layer = self._graph.transitlayer
+                speed = walk_speed
+            else:
+                layer = self._graph.layers[link.label]
+                speed = layer.default_speed
+            costs = {"speed": speed,
+                     "travel_time": link.length/speed}
+            # NB: travel_time could be defined as a cost_function
+            for k,f in layer._costs_functions.items():
+                costs[k] = f(self._graph.graph, link, costs)
+            link.update_costs(costs)
+
+            for links in link_layers: # only non transit links concerned
+                layer_link = links.get(link.id, None)
+                if layer_link is not None:
+                    layer_link.update_costs(costs)
+
+        # Other initializations
         self.dict_accumulations = {}
         self.dict_speeds = {}
         for res in self.reservoirs:
@@ -135,7 +172,7 @@ class MFDFlow(AbstractFlowMotor):
             veh.notify_passengers(new_time)
 
     def step(self, dt: Dt):
-        
+
         log.info(f'MFD step {self._tcurrent}')
 
         for res in self.reservoirs:
@@ -194,15 +231,50 @@ class MFDFlow(AbstractFlowMotor):
                 link_service = topolink.label
                 topolink_lengths[tid] = {'lengths': {},
                                          'speeds': {}}
-                for l in self._graph.map_reference_links[tid]:
-                    topolink_lengths[tid]['lengths'][l] = self._graph.roads.sections[l].length
-                    topolink_lengths[tid]['speeds'][l] = None
-                    for resid, zone in res_links.items():
-                        res = res_dict[resid]
-                        if l in zone.sections:
-                            mspeed = res.dict_speeds[link_service.upper()]
-                            topolink_lengths[tid]['speeds'][l] = mspeed
-                            break
+                # If topolink is a link between two stops, we should compute the length of l bounded by stops
+                topolink_layer = self._graph.layers[topolink.label]
+                if isinstance(topolink_layer, PublicTransportLayer):
+                    _dist = lambda x,y: np.linalg.norm(np.array(x) - np.array(y))
+                    unode_pos = graph.nodes[topolink.upstream].position
+                    dnode_pos = graph.nodes[topolink.downstream].position
+                    if len(self._graph.map_reference_links[tid]) > 1:
+                        for i,l in enumerate(self._graph.map_reference_links[tid]):
+                            if i == 0:
+                                l_dnode_pos = self._graph.roads.nodes[self._graph.roads.sections[l].downstream].position
+                                topolink_lengths[tid]['lengths'][l] = _dist(unode_pos, l_dnode_pos)
+                            if i == len(self._graph.map_reference_links[tid])-1:
+                                l_unode_pos = self._graph.roads.nodes[self._graph.roads.sections[l].upstream].position
+                                topolink_lengths[tid]['lengths'][l] = _dist(l_unode_pos,dnode_pos)
+                            else:
+                                topolink_lengths[tid]['lengths'][l] = self._graph.roads.sections[l].length
+                            topolink_lengths[tid]['speeds'][l] = None
+                            for resid, zone in res_links.items():
+                                res = res_dict[resid]
+                                if l in zone.sections:
+                                    mspeed = res.dict_speeds[link_service.upper()]
+                                    topolink_lengths[tid]['speeds'][l] = mspeed
+                                    break
+                    else:
+                        l = self._graph.map_reference_links[tid][0]
+                        topolink_lengths[tid]['lengths'][l] = _dist(unode_pos, dnode_pos)
+                        topolink_lengths[tid]['speeds'][l] = None
+                        for resid, zone in res_links.items():
+                            res = res_dict[resid]
+                            if l in zone.sections:
+                                mspeed = res.dict_speeds[link_service.upper()]
+                                topolink_lengths[tid]['speeds'][l] = mspeed
+                                break
+                # If topolink does not belong to a PublicTransportLayer, entire length of l can be used
+                else:
+                    for l in self._graph.map_reference_links[tid]:
+                        topolink_lengths[tid]['lengths'][l] = self._graph.roads.sections[l].length
+                        topolink_lengths[tid]['speeds'][l] = None
+                        for resid, zone in res_links.items():
+                            res = res_dict[resid]
+                            if l in zone.sections:
+                                mspeed = res.dict_speeds[link_service.upper()]
+                                topolink_lengths[tid]['speeds'][l] = mspeed
+                                break
 
         for tid, tdata in topolink_lengths.items():
             total_len = 0
@@ -213,12 +285,19 @@ class MFDFlow(AbstractFlowMotor):
                 if speed is not None:
                     new_speed += length * speed
                 else:
-                    new_speed = graph.links[tid].cost["speed"]
+                    new_speed = graph.links[tid].cost["speed"] # not sure this is correct, I would have done new_speed += length * graph.links[tid].cost["speed"]
             new_speed = new_speed / total_len if total_len != 0 else new_speed
-            if new_speed != 0:
+            if new_speed != 0: # TODO: check if this condition is still useful
                 costs = {'travel_time': total_len / new_speed,
-                         'speed': new_speed}
+                         'speed': new_speed,
+                         'length': total_len}
+
+                layer = self._graph.layers[graph.links[tid].label]
+                costs_functions = layer._costs_functions
+                for k,f in costs_functions.items():
+                    costs[k] = f(graph, graph.links[tid], costs)
                 graph.update_link_costs(tid, costs)
+                
                 for links in link_layers:
                     link = links.get(tid, None)
                     if link is not None:
