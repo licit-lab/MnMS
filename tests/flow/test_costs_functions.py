@@ -16,7 +16,7 @@ from mnms.simulation import Supervisor
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 
 
-class TestMFDFlow(unittest.TestCase):
+class TestCostsFunctions(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
