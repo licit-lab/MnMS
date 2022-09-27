@@ -9,7 +9,6 @@ from mnms.generation.roads import generate_line_road, generate_manhattan_road
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
 from mnms.io.graph import save_graph, load_graph
 from mnms.log import set_mnms_logger_level
-from mnms.mobility_service.car import PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.simulation import Supervisor
 from mnms.time import TimeTable, Time, Dt

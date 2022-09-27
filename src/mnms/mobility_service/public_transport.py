@@ -34,7 +34,7 @@ def _insert_in_activity(curr_activity, activity_pos, drop_node, drop_node_ind, t
                                                   user=user)
 
         new_activities = [pickup_activity, serving_activity]
-    curr_activity.modify_path(curr_activity.path[drop_node_ind + 1:])
+    curr_activity.modify_path(curr_activity.path[drop_node_ind:])
 
     # Check if vehicle is stopped
     if veh.activity.state is not VehicleState.STOP:
