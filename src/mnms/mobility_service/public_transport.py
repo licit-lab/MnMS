@@ -268,41 +268,52 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 # self.add_passenger(user, drop_node, waiting_veh, user_line["nodes"])
                 continue
             else:
-                curr_veh = None
-                next_veh = None
-                it_veh = iter(self.vehicles[user_line_id])
                 ind_start = user_line["nodes"].index(start)
-                try:
-                    curr_veh = next(it_veh)
-                    next_veh = next(it_veh)
-                except StopIteration:
-                    if curr_veh is not None:
-                        matched_user[user.id] = (curr_veh, user_line)
-                        # self.add_passenger(user, drop_node, curr_veh, user_line["nodes"])
-                        # curr_veh.take_next_user(user, drop_node)
-                        continue
-                    else:
-                        raise VehicleNotFoundError(user, self)
+                for veh in reversed(list(self.vehicles[user_line_id])):
+                    ind_curr_veh = user_line["nodes"].index(veh.current_link[1])
+                    if ind_curr_veh <= ind_start:
+                        matched_user[user.id] = (veh, user_line)
+                        break
+                else:
+                    log.warning(f"No vehicle found for {user}")
 
-                while True:
-                    ind_curr_veh = user_line["nodes"].index(curr_veh.current_link[1])
-                    ind_next_veh = user_line["nodes"].index(next_veh.current_link[1])
-                    if ind_curr_veh <= ind_start < ind_next_veh:
-                        # curr_veh.take_next_user(user, drop_node)
-                        print(f"What should I do there?")
-                        continue
-                    try:
-                        curr_veh = next_veh
-                        next_veh = next(it_veh)
-                    except StopIteration:
-                        ind_curr_veh = user_line["nodes"].index(curr_veh.current_link[1])
-                        if ind_curr_veh <= ind_start:
-                            # curr_veh.take_next_user(user, drop_node)
-                            continue
-                        else:
-                            log.info(f"{user}, {user._current_node}")
-                            log.info(f"{curr_veh.current_link}")
-                            raise VehicleNotFoundError(user, self)
+
+                # curr_veh = None
+                # next_veh = None
+                # it_veh = iter(self.vehicles[user_line_id])
+                # ind_start = user_line["nodes"].index(start)
+                # try:
+                #     curr_veh = next(it_veh)
+                #     next_veh = next(it_veh)
+                # except StopIteration:
+                #     if curr_veh is not None:
+                #         matched_user[user.id] = (curr_veh, user_line)
+                #         # self.add_passenger(user, drop_node, curr_veh, user_line["nodes"])
+                #         # curr_veh.take_next_user(user, drop_node)
+                #         continue
+                #     else:
+                #         raise VehicleNotFoundError(user, self)
+                #
+                # while True:
+                #     ind_curr_veh = user_line["nodes"].index(curr_veh.current_link[1])
+                #     ind_next_veh = user_line["nodes"].index(next_veh.current_link[1])
+                #     if ind_curr_veh <= ind_start < ind_next_veh:
+                #         # curr_veh.take_next_user(user, drop_node)
+                #         matched_user[user.id] = (curr_veh, user_line)
+                #         print(f"What should I do there?")
+                #         break
+                #     try:
+                #         curr_veh = next_veh
+                #         next_veh = next(it_veh)
+                #     except StopIteration:
+                #         ind_curr_veh = user_line["nodes"].index(curr_veh.current_link[1])
+                #         if ind_curr_veh <= ind_start:
+                #             # curr_veh.take_next_user(user, drop_node)
+                #             continue
+                #         else:
+                #             log.info(f"{user}, {user._current_node}")
+                #             log.info(f"{curr_veh.current_link}")
+                #             raise VehicleNotFoundError(user, self)
 
         estimation_pickup = {u: self.estimation_pickup_time(users[u][0], veh, line) for u, (veh, line) in matched_user.items()}
         self._cache_request_vehicles = matched_user
