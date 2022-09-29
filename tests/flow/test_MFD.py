@@ -3,10 +3,10 @@ from tempfile import TemporaryDirectory
 
 from mnms.demand import User
 from mnms.demand.user import Path
-from mnms.flow.MFD import MFDFlow, Reservoir
+from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
 from mnms.graph.road import RoadDescriptor
-from mnms.graph.zone import Zone
+from mnms.graph.zone import construct_zone_from_sections
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import Dt, TimeTable, Time
@@ -37,8 +37,8 @@ class TestMFDFlow(unittest.TestCase):
         roads.register_stop("B3", "3_4", 0)
         roads.register_stop("B4", "3_4", 1)
 
-        roads.add_zone(Zone("res1", {"0_1", "0_2", "2_3"}))
-        roads.add_zone(Zone("res2", {"3_4"}))
+        roads.add_zone(construct_zone_from_sections(roads, "res1", ["0_1", "0_2", "2_3"]))
+        roads.add_zone(construct_zone_from_sections(roads, "res2", ["3_4"]))
 
         self.personal_car = PersonalMobilityService()
         car_layer = CarLayer(roads, services=[self.personal_car])
@@ -63,17 +63,17 @@ class TestMFDFlow(unittest.TestCase):
 
         self.mlgraph = mlgraph
 
-        self.flow = MFDFlow()
+        self.flow = MFDFlowMotor()
         self.flow.set_graph(mlgraph)
 
-        res1 = Reservoir('res1', ["CAR", "BUS"], lambda x: {k: 42 for k in x})
-        res2 = Reservoir('res2', ["CAR", "BUS"], lambda x: {k: 0.23 for k in x})
+        res1 = Reservoir(roads.zones["res1"], ["CAR", "BUS"], lambda x: {k: 42 for k in x})
+        res2 = Reservoir(roads.zones['res2'], ["CAR", "BUS"], lambda x: {k: 0.23 for k in x})
 
         self.flow.add_reservoir(res1)
         self.flow.add_reservoir(res2)
         self.flow.set_time(Time('09:00:00'))
 
-        self.flow.initialize()
+        self.flow.initialize(1.42)
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -94,7 +94,7 @@ class TestMFDFlow(unittest.TestCase):
                            3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
         self.personal_car.request_vehicle(user, 'C2')
-        self.personal_car.matching({user.id: (user, "C2")})
+        self.personal_car.matching(user, "C2")
         self.flow.step(Dt(seconds=1))
         self.assertDictEqual({'CAR': 1, 'BUS': 0}, self.flow.dict_accumulations['res1'])
         self.assertDictEqual({'BUS': 42, 'CAR': 42}, self.flow.dict_speeds['res1'])

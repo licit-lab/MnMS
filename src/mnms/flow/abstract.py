@@ -1,12 +1,31 @@
 from abc import ABC, abstractmethod
-from typing import List
+from collections import defaultdict
+from typing import List, Dict, Set
 import csv
 
+from mnms.graph.zone import Zone
 from mnms.time import Time, Dt
 from mnms.graph.layers import MultiLayerGraph
 
 
-class AbstractFlowMotor(ABC):
+class AbstractReservoir(ABC):
+    def __init__(self, zone: Zone, modes: List[str]):
+        self.id: str = zone.id
+        self.zone = zone
+        self.modes = modes
+        self.dict_accumulations = defaultdict(lambda: 0)
+        self.dict_speeds = defaultdict(lambda: 0.)
+
+    @abstractmethod
+    def update_accumulations(self, dict_accumulations: Dict[str, int]):
+        pass
+
+    @abstractmethod
+    def update_speeds(self):
+        pass
+
+
+class AbstractMFDFlowMotor(ABC):
     """Abstraction of a flow motor, two methods must be overridden `step` and `update_graph`.
     `step` define the core of the motor, i.e. the way `Vehicle` move. `update_graph` must update the cost of the graph.
 
@@ -33,22 +52,6 @@ class AbstractFlowMotor(ABC):
     def set_graph(self, mlgraph: MultiLayerGraph):
         self._graph = mlgraph
 
-    def set_initial_demand(self, demand:List[List]):
-        self._demand = demand
-
-    def run(self, tstart:str, tend:str, dt:float):
-        self.initialize()
-        tend = Time(tend)
-        self._tcurrent = Time(tstart)
-        step = 0
-        while self._tcurrent < tend:
-            self.update_time(dt)
-            self.step(dt)
-            if self._write:
-                self.write_result(step)
-            step += 1
-        self.finalize()
-
     def set_time(self, time:Time):
         self._tcurrent = time.copy()
 
@@ -71,6 +74,9 @@ class AbstractFlowMotor(ABC):
         raise NotImplementedError(f"{self.__class__.__name__} do not implement a write_result method")
 
     def initialize(self):
+        pass
+
+    def add_reservoir(self, res: AbstractReservoir):
         pass
 
     def finalize(self):

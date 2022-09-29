@@ -9,7 +9,7 @@ from mnms.graph.layers import MultiLayerGraph
 
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
-from mnms.flow.MFD import MFDFlow, Reservoir
+from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
@@ -57,8 +57,8 @@ class TestPersonalCar(unittest.TestCase):
             dspeed = {'CAR': 3}
             return dspeed
 
-        flow_motor = MFDFlow()
-        flow_motor.add_reservoir(Reservoir('RES', ['CAR'], mfdspeed))
+        flow_motor = MFDFlowMotor()
+        flow_motor.add_reservoir(Reservoir(road_db.zones["RES"], ['CAR'], mfdspeed))
 
         supervisor = Supervisor(mlgraph,
                                 demand,

@@ -1,14 +1,14 @@
 import unittest
 from tempfile import TemporaryDirectory
 
+from mnms.demand.user import User, Path
 from mnms.flow.user_flow import UserFlow
-from mnms.graph.road import RoadDescriptor
-from mnms.graph.zone import Zone
-from mnms.time import Time, Dt, TimeTable
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
+from mnms.graph.road import RoadDescriptor
+from mnms.graph.zone import construct_zone_from_sections
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
-from mnms.demand.user import User, Path
+from mnms.time import Time, Dt, TimeTable
 
 
 class TestUserFlow(unittest.TestCase):
@@ -35,8 +35,8 @@ class TestUserFlow(unittest.TestCase):
         roads.register_stop("B3", "3_4", 0)
         roads.register_stop("B4", "3_4", 1)
 
-        roads.add_zone(Zone("res1", {"0_1", "0_2", "2_3"}))
-        roads.add_zone(Zone("res2", {"3_4"}))
+        roads.add_zone(construct_zone_from_sections(roads, "res1", ["0_1", "0_2", "2_3"]))
+        roads.add_zone(construct_zone_from_sections(roads, "res1", ["3_4"]))
 
         car_layer = CarLayer(roads, services=[PersonalMobilityService()])
         car_layer.create_node('C0', '0')
