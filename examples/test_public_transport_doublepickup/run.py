@@ -45,11 +45,16 @@ mlgraph = MultiLayerGraph([pblayer],
 # U4(S1->S3) and U5(S2->S4) depart at different but close timesteps 7:09:00 and 7:11:00
 # U6(S1->S3), U7(S2->S4) and U8(S0->S5) depart at the same timestep 7:30:00
 demand = BaseDemandManager([User("U0", [0, 1000], [0, 3000], Time("07:00:00")),
-    User("U1", [0, 2000], [0, 4000], Time("07:00:00"))])
-#demand = BaseDemandManager([User("U0", [0, 1000], [0, 3000], Time("07:00:00")),
-#    User("U1", [0, 2000], [0, 4000], Time("07:00:00")),
-#    User("U2", [0, 2000], [0, 4000], Time("07:10:00")),
-#    User("U3", [0, 1000], [0, 3000], Time("07:10:00"))])
+    User("U1", [0, 2000], [0, 4000], Time("07:00:00")),
+    User("U2", [0, 2000], [0, 4000], Time("07:10:00")),
+    User("U3", [0, 1000], [0, 3000], Time("07:10:00")),
+    User("U4", [0, 1000], [0, 3000], Time("07:19:00")),
+    User("U5", [0, 2000], [0, 4000], Time("07:21:00")),
+    User("U6", [0, 3000], [0, 4000], Time("07:30:00")),
+    User("U7", [0, 1000], [0, 2000], Time("07:30:00")),
+    User("U8", [0, 1000], [0, 5000], Time("07:38:00")),
+    User("U9", [0, 2000], [0, 3000], Time("07:41:00")),
+    User("U10", [0, 3000], [0, 4000], Time("07:47:00"))])
 demand.add_user_observer(CSVUserObserver('user.csv'))
 
 # Decison Model

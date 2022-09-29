@@ -22,8 +22,10 @@ def _to_nodes(path):
 def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
     if veh.activity is not None:
         activities_including_curr = [veh.activity] + [a for a in veh.activities]
+        decrement_insert_index = True
     else:
         activities_including_curr = [a for a in veh.activities]
+        decrement_insert_index = False
     if ind_pu == ind_do:
         # Insertion modifies only one activity in vehicles' activities
         ind = ind_pu
@@ -50,16 +52,20 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
         # Modify activity_to_modify
         activity_to_modify.modify_path(activity_to_modify.path[do_ind_inpath:])
         # Insert the new activities and the modified one
-        if ind == 0: # TODO: check if veh.activity.state is not VehicleState.STOP condition should be added here
+        if ind == 0 and veh.activity is not None: # TODO: check if veh.activity.state is not VehicleState.STOP condition should be added here
             # Interrupt current activity and insert the new activities plus the
             # modified one
             veh.activity = None
             for a in reversed([pu_activity, do_activity, activity_to_modify]):
+                if decrement_insert_index:
+                    ind = max(0, ind-1)
                 veh.activities.insert(ind, a)
         else:
             # Only insert the new activities, path of activity_to_modify has
             # already been modified
             for a in reversed([pu_activity, do_activity]):
+                if decrement_insert_index:
+                    ind = max(0, ind-1)
                 veh.activities.insert(ind, a)
     else:
         assert ind_pu < ind_do, "Index where pickup activity is going to be inserted in "\
@@ -73,6 +79,8 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
                                             path=do_path,
                                             user=user)
         activity_to_modify_do.modify_path(activity_to_modify_do.path[do_ind_inpath:])
+        if decrement_insert_index:
+            ind_do = max(0, ind_do-1)
         veh.activities.insert(ind_do, do_activity)
         # Then insert pickup activity
         activity_to_modify_pu = activities_including_curr[ind_pu]
@@ -86,15 +94,19 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
                                             path=pu_path,
                                             user=user)
         activity_to_modify_pu.modify_path(activity_to_modify_pu.path[pu_ind_inpath:])
-        if ind_pu == 0: # TODO: check if veh.activity.state is not VehicleState.STOP condition should be added here
+        if ind_pu == 0 and veh.activity is not None: # TODO: check if veh.activity.state is not VehicleState.STOP condition should be added here
             # Interrupt current activity and insert the pickup activity plus the
             # modified one
             veh.activity = None
             for a in reversed([pu_activity, activity_to_modify_pu]):
+                if decrement_insert_index:
+                    ind_pu = max(0, ind_pu-1)
                 veh.activities.insert(ind_pu, a)
         else:
             # Only insert the pickup activity, path of activity_to_modify_pu has
             # already been modified
+            if decrement_insert_index:
+                ind_pu = max(0, ind_pu-1)
             veh.activities.insert(ind_pu, pu_activity)
 
 
