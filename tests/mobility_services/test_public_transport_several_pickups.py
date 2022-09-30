@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tempfile import TemporaryDirectory
 from mnms.demand import BaseDemandManager, User
 from mnms.demand.user import UserState
 from mnms.flow.MFD import MFDFlow, Reservoir
@@ -21,7 +22,7 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
-        self.temp_dir_results = tempfile.TemporaryDirectory()
+        self.temp_dir_results = TemporaryDirectory()
         self.dir_results = Path(self.temp_dir_results.name)
 
         roads = generate_line_road([0, 0], [0, 5000], 2)
@@ -35,7 +36,7 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
 
         bus_service = PublicTransportMobilityService('B0')
         pblayer = PublicTransportLayer(roads, 'BUS', Bus, 10, services=[bus_service],
-                                       observer=CSVVehicleObserver("veh.csv"))
+                                       observer=CSVVehicleObserver(self.dir_results / "veh.csv"))
 
         pblayer.create_line('L0',
                             ['S0', 'S1', 'S2', 'S3', 'S4', 'S5'],
@@ -64,11 +65,11 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
             User("U10", [0, 3000], [0, 4000], Time("07:45:00")),
             User("U11", [0, 3000], [0, 4000], Time("07:49:00")),
             User("U12", [0, 2000], [0, 4000], Time("07:50:40"))])
-        demand.add_user_observer(CSVUserObserver('user.csv'))
+        demand.add_user_observer(CSVUserObserver(self.dir_results / 'user.csv'))
         self.demand = demand
 
         # Decison Model
-        decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
+        decision_model = DummyDecisionModel(mlgraph, outfile=self.dir_results / "path.csv")
 
         # Flow Motor
         def mfdspeed(dacc):
@@ -83,8 +84,7 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
                                 flow_motor,
                                 decision_model)
         self.supervisor = supervisor
-
-        supervisor.run(Time("07:00:00"),
+        self.supervisor.run(Time("07:00:00"),
                        Time("08:00:00"),
                        Dt(minutes=1),
                        1)
@@ -101,7 +101,6 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
     def test_users_arrival(self):
         # Check that all users have arrived at destination
         for user in self.demand._users:
-            print(f"{user} state={user.state}")
             self.assertEqual(user.state,UserState.ARRIVED)
 
     def test_buses_arrival(self):
