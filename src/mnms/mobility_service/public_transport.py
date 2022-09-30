@@ -52,7 +52,7 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
         # Modify activity_to_modify
         activity_to_modify.modify_path(activity_to_modify.path[do_ind_inpath:])
         # Insert the new activities and the modified one
-        if ind == 0 and veh.activity is not None: # TODO: check if veh.activity.state is not VehicleState.STOP condition should be added here
+        if ind == 0 and veh.activity is not None and veh.activity.state is not VehicleState.STOP:
             # Interrupt current activity and insert the new activities plus the
             # modified one
             veh.activity = None
@@ -94,7 +94,7 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
                                             path=pu_path,
                                             user=user)
         activity_to_modify_pu.modify_path(activity_to_modify_pu.path[pu_ind_inpath:])
-        if ind_pu == 0 and veh.activity is not None: # TODO: check if veh.activity.state is not VehicleState.STOP condition should be added here
+        if ind_pu == 0 and veh.activity is not None and veh.activity.state is not VehicleState.STOP:
             # Interrupt current activity and insert the pickup activity plus the
             # modified one
             veh.activity = None
@@ -254,6 +254,10 @@ class PublicTransportMobilityService(AbstractMobilityService):
         for i in range(len(path)-1):
             dist += self.gnodes[path[i]].adj[path[i+1]].length
         dist -= veh_traveled_dist_link
+        # NB: if veh has not been moved yet (stopped at the first station of the
+        #     line, speed of veh corresponds to the initial speed, it may be different
+        #     from the speed computed in the MFD flow so estimation of pickup time
+        #     is incorrect)
 
         dt = Dt(seconds=dist/veh.speed)
 
@@ -287,8 +291,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
                         matched_user[user.id] = (veh, user_line)
                         break
                 else:
-                    log.warning(f"No vehicle found for {user}")
-
+                    departure_time, waiting_veh = self._next_veh_departure[user_line_id]
+                    matched_user[user.id] = (waiting_veh, user_line)
 
                 # curr_veh = None
                 # next_veh = None
