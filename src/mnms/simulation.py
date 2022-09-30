@@ -190,7 +190,6 @@ class Supervisor(object):
         self.tcurrent = tstart
 
         progress = ProgressBar((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor) - 1)
-
         while self.tcurrent < tend:
             progress.update()
             progress.show()

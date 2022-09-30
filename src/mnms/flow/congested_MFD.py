@@ -107,6 +107,19 @@ class CongestedMFDFlowMotor(MFDFlowMotor):
             new_res.compute_time_interval(entrance_time)
             if entrance_time >= res_time_interval:
                 new_res.car_queue.append(QueuedVehicle(veh, entrance_time, previous_veh_zone))
+                upnode, downode = veh.current_link
+                link = self.graph_nodes[upnode].adj[downode]
+
+                # Put the vehicle at the start of the link
+                veh_remaining_length = veh._remaining_link_length
+                link_length = link.length
+                veh._remaining_link_length = link_length
+                veh.update_distance(veh_remaining_length-link_length)
+                veh.speed = 0
+                self.set_vehicle_position(veh)
+                for passenger_id, passenger in veh.passenger.items():
+                    passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
+
                 return dt
 
         return elapsed_time

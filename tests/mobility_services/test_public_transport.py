@@ -12,6 +12,7 @@ from mnms.simulation import Supervisor
 from mnms.time import Time, Dt, TimeTable
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 from mnms.travel_decision.dummy import DummyDecisionModel
+from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Bus
 
 
@@ -74,6 +75,7 @@ class TestPublicTransport(unittest.TestCase):
         """Concludes and closes the test.
         """
         self.temp_dir_results.cleanup()
+        VehicleManager.empty()
 
     def test_run_and_results(self):
         pass

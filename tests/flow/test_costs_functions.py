@@ -128,7 +128,7 @@ class TestCostsFunctions(unittest.TestCase):
             elif lid in ['L1_B2_B3', 'L1_B1_B2']:
                 self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 1450 / 7)
 
-    def test_costupdate(self):
+    def test_cost_update(self):
         self.supervisor.run(Time("07:00:00"),
                        Time("09:00:00"),
                        Dt(seconds=1),

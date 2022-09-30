@@ -13,6 +13,7 @@ from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
+from mnms.vehicles.manager import VehicleManager
 
 
 class TestPersonalCar(unittest.TestCase):
@@ -74,6 +75,7 @@ class TestPersonalCar(unittest.TestCase):
         """Concludes and closes the test.
         """
         self.temp_dir_results.cleanup()
+        VehicleManager.empty()
 
     def test_run_and_results(self):
         pass

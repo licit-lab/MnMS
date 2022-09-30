@@ -9,6 +9,7 @@ from mnms.graph.zone import construct_zone_from_sections
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import Time, Dt, TimeTable
+from mnms.vehicles.manager import VehicleManager
 
 
 class TestUserFlow(unittest.TestCase):
@@ -68,6 +69,7 @@ class TestUserFlow(unittest.TestCase):
         """Concludes and closes the test.
         """
         self.tempfile.cleanup()
+        VehicleManager.empty()
 
     def test_fill(self):
         self.assertTrue(self.mlgraph is self.user_flow._graph)

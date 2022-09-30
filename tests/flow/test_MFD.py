@@ -1,15 +1,21 @@
 import unittest
 from tempfile import TemporaryDirectory
 
+import numpy as np
+import pytest
 from mnms.demand import User
 from mnms.demand.user import Path
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
+from mnms.generation.roads import generate_line_road
+from mnms.generation.layers import generate_layer_from_roads, generate_matching_origin_destination_layer
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import construct_zone_from_sections
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
+from mnms.mobility_service.on_demand import OnDemandMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import Dt, TimeTable, Time
+from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Vehicle
 
 
@@ -79,7 +85,7 @@ class TestMFDFlow(unittest.TestCase):
         """Concludes and closes the test.
         """
         self.tempfile.cleanup()
-        self.flow.veh_manager.empty()
+        VehicleManager.empty()
         Vehicle._counter = 0
 
     def test_fill(self):
@@ -99,3 +105,96 @@ class TestMFDFlow(unittest.TestCase):
         self.assertDictEqual({'CAR': 1, 'BUS': 0}, self.flow.dict_accumulations['res1'])
         self.assertDictEqual({'BUS': 42, 'CAR': 42}, self.flow.dict_speeds['res1'])
         self.assertAlmostEqual(1158.0, self.personal_car.fleet.vehicles['0']._remaining_link_length)
+
+
+def test_move_veh_activity_change():
+    roads = generate_line_road([0, 0], [0, 20], 3)
+    roads.add_zone(construct_zone_from_sections(roads, "LEFT", ["0_1"]))
+    roads.add_zone(construct_zone_from_sections(roads, "RIGHT", ["1_2"]))
+
+    on_demand = OnDemandMobilityService("Uber", 0)
+    car_layer = generate_layer_from_roads(roads,
+                                          "CarLayer",
+                                          mobility_services=[on_demand])
+
+    odlayer = generate_matching_origin_destination_layer(roads)
+
+    mlgraph = MultiLayerGraph([car_layer],
+                              odlayer,
+                              1e-3)
+
+    on_demand.create_waiting_vehicle("CarLayer_0")
+
+    flow = MFDFlowMotor()
+    flow.set_graph(mlgraph)
+
+    res1 = Reservoir(roads.zones["LEFT"], ["CAR"], lambda x: {k: 20 for k in x})
+    res2 = Reservoir(roads.zones['RIGHT'], ["CAR"], lambda x: {k: 2 for k in x})
+
+    flow.add_reservoir(res1)
+    flow.add_reservoir(res2)
+    flow.set_time(Time('09:00:00'))
+
+    flow.initialize(1.42)
+
+    user = User('U0', 'CarLayer_1', 'CarLayer_2', Time('00:01:00'))
+    user._position = np.array([0, 10])
+    user.set_path(Path(0,
+                       3400,
+                       ['CarLayer_1', 'CarLayer_2']))
+    on_demand.step_maintenance(Dt(seconds=1))
+    on_demand.request({user.id: (user, "CarLayer_2")})
+    on_demand.matching(user, "CarLayer_2")
+
+
+    flow.step(Dt(seconds=1))
+
+    veh = on_demand.fleet.vehicles["0"]
+    assert 1 == pytest.approx(user.distance)
+    assert 11 == pytest.approx(veh.distance)
+
+    VehicleManager.empty()
+
+
+def test_move_veh_res_change():
+    roads = generate_line_road([0, 0], [0, 20], 3)
+    roads.add_zone(construct_zone_from_sections(roads, "LEFT", ["0_1"]))
+    roads.add_zone(construct_zone_from_sections(roads, "RIGHT", ["1_2"]))
+
+    personal_car = PersonalMobilityService()
+    car_layer = generate_layer_from_roads(roads,
+                                          "CarLayer",
+                                          mobility_services=[personal_car])
+
+    odlayer = generate_matching_origin_destination_layer(roads)
+
+    mlgraph = MultiLayerGraph([car_layer],
+                              odlayer,
+                              1e-3)
+
+    flow = MFDFlowMotor()
+    flow.set_graph(mlgraph)
+
+    res1 = Reservoir(roads.zones["LEFT"], ["CAR"], lambda x: {k: 20 for k in x})
+    res2 = Reservoir(roads.zones['RIGHT'], ["CAR"], lambda x: {k: 2 for k in x})
+
+    flow.add_reservoir(res1)
+    flow.add_reservoir(res2)
+    flow.set_time(Time('09:00:00'))
+
+    flow.initialize(1.42)
+
+    user = User('U0', '0', '4', Time('00:01:00'))
+    user.set_path(Path(0,
+                       3400,
+                       ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
+    personal_car.request_vehicle(user, 'C2')
+    personal_car.matching(user, "CarLayer_2")
+    flow.step(Dt(seconds=1))
+
+    veh = personal_car.fleet.vehicles["0"]
+    approx_dist = 11
+    assert approx_dist == pytest.approx(user.distance)
+    assert approx_dist == pytest.approx(veh.distance)
+
+    VehicleManager.empty()

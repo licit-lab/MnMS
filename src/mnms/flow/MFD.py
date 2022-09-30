@@ -121,23 +121,36 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         dist_travelled = dt*speed
 
         if dist_travelled > veh.remaining_link_length:
-            elapsed_time = veh.remaining_link_length / speed
-            current_link, remaining_link_length = next(veh.activity.iter_path)
-            veh.update_distance(veh.remaining_link_length)
-            veh._current_link = current_link
-            veh._remaining_link_length = remaining_link_length
-            # new_dt = dt - elapsed_time
+            dist_travelled = veh.remaining_link_length
+            elapsed_time = dist_travelled / speed
+            veh.update_distance(dist_travelled)
+            self.set_vehicle_position(veh)
+            for passenger_id, passenger in veh.passenger.items():
+                passenger.update_distance(dist_travelled)
+                passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
+
+            try:
+                current_link, remaining_link_length = next(veh.activity.iter_path)
+                veh._current_link = current_link
+                veh._current_node = current_link[0]
+                veh._remaining_link_length = remaining_link_length
+            except StopIteration:
+                veh._current_node = veh.current_link[1]
+                veh.next_activity()
+                if veh.state is VehicleState.STOP:
+                    elapsed_time = dt
+            # finally:
+            # veh.update_distance(dist_travelled)
+            # self.set_vehicle_position(veh)
+            # for passenger_id, passenger in veh.passenger.items():
+            #     passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
             return elapsed_time
         else:
-            elapsed_time = dt
             veh._remaining_link_length -= dist_travelled
             veh.update_distance(dist_travelled)
             self.set_vehicle_position(veh)
             for passenger_id, passenger in veh.passenger.items():
                 passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
-            new_time = tcurrent.add_time(Dt(seconds=elapsed_time))
-            veh.notify(new_time)
-            veh.notify_passengers(new_time)
             return dt
 
     def get_vehicle_zone(self, veh):
@@ -175,28 +188,24 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
         # Move the vehicles
         for veh_id, veh in current_vehicles.items():
-            unode, dnode = veh.current_link
-            curr_link = self.graph_nodes[unode].adj[dnode]
-            lid = self._graph.map_reference_links[curr_link.id][0]
-            res_id = self._graph.roads.sections[lid].zone
-            veh_type = veh.type.upper()
-            speed = self.dict_speeds[res_id][veh_type]
-            veh.speed = speed
             veh_dt = dt.to_seconds()
+            veh_type = veh.type.upper()
             while veh_dt > 0:
-                try:
-                    elapsed_time = self.move_veh(veh, self._tcurrent, veh_dt, speed)
-                    veh_dt -= elapsed_time
-                except StopIteration:
-                    veh_dt = 0
-                    self.finish_vehicle_activities(veh)
+                res_id = self.get_vehicle_zone(veh)
+                speed = self.dict_speeds[res_id][veh_type]
+                veh.speed = speed
+                elapsed_time = self.move_veh(veh, self._tcurrent, veh_dt, speed)
+                veh_dt -= elapsed_time
+            new_time = self._tcurrent.add_time(dt)
+            veh.notify(new_time)
+            veh.notify_passengers(new_time)
 
     def update_reservoir_speed(self, res, dict_accumulations):
         res.update_accumulations(dict_accumulations)
         self.dict_speeds[res.id] = res.update_speeds()
 
     def count_moving_vehicle(self, veh: Vehicle, current_vehicles):
-        log.info(f"{veh} -> {veh.current_link}")
+        # log.info(f"{veh} -> {veh.current_link}")
         res_id = self.get_vehicle_zone(veh)
         veh_type = veh.type.upper()
         self.dict_accumulations[res_id][veh_type] += 1
