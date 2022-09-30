@@ -137,7 +137,7 @@ class User(TimeDependentSubject):
         self._state = UserState.INSIDE_VEHICLE
 
     def set_state_waiting_vehicle(self):
-        self._state = UserState.WAITING_ANSWER
+        self._state = UserState.WAITING_VEHICLE
 
     def set_state_waiting_answer(self):
         self._state = UserState.WAITING_ANSWER
