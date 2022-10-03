@@ -41,7 +41,7 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
         pblayer.create_line('L0',
                             ['S0', 'S1', 'S2', 'S3', 'S4', 'S5'],
                             [['0_1'], ['0_1'], ['0_1'], ['0_1'], ['0_1']],
-                            TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=10)))
+                            TimeTable.create_table_freq('07:00:00', '08:30:00', Dt(minutes=10)))
 
         odlayer = generate_matching_origin_destination_layer(roads)
 
@@ -64,7 +64,9 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
             User("U9", [0, 2000], [0, 3000], Time("07:41:00")),
             User("U10", [0, 3000], [0, 4000], Time("07:45:00")),
             User("U11", [0, 3000], [0, 4000], Time("07:49:00")),
-            User("U12", [0, 2000], [0, 4000], Time("07:50:40"))])
+            User("U12", [0, 2000], [0, 4000], Time("07:50:40")),
+            User("U13", [0, 2000], [0, 4000], Time("07:59:00")),
+            User("U14", [0, 2000], [0, 4000], Time("07:59:00"))])
         demand.add_user_observer(CSVUserObserver(self.dir_results / 'user.csv'))
         self.demand = demand
 
@@ -85,7 +87,7 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
                                 decision_model)
         self.supervisor = supervisor
         self.supervisor.run(Time("07:00:00"),
-                       Time("08:00:00"),
+                       Time("08:30:00"),
                        Dt(minutes=1),
                        1)
 
