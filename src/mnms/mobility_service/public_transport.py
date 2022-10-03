@@ -14,15 +14,21 @@ from mnms.vehicles.veh_type import VehicleActivityServing, Vehicle, VehicleActiv
 
 log = create_logger(__name__)
 
-def _to_nodes(path):
-    nodes = [l[0][0] for l in path] + [path[-1][0][1]]
+def _to_nodes(path, veh):
+    if len(path) > 0:
+        nodes = [l[0][0] for l in path] + [path[-1][0][1]]
+    else:
+        nodes = [veh._current_node]
     return nodes
 
 
 def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
-    if veh.activity is not None:
+    if veh.activity is not None and veh.activity.state is not VehicleState.STOP:
         activities_including_curr = [veh.activity] + [a for a in veh.activities]
         decrement_insert_index = True
+    elif veh.activity is not None and veh.activity.state == VehicleState.STOP:
+        activities_including_curr = [a for a in veh.activities] + [veh.activity]
+        decrement_insert_index = False
     else:
         activities_including_curr = [a for a in veh.activities]
         decrement_insert_index = False
@@ -30,12 +36,12 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
         # Insertion modifies only one activity in vehicles' activities
         ind = ind_pu
         activity_to_modify = activities_including_curr[ind]
-        pu_ind_inpath = _to_nodes(activity_to_modify.path).index(pu_node)
-        do_ind_inpath = _to_nodes(activity_to_modify.path).index(do_node)
+        pu_ind_inpath = _to_nodes(activity_to_modify.path, veh).index(pu_node)
+        do_ind_inpath = _to_nodes(activity_to_modify.path, veh).index(do_node)
         if ind == 0:
             # activity_to_modify have begun, pickup activity path should start
             # at vehicle current node
-            start_ind_inpath =_to_nodes(activity_to_modify.path).index(veh._current_node)
+            start_ind_inpath =_to_nodes(activity_to_modify.path, veh).index(veh._current_node)
         else:
             # activity_to_modify has not begun, pickup activity path should start
             # at the beginning of activity_to_modify path
@@ -73,7 +79,7 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
             "to be inserted: this is not consistent."
         # Start by inserting serving activity since it is located after pickup
         activity_to_modify_do = activities_including_curr[ind_do]
-        do_ind_inpath = _to_nodes(activity_to_modify_do.path).index(do_node)
+        do_ind_inpath = _to_nodes(activity_to_modify_do.path, veh).index(do_node)
         do_path = activity_to_modify_do.path[:do_ind_inpath]
         do_activity = VehicleActivityServing(node=do_node,
                                             path=do_path,
@@ -84,9 +90,9 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
         veh.activities.insert(ind_do, do_activity)
         # Then insert pickup activity
         activity_to_modify_pu = activities_including_curr[ind_pu]
-        pu_ind_inpath = _to_nodes(activity_to_modify_pu.path).index(pu_node)
+        pu_ind_inpath = _to_nodes(activity_to_modify_pu.path, veh).index(pu_node)
         if ind_pu == 0:
-            start_ind_inpath =_to_nodes(activity_to_modify_pu.path).index(veh._current_node)
+            start_ind_inpath =_to_nodes(activity_to_modify_pu.path, veh).index(veh._current_node)
         else:
             start_ind_inpath = 0
         pu_path = activity_to_modify_pu.path[start_ind_inpath:pu_ind_inpath]
@@ -220,8 +226,10 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         # Get the indexes of veh.activities where pickup and serving activities
         # should be inserted
-        if veh.activity is not None:
+        if veh.activity is not None and veh.activity.state is not VehicleState.STOP:
             activities_including_curr = [veh.activity] + [a for a in veh.activities]
+        elif veh.activity is not None and veh.activity.state == VehicleState.STOP:
+            activities_including_curr = [a for a in veh.activities] + [veh.activity]
         else:
             activities_including_curr = [a for a in veh.activities]
         ind_pu = -1
