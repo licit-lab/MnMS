@@ -126,7 +126,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             veh.update_distance(dist_travelled)
             self.set_vehicle_position(veh)
             for passenger_id, passenger in veh.passenger.items():
-                passenger.update_distance(dist_travelled)
                 passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
 
             try:
@@ -139,11 +138,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 veh.next_activity()
                 if veh.state is VehicleState.STOP:
                     elapsed_time = dt
-            # finally:
-            # veh.update_distance(dist_travelled)
-            # self.set_vehicle_position(veh)
-            # for passenger_id, passenger in veh.passenger.items():
-            #     passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
             return elapsed_time
         else:
             veh._remaining_link_length -= dist_travelled

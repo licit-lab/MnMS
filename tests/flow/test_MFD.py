@@ -157,6 +157,8 @@ def test_move_veh_activity_change():
 
 
 def test_move_veh_res_change():
+    from mnms.vehicles.manager import VehicleManager
+
     roads = generate_line_road([0, 0], [0, 20], 3)
     roads.add_zone(construct_zone_from_sections(roads, "LEFT", ["0_1"]))
     roads.add_zone(construct_zone_from_sections(roads, "RIGHT", ["1_2"]))
@@ -192,7 +194,7 @@ def test_move_veh_res_change():
     personal_car.matching(user, "CarLayer_2")
     flow.step(Dt(seconds=1))
 
-    veh = personal_car.fleet.vehicles["0"]
+    veh = list(personal_car.fleet.vehicles.values())[0]
     approx_dist = 11
     assert approx_dist == pytest.approx(user.distance)
     assert approx_dist == pytest.approx(veh.distance)
