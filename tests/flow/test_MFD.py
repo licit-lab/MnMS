@@ -146,7 +146,6 @@ def test_move_veh_activity_change():
     on_demand.request({user.id: (user, "CarLayer_2")})
     on_demand.matching(user, "CarLayer_2")
 
-
     flow.step(Dt(seconds=1))
 
     veh = on_demand.fleet.vehicles["0"]

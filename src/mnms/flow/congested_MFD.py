@@ -33,7 +33,7 @@ class CongestedReservoir(AbstractReservoir):
         self.n_car_max: int = n_car_max
         self.car_queue: Deque[QueuedVehicle] = deque()
         self.last_car_entrance = None
-        self.time_interval = Time("24:00:00")
+        self.time_interval = Time("00:00:00")
         self.car_in_outgoing_queues = 0
 
         self.update_speeds()
@@ -105,7 +105,7 @@ class CongestedMFDFlowMotor(MFDFlowMotor):
             entrance_time = self._tcurrent.add_time(Dt(seconds=elapsed_time))
             res_time_interval = new_res.time_interval.copy()
             new_res.compute_time_interval(entrance_time)
-            if entrance_time >= res_time_interval:
+            if entrance_time <= res_time_interval:
                 new_res.car_queue.append(QueuedVehicle(veh, entrance_time, previous_veh_zone))
                 upnode, downode = veh.current_link
                 link = self.graph_nodes[upnode].adj[downode]
