@@ -2,7 +2,7 @@ from collections import deque, defaultdict
 from typing import List, Callable, Dict, Optional, Deque
 from dataclasses import dataclass, field
 
-from mnms.flow.MFD import Reservoir, MFDFlowMotor
+from mnms.flow.MFD import MFDFlowMotor
 from mnms.flow.abstract import AbstractReservoir
 from mnms.graph.zone import Zone
 from mnms.time import Time, Dt

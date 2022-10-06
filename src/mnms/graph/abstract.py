@@ -38,7 +38,7 @@ class AbstractLayer(object):
         self.map_reference_links: Dict[str, List[str]] = dict()
         self.map_reference_nodes: Dict[str, str] = dict()
 
-        self._costs_functions: Dict[str, function] = dict()
+        self._costs_functions: Dict[str, Callable] = dict()
 
         self.mobility_services: Dict[str, AbstractMobilityService] = dict()
         self._veh_type: Type[Vehicle] = veh_type
@@ -64,6 +64,10 @@ class AbstractLayer(object):
     @property
     def id(self):
         return self._id
+
+    @property
+    def vehicle_type(self):
+        return self._veh_type.__name__
 
     @abstractmethod
     def __dump__(self):
