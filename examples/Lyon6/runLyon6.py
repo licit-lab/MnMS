@@ -1,6 +1,6 @@
 from mnms.simulation import Supervisor
 from mnms.demand import CSVDemandManager
-from mnms.flow.MFD import Reservoir, MFDFlow
+from mnms.flow.MFD import Reservoir, MFDFlowMotor
 from mnms.log import attach_log_file, LOGLEVEL, get_logger, set_all_mnms_logger_level, set_mnms_logger_level
 from mnms.time import Time, Dt
 from mnms.io.graph import load_graph
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     demand = CSVDemandManager(demand_file_name)
     demand.add_user_observer(CSVUserObserver(outdir+"/user.csv"), user_ids="all")
 
-    flow_motor = MFDFlow(outfile=outdir+"/flow.csv")
+    flow_motor = MFDFlowMotor(outfile=outdir + "/flow.csv")
     flow_motor.add_reservoir(Reservoir("RES", ["CAR"], calculate_V_MFD))
 
     travel_decision = LogitDecisionModel(mmgraph, outfile=outdir+"/path.csv")

@@ -7,7 +7,7 @@ from mnms.demand.manager import CSVDemandManager
 from mnms.log import set_mnms_logger_level, LOGLEVEL, attach_log_file
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.mobility_service.on_demand import OnDemandMobilityService, OnDemandDepotMobilityService
-from mnms.flow.MFD import MFDFlow, Reservoir
+from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
@@ -71,7 +71,7 @@ def mfdspeed(dacc):
     return dspeed
 
 
-flow_motor = MFDFlow()
+flow_motor = MFDFlowMotor()
 flow_motor.add_reservoir(Reservoir('RES', ['CAR'], mfdspeed))
 
 supervisor = Supervisor(mlgraph,

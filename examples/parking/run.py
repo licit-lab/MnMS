@@ -8,7 +8,7 @@ from mnms.log import set_mnms_logger_level
 
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.mobility_service.parking_service import ParkingService, InRadiusFilter
-from mnms.flow.MFD import MFDFlow, Reservoir
+from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
@@ -68,7 +68,7 @@ def mfdspeed(dacc):
               'BUS': 12}
     return dspeed
 
-flow_motor = MFDFlow()
+flow_motor = MFDFlowMotor()
 flow_motor.add_reservoir(Reservoir('RES', ['CAR'], mfdspeed))
 
 supervisor = Supervisor(mlgraph,
