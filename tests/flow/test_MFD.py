@@ -106,6 +106,13 @@ class TestMFDFlow(unittest.TestCase):
         self.assertDictEqual({'BUS': 42, 'CAR': 42}, self.flow.dict_speeds['res1'])
         self.assertAlmostEqual(1158.0, self.personal_car.fleet.vehicles['0']._remaining_link_length)
 
+    def test_ghost_accumulation(self):
+        self.flow.reservoirs['res1'].set_ghost_accumulation(lambda x: {"CAR": 21})
+        self.flow.step(Dt(seconds=1))
+        self.assertEqual(self.flow.dict_accumulations["res1"]["CAR"], 21)
+        self.assertEqual(self.flow.reservoirs["res1"].dict_accumulations["CAR"], 21)
+        self.assertEqual(self.flow.dict_accumulations["res1"]["BUS"], 0)
+
 
 def test_move_veh_activity_change():
     roads = generate_line_road([0, 0], [0, 20], 3)

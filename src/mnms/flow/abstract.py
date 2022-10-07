@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import List, Dict, Set
+from typing import List, Dict, Optional, Callable
 import csv
 
 from mnms.graph.zone import Zone
@@ -16,6 +16,8 @@ class AbstractReservoir(ABC):
         self.dict_accumulations = defaultdict(lambda: 0)
         self.dict_speeds = defaultdict(lambda: 0.)
 
+        self.ghost_accumulation: Callable[[Time], Dict[str, float]] = lambda x: {}
+
     @abstractmethod
     def update_accumulations(self, dict_accumulations: Dict[str, int]):
         pass
@@ -23,6 +25,9 @@ class AbstractReservoir(ABC):
     @abstractmethod
     def update_speeds(self):
         pass
+
+    def set_ghost_accumulation(self, f_acc: Callable[[Time], Dict[str, float]]):
+        self.ghost_accumulation = f_acc
 
 
 class AbstractMFDFlowMotor(ABC):

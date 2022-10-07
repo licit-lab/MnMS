@@ -211,8 +211,9 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         log.info(f'MFD step {self._tcurrent}')
 
         for res in self.reservoirs.values():
+            ghost_acc = res.ghost_accumulation(self._tcurrent)
             for mode in res.modes:
-                res.dict_accumulations[mode] = 0
+                res.dict_accumulations[mode] = ghost_acc.get(mode, 0)
 
         while self.veh_manager.has_new_vehicles:
             new_veh = self.veh_manager._new_vehicles.pop()
