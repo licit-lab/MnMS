@@ -50,8 +50,5 @@ conda env update --file conda/doc.yaml
 Then build the doc:
 
 ```bash
-cd doc
-make clean && make html
+mkdocs serve 
 ```
-
-Then open the file `doc/_build/html/index.html` in your web browser.

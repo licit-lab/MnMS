@@ -13,7 +13,7 @@ def _format(timing):
 
 
 class ProgressBar(object):
-    def __init__(self, stop:int, start=0, text='Run', size_bar=20, item='■'):
+    def __init__(self, stop: int, start=0, text='Run', size_bar=20, item='■'):
         self._max = stop
         self._index = start
         self._text = text

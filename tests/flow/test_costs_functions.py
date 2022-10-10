@@ -40,7 +40,7 @@ class TestCostsFunctions(unittest.TestCase):
         roads.add_zone(construct_zone_from_sections(roads, "res", ["0_1", "1_2", "2_3"]))
 
         self.personal_car = PersonalMobilityService()
-        self.personal_car.attach_vehicle_observer(CSVVehicleObserver("veh_car.csv"))
+        self.personal_car.attach_vehicle_observer(CSVVehicleObserver(self.pathdir+"veh_car.csv"))
         car_layer = CarLayer(roads, default_speed=8.33, services=[self.personal_car])
         car_layer.create_node('C0', '0')
         car_layer.create_node('C1', '1')
@@ -49,7 +49,7 @@ class TestCostsFunctions(unittest.TestCase):
 
         bus_layer = BusLayer(roads, default_speed=7,
                        services=[PublicTransportMobilityService('Bus')],
-                       observer=CSVVehicleObserver("veh_bus.csv"))
+                       observer=CSVVehicleObserver(self.pathdir+"veh_bus.csv"))
 
         bus_layer.create_line("L1",
                         ["B1", "B2", "B3"],
@@ -93,7 +93,7 @@ class TestCostsFunctions(unittest.TestCase):
 
         ## Demand
         self.demand = BaseDemandManager([User("U0", [-20, 0], [0, 5000], Time("07:00:00"))])
-        self.demand.add_user_observer(CSVUserObserver('myuser.csv'))
+        self.demand.add_user_observer(CSVUserObserver(self.pathdir+'myuser.csv'))
         self.decision_model = DummyDecisionModel(mlgraph, cost='generalized_cost')
 
         ## MFDFlowMotor

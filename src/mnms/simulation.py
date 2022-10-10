@@ -1,3 +1,4 @@
+from math import ceil
 from time import time
 import csv
 import traceback
@@ -189,7 +190,7 @@ class Supervisor(object):
 
         self.tcurrent = tstart
 
-        progress = ProgressBar((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor) - 1)
+        progress = ProgressBar(int((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor)))
         while self.tcurrent < tend:
             progress.update()
             progress.show()
