@@ -6,7 +6,7 @@ from mnms.flow.MFD import MFDFlowMotor
 from mnms.flow.abstract import AbstractReservoir
 from mnms.graph.zone import Zone
 from mnms.time import Time, Dt
-from mnms.vehicles.veh_type import Vehicle
+from mnms.vehicles.veh_type import Vehicle, Car
 
 
 @dataclass
@@ -96,31 +96,33 @@ class CongestedMFDFlowMotor(MFDFlowMotor):
         super(CongestedMFDFlowMotor, self).step(dt)
 
     def move_veh(self, veh: Vehicle, tcurrent: Time, dt: float, speed: float) -> float:
-        previous_veh_zone = self.get_vehicle_zone(veh)
-        elapsed_time = super(CongestedMFDFlowMotor, self).move_veh(veh, tcurrent, dt, speed)
-        next_veh_zone = self.get_vehicle_zone(veh)
+        if isinstance(veh, Car):
+            previous_veh_zone = self.get_vehicle_zone(veh)
+            elapsed_time = super(CongestedMFDFlowMotor, self).move_veh(veh, tcurrent, dt, speed)
+            next_veh_zone = self.get_vehicle_zone(veh)
 
-        if previous_veh_zone != next_veh_zone:
-            new_res = self.reservoirs[next_veh_zone]
-            entrance_time = self._tcurrent.add_time(Dt(seconds=elapsed_time))
-            res_time_interval = new_res.time_interval.copy()
-            new_res.compute_time_interval(entrance_time)
-            if entrance_time <= res_time_interval:
-                new_res.car_queue.append(QueuedVehicle(veh, entrance_time, previous_veh_zone))
-                upnode, downode = veh.current_link
-                link = self.graph_nodes[upnode].adj[downode]
+            if previous_veh_zone != next_veh_zone:
+                new_res = self.reservoirs[next_veh_zone]
+                entrance_time = self._tcurrent.add_time(Dt(seconds=elapsed_time))
+                res_time_interval = new_res.time_interval.copy()
+                new_res.compute_time_interval(entrance_time)
+                if entrance_time <= res_time_interval:
+                    new_res.car_queue.append(QueuedVehicle(veh, entrance_time, previous_veh_zone))
+                    upnode, downode = veh.current_link
+                    link = self.graph_nodes[upnode].adj[downode]
 
-                # Put the vehicle at the start of the link
-                veh_remaining_length = veh._remaining_link_length
-                link_length = link.length
-                veh._remaining_link_length = link_length
-                veh.update_distance(veh_remaining_length-link_length)
-                veh.speed = 0
-                self.set_vehicle_position(veh)
-                for passenger_id, passenger in veh.passenger.items():
-                    passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
-
-                return dt
+                    # Put the vehicle at the start of the link
+                    veh_remaining_length = veh._remaining_link_length
+                    link_length = link.length
+                    veh._remaining_link_length = link_length
+                    veh.update_distance(veh_remaining_length-link_length)
+                    veh.speed = 0
+                    self.set_vehicle_position(veh)
+                    for passenger_id, passenger in veh.passenger.items():
+                        passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
+                    return dt
+        else:
+            elapsed_time = super(CongestedMFDFlowMotor, self).move_veh(veh, tcurrent, dt, speed)
 
         return elapsed_time
 
