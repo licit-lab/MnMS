@@ -18,15 +18,15 @@ from mnms.tools.dict_tools import sum_cost_dict
 from mnms.tools.exceptions import PathNotFound
 
 from hipop.shortest_path import parallel_k_shortest_path, compute_path_length
-from hipop.graph import Node
 
 log = create_logger(__name__)
 
 
-def _process_shortest_path_inputs(odlayer, users):
+def _process_shortest_path_inputs(mlgraph: MultiLayerGraph, users):
+    odlayer = mlgraph.odlayer
     origins = [None] * len(users)
     destinations = [None] * len(users)
-    available_mobility_services = [None] * len(users)
+    available_layers = [None] * len(users)
 
     origins_id = list(odlayer.origins.keys())
     origins_pos = np.array([n.position for n in odlayer.origins.values()])
@@ -41,9 +41,11 @@ def _process_shortest_path_inputs(odlayer, users):
             origins[i] = u.origin
             destinations[i] = u.destination
 
-        available_mobility_services[i] = set() if u.available_mobility_service is None else u.available_mobility_service
+        available_layers[i] = set() if u.available_mobility_service is None else {layer.id for mservice in u.available_mobility_service for layer in mlgraph.layers.values()  if mservice in layer.mobility_services}
+        if available_layers[i]:
+            available_layers[i].add("TRANSIT")
 
-    return origins, destinations, available_mobility_services
+    return origins, destinations, available_layers
 
 
 class AbstractDecisionModel(ABC):
@@ -127,12 +129,12 @@ class AbstractDecisionModel(ABC):
            u.departure_time = tcurrent.copy()
         new_users.extend(refused_user)
 
-        origins, destinations, available_mobility_services = _process_shortest_path_inputs(self._mlgraph.odlayer, new_users)
+        origins, destinations, available_layers = _process_shortest_path_inputs(self._mlgraph, new_users)
         paths = parallel_k_shortest_path(self._mlgraph.graph,
                                          origins,
                                          destinations,
                                          self._cost,
-                                         available_mobility_services,
+                                         available_layers,
                                          self._min_diff_dist,
                                          self._max_diff_dist,
                                          self._n_shortest_path,
