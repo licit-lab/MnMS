@@ -4,6 +4,7 @@ import traceback
 import random
 from typing import List, Optional
 
+import numpy
 import numpy as np
 
 from mnms.demand import User
@@ -43,7 +44,7 @@ class Supervisor(object):
         self._demand: AbstractDemandManager = demand
         self._flow_motor: AbstractFlowMotor = flow_motor
 
-        self._decision_model:AbstractDecisionModel = decision_model
+        self._decision_model: AbstractDecisionModel = decision_model
         self._user_flow: UserFlow = UserFlow()
 
         self.add_graph(graph)
@@ -91,43 +92,25 @@ class Supervisor(object):
 
         return new_users
 
-    def compute_user_paths(self, new_users: List[User]):
+    def compute_user_paths(self, new_users: List[User], decision_model=None):
         log.info('Computing paths for new users ..')
         start = time()
-        self._decision_model(new_users, self.tcurrent)
+        if decision_model:
+            decision_model(new_users, self.tcurrent)
+        else:
+            self._decision_model(new_users, self.tcurrent)
         end = time()
         log.info(f'Done [{end - start:.5} s]')
-        
+
     def initialize(self, tstart:Time):
-
-        link_layers = list()
-        for lid, layer in self._mlgraph.layers.items():
-            link_layers.append(layer.graph.links)
-
-        for link in self._mlgraph.graph.links.values():
-            if link.label == "TRANSIT":
-                speed = self._user_flow._walk_speed
-            else:
-                speed = self._mlgraph.layers[link.label].default_speed
-
-            costs = {"speed": speed,
-                     "travel_time": link.length/speed}
-            link.update_costs(costs)
-
-            for links in link_layers:
-                layer_link = links.get(link.id, None)
-                if layer_link is not None:
-                    layer_link.update_costs(costs)
-
         for layer in self._mlgraph.layers.values():
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
-        
+
         self._flow_motor.set_time(tstart)
-        self._flow_motor.initialize()
+        self._flow_motor.initialize(self._user_flow._walk_speed)
 
         self._user_flow.set_time(tstart)
-
 
     def update_mobility_services(self, flow_dt:Dt):
         for layer in self._mlgraph.layers.values():
@@ -135,7 +118,7 @@ class Supervisor(object):
                 log.info(f' Update mobility service {mservice.id}')
                 mservice.update(flow_dt)
                 mservice.update_time(flow_dt)
-            
+
     def step_flow(self, flow_dt, users_step):
         log.info(' Step user flow ..')
         start = time()
@@ -167,14 +150,18 @@ class Supervisor(object):
         log.info(f' Done [{end - start:.5} s]')
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
+        # assume users are sorted by departure time
+        new_users.sort(key=lambda user: user.departure_time)
+
+        t_current = self.tcurrent.copy()
         if len(new_users) > 0:
             iter_new_users = iter(new_users)
             u = next(iter_new_users)
             for _ in range(affectation_factor):
-                next_time = self.tcurrent.add_time(flow_dt)
+                next_time = t_current.add_time(flow_dt)
                 users_step = list()
                 try:
-                    while self.tcurrent <= u.departure_time < next_time:
+                    while t_current <= u.departure_time < next_time:
                         users_step.append(u)
                         u = next(iter_new_users)
                 except StopIteration:
@@ -185,22 +172,35 @@ class Supervisor(object):
                 self.step_flow(flow_dt, users_step)
                 if self._flow_motor._write:
                     self._flow_motor.write_result(affectation_step, flow_step)
-                self.tcurrent = next_time
+                t_current = next_time
                 flow_step += 1
 
         else:
             for _ in range(affectation_factor):
-                next_time = self.tcurrent.add_time(flow_dt)
+                next_time = t_current.add_time(flow_dt)
                 self.update_mobility_services(flow_dt)
                 self.step_flow(flow_dt, [])
                 if self._flow_motor._write:
                     self._flow_motor.write_result(affectation_step, flow_step)
-                self.tcurrent = next_time
+                t_current = next_time
                 flow_step += 1
 
-    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
+    def _write_t_current_values(self, affectation_step):
+        if self._write:
+            log.info('Writing travel time of each link in graph ...')
+            start = time()
+            t_str = self._flow_motor.time
+            for link in self._mlgraph.graph.links.values():
+                self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['travel_time']])
+            end = time()
+            log.info(f'Done [{end - start:.5} s]')
+
+    def _update_time(self, principal_dt):
+        self.tcurrent = self.tcurrent.add_time(principal_dt)
+
+    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor: int):
         log.info(f'Start run from {tstart} to {tend}')
-        
+
         self.initialize(tstart)
 
         affectation_step = 0
@@ -211,6 +211,8 @@ class Supervisor(object):
 
         progress = ProgressBar((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor) - 1)
 
+        total_user = []
+
         while self.tcurrent < tend:
             progress.update()
             progress.show()
@@ -218,6 +220,7 @@ class Supervisor(object):
             log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
             new_users = self.get_new_users(principal_dt)
+            total_user += new_users
 
             self.compute_user_paths(new_users)
 
@@ -233,14 +236,9 @@ class Supervisor(object):
             end = time()
             log.info(f' Done [{end-start:.5} s]')
 
-            if self._write:
-                log.info('Writing travel time of each link in graph ...')
-                start = time()
-                t_str = self._flow_motor.time
-                for link in self._mlgraph.graph.links.values():
-                    self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['travel_time']])
-                end = time()
-                log.info(f'Done [{end - start:.5} s]')
+            self._write_t_current_values(affectation_step)
+
+            self._update_time(principal_dt)
 
             log.info('-'*50)
             affectation_step += 1
@@ -261,7 +259,17 @@ class Supervisor(object):
                 if mservice._observer is not None:
                     mservice._observer.finish()
 
+        self._compute_users_stat(total_user)
+
         progress.end()
+
+    def _compute_users_stat(self, users: List[User]):
+        times = numpy.array([[user.path.path_cost, (user.arrival_time - user.departure_time).to_seconds()]
+                             for user in users if user.arrival_time])
+
+        print(f"\nTemps total de trajet estimé : {times[:, 0].sum(): .2f}s")
+        print(f"Temps total de trajet effectif : {times[:, 1].sum(): .2f}s")
+        print(f"Utilisateurs arrivés à destination : {times[:, 0].size / len(users): .2%}")
 
     def create_crash_report(self, affectation_step, flow_step) -> dict:
         data = dict(time=str(self.tcurrent),

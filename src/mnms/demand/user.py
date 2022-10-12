@@ -106,11 +106,23 @@ class User(TimeDependentSubject):
     def current_node(self):
         return self._current_node
 
+    @current_node.setter
+    def current_node(self, node: str):
+        self._current_node = node
+
     @property
     def is_in_vehicle(self):
         return self._vehicle is not None
 
-    def finish_trip(self, arrival_time:Time):
+    @property
+    def current_link(self) -> Tuple[str, str]:
+        return self._current_link
+
+    @current_link.setter
+    def current_link(self, link: Tuple[str, str]):
+        self._current_link = link
+
+    def finish_trip(self, arrival_time: Time):
         self.arrival_time = arrival_time
         # self.notify()
 
@@ -119,10 +131,13 @@ class User(TimeDependentSubject):
         self._current_node = path.nodes[0]
         self._current_link = (path.nodes[0], path.nodes[1])
 
-    def set_position(self, current_link:Tuple[str, str], remaining_length:float, position:np.ndarray):
+    def set_position(self, current_link: Tuple[str, str], remaining_length: float, position: np.ndarray):
         self._current_link = current_link
         self._remaining_link_length = remaining_length
         self._position = position
+
+    def path_cost(self) -> Optional[float]:
+        return self.path.path_cost if self.path is not None else None
 
     def update_distance(self, dist: float):
         self._distance += dist
