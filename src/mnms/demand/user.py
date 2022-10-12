@@ -161,7 +161,11 @@ class Path(object):
         nodes_number = len(self.nodes)
         for i in range(2, nodes_number-1):
             ilayer = gnodes[self.nodes[i]].label
-            if ilayer != layer:
+            linklayer = gnodes[self.nodes[i-1]].adj[self.nodes[i]].label
+            # If we change layer or we temporary leave the layer to re-enter it
+            # with a transit link, this is the case when user transfer from one
+            # bus line to another bus line belonging to the same layer for example
+            if ilayer != layer or linklayer == 'TRANSIT':
                 self.layers.append((layer, slice(start, i, 1)))
                 layer = ilayer
                 start = i
