@@ -127,9 +127,19 @@ class AbstractDecisionModel(ABC):
                 u.available_mobility_service.remove(refused_mservice)
             # Remove personal mobility services if traveler is not at home/origin
             # anymore
+            origins_id = list(self._mlgraph.odlayer.origins.keys())
+            origins_pos = np.array([n.position for n in self._mlgraph.odlayer.origins.values()])
+            if isinstance(u.origin, np.ndarray):
+                origin = origins_id[np.argmin(_norm(origins_pos - u.origin, axis=1))]
+            else:
+                origin = u.origin
             for personal_mob_service in personal_mob_services_names:
-                if personal_mob_service in u.available_mobility_service and u._current_node != u.origin:
+                if personal_mob_service in u.available_mobility_service and u._current_node != origin:
                     u.available_mobility_service.remove(personal_mob_service)
+            # Check if user has no remaining available mobility_service
+            if len(u.available_mobility_service) == 0:
+                log.error(f"User {u.id} has no available mobility service left.")
+                sys.exit()
 
             # Create a new user representing refused user legacy
             u._continuous_journey = u.id
