@@ -13,6 +13,7 @@ from mnms.flow.abstract import AbstractMFDFlowMotor
 from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.abstract import AbstractDecisionModel
+from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import Time, Dt
 from mnms.log import create_logger, attach_log_file, LOGLEVEL
 from mnms.tools.progress import ProgressBar
@@ -198,6 +199,14 @@ class Supervisor(object):
             log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
             new_users = self.get_new_users(principal_dt)
+
+            # Set pickup_dt to infinite for all PT mobility services
+            all_mob_services = [list(v.mobility_services.values()) for v in self._mlgraph.layers.values()]
+            all_mob_services = [item for sublist in all_mob_services for item in sublist]
+            pt_mob_services_names = set([ms.id for ms in all_mob_services if isinstance(ms,PublicTransportMobilityService)])
+            for user in new_users:
+                for pt_ms in pt_mob_services_names:
+                    user.pickup_dt[pt_ms] = Dt(hours=24)
 
             self.compute_user_paths(new_users)
 
