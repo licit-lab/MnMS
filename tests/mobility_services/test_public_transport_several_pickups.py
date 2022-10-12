@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from mnms.demand import BaseDemandManager, User
 from mnms.demand.user import UserState
-from mnms.flow.MFD import MFDFlow, Reservoir
+from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.generation.layers import generate_matching_origin_destination_layer
 from mnms.generation.roads import generate_line_road
 from mnms.graph.layers import MultiLayerGraph, PublicTransportLayer
@@ -78,8 +78,8 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
             dacc['BUS'] = 10
             return dacc
 
-        flow_motor = MFDFlow()
-        flow_motor.add_reservoir(Reservoir('RES', ['BUS'], mfdspeed))
+        flow_motor = MFDFlowMotor()
+        flow_motor.add_reservoir(Reservoir(roads.zones['RES'], ['BUS'], mfdspeed))
 
         supervisor = Supervisor(mlgraph,
                                 demand,

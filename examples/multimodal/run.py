@@ -10,10 +10,11 @@ from mnms.generation.layers import generate_layer_from_roads, generate_grid_orig
 from mnms.graph.layers import MultiLayerGraph, PublicTransportLayer, CarLayer
 from mnms.log import set_mnms_logger_level
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
+from mnms.travel_decision import LogitDecisionModel
 
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
-from mnms.flow.MFD import MFDFlow, Reservoir
+from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt, TimeTable
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
@@ -42,10 +43,13 @@ car_layer.create_node("CAR_0", "0")
 car_layer.create_node("CAR_1", "1")
 car_layer.create_node("CAR_2", "2")
 car_layer.create_node("CAR_3", "3")
+car_layer.create_node("CAR_5", "5")
 
 car_layer.create_link("CAR_0_1", "CAR_0", "CAR_1", {}, ["0_1"])
 car_layer.create_link("CAR_1_2", "CAR_1", "CAR_2", {}, ["1_2"])
 car_layer.create_link("CAR_2_3", "CAR_2", "CAR_3", {}, ["2_3"])
+car_layer.create_link("CAR_3_5", "CAR_3", "CAR_5", {}, ["3_4", "4_5"])
+
 
 bus_service = PublicTransportMobilityService('Bus')
 pblayer = PublicTransportLayer(roads, 'BUS', Bus, 13, services=[bus_service],
@@ -75,7 +79,7 @@ demand.add_user_observer(CSVUserObserver('user.csv'))
 
 # Decison Model
 
-decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
+decision_model = LogitDecisionModel(mlgraph, outfile="path.csv")
 
 # Flow Motor
 
@@ -84,8 +88,8 @@ def mfdspeed(dacc):
               'BUS': 12}
     return dspeed
 
-flow_motor = MFDFlow()
-flow_motor.add_reservoir(Reservoir('RES', ['CAR'], mfdspeed))
+flow_motor = MFDFlowMotor()
+flow_motor.add_reservoir(Reservoir(roads.zones["RES"], ['CAR'], mfdspeed))
 
 supervisor = Supervisor(mlgraph,
                         demand,

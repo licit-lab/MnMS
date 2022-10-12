@@ -2,18 +2,17 @@ import unittest
 from tempfile import TemporaryDirectory
 
 from mnms.demand import User, BaseDemandManager
-from mnms.demand.user import Path
-from mnms.flow.MFD import MFDFlow, Reservoir
-from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer, OriginDestinationLayer, TransitLayer
+from mnms.flow.MFD import MFDFlowMotor, Reservoir
+from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer, OriginDestinationLayer
 from mnms.graph.road import RoadDescriptor
-from mnms.graph.zone import Zone
-from mnms.travel_decision.dummy import DummyDecisionModel
+from mnms.graph.zone import construct_zone_from_sections
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
-from mnms.time import Dt, TimeTable, Time
-from mnms.vehicles.veh_type import Vehicle
 from mnms.simulation import Supervisor
+from mnms.time import Dt, TimeTable, Time
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
+from mnms.travel_decision.dummy import DummyDecisionModel
+from mnms.vehicles.veh_type import Vehicle
 
 
 class TestCostsFunctions(unittest.TestCase):
@@ -38,10 +37,10 @@ class TestCostsFunctions(unittest.TestCase):
         roads.register_stop("B2", "2_3", 0.5)
         roads.register_stop("B3", "2_3", 1)
 
-        roads.add_zone(Zone("res", {"0_1", "1_2", "2_3"}, [[0,-1],[5000,-1],[5000,1], [0,1]]))
+        roads.add_zone(construct_zone_from_sections(roads, "res", ["0_1", "1_2", "2_3"]))
 
         self.personal_car = PersonalMobilityService()
-        self.personal_car.attach_vehicle_observer(CSVVehicleObserver("veh_car.csv"))
+        self.personal_car.attach_vehicle_observer(CSVVehicleObserver(self.pathdir+"veh_car.csv"))
         car_layer = CarLayer(roads, default_speed=8.33, services=[self.personal_car])
         car_layer.create_node('C0', '0')
         car_layer.create_node('C1', '1')
@@ -50,7 +49,7 @@ class TestCostsFunctions(unittest.TestCase):
 
         bus_layer = BusLayer(roads, default_speed=7,
                        services=[PublicTransportMobilityService('Bus')],
-                       observer=CSVVehicleObserver("veh_bus.csv"))
+                       observer=CSVVehicleObserver(self.pathdir+"veh_bus.csv"))
 
         bus_layer.create_line("L1",
                         ["B1", "B2", "B3"],
@@ -94,12 +93,12 @@ class TestCostsFunctions(unittest.TestCase):
 
         ## Demand
         self.demand = BaseDemandManager([User("U0", [-20, 0], [0, 5000], Time("07:00:00"))])
-        self.demand.add_user_observer(CSVUserObserver('myuser.csv'))
+        self.demand.add_user_observer(CSVUserObserver(self.pathdir+'myuser.csv'))
         self.decision_model = DummyDecisionModel(mlgraph, cost='generalized_cost')
 
-        ## MFDFlow
-        self.flow = MFDFlow()
-        res = Reservoir('res', ["CAR", "BUS"], lambda x: {k: 7 for k in x})
+        ## MFDFlowMotor
+        self.flow = MFDFlowMotor()
+        res = Reservoir(roads.zones['res'], ["CAR", "BUS"], lambda x: {k: 7 for k in x})
         self.flow.add_reservoir(res)
 
         self.supervisor = Supervisor(self.mlgraph,
@@ -107,7 +106,6 @@ class TestCostsFunctions(unittest.TestCase):
                                 self.flow,
                                 self.decision_model)
         self.flow.initialize(1.42)
-
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -130,7 +128,7 @@ class TestCostsFunctions(unittest.TestCase):
             elif lid in ['L1_B2_B3', 'L1_B1_B2']:
                 self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 1450 / 7)
 
-    def test_costupdate(self):
+    def test_cost_update(self):
         self.supervisor.run(Time("07:00:00"),
                        Time("09:00:00"),
                        Dt(seconds=1),

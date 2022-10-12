@@ -19,25 +19,10 @@ class FleetManager(object):
     def create_waiting_vehicle(self, node: str, capacity: int):
         return self.create_vehicle(node, capacity, [VehicleActivityStop(node, is_done=False)])
 
-    def start_waiting_vehicle(self, id:str):
-        new_veh = self._stopped.pop(id)
-        self.vehicles[new_veh.id] = new_veh
-        self.__veh_manager.add_vehicle(new_veh)
-        for user in self.vehicles[id].passenger.values():
-            user[1]._waiting_vehicle = False
-
     def delete_vehicle(self, vehid:str):
         self.__veh_manager.remove_vehicle(self.vehicles[vehid])
         del self.vehicles[vehid]
 
-    # def make_vehicle_wait(self, veh:Vehicle):
-    #     self.__veh_manager.remove_vehicle(veh)
-    #     del self.vehicles[veh.id]
-    #     self._stopped[veh.id] = veh
-
     def vehicle_type(self):
         return self._constructor.__name__ if self._constructor is not None else None
 
-    # @property
-    # def nb_waiting_vehicles(self):
-    #     return len(self._stopped)

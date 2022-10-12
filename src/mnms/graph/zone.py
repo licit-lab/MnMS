@@ -1,5 +1,5 @@
 from typing import Set, List, Annotated
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -13,8 +13,8 @@ class Zone(object):
     sections: Set[str]
     contour: PointList
 
-    def is_inside(self, point: Point):
-        return points_in_polygon(self.contour, [point])[0]
+    def is_inside(self, points: List[Point]):
+        return points_in_polygon(self.contour, [points])
 
 
 def points_in_polygon(polygon, pts):
@@ -36,7 +36,7 @@ def points_in_polygon(polygon, pts):
     return mask
 
 
-def construct_zone(roads: "RoadDescriptor", _id: str, contour: PointList):
+def construct_zone_from_contour(roads: "RoadDescriptor", _id: str, contour: PointList):
     section_centers = [0 for _ in range(len(roads.sections))]
     section_ids = np.array([s for s in roads.sections])
 
@@ -51,3 +51,18 @@ def construct_zone(roads: "RoadDescriptor", _id: str, contour: PointList):
     mask = points_in_polygon(contour_array, section_centers)
     zone_links = section_ids[mask].tolist()
     return Zone(_id, zone_links, contour)
+
+
+def construct_zone_from_sections(roads: "RoadDescriptor", _id: str, sections: List[str]):
+    nodes = []
+    for sec in sections:
+        section = roads.sections[sec]
+        nodes.append(roads.nodes[section.upstream].position)
+        nodes.append(roads.nodes[section.downstream].position)
+
+    nodes = np.array(nodes)
+
+    min_x, min_y = np.min(nodes, axis=0)
+    max_x, max_y = np.max(nodes, axis=0)
+    bbox = [[min_x, min_y], [max_x, min_y], [max_x, max_y], [min_x, max_y]]
+    return Zone(_id, set(sections), bbox)

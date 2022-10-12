@@ -52,8 +52,6 @@ class Dt(object):
         if minutes < 0:
             minutes = 60 + seconds
             hours -= 1
-        # print(self._hours, self._minutes, self._seconds)
-        # print(other._hours, other._minutes, other._seconds)
 
         return Dt(hours, minutes, seconds)
 
@@ -213,12 +211,9 @@ class Time(object):
         new_seconds = self._seconds + Decimal(dt._seconds)
         new_minutes = self._minutes + Decimal(dt._minutes) + Decimal(new_seconds//60)
         new_seconds = new_seconds%60
-        # print(new_minutes)
         hours = self._hours + Decimal(dt._hours) + Decimal(new_minutes//60)
         new_minutes = new_minutes%60
-        # print(new_minutes)
         new_seconds = new_seconds%60
-        # print(hours, new_minutes, new_seconds)
         assert hours <= 24
 
         new_time = Time("")
@@ -262,8 +257,8 @@ class Time(object):
 
 
 class TimeTable(object):
-    def __init__(self, times:List[Time]=None):
-        self.table:List[Time] = times if times is not None else []
+    def __init__(self, times: List[Time]=None):
+        self.table: List[Time] = times if times is not None else []
 
     @classmethod
     def create_table_freq(cls, start: str, end: str, dt:Dt):
@@ -294,7 +289,6 @@ class TimeTable(object):
 
     def __dump__(self):
         return [time.time for time in self.table]
-
 
     @classmethod
     def __load__(cls, data):
