@@ -1,3 +1,4 @@
+from math import ceil
 from time import time
 import csv
 import traceback
@@ -9,7 +10,7 @@ import numpy as np
 
 from mnms.demand import User
 from mnms.graph.layers import MultiLayerGraph
-from mnms.flow.abstract import AbstractFlowMotor
+from mnms.flow.abstract import AbstractMFDFlowMotor
 from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.abstract import AbstractDecisionModel
@@ -24,7 +25,7 @@ class Supervisor(object):
     def __init__(self,
                  graph: MultiLayerGraph,
                  demand: AbstractDemandManager,
-                 flow_motor: AbstractFlowMotor,
+                 flow_motor: AbstractMFDFlowMotor,
                  decision_model: AbstractDecisionModel,
                  outfile: Optional[str] = None,
                  logfile: Optional[str] = None,
@@ -42,7 +43,7 @@ class Supervisor(object):
 
         self._mlgraph: MultiLayerGraph = None
         self._demand: AbstractDemandManager = demand
-        self._flow_motor: AbstractFlowMotor = flow_motor
+        self._flow_motor: AbstractMFDFlowMotor = flow_motor
 
         self._decision_model: AbstractDecisionModel = decision_model
         self._user_flow: UserFlow = UserFlow()
@@ -74,7 +75,7 @@ class Supervisor(object):
         for layer in mmgraph.layers.values():
             layer.initialize()
 
-    def add_flow_motor(self, flow: AbstractFlowMotor):
+    def add_flow_motor(self, flow: AbstractMFDFlowMotor):
         self._flow_motor = flow
         flow.set_graph(self._mlgraph)
 
@@ -209,8 +210,7 @@ class Supervisor(object):
 
         self.tcurrent = tstart
 
-        progress = ProgressBar((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor) - 1)
-
+        progress = ProgressBar(int((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor)))
         total_user = []
 
         while self.tcurrent < tend:

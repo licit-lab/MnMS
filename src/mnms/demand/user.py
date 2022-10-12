@@ -1,3 +1,4 @@
+from collections import defaultdict
 from copy import deepcopy
 from enum import Enum
 from typing import Union, List, Tuple, Optional, Dict
@@ -73,7 +74,7 @@ class User(TimeDependentSubject):
         self._state = UserState.STOP
 
         self.response_dt = User.default_response_dt.copy() if response_dt is None else response_dt
-        self.pickup_dt = User.default_pickup_dt.copy() if response_dt is None else pickup_dt
+        self.pickup_dt = defaultdict(lambda: User.default_pickup_dt.copy() if response_dt is None else lambda: pickup_dt)
 
         self._continuous_journey = continuous_journey
         self.parameters: Dict = dict()

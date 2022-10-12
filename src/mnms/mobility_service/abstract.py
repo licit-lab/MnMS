@@ -85,26 +85,22 @@ class AbstractMobilityService(ABC):
         else:
             self._counter_maintenance += 1
 
-    # TODO: match just after request
     def launch_matching(self):
         refuse_user = list()
 
         if self._counter_matching == self._dt_matching:
             self._counter_matching = 0
             negotiation = self.request(self._user_buffer)
-            matched_user = dict()
 
             for uid, service_dt in negotiation.items():
-                u = self._user_buffer[uid][0]
-                if u.pickup_dt > service_dt:
-                    matched_user[uid] = u, self._user_buffer[uid][1]
+                user, drop_node = self._user_buffer[uid]
+                if user.pickup_dt[self.id] > service_dt:
+                    self.matching(user, drop_node)
                 else:
                     log.info(f"{uid} refused {self.id} offer (predicted pickup time too long)")
-                    u.set_state_stop()
-                    u.notify(self._tcurrent)
-                    refuse_user.append(u)
-
-            self.matching(matched_user)
+                    user.set_state_stop()
+                    user.notify(self._tcurrent)
+                    refuse_user.append(user)
 
             self._user_buffer = dict()
         else:
@@ -127,7 +123,7 @@ class AbstractMobilityService(ABC):
         pass
 
     @abstractmethod
-    def matching(self, users: Dict[str, Tuple[User, str]]):
+    def matching(self, user: User, drop_node: str):
         pass
 
     @abstractmethod

@@ -2,7 +2,7 @@ import unittest
 
 from mnms.graph.layers import CarLayer, BusLayer
 from mnms.graph.road import RoadDescriptor
-from mnms.graph.zone import Zone
+from mnms.graph.zone import construct_zone_from_sections
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable, Dt
@@ -24,8 +24,8 @@ class TestLayers(unittest.TestCase):
         self.roads.register_stop("S0", "0_1", 0.4)
         self.roads.register_stop("S1", "1_2", 0.9)
 
-        self.roads.add_zone(Zone("Z0", {"0_1"}))
-        self.roads.add_zone(Zone("Z1", {"1_2"}))
+        self.roads.add_zone(construct_zone_from_sections(self.roads, "Z0", ["0_1"]))
+        self.roads.add_zone(construct_zone_from_sections(self.roads, "Z1", ["1_2"]))
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -101,8 +101,8 @@ class TestSerializationLayers(unittest.TestCase):
         self.roads.register_stop("S0", "0_1", 0.4)
         self.roads.register_stop("S1", "1_2", 0.9)
 
-        self.roads.add_zone(Zone("Z0", {"0_1"}))
-        self.roads.add_zone(Zone("Z1", {"1_2"}))
+        self.roads.add_zone(construct_zone_from_sections(self.roads, "Z0", ["0_1"]))
+        self.roads.add_zone(construct_zone_from_sections(self.roads, "Z1", ["1_2"]))
 
     def tearDown(self):
         """Concludes and closes the test.

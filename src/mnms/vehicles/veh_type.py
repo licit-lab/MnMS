@@ -65,13 +65,11 @@ class VehicleActivityStop(VehicleActivity):
     state: VehicleState = field(default=VehicleState.STOP, init=False)
 
     def start(self, veh: "Vehicle"):
-        # if self.user is not None:
-        #     veh._vehicle = veh
         return None
 
     def done(self, veh: "Vehicle"):
         if self.user is not None:
-            veh._vehicle = veh
+            self.user._vehicle = veh
 
 
 @dataclass(slots=True)
@@ -148,6 +146,7 @@ class Vehicle(TimeDependentSubject):
         self._remaining_link_length = None
         self._position = None
         self._distance = 0
+        self._iter_path = None
         self.speed = initial_speed
 
         self.activities: Deque[VehicleActivity] = deque([])
@@ -219,8 +218,6 @@ class Vehicle(TimeDependentSubject):
                 assert self._current_node == self._current_link[0]
             else:
                 activity.is_done = True
-
-            # self._current_node = self._current_link[0]
 
     def override_current_activity(self):
         next_activity = self.activities.popleft()

@@ -1,8 +1,9 @@
-from collections import ChainMap
-from typing import Optional, Dict, Set, List, Type
+import sys
+from collections import ChainMap, defaultdict
+from typing import Optional, Dict, Set, List, Type, Callable
 
 import numpy as np
-from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph
+from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph, Link
 
 from mnms.graph.abstract import AbstractLayer
 from mnms.graph.road import RoadDescriptor
@@ -118,10 +119,12 @@ class PublicTransportLayer(AbstractLayer):
         self.graph.add_node(sid, node_pos[0], node_pos[1], self.id)
 
     def _connect_stops(self, lid, line_id, upstream, downstream, reference_sections):
-        line_length = sum(self.roads.sections[s].length for s in reference_sections[1:-1])
-        line_length += self.roads.sections[reference_sections[0]].length * (1 - self.roads.stops[upstream].relative_position)
-        line_length += self.roads.sections[reference_sections[-1]].length * self.roads.stops[downstream].relative_position
-
+        if len(reference_sections) > 1:
+            line_length = sum(self.roads.sections[s].length for s in reference_sections[1:-1])
+            line_length += self.roads.sections[reference_sections[0]].length * (1 - self.roads.stops[upstream].relative_position)
+            line_length += self.roads.sections[reference_sections[-1]].length * self.roads.stops[downstream].relative_position
+        else:
+            line_length = self.roads.sections[reference_sections[0]].length * (self.roads.stops[downstream].relative_position - self.roads.stops[upstream].relative_position)
         costs = {'length': line_length}
         self.graph.add_link(lid, line_id+'_'+upstream, line_id+'_'+downstream, line_length, costs, self.id)
         self.map_reference_links[lid] = reference_sections
@@ -220,14 +223,15 @@ class OriginDestinationLayer(object):
     def __init__(self):
         self.origins = dict()
         self.destinations = dict()
+        self.id = "ODLAYER"
 
     def create_origin_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, pos[0], pos[1], "ODLAYER")
+        new_node = Node(nid, pos[0], pos[1], self.id)
 
         self.origins[nid] = new_node
 
     def create_destination_node(self, nid, pos: np.ndarray):
-        new_node = Node(nid, pos[0], pos[1], "ODLAYER")
+        new_node = Node(nid, pos[0], pos[1], self.id)
 
         self.destinations[nid] = new_node
 
@@ -246,6 +250,62 @@ class OriginDestinationLayer(object):
         return new_obj
 
 
+class TransitLayer(object):
+    def __init__(self):
+        self._costs_functions: Dict[str, Callable[[Link], float]] = dict()
+        self.links: defaultdict[str, defaultdict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
+
+    def add_cost_function(self, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
+        self._costs_functions[cost_name] = cost_function
+
+    def add_link(self, lid, olayer, dlayer):
+        """
+        lid: id of link
+        olayer: name of the layer origin node of link belongs to
+        dlayer: name of the layer destination node of link belongs to
+        """
+        self.links[olayer][dlayer].append(lid)
+
+    def iter_links(self):
+        """
+        Iter through all links that connects different layer including the origin destination layer
+
+        Yields:
+            str: The id of the transit link
+
+        """
+        for olayer in self.links:
+            for links in self.links[olayer].values():
+                for lid in links:
+                    yield lid
+
+    def iter_inter_links(self):
+        """
+        Iter through all links that connects different layer except the origin destination layer
+
+        Yields:
+            str: The id of the transit link
+
+        """
+        for olayer in self.links:
+            for dlayer, links in self.links[olayer].items():
+                if "ODLAYER" not in (olayer, dlayer):
+                    for lid in links:
+                        yield lid
+
+    def __dump__(self):
+        return dict(self.links)
+
+    @classmethod
+    def __load__(cls, data):
+        new_obj = cls()
+        for olayer in data:
+            for dlayer, lid in data[olayer].items():
+                new_obj.add_link(lid, olayer, dlayer)
+
+        return new_obj
+
+
 class MultiLayerGraph(object):
     def __init__(self,
                  layers:List[AbstractLayer] = [],
@@ -259,7 +319,6 @@ class MultiLayerGraph(object):
             odlayer:
             connection_distance:
         """
-
         self.graph: OrientedGraph = merge_oriented_graph([l.graph for l in layers])
 
         self.layers = dict()
@@ -270,6 +329,7 @@ class MultiLayerGraph(object):
             self.map_reference_links.maps.append(l.map_reference_links)
 
         self.odlayer = None
+        self.transitlayer = TransitLayer()
         self.roads = layers[0].roads
 
         for l in layers:
@@ -293,21 +353,30 @@ class MultiLayerGraph(object):
 
         graph_node_ids = np.array([nid for nid in self.graph.nodes])
         graph_node_pos = np.array([n.position for n in self.graph.nodes.values()])
-
         for nid, node in odlayer.origins.items():
             npos = np.array(node.position)
             dist_nodes = _norm(graph_node_pos-npos, axis=1)
             mask = dist_nodes < connection_distance
             for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                 if layer_nid not in odlayer_nodes:
-                    self.graph.add_link(f"{nid}_{layer_nid}", nid, layer_nid, dist, {'length': dist}, "TRANSIT")
+                    lid = f"{nid}_{layer_nid}"
+                    self.graph.add_link(lid, nid, layer_nid, dist, {'length': dist}, "TRANSIT")
+                    # Add the transit link into the transit layer
+                    link_olayer_id = self.graph.nodes[nid].label
+                    link_dlayer_id = self.graph.nodes[layer_nid].label
+                    self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
         for nid, node in odlayer.destinations.items():
             npos = np.array(node.position)
             dist_nodes = _norm(graph_node_pos-npos, axis=1)
             mask = dist_nodes < connection_distance
             for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                 if layer_nid not in odlayer_nodes:
-                    self.graph.add_link(f"{layer_nid}_{nid}", layer_nid, nid, dist, {'length': dist}, "TRANSIT")
+                    lid = f"{layer_nid}_{nid}"
+                    self.graph.add_link(lid, layer_nid, nid, dist, {'length': dist}, "TRANSIT")
+                    # Add the transit link into the transit layer
+                    link_olayer_id = self.graph.nodes[layer_nid].label
+                    link_dlayer_id = self.graph.nodes[nid].label
+                    self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
 
     def construct_layer_service_mapping(self):
         for layer in self.layers.values():
@@ -316,6 +385,19 @@ class MultiLayerGraph(object):
 
     def connect_layers(self, lid: str, upstream: str, downstream: str, length: float, costs: Dict[str, float]):
         self.graph.add_link(lid, upstream, downstream, length, costs, "TRANSIT")
+        # Add the transit link into the transit layer
+        link_olayer_id = self.graph.nodes[upstream].label
+        link_dlayer_id = self.graph.nodes[downstream].label
+        self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
+
+    def add_cost_function(self, layerid, cost_name, cost_function):
+        # Retrieve layer
+        if layerid == 'TRANSIT':
+            layer = self.transitlayer
+        else:
+            layer = self.layers[layerid]
+        # Add cost function on layer
+        layer.add_cost_function(cost_name, cost_function)
 
 
 if __name__ == "__main__":

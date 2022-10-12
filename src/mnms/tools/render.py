@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
-
+import pandas as pd
 from matplotlib.collections import LineCollection
+from matplotlib.patches import Patch
+
+from mnms.time import Time
 
 
 def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=True, draw_stops=True, label_size=5):
@@ -73,8 +76,55 @@ def draw_line(ax, mlgraph, line, color='green', linkwidth=6, alpha=0.6, draw_sto
         ax.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='black',
             fillstyle='full', markersize=nodesize)
 
+
 def draw_odlayer(ax, mlgraph, color='blue', nodesize=2):
     ods = list(mlgraph.odlayer.origins.keys()) + list(mlgraph.odlayer.destinations.keys())
     x, y = zip(*[mlgraph.graph.nodes[od].position for od in ods])
     ax.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='black',
         fillstyle='full', markersize=nodesize)
+
+
+def draw_veh_activity(ax, veh_result_file: str, veh_id: str):
+    c_dict = {'STOP': '#E64646', 'PICKUP': '#E69646', 'SERVING': '#34D05C',
+              'REPOSITIONING': '#34D0C3'}
+    df = pd.read_csv(veh_result_file, sep=";")
+    df = df[df["ID"] == int(veh_id)]
+    current_state = df.iloc[0]["STATE"]
+    start_time = Time(df.iloc[0]["TIME"])
+    current_passengers = df.iloc[0]["PASSENGERS"] if not pd.isna(df.iloc[0]["PASSENGERS"]) else ""
+    xticks = []
+    i = 0
+    for idx, row in df.iterrows():
+        next_state = row.STATE
+        next_passengers = row.PASSENGERS if not pd.isna(row.PASSENGERS) else ""
+        end_time = Time(row.TIME)
+        xticks.append(end_time.to_seconds())
+        if next_state != current_state:
+            ax.barh(f"ACTIVITY_{i}", (end_time - start_time).to_seconds(), left=start_time.to_seconds(), height=0.5,
+                    color=c_dict[current_state])
+            ax.axvline(x=start_time.to_seconds(), color='k', ls='--')
+            ax.text(end_time.to_seconds() + 1, f"ACTIVITY_{i}",
+                    next_passengers,
+                    va='center', alpha=0.8)
+            current_state = next_state
+            current_passengers = next_passengers
+            start_time = end_time
+        elif next_passengers != current_passengers:
+            ax.barh(f"ACTIVITY_{i}", (end_time - start_time).to_seconds(), left=start_time.to_seconds(), height=0.5,
+                    color=c_dict[current_state])
+            ax.axvline(x=start_time.to_seconds(), color='k', ls='--')
+            ax.text(end_time.to_seconds() + 1, f"ACTIVITY_{i}",
+                    next_passengers,
+                    va='center', alpha=0.8)
+            current_state = next_state
+            start_time = end_time
+            current_passengers = next_passengers
+        i += 1
+
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([Time.from_seconds(x).time for x in xticks])
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    legend_elements = [Patch(facecolor=c_dict[i], label=i) for i in c_dict]
+    plt.legend(handles=legend_elements)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(20))

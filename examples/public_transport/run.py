@@ -2,14 +2,13 @@ import pathlib
 
 from mnms import LOGLEVEL
 from mnms.demand import CSVDemandManager
-from mnms.flow.MFD import Reservoir, MFDFlow
+from mnms.flow.MFD import Reservoir, MFDFlowMotor
 from mnms.generation.layers import generate_matching_origin_destination_layer, generate_layer_from_roads, \
     generate_grid_origin_destination_layer
 from mnms.generation.roads import generate_line_road, generate_manhattan_road
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
 from mnms.io.graph import save_graph, load_graph
 from mnms.log import set_mnms_logger_level
-from mnms.mobility_service.car import PersonalCarMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.simulation import Supervisor
 from mnms.time import TimeTable, Time, Dt
@@ -67,7 +66,7 @@ def mfdspeed(dacc):
     dacc['BUS'] = 5
     return dacc
 
-flow_motor = MFDFlow()
+flow_motor = MFDFlowMotor()
 flow_motor.add_reservoir(Reservoir('RES', ['BUS'], mfdspeed))
 
 supervisor = Supervisor(mlgraph,

@@ -11,14 +11,15 @@ from mnms.mobility_service.public_transport import PublicTransportMobilityServic
 
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
-from mnms.flow.MFD import MFDFlow, Reservoir
+from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt, TimeTable
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
+from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Bus
 
 
-class TestMultoModal(unittest.TestCase):
+class TestMultiModal(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
@@ -79,8 +80,8 @@ class TestMultoModal(unittest.TestCase):
             dspeed = {'CAR': 3}
             return dspeed
 
-        flow_motor = MFDFlow()
-        flow_motor.add_reservoir(Reservoir('RES', ['CAR'], mfdspeed))
+        flow_motor = MFDFlowMotor()
+        flow_motor.add_reservoir(Reservoir(roads.zones["RES"], ['CAR'], mfdspeed))
 
         supervisor = Supervisor(mlgraph,
                                 demand,
@@ -96,6 +97,7 @@ class TestMultoModal(unittest.TestCase):
         """Concludes and closes the test.
         """
         self.temp_dir_results.cleanup()
+        VehicleManager.empty()
 
     def test_run_and_results(self):
         pass

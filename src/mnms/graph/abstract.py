@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Optional, Dict, List, Type
+from typing import Optional, Dict, List, Type, Callable
 
 from hipop.graph import OrientedGraph
 
@@ -38,6 +38,8 @@ class AbstractLayer(object):
         self.map_reference_links: Dict[str, List[str]] = dict()
         self.map_reference_nodes: Dict[str, str] = dict()
 
+        self._costs_functions: Dict[str, Callable] = dict()
+
         self.mobility_services: Dict[str, AbstractMobilityService] = dict()
         self._veh_type: Type[Vehicle] = veh_type
 
@@ -52,6 +54,9 @@ class AbstractLayer(object):
         service.fleet = FleetManager(self._veh_type)
         self.mobility_services[service.id] = service
 
+    def add_cost_function(self, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
+        self._costs_functions[cost_name] = cost_function
+
     @property
     def default_speed(self):
         return self._default_speed
@@ -59,6 +64,10 @@ class AbstractLayer(object):
     @property
     def id(self):
         return self._id
+
+    @property
+    def vehicle_type(self):
+        return self._veh_type.__name__
 
     @abstractmethod
     def __dump__(self):
