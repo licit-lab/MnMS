@@ -12,6 +12,7 @@ from numpy.linalg import norm as _norm
 
 from mnms.demand.user import User, Path
 from mnms.graph.layers import MultiLayerGraph
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.log import create_logger
 from mnms.time import Time
 from mnms.tools.dict_tools import sum_cost_dict
@@ -103,31 +104,57 @@ class AbstractDecisionModel(ABC):
         self._mandatory_mobility_services = services
 
     def set_refused_users(self, users: List[User]):
-        self._refused_user = users
+        self._refused_user.extend(users)
 
-    def _check_refused_users(self) -> List[User]:
+    def _check_refused_users(self, tcurrent) -> List[User]:
         new_users = []
         gnodes = self._mlgraph.graph.nodes
         for u in self._refused_user:
             cnode = u._current_node
             refused_mservice = gnodes[cnode].label
 
-            if u.available_mobility_service is not None and len(u.available_mobility_service) > 1:
+            # Get all available mobility services
+            all_mob_services = [list(v.mobility_services.values()) for v in self._mlgraph.layers.values()]
+            all_mob_services = [item for sublist in all_mob_services for item in sublist]
+            all_mob_services_names = set([ms.id for ms in all_mob_services])
+            personal_mob_services_names = set([ms.id for ms in all_mob_services if isinstance(ms,PersonalMobilityService)])
+            # If user had no defined available mobility services, it means she had
+            # access to all
+            if u.available_mobility_service is None:
+                u.available_mobility_service = all_mob_services_names
+            # Remove the mobility service traveler has (been) refused (on)
+            if refused_mservice in u.available_mobility_service:
                 u.available_mobility_service.remove(refused_mservice)
-                u._continuous_journey = u.id
-                u.id = f"{u.id}_CONTINUOUS"
-                new_users.append(u)
-                u.origin = np.array(gnodes[u._current_node].position)
+            # Remove personal mobility services if traveler is not at home/origin
+            # anymore
+            origins_id = list(self._mlgraph.odlayer.origins.keys())
+            origins_pos = np.array([n.position for n in self._mlgraph.odlayer.origins.values()])
+            if isinstance(u.origin, np.ndarray):
+                origin = origins_id[np.argmin(_norm(origins_pos - u.origin, axis=1))]
+            else:
+                origin = u.origin
+            for personal_mob_service in personal_mob_services_names:
+                if personal_mob_service in u.available_mobility_service and u._current_node != origin:
+                    u.available_mobility_service.remove(personal_mob_service)
+            # Check if user has no remaining available mobility_service
+            if len(u.available_mobility_service) == 0:
+                log.error(f"User {u.id} has no available mobility service left.")
+                sys.exit()
+
+            # Create a new user representing refused user legacy
+            u._continuous_journey = u.id
+            u.id = f"{u.id}_CONTINUOUS"
+            new_users.append(u)
+            u.origin = np.array(gnodes[u._current_node].position)
+            u.departure_time = tcurrent.copy()
 
         self._refused_user = list()
         return new_users
 
     # TODO: restrict combination of paths (ex: we dont want Uber->Bus)
     def __call__(self, new_users: List[User], tcurrent: Time):
-        refused_user = self._check_refused_users()
-        for u in refused_user:
-           u.departure_time = tcurrent.copy()
-        new_users.extend(refused_user)
+        legacy_users = self._check_refused_users(tcurrent)
+        new_users.extend(legacy_users)
 
         origins, destinations, available_layers = _process_shortest_path_inputs(self._mlgraph, new_users)
         paths = parallel_k_shortest_path(self._mlgraph.graph,
@@ -201,4 +228,3 @@ class AbstractDecisionModel(ABC):
 
         if path_not_found:
             log.warning("Paths not found: %s", len(path_not_found))
-

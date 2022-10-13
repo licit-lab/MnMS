@@ -211,7 +211,7 @@ class UserFlow(object):
                 u.notify(self._tcurrent)
 
             if u.state is UserState.WAITING_ANSWER:
-                self._waiting_answer.setdefault(u.id, self._tcurrent.copy())
+                self._waiting_answer.setdefault(u.id, u.response_dt.copy())
 
         for uid in to_del:
             self.users.pop(uid)

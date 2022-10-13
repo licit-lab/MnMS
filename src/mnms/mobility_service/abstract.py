@@ -103,6 +103,11 @@ class AbstractMobilityService(ABC):
                     refuse_user.append(user)
 
             self._user_buffer = dict()
+            # NB: we clean _user_buffer here because answer provided by the mobility
+            #     service should be YES I match with you or No I refuse you, but not
+            #     let's wait the next timestep to see if I can find a vehicle for you
+            #     Mob service has only one chance to propose a match to the user,
+            #     except if user request the service again 
         else:
             self._counter_matching += 1
 
@@ -168,4 +173,3 @@ class AbstractOnDemandMobilityService(AbstractMobilityService, metaclass=ABCMeta
             self.rebalancing(next_demand, self._horizon.dt)
         else:
             self._counter_maintenance += 1
-
