@@ -62,7 +62,7 @@ def mfdspeed(dacc):
     return dspeed
 
 flow_motor = MFDFlowMotor()
-flow_motor.add_reservoir(Reservoir('RES', 'CAR', mfdspeed))
+flow_motor.add_reservoir(Reservoir(road_db.zones["RES"], 'CAR', mfdspeed))
 
 supervisor = Supervisor(mlgraph,
                         demand,
@@ -70,6 +70,6 @@ supervisor = Supervisor(mlgraph,
                         decision_model)
 
 supervisor.run(Time("07:00:00"),
-               Time("07:03:00"),
+               Time("07:03:03"),
                Dt(seconds=10),
                10)

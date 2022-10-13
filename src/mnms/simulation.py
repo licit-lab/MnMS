@@ -191,7 +191,7 @@ class Supervisor(object):
 
         self.tcurrent = tstart
 
-        progress = ProgressBar(int((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor)))
+        progress = ProgressBar(ceil((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor)))
         while self.tcurrent < tend:
             progress.update()
             progress.show()
@@ -233,7 +233,7 @@ class Supervisor(object):
 
             log.info('-'*50)
             affectation_step += 1
-
+        # print(progress._index, affectation_step)
         self._flow_motor.finalize()
 
         if self._decision_model._write:
@@ -250,6 +250,8 @@ class Supervisor(object):
                 if mservice._observer is not None:
                     mservice._observer.finish()
 
+        progress.update()
+        progress.show()
         progress.end()
 
     def create_crash_report(self, affectation_step, flow_step) -> dict:
