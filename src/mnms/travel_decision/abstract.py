@@ -106,7 +106,7 @@ class AbstractDecisionModel(ABC):
     def set_refused_users(self, users: List[User]):
         self._refused_user.extend(users)
 
-    def _check_refused_users(self, tcurrent) -> List[User]:
+    def _check_refused_users(self, tcurrent, personal_mob_service_park_radius: float = 100) -> List[User]:
         new_users = []
         gnodes = self._mlgraph.graph.nodes
         for u in self._refused_user:
@@ -125,16 +125,12 @@ class AbstractDecisionModel(ABC):
             # Remove the mobility service traveler has (been) refused (on)
             if refused_mservice in u.available_mobility_service:
                 u.available_mobility_service.remove(refused_mservice)
-            # Remove personal mobility services if traveler is not at home/origin
+            # Remove personal mobility services if traveler is not near home/origin
             # anymore
-            origins_id = list(self._mlgraph.odlayer.origins.keys())
-            origins_pos = np.array([n.position for n in self._mlgraph.odlayer.origins.values()])
-            if isinstance(u.origin, np.ndarray):
-                origin = origins_id[np.argmin(_norm(origins_pos - u.origin, axis=1))]
-            else:
-                origin = u.origin
+            current_pos = gnodes[u._current_node].position
+            origin_pos = u.origin if isinstance(u.origin, np.ndarray) else gnodes[u.origin].position
             for personal_mob_service in personal_mob_services_names:
-                if personal_mob_service in u.available_mobility_service and u._current_node != origin:
+                if personal_mob_service in u.available_mobility_service and _norm(origin_pos - current_pos) > personal_mob_service_park_radius:
                     u.available_mobility_service.remove(personal_mob_service)
             # Check if user has no remaining available mobility_service
             if len(u.available_mobility_service) == 0:
@@ -145,7 +141,7 @@ class AbstractDecisionModel(ABC):
             u._continuous_journey = u.id
             u.id = f"{u.id}_CONTINUOUS"
             new_users.append(u)
-            u.origin = np.array(gnodes[u._current_node].position)
+            u.origin = np.array(current_pos)
             u.departure_time = tcurrent.copy()
 
         self._refused_user = list()
