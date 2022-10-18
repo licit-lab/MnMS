@@ -56,6 +56,7 @@ class AbstractDecisionModel(ABC):
                  n_shortest_path: int = 3,
                  min_diff_dist: float = -100,
                  max_diff_dist: float = 100,
+                 personal_mob_service_park_radius: float = 100,
                  outfile: str = None,
                  verbose_file: bool = False,
                  cost: str = 'travel_time',
@@ -69,6 +70,7 @@ class AbstractDecisionModel(ABC):
             n_shortest_path: The number of shortest path computed for one user
             min_diff_dist: The min distance between the n computed shortest path and the first one that is required to accept the n shortest path
             max_diff_dist: The max distance between the n computed shortest path and the first one that is required to accept the n shortest path
+            personal_mob_service_park_radius: radius around refused user origin in which she can still have access to her personal mobility services such as personal car
             outfile: If specified the file in which compute path are written
             verbose_file: If true write all the computed shortest path, not only the one that is selected
             cost: The name of the cost to consider for the shortest path
@@ -78,6 +80,7 @@ class AbstractDecisionModel(ABC):
         self._n_shortest_path = n_shortest_path
         self._min_diff_dist = min_diff_dist
         self._max_diff_dist = max_diff_dist
+        self.personal_mob_service_park_radius = personal_mob_service_park_radius
         self._thread_number = thread_number
 
         self._mlgraph = mlgraph
@@ -106,7 +109,7 @@ class AbstractDecisionModel(ABC):
     def set_refused_users(self, users: List[User]):
         self._refused_user.extend(users)
 
-    def _check_refused_users(self, tcurrent, personal_mob_service_park_radius: float = 100) -> List[User]:
+    def _check_refused_users(self, tcurrent) -> List[User]:
         new_users = []
         gnodes = self._mlgraph.graph.nodes
         for u in self._refused_user:
@@ -130,7 +133,7 @@ class AbstractDecisionModel(ABC):
             current_pos = gnodes[u._current_node].position
             origin_pos = u.origin if isinstance(u.origin, np.ndarray) else gnodes[u.origin].position
             for personal_mob_service in personal_mob_services_names:
-                if personal_mob_service in u.available_mobility_service and _norm(origin_pos - current_pos) > personal_mob_service_park_radius:
+                if personal_mob_service in u.available_mobility_service and _norm(np.array(origin_pos) - np.array(current_pos)) > self.personal_mob_service_park_radius:
                     u.available_mobility_service.remove(personal_mob_service)
             # Check if user has no remaining available mobility_service
             if len(u.available_mobility_service) == 0:
