@@ -137,6 +137,7 @@ class Supervisor(object):
         self._decision_model.set_refused_users(all_refused_user)
         for u in all_refused_user:
             self._user_flow.users.pop(u.id, None)
+            self._user_flow._waiting_answer.pop(u.id, None)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
 

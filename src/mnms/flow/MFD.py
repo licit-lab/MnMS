@@ -136,7 +136,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                                    "travel_time": link.length/speed}
             # NB: travel_time could be defined as a cost_function
             for k,f in layer._costs_functions.items():
-                costs[k] = f(self._graph.graph, link, costs)
+                costs[k] = f(self._graph, link, costs)
             link.update_costs(costs)
 
             for links in link_layers: # only non transit links concerned
@@ -305,7 +305,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 layer = self._graph.layers[graph.links[lid].label]
                 costs_functions = layer._costs_functions
                 for k, f in costs_functions.items():
-                    costs[k] = f(graph, graph.links[lid], costs)
+                    costs[k] = f(self._graph, graph.links[lid], costs)
 
                 link = link_info.link
                 for mservice in link.costs.keys():

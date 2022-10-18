@@ -66,21 +66,21 @@ class TestCostsFunctions(unittest.TestCase):
 
         ## Add cost functions
         # CAR links
-        def gc_car(graph, link, costs, car_kmcost=0.0005, vot=0.003):
+        def gc_car(mlgraph, link, costs, car_kmcost=0.0005, vot=0.003):
             gc = link.length * car_kmcost + vot * link.length / costs['speed']
             return gc
 
         mlgraph.add_cost_function('CAR', 'generalized_cost', gc_car)
         # BUS links
-        def gc_bus(graph, link, costs, vot=0.003):
+        def gc_bus(mlgraph, link, costs, vot=0.003):
             gc = vot * link.length / costs['speed']
             return gc
 
         mlgraph.add_cost_function('BUS', 'generalized_cost', gc_bus)
         # TRANSIT links
-        def gc_transit(graph, link, costs, vot=0.003, transfer_penalty=1.44, parking_cost=3, bus_cost=2):
-            olabel = graph.nodes[link.upstream].label
-            dlabel = graph.nodes[link.downstream].label
+        def gc_transit(mlgraph, link, costs, vot=0.003, transfer_penalty=1.44, parking_cost=3, bus_cost=2):
+            olabel = mlgraph.graph.nodes[link.upstream].label
+            dlabel = mlgraph.graph.nodes[link.downstream].label
             if olabel == 'CAR' and dlabel == 'BUS':
                 gc = vot * link.length / costs['speed'] + transfer_penalty + parking_cost + bus_cost
             elif olabel == 'ODLAYER' and dlabel == 'CAR':
@@ -152,7 +152,7 @@ class TestCostsFunctions(unittest.TestCase):
         #       so as estimated travel cost and realized travel cost because the
         #       waiting time for a vehicle (PT, MoD, etc.) is not included in the
         #       estimation of travel time/cost. New feature = add a waiting time
-        #       estimator 
+        #       estimator
 
         #total_cost = 2 * 0.003 * 50 / 1.42 + 0.003 * 2000 / 7 + 0.0005 * 2000 + 0.003 * 20 / 1.42 + 3 + 2 + 1.44 + 2 * 0.003 * 1450 / 7
         #travel_time = Dt(seconds=2 * 50 / 1.42 + 2000 / 7 + 20 / 1.42 + 2 * 1450 / 7)
