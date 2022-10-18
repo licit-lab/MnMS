@@ -62,11 +62,15 @@ def generate_random_demand(mlgraph: "MultiLayerGraph",
 
     graph = mlgraph.graph
     user_count = 0
+
+    map_layer_services = {lid:list(layer.mobility_services.keys())[0] for lid, layer in mlgraph.layers.items()}
+    map_layer_services["TRANSIT"] = "WALK"
+
     while user_count <= nb_user:
         unode = choice(origins)
         dnode = choice(destinations)
 
-        _, path_cost = dijkstra(graph, unode, dnode, cost_path)
+        _, path_cost = dijkstra(graph, unode, dnode, cost_path, map_layer_services)
         if min_cost <= path_cost < float('inf'):
             demand.extend([User(str(next(uid)), unode, dnode, Time.from_seconds(distrib_time(tstart, tend))) for _ in
                            range(repeat)])

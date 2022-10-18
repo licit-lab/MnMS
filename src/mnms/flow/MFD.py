@@ -5,6 +5,8 @@ from typing import Callable, Dict
 
 import numpy as np
 
+from hipop.graph import Link
+
 from mnms.demand import User
 from mnms.flow.abstract import AbstractMFDFlowMotor, AbstractReservoir
 from mnms.graph.zone import Zone
@@ -21,6 +23,7 @@ _dist = np.linalg.norm
 
 @dataclass
 class LinkInfo:
+    link: Link
     veh: str
     sections: List[Tuple[str, float]]
 
@@ -90,7 +93,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     for section in self._graph.map_reference_links[lid]:
                         sections_length.append((section, roads.sections[section].length))
 
-                self._layer_link_length_mapping[lid] = LinkInfo(link_layer.vehicle_type.upper(), sections_length)
+                self._layer_link_length_mapping[lid] = LinkInfo(link, link_layer.vehicle_type.upper(), sections_length)
 
         res_links = {res.id: roads.zones[res.id] for res in self.reservoirs.values()}
         res_dict = {res.id: res for res in self.reservoirs.values()}
@@ -126,8 +129,11 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             else:
                 layer = self._graph.layers[link.label]
                 speed = layer.default_speed
-            costs = {"speed": speed,
-                     "travel_time": link.length/speed}
+
+            costs = {}
+            for mservice in link.costs.keys():
+                costs[mservice] = {"speed": speed,
+                                   "travel_time": link.length/speed}
             # NB: travel_time could be defined as a cost_function
             for k,f in layer._costs_functions.items():
                 costs[k] = f(self._graph.graph, link, costs)
@@ -291,15 +297,21 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     new_speed += length * graph.links[lid].cost["speed"]
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             if new_speed != 0:  # TODO: check if this condition is still useful
-                costs = {'travel_time': total_len / new_speed,
-                         'speed': new_speed,
-                         'length': total_len}
+                # costs = {'travel_time': total_len / new_speed,
+                #          'speed': new_speed,
+                #          'length': total_len}
+                costs = {}
 
                 layer = self._graph.layers[graph.links[lid].label]
                 costs_functions = layer._costs_functions
                 for k, f in costs_functions.items():
                     costs[k] = f(graph, graph.links[lid], costs)
 
+                link = link_info.link
+                for mservice in link.costs.keys():
+                    costs[mservice] = {'travel_time': total_len / new_speed,
+                                       'speed': new_speed,
+                                       'length': total_len}
                 # Update of the big multi layer graph
                 graph.update_link_costs(lid, costs)
 
@@ -308,7 +320,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     if lid in links:
                         links[lid].update_costs(costs)
                         break
-
 
     def write_result(self, step_affectation:int, step_flow:int):
         tcurrent = self._tcurrent.time

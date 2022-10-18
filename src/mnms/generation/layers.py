@@ -20,8 +20,18 @@ def generate_layer_from_roads(roads: RoadDescriptor,
         layer.create_node(f"{layer_id}_{n}", n, {})
 
     for lid, data in roads.sections.items():
-        layer.create_link(f"{layer_id}_{lid}", f"{layer_id}_{data.upstream}", f"{layer_id}_{data.downstream}",
-                          {'length': data.length}, [lid])
+        cost = {}
+        if mobility_services is not None:
+            for mservice in mobility_services:
+                cost[mservice.id] = {'length': data.length}
+        else:
+            cost["_DEFAULT"] = {'length': data.length}
+
+        layer.create_link(f"{layer_id}_{lid}",
+                          f"{layer_id}_{data.upstream}",
+                          f"{layer_id}_{data.downstream}",
+                          cost,
+                          [lid])
     return layer
 
 

@@ -31,7 +31,10 @@ class SimpleLayer(AbstractLayer):
 
         self.map_reference_nodes[nid] = dbnode
 
-    def create_link(self, lid: str, upstream: str, downstream: str, costs: Dict[str, float], road_links: List[str]):
+    def create_link(self, lid: str, upstream: str, downstream: str, costs: Dict[str, Dict[str, float]], road_links: List[str]):
+        # for mservice in costs:
+        #     assert mservice == "WALK" or mservice in self.mobility_services.keys(), f"Mobility service {mservice} defined in costs is not in {self.id} mobility services"
+
         length = sum(self.roads.sections[l].length for l in road_links)
         self.graph.add_link(lid, upstream, downstream, length, costs, self.id)
 
@@ -125,7 +128,8 @@ class PublicTransportLayer(AbstractLayer):
             line_length += self.roads.sections[reference_sections[-1]].length * self.roads.stops[downstream].relative_position
         else:
             line_length = self.roads.sections[reference_sections[0]].length * (self.roads.stops[downstream].relative_position - self.roads.stops[upstream].relative_position)
-        costs = {'length': line_length}
+
+        costs = {mservice: {'length': line_length} for mservice in self.mobility_services.keys()}
         self.graph.add_link(lid, line_id+'_'+upstream, line_id+'_'+downstream, line_length, costs, self.id)
         self.map_reference_links[lid] = reference_sections
 
@@ -252,11 +256,11 @@ class OriginDestinationLayer(object):
 
 class TransitLayer(object):
     def __init__(self):
-        self._costs_functions: Dict[str, Callable[[Link], float]] = dict()
+        self._costs_functions: Dict[str, Dict[str, Callable[[Link], float]]] = defaultdict(dict)
         self.links: defaultdict[str, defaultdict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
 
-    def add_cost_function(self, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
-        self._costs_functions[cost_name] = cost_function
+    def add_cost_function(self, mobility_service: str, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
+        self._costs_functions[mobility_service][cost_name] = cost_function
 
     def add_link(self, lid, olayer, dlayer):
         """
@@ -360,7 +364,7 @@ class MultiLayerGraph(object):
             for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                 if layer_nid not in odlayer_nodes:
                     lid = f"{nid}_{layer_nid}"
-                    self.graph.add_link(lid, nid, layer_nid, dist, {'length': dist}, "TRANSIT")
+                    self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
                     # Add the transit link into the transit layer
                     link_olayer_id = self.graph.nodes[nid].label
                     link_dlayer_id = self.graph.nodes[layer_nid].label
@@ -372,7 +376,7 @@ class MultiLayerGraph(object):
             for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                 if layer_nid not in odlayer_nodes:
                     lid = f"{layer_nid}_{nid}"
-                    self.graph.add_link(lid, layer_nid, nid, dist, {'length': dist}, "TRANSIT")
+                    self.graph.add_link(lid, layer_nid, nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
                     # Add the transit link into the transit layer
                     link_olayer_id = self.graph.nodes[layer_nid].label
                     link_dlayer_id = self.graph.nodes[nid].label
@@ -384,20 +388,22 @@ class MultiLayerGraph(object):
                 self.mapping_layer_services[service] = layer
 
     def connect_layers(self, lid: str, upstream: str, downstream: str, length: float, costs: Dict[str, float]):
+        if "WALK" not in costs:
+            costs = {"WALK": costs}
         self.graph.add_link(lid, upstream, downstream, length, costs, "TRANSIT")
         # Add the transit link into the transit layer
         link_olayer_id = self.graph.nodes[upstream].label
         link_dlayer_id = self.graph.nodes[downstream].label
         self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
 
-    def add_cost_function(self, layerid, cost_name, cost_function):
+    def add_cost_function(self, layer_id: str, cost_name: str, cost_function: Callable, mobility_service: Optional[str] = None):
         # Retrieve layer
-        if layerid == 'TRANSIT':
+        if layer_id == 'TRANSIT':
             layer = self.transitlayer
         else:
-            layer = self.layers[layerid]
+            layer = self.layers[layer_id]
         # Add cost function on layer
-        layer.add_cost_function(cost_name, cost_function)
+        layer.add_cost_function(mobility_service, cost_name, cost_function)
 
 
 if __name__ == "__main__":

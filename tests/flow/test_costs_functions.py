@@ -45,7 +45,7 @@ class TestCostsFunctions(unittest.TestCase):
         car_layer.create_node('C0', '0')
         car_layer.create_node('C1', '1')
 
-        car_layer.create_link('C0_C1', 'C0', 'C1', costs={'length': 2000}, road_links=['0_1'])
+        car_layer.create_link('C0_C1', 'C0', 'C1', costs={"PersonalVehicle": {'length': 2000}}, road_links=['0_1'])
 
         bus_layer = BusLayer(roads, default_speed=7,
                        services=[PublicTransportMobilityService('Bus')],
@@ -69,11 +69,13 @@ class TestCostsFunctions(unittest.TestCase):
         def gc_car(graph, link, costs, car_kmcost=0.0005, vot=0.003):
             gc = link.length * car_kmcost + vot * link.length / costs['speed']
             return gc
+
         mlgraph.add_cost_function('CAR', 'generalized_cost', gc_car)
         # BUS links
         def gc_bus(graph, link, costs, vot=0.003):
             gc = vot * link.length / costs['speed']
             return gc
+
         mlgraph.add_cost_function('BUS', 'generalized_cost', gc_bus)
         # TRANSIT links
         def gc_transit(graph, link, costs, vot=0.003, transfer_penalty=1.44, parking_cost=3, bus_cost=2):
@@ -88,6 +90,7 @@ class TestCostsFunctions(unittest.TestCase):
             else:
                 raise ValueError(f'Cost not defined for transit link between layer {olabel} and layer {dlabel}')
             return gc
+
         mlgraph.add_cost_function('TRANSIT', 'generalized_cost', gc_transit)
         self.mlgraph = mlgraph
 

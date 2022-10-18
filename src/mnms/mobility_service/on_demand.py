@@ -57,8 +57,7 @@ class OnDemandMobilityService(AbstractMobilityService):
                     if choosen_veh.is_empty:
                         veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
                         choosen_veh.activities[-1].node
-                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time',
-                                                  {self.layer.id})
+                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
                         if cost == float('inf'):
                             raise PathNotFound(choosen_veh._current_node, user.current_node)
 

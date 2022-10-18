@@ -28,6 +28,7 @@ def _process_shortest_path_inputs(mlgraph: MultiLayerGraph, users):
     origins = [None] * len(users)
     destinations = [None] * len(users)
     available_layers = [None] * len(users)
+    chosen_mservice = [None] * len(users)
 
     origins_id = list(odlayer.origins.keys())
     origins_pos = np.array([n.position for n in odlayer.origins.values()])
@@ -43,10 +44,23 @@ def _process_shortest_path_inputs(mlgraph: MultiLayerGraph, users):
             destinations[i] = u.destination
 
         available_layers[i] = set() if u.available_mobility_service is None else {layer.id for mservice in u.available_mobility_service for layer in mlgraph.layers.values()  if mservice in layer.mobility_services}
+
         if available_layers[i]:
             available_layers[i].add("TRANSIT")
 
-    return origins, destinations, available_layers
+        services = {}
+        if available_layers[i]:
+            for available_service in available_layers[i]:
+                for layer in mlgraph.layers.values():
+                    if available_service in layer.mobility_services.keys():
+                        services[layer.id] = available_service
+        else:
+            for layer in mlgraph.layers.values():
+                # Take the first registered mobility service
+                services[layer.id] = list(layer.mobility_services.keys())[0]
+        services["TRANSIT"] = "WALK"
+        chosen_mservice[i] = services
+    return origins, destinations, available_layers, chosen_mservice
 
 
 class AbstractDecisionModel(ABC):
@@ -156,11 +170,12 @@ class AbstractDecisionModel(ABC):
         legacy_users = self._check_refused_users(tcurrent)
         new_users.extend(legacy_users)
 
-        origins, destinations, available_layers = _process_shortest_path_inputs(self._mlgraph, new_users)
+        origins, destinations, available_layers, chosen_services = _process_shortest_path_inputs(self._mlgraph, new_users)
         paths = parallel_k_shortest_path(self._mlgraph.graph,
                                          origins,
                                          destinations,
                                          self._cost,
+                                         chosen_services,
                                          available_layers,
                                          self._min_diff_dist,
                                          self._max_diff_dist,

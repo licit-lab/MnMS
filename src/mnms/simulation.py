@@ -110,7 +110,6 @@ class Supervisor(object):
 
         self._user_flow.set_time(tstart)
 
-
     def update_mobility_services(self, flow_dt:Dt):
         for layer in self._mlgraph.layers.values():
             for mservice in layer.mobility_services.values():
