@@ -169,7 +169,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                         raise PathNotFound(veh._current_node, depot)
 
                     veh_path = self._construct_veh_path(veh_path)
-                    repositioning = VehicleActivityRepositioning(node=depot,
+                    repositioning = VehicleActivityRepositioning(node=nearest_depot,
                                                                  path=veh_path)
                     veh.activity.is_done = True
                     veh.add_activities([repositioning])
@@ -224,10 +224,19 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
 
         user_path = self._construct_veh_path(upath)
         veh_path = self._construct_veh_path(veh_path)
+
+        if veh_path:
+            pickup = VehicleActivityPickup(node=user._current_node,
+                                           path=veh_path,
+                                           user=user)
+        else:
+            pickup = VehicleActivityPickup(node=user._current_node,
+                                           path=veh_path,
+                                           user=user,
+                                           is_done=True)
+
         activities = [
-            VehicleActivityPickup(node=user._current_node,
-                                  path=veh_path,
-                                  user=user),
+            pickup,
             VehicleActivityServing(node=user.destination,
                                    path=user_path,
                                    user=user)

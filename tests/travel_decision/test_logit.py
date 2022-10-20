@@ -13,7 +13,8 @@ from mnms.simulation import Supervisor
 from mnms.time import TimeTable, Dt, Time
 from mnms.tools.observer import CSVVehicleObserver
 from mnms.travel_decision import DummyDecisionModel, LogitDecisionModel
-from mnms.vehicles.veh_type import Bus
+from mnms.vehicles.manager import VehicleManager
+from mnms.vehicles.veh_type import Bus, Vehicle
 
 
 def test_compute_all_mobility_services():
@@ -88,3 +89,6 @@ def test_compute_all_mobility_services():
                    Time("07:10:00"),
                    Dt(seconds=10),
                    10)
+
+    VehicleManager.empty()
+    Vehicle._counter = 0

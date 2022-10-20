@@ -1,4 +1,5 @@
 import sys
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 from typing import Callable, Dict
@@ -107,15 +108,15 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
     def initialize(self, walk_speed):
         # Check consistency of costs functions definition
-        if len(self._graph.layers) > 0:
-            costs_names = set(list(self._graph.layers.values())[0]._costs_functions.keys())
-            for layer in self._graph.layers.values():
-                if set(layer._costs_functions.keys()) != costs_names:
-                    log.error("Each cost function should be defined on all layers.")
-                    sys.exit()
-            if set(self._graph.transitlayer._costs_functions) != costs_names:
-                log.error("Each cost function should be defined on all layers, including transit layer.")
-                sys.exit()
+        # if len(self._graph.layers) > 0:
+        #     costs_names = set(list(self._graph.layers.values())[0]._costs_functions.keys())
+        #     for layer in self._graph.layers.values():
+        #         if set(layer._costs_functions.keys()) != costs_names:
+        #             log.error("Each cost function should be defined on all layers.")
+        #             sys.exit()
+        #     if set(self._graph.transitlayer._costs_functions) != costs_names:
+        #         log.error("Each cost function should be defined on all layers, including transit layer.")
+        #         sys.exit()
 
         # initialize costs on links
         link_layers = list()
@@ -246,7 +247,9 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         # Calculate accumulations
         current_vehicles = dict()
         for veh_id, veh in self.veh_manager._vehicles.items():
-            if veh.activity is None or veh.activity.is_done:
+            if veh.activity is None:
+                veh.next_activity()
+            while veh.activity.is_done:
                 veh.next_activity()
             if veh.state is not VehicleState.STOP:
                 self.count_moving_vehicle(veh, current_vehicles)
@@ -318,19 +321,23 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 # costs = {'travel_time': total_len / new_speed,
                 #          'speed': new_speed,
                 #          'length': total_len}
-                costs = {}
-
-                layer = self._graph.layers[graph.links[lid].label]
-                costs_functions = layer._costs_functions
-                for k, f in costs_functions.items():
-                    costs[k] = f(self._graph, graph.links[lid], costs)
+                costs = defaultdict(dict)
 
                 link = link_info.link
+
+                # Update critical costs first
                 for mservice in link.costs.keys():
                     costs[mservice] = {'travel_time': total_len / new_speed,
                                        'speed': new_speed,
                                        'length': total_len}
-                # Update of the big multi layer graph
+                graph.update_link_costs(lid, costs)
+
+                # The update the generalized one
+                layer = self._graph.layers[graph.links[lid].label]
+                costs_functions = layer._costs_functions
+                for mservice, cost_funcs in costs_functions.items():
+                    for cost_name, cost_f in cost_funcs.items():
+                        costs[mservice][cost_name] = cost_f(self._graph, graph.links[lid], costs)
                 graph.update_link_costs(lid, costs)
 
                 # Update of the cost in the corresponding graph layer
