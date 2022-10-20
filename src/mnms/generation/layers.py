@@ -68,7 +68,7 @@ def generate_grid_origin_destination_layer(xmin: float,
 
 
 def get_bounding_box(roads: RoadDescriptor):
-    positions = np.array([n for n in roads.nodes.values()])
+    positions = np.array([node.position for node in roads.nodes.values()])
     return np.min(positions[0, :]), np.min(positions[1, :]), np.max(positions[0, :]), np.max(positions[1, :])
 
 
