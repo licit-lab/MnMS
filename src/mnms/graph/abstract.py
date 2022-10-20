@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from collections import defaultdict
 from typing import Optional, Dict, List, Type, Callable
 
 from hipop.graph import OrientedGraph
@@ -7,10 +8,18 @@ from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.tools.observer import CSVVehicleObserver
 from mnms.vehicles.fleet import FleetManager
-from mnms.vehicles.veh_type import Vehicle, Car
+from mnms.vehicles.veh_type import Vehicle
 
 
-class AbstractLayer(object):
+class CostFunctionLayer(object):
+    def __init__(self):
+        self._costs_functions: Dict[str, Dict[str, Callable]] = defaultdict(dict)
+
+    def add_cost_function(self, mobility_service: str, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
+        self._costs_functions[mobility_service][cost_name] = cost_function
+
+
+class AbstractLayer(CostFunctionLayer):
     def __init__(self,
                  roads: RoadDescriptor,
                  id: str,
@@ -29,6 +38,7 @@ class AbstractLayer(object):
             services: The services that used the layer
             observer: An observer to write information about the vehicles in the layer
         """
+        super(AbstractLayer, self).__init__()
         self._id: str = id
         self.graph: OrientedGraph = OrientedGraph()
         self.roads: RoadDescriptor = roads
@@ -38,7 +48,7 @@ class AbstractLayer(object):
         self.map_reference_links: Dict[str, List[str]] = dict()
         self.map_reference_nodes: Dict[str, str] = dict()
 
-        self._costs_functions: Dict[str, Callable] = dict()
+        # self._costs_functions: Dict[Dict[str, Callable]] = defaultdict(dict)
 
         self.mobility_services: Dict[str, AbstractMobilityService] = dict()
         self._veh_type: Type[Vehicle] = veh_type
@@ -54,8 +64,8 @@ class AbstractLayer(object):
         service.fleet = FleetManager(self._veh_type)
         self.mobility_services[service.id] = service
 
-    def add_cost_function(self, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
-        self._costs_functions[cost_name] = cost_function
+    # def add_cost_function(self, mobility_service: str, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
+    #     self._costs_functions[mobility_service][cost_name] = cost_function
 
     @property
     def default_speed(self):

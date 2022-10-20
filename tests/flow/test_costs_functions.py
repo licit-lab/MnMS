@@ -81,12 +81,13 @@ class TestCostsFunctions(unittest.TestCase):
         def gc_transit(mlgraph, link, costs, vot=0.003, transfer_penalty=1.44, parking_cost=3, bus_cost=2):
             olabel = mlgraph.graph.nodes[link.upstream].label
             dlabel = mlgraph.graph.nodes[link.downstream].label
+            speed_cost = costs["WALK"]['speed']
             if olabel == 'CAR' and dlabel == 'BUS':
-                gc = vot * link.length / costs['speed'] + transfer_penalty + parking_cost + bus_cost
+                gc = vot * link.length / speed_cost + transfer_penalty + parking_cost + bus_cost
             elif olabel == 'ODLAYER' and dlabel == 'CAR':
-                gc = vot * link.length / costs['speed']
+                gc = vot * link.length / speed_cost
             elif olabel == 'BUS' and dlabel == 'ODLAYER':
-                gc = vot * link.length / costs['speed']
+                gc = vot * link.length / speed_cost
             else:
                 raise ValueError(f'Cost not defined for transit link between layer {olabel} and layer {dlabel}')
             return gc

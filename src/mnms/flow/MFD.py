@@ -123,20 +123,29 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             link_layers.append(layer.graph.links) # only non transit links concerned
 
         for link in self._graph.graph.links.values():
+            costs = {}
             if link.label == "TRANSIT":
                 layer = self._graph.transitlayer
                 speed = walk_speed
+                costs["WALK"] = {"speed": speed,
+                                 "travel_time": link.length / speed}
+                # NB: travel_time could be defined as a cost_function
+                for mservice, cost_functions in layer._costs_functions.items():
+                    for cost_name, cost_func in cost_functions.items():
+                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
             else:
                 layer = self._graph.layers[link.label]
                 speed = layer.default_speed
 
-            costs = {}
-            for mservice in link.costs.keys():
-                costs[mservice] = {"speed": speed,
-                                   "travel_time": link.length/speed}
+                link_layer_id = link.label
+                for mservice in self._graph.layers[link_layer_id].mobility_services.keys():
+                    costs[mservice] = {"speed": speed,
+                                       "travel_time": link.length/speed}
             # NB: travel_time could be defined as a cost_function
-            for k,f in layer._costs_functions.items():
-                costs[k] = f(self._graph, link, costs)
+                for mservice, cost_functions in layer._costs_functions.items():
+                    for cost_name, cost_func in cost_functions.items():
+                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
+
             link.update_costs(costs)
 
             for links in link_layers: # only non transit links concerned
@@ -206,10 +215,19 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             return dt
 
     def get_vehicle_zone(self, veh):
-        unode, dnode = veh.current_link
-        curr_link = self.graph_nodes[unode].adj[dnode]
-        lid = self._graph.map_reference_links[curr_link.id][0]  # take reservoir of first part of trip
-        res_id = self._graph.roads.sections[lid].zone
+        try:
+            unode, dnode = veh.current_link
+            curr_link = self.graph_nodes[unode].adj[dnode]
+            lid = self._graph.map_reference_links[curr_link.id][0]  # take reservoir of first part of trip
+            res_id = self._graph.roads.sections[lid].zone
+        except:
+            pos = veh.position
+            res_id = None
+            for res in self.reservoirs.values():
+                if res.zone.is_inside([pos]):
+                    res_id = res.id
+                    break
+
         return res_id
 
     def step(self, dt: Dt):

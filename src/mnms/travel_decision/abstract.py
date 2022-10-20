@@ -18,7 +18,7 @@ from mnms.time import Time
 from mnms.tools.dict_tools import sum_cost_dict
 from mnms.tools.exceptions import PathNotFound
 
-from hipop.shortest_path import parallel_k_shortest_path, compute_path_length
+from hipop.shortest_path import parallel_k_shortest_path, dijkstra, compute_path_length
 
 log = create_logger(__name__)
 
@@ -45,15 +45,14 @@ def _process_shortest_path_inputs(mlgraph: MultiLayerGraph, users):
 
         available_layers[i] = set() if u.available_mobility_service is None else {layer.id for mservice in u.available_mobility_service for layer in mlgraph.layers.values()  if mservice in layer.mobility_services}
 
-        if available_layers[i]:
-            available_layers[i].add("TRANSIT")
+        # if available_layers[i]:
+        #     available_layers[i].add("TRANSIT")
 
         services = {}
         if available_layers[i]:
-            for available_service in available_layers[i]:
-                for layer in mlgraph.layers.values():
-                    if available_service in layer.mobility_services.keys():
-                        services[layer.id] = available_service
+            for layer in available_layers[i]:
+                services[layer] = list(mlgraph.layers[layer].mobility_services.keys())[0]
+            available_layers[i].add("TRANSIT")
         else:
             for layer in mlgraph.layers.values():
                 # Take the first registered mobility service
@@ -192,27 +191,39 @@ class AbstractDecisionModel(ABC):
                     p = Path(path_index, p[1], p[0])
                     p.construct_layers(gnodes)
                     path_index += 1
-                    path_services = []
 
-                    for layer, node_inds in p.layers:
-                        layer_services = []
-                        path_services.append(layer_services)
-                        for service in self._mlgraph.layers[layer].mobility_services:
-                            if user.available_mobility_service is None or service in user.available_mobility_service:
-                                layer_services.append(service)
+                    user_chosen_services = chosen_services[i]
+                    user_mobility_services = [user_chosen_services[layer_id] for layer_id, slice_nodes in p.layers]
+                    p.mobility_services = user_mobility_services
+                    user_paths.append(p)
 
-                    for ls in product(*path_services):
-                        new_path = deepcopy(p)
-                        services = list(ls)
-                        new_path.mobility_services = services
-
-                        service_costs = sum_cost_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services)))
-
-                        new_path.service_costs = service_costs
-                        user_paths.append(new_path)
+                    service_costs = sum_cost_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services)))
+                    p.service_costs = service_costs
                 else:
                     path_not_found.append(user.id)
-                    # log.warning(f"Path not found for %s", user.id)
+                    log.warning(f"Path not found for %s", user.id)
+
+            # Check if every possible User mobility service option has been explored
+            # if not compute the mono modal journey with the missed option
+            if user.available_mobility_service is not None:
+                used_mobility_services = set(service for p in user_paths for service in p.mobility_services)
+                missed_mobility_services = user.available_mobility_service.difference(used_mobility_services)
+                for mservice in missed_mobility_services:
+                    layer_id = self._mlgraph.mapping_layer_services[mservice].id
+                    path, cost = dijkstra(self._mlgraph.graph,
+                                          origins[i],
+                                          destinations[i],
+                                          self._cost,
+                                          {layer_id: mservice,
+                                           "TRANSIT": "WALK"},
+                                          set([layer_id, "TRANSIT"]))
+                    if path:
+                        path_index += 1
+                        p = Path(path_index, cost, path)
+                        p.construct_layers(gnodes)
+                        p.mobility_services = [mservice]
+                        p.service_costs = self._mlgraph.layers[layer_id].mobility_services[mservice].service_level_costs(p.nodes[p.layers[0][1]])
+                        user_paths.append(p)
 
             if user_paths:
                 path = self.path_choice(user_paths)

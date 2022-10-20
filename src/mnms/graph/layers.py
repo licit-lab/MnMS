@@ -5,7 +5,7 @@ from typing import Optional, Dict, Set, List, Type, Callable
 import numpy as np
 from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph, Link
 
-from mnms.graph.abstract import AbstractLayer
+from mnms.graph.abstract import AbstractLayer, CostFunctionLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.io.utils import load_class_by_module_name
 from mnms.log import create_logger
@@ -254,13 +254,10 @@ class OriginDestinationLayer(object):
         return new_obj
 
 
-class TransitLayer(object):
+class TransitLayer(CostFunctionLayer):
     def __init__(self):
-        self._costs_functions: Dict[str, Dict[str, Callable[[Link], float]]] = defaultdict(dict)
+        super(TransitLayer, self).__init__()
         self.links: defaultdict[str, defaultdict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
-
-    def add_cost_function(self, mobility_service: str, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
-        self._costs_functions[mobility_service][cost_name] = cost_function
 
     def add_link(self, lid, olayer, dlayer):
         """
@@ -400,10 +397,17 @@ class MultiLayerGraph(object):
         # Retrieve layer
         if layer_id == 'TRANSIT':
             layer = self.transitlayer
+            mservices = ["WALK"]
         else:
             layer = self.layers[layer_id]
+            mservices = list(layer.mobility_services.keys())
+
         # Add cost function on layer
-        layer.add_cost_function(mobility_service, cost_name, cost_function)
+        if mobility_service is not None:
+            layer.add_cost_function(mobility_service, cost_name, cost_function)
+        else:
+            for mservice in mservices:
+                layer.add_cost_function(mservice, cost_name, cost_function)
 
 
 if __name__ == "__main__":
