@@ -3,7 +3,7 @@ from typing import List, Optional, Dict
 
 import numpy as np
 
-from mnms.graph.zone import Zone, points_in_polygon
+from mnms.graph.zone import Zone, points_in_polygon, construct_zone_from_contour
 
 
 def _compute_dist(pos1: np.ndarray, pos2: np.ndarray):
@@ -106,7 +106,9 @@ class RoadDescriptor(object):
             new_obj.register_section(lid, d['upstream'], d['downstream'], d['length'])
 
         for z in data["ZONES"].values():
-            new_obj.add_zone(Zone(z["id"], set(z["sections"]), z["contour"]))
-
+            if z["sections"]:
+                new_obj.add_zone(Zone(z["id"], set(z["sections"]), z["contour"]))
+            else:
+                new_obj.add_zone(construct_zone_from_contour(new_obj, z["id"], z["contour"]))
 
         return new_obj
