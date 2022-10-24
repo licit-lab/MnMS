@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from typing import Optional, Type, List
 
 import numpy as np
@@ -67,9 +69,20 @@ def generate_grid_origin_destination_layer(xmin: float,
     return odlayer
 
 
+@dataclass
+class BoundingBox:
+    xmin: float
+    ymin: float
+    xmax: float
+    ymax: float
+
+
 def get_bounding_box(roads: RoadDescriptor):
     positions = np.array([node.position for node in roads.nodes.values()])
-    return np.min(positions[0, :]), np.min(positions[1, :]), np.max(positions[0, :]), np.max(positions[1, :])
+    return BoundingBox(np.min(positions[:, 0]),
+                       np.min(positions[:, 1]),
+                       np.max(positions[:, 0]),
+                       np.max(positions[:, 1]))
 
 
 def generate_bbox_origin_destination_layer(roads: RoadDescriptor, nx: int, ny: Optional[int] = None):
