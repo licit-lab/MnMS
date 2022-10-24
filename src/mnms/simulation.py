@@ -60,7 +60,7 @@ class Supervisor(object):
             self._write = True
             self._outfile = open(outfile, "w")
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
-            self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'TRAVEL_TIME'])
+            self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'MOBILITY_SERVICE', 'TRAVEL_TIME'])
 
         if logfile is not None:
             attach_log_file(logfile, loglevel)
@@ -227,7 +227,8 @@ class Supervisor(object):
                 start = time()
                 t_str = self._flow_motor.time
                 for link in self._mlgraph.graph.links.values():
-                    self._csvhandler.writerow([str(affectation_step), t_str, link.id, link.costs['travel_time']])
+                    for mservice, costs in link.costs.items():
+                        self._csvhandler.writerow([str(affectation_step), t_str, link.id, mservice, costs['travel_time']])
                 end = time()
                 log.info(f'Done [{end - start:.5} s]')
 

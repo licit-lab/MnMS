@@ -53,7 +53,7 @@ class SimpleLayer(AbstractLayer):
 
         link_ref = data["MAP_ROADDB"]["LINKS"]
         for ldata in data['LINKS']:
-            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'],
+            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], {},
                                 link_ref[ldata["ID"]])
 
         for sdata in data['SERVICES']:
@@ -94,7 +94,7 @@ class CarLayer(SimpleLayer):
 
         link_ref = data["MAP_ROADDB"]["LINKS"]
         for ldata in data['LINKS']:
-            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], ldata['COSTS'],
+            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], {},
                                 link_ref[ldata["ID"]])
 
         for sdata in data['SERVICES']:
