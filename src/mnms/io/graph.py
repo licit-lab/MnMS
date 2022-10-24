@@ -47,7 +47,7 @@ def load_graph(filename: Union[str, Path]):
 
     mlgraph = MultiLayerGraph(layers)
 
-    for data_link in data["TRANSIT"]:
+    for data_link in data.get("TRANSIT", []):
         mlgraph.connect_layers(data_link["ID"],
                                data_link["UPSTREAM"],
                                data_link["DOWNSTREAM"],
