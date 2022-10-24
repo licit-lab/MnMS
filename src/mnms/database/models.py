@@ -1,12 +1,15 @@
+"""
+Definitions of all the tables used in day to day simple simulation
+"""
+
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, Float
-from sqlalchemy.orm import relationship, Session
+from sqlalchemy.orm import Session
 
 from mnms.database import Base
 
 
 class Path(Base):
     __tablename__ = 'path'
-    # __table_args__ = (UniqueConstraint('code', 'name', 'category', 'size'),)
 
     id = Column(Integer, primary_key=True)
     index = Column(Integer)
@@ -23,8 +26,6 @@ class User(Base):
     name = Column(String)
     origin = Column(String)
     destination = Column(String)
-    current_node = Column(String)
-    current_link_id = Column(ForeignKey("cost_link.id"))
 
 
 class NodeName(Base):
@@ -55,8 +56,6 @@ class CostLink(Base):
 
 class Cost(Base):
     __tablename__ = 'cost'
-    # __table_args__ = (UniqueConstraint(
-    #     'code', 'name', 'longitude', 'latitude'),)
 
     id = Column(Integer, primary_key=True)
     link_id = Column(ForeignKey('cost_link.id'))
@@ -86,5 +85,8 @@ class Layer(Base):
 
 
 def add_in_db(new_object, session: Session):
+    """
+    Add and object in the base without commit.
+    """
     session.add(new_object)
     session.flush()

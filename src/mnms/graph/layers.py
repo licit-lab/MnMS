@@ -3,6 +3,7 @@ from collections import ChainMap, defaultdict
 from typing import Optional, Dict, Set, List, Type, Callable
 
 import numpy as np
+from numpy.linalg import norm as _norm
 from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph, Link
 
 from mnms.graph.abstract import AbstractLayer
@@ -248,6 +249,16 @@ class OriginDestinationLayer(object):
             new_obj.create_destination_node(nid, pos)
 
         return new_obj
+
+    def get_od_from_positions(self, origin_array: np.ndarray, destination_array: np.ndarray):
+        origins_id = list(self.origins.keys())
+        origins_pos = np.array([n.position for n in self.origins.values()])
+        destinations_id = list(self.destinations.keys())
+        destinations_pos = np.array([n.position for n in self.destinations.values()])
+
+        origin = origins_id[np.argmin(_norm(origins_pos - origin_array, axis=1))]
+        destination = destinations_id[np.argmin(_norm(destinations_pos - destination_array, axis=1))]
+        return origin, destination
 
 
 class TransitLayer(object):

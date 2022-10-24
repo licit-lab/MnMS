@@ -1,16 +1,14 @@
-from math import ceil
 from time import time
 import csv
 import traceback
 import random
 from typing import List, Optional
 
-import numpy
 import numpy as np
 
 from mnms.demand import User
-from mnms.graph.layers import MultiLayerGraph
 from mnms.flow.abstract import AbstractMFDFlowMotor
+from mnms.graph.layers import MultiLayerGraph
 from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager
 from mnms.travel_decision.abstract import AbstractDecisionModel
@@ -19,6 +17,9 @@ from mnms.log import create_logger, attach_log_file, LOGLEVEL
 from mnms.tools.progress import ProgressBar
 
 log = create_logger(__name__)
+
+
+ARRAY_STAT = []
 
 
 class Supervisor(object):
@@ -150,6 +151,8 @@ class Supervisor(object):
         end = time()
         log.info(f' Done [{end - start:.5} s]')
 
+        self._user_flow.step(flow_dt, list(self._user_flow.users.values()))
+
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         # assume users are sorted by departure time
         new_users.sort(key=lambda user: user.departure_time)
@@ -264,12 +267,7 @@ class Supervisor(object):
         progress.end()
 
     def _compute_users_stat(self, users: List[User]):
-        times = numpy.array([[user.path.path_cost, (user.arrival_time - user.departure_time).to_seconds()]
-                             for user in users if user.arrival_time])
-
-        print(f"\nTemps total de trajet estimé : {times[:, 0].sum(): .2f}s")
-        print(f"Temps total de trajet effectif : {times[:, 1].sum(): .2f}s")
-        print(f"Utilisateurs arrivés à destination : {times[:, 0].size / len(users): .2%}")
+        pass
 
     def create_crash_report(self, affectation_step, flow_step) -> dict:
         data = dict(time=str(self.tcurrent),

@@ -1,7 +1,9 @@
 from functools import singledispatch
 from typing import List, Tuple, Optional, Any
 
+import numpy
 from hipop.cpp.graph import Link
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from mnms.database.models import Path as DbPath, add_in_db, User as DbUser, \
@@ -12,6 +14,7 @@ from mnms.time import Time
 
 
 def add_path_from_user(user: DbUser, path: Path, day: int, t_current: Time, session: Session) -> DbPath:
+    """Add a path in the table."""
     new_path = DbPath(
         index=path.ind,
         user_id=user.id,
@@ -23,50 +26,55 @@ def add_path_from_user(user: DbUser, path: Path, day: int, t_current: Time, sess
 
 
 def add_mobility_services(mobility_services: List[str], path_id: int, session: Session):
+    """Add mobility services in the table."""
     for service in mobility_services:
         new_service = MobilityService(name=service, path_id=path_id)
         add_in_db(new_service, session)
 
 
 def get_mobility_services(db_path: DbPath, session: Session) -> List[str]:
+    """Return the mobility services associated with a path."""
     return [res[0] for res in session.query(MobilityService.name).filter(MobilityService.path_id == db_path.id)]
 
 
 def add_layers(layers: List[Tuple[str, slice]], path_id: int, session: Session):
+    """Add layers in the table."""
     for layer in layers:
         new_layer = Layer(name=layer[0], start=layer[1].start, stop=layer[1].stop, step=layer[1].step, path_id=path_id)
         add_in_db(new_layer, session)
 
 
 def get_layers(db_path: DbPath, session: Session) -> List[Tuple[str, slice]]:
+    """Return layers associated with a path."""
     return [(res[0], slice(res[1], res[2], res[3])) for res in session.query(Layer.name, Layer.start, Layer.stop, Layer.step).filter(Layer.path_id == db_path.id).all()]
 
 
 def get_or_create_user(user: User, session: Session) -> DbUser:
+    """Return a user from its name and create it if it doesn't exist."""
     db_user = get_user(user.id, session)
     if not db_user:
-        current_link = get_cost_link(user.current_link, session)
         db_user = DbUser(name=user.id,
                          origin=user.origin,
-                         destination=user.destination,
-                         current_node=user.current_node,
-                         current_link_id=current_link.id)
+                         destination=user.destination)
         add_in_db(db_user, session)
     return db_user
 
 
 def add_node(node: str, session: Session):
+    """Add a node in the table."""
     new_node = NodeName(name=node)
     add_in_db(new_node, session)
     return new_node
 
 
 def get_node_name(node: str, session: Session) -> bool:
+    """Return a node from its name."""
     return session.query(NodeName).filter(
         NodeName.name == node).first()
 
 
 def add_path_node(path_id: int, node_id: int, rank: int, session: Session):
+    """Add """
     new_node_path = PathNode(path_id=path_id, node_id=node_id, rank=rank)
     add_in_db(new_node_path, session)
 
@@ -128,3 +136,19 @@ def get_user_nodes(path_id: int, session: Session) -> List[Tuple[int, str]]:
     return session.query(PathNode.rank, NodeName.name).join(
         NodeName, NodeName.id == PathNode.node_id).filter(
         PathNode.path_id == path_id).order_by(PathNode.rank).all()
+
+
+def get_user_path_cost(users_name: List[str], day: int, session: Session):
+    return session.query(DbUser.name, DbPath.cost).join(DbPath, DbPath.user_id == DbUser.id).filter(
+        DbPath.day == day, DbUser.name.in_(users_name)).all()
+
+
+def get_od_path_cost(origin: str, destination: str, day: int, session: Session) -> List[float]:
+    """Return all the costs associated to a tuple (origin destination) for a given day."""
+    return [res[0] for res in session.query(DbPath.cost).join(DbUser, DbUser.id == DbPath.user_id).filter(
+        DbPath.day == day, DbUser.origin == origin, DbUser.destination == destination).all()]
+
+
+def get_last_day(session: Session) -> int:
+    """Return the last day with data in the database."""
+    return session.query(func.max(Cost.day)).first()[0]
