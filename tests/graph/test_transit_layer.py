@@ -10,7 +10,7 @@ from mnms.time import TimeTable, Dt
 from mnms.io.graph import save_graph, load_graph
 
 
-class TestIOGraph(unittest.TestCase):
+class TestTransitLayer(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
@@ -34,7 +34,7 @@ class TestIOGraph(unittest.TestCase):
         car_layer.create_node("C0", "0")
         car_layer.create_node("C1", "1", {"0": {"2"}})
         car_layer.create_node("C2", "2")
-        car_layer.create_link("C0_C1", "C0", "C1", {"test": 34.3}, ["0_1"])
+        car_layer.create_link("C0_C1", "C0", "C1", {"PersonalVehicle": {"test": 34.3}}, ["0_1"])
 
         bus_layer = BusLayer(self.roads)
 
@@ -78,5 +78,5 @@ class TestIOGraph(unittest.TestCase):
 
         link = self.mlgraph.graph.links[iterator[0]]
 
-        self.assertDictEqual(link.costs, {"test": 1.43})
+        self.assertDictEqual(link.costs["WALK"], {"test": 1.43})
         self.assertEqual(link.length, 156)

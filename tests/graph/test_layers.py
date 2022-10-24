@@ -41,7 +41,7 @@ class TestLayers(unittest.TestCase):
         car_layer.create_node("C0", "0")
         car_layer.create_node("C1", "1", {"0": {"2"}})
         car_layer.create_node("C2", "2")
-        costs = {"test": 34.3}
+        costs = {"PersonalVehicle": {"test": 34.3}}
         car_layer.create_link("C0_C1", "C0", "C1", costs, ["0_1"])
 
         gnodes = car_layer.graph.nodes
@@ -118,7 +118,7 @@ class TestSerializationLayers(unittest.TestCase):
         car_layer.create_node("C0", "0")
         car_layer.create_node("C1", "1", {"0": {"2"}})
         car_layer.create_node("C2", "2")
-        car_layer.create_link("C0_C1", "C0", "C1", {"test": 34.3}, ["0_1"])
+        car_layer.create_link("C0_C1", "C0", "C1", {"PersonalVehicle": {"test": 34.3}}, ["0_1"])
 
         data_dict = car_layer.__dump__()
 

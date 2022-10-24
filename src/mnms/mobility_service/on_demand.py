@@ -57,8 +57,7 @@ class OnDemandMobilityService(AbstractMobilityService):
                     if choosen_veh.is_empty:
                         veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
                         choosen_veh.activities[-1].node
-                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time',
-                                                  {self.layer.id})
+                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
                         if cost == float('inf'):
                             raise PathNotFound(choosen_veh._current_node, user.current_node)
 
@@ -159,13 +158,18 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                             nearest_depot = current_depot
                             break
 
-                    veh_path, cost = dijkstra(self.graph, veh._current_node, nearest_depot, 'travel_time',
+                    veh_path, cost = dijkstra(self.graph,
+                                              veh._current_node,
+                                              nearest_depot,
+                                              'travel_time',
+                                              {self.layer.id: self.id,
+                                               "TRANSIT": "WALK"},
                                               {self.layer.id})
                     if cost == float('inf'):
                         raise PathNotFound(veh._current_node, depot)
 
                     veh_path = self._construct_veh_path(veh_path)
-                    repositioning = VehicleActivityRepositioning(node=depot,
+                    repositioning = VehicleActivityRepositioning(node=nearest_depot,
                                                                  path=veh_path)
                     veh.activity.is_done = True
                     veh.add_activities([repositioning])
@@ -193,7 +197,12 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                     if choosen_veh.is_empty:
                         veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
                         choosen_veh.activities[-1].node
-                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time',
+                        veh_path, cost = dijkstra(self.graph,
+                                                  veh_last_node,
+                                                  user.current_node,
+                                                  'travel_time',
+                                                  {self.layer.id: self.id,
+                                                   "TRANSIT": "WALK"},
                                                   {self.layer.id})
                         if cost == float('inf'):
                             raise PathNotFound(nearest_veh.origin, user.current_node)
@@ -215,10 +224,19 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
 
         user_path = self._construct_veh_path(upath)
         veh_path = self._construct_veh_path(veh_path)
+
+        if veh_path:
+            pickup = VehicleActivityPickup(node=user._current_node,
+                                           path=veh_path,
+                                           user=user)
+        else:
+            pickup = VehicleActivityPickup(node=user._current_node,
+                                           path=veh_path,
+                                           user=user,
+                                           is_done=True)
+
         activities = [
-            VehicleActivityPickup(node=user._current_node,
-                                  path=veh_path,
-                                  user=user),
+            pickup,
             VehicleActivityServing(node=user.destination,
                                    path=user_path,
                                    user=user)

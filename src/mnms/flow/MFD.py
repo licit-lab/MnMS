@@ -1,9 +1,12 @@
 import sys
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 from typing import Callable, Dict
 
 import numpy as np
+
+from hipop.graph import Link
 
 from mnms.demand import User
 from mnms.flow.abstract import AbstractMFDFlowMotor, AbstractReservoir
@@ -21,6 +24,7 @@ _dist = np.linalg.norm
 
 @dataclass
 class LinkInfo:
+    link: Link
     veh: str
     sections: List[Tuple[str, float]]
 
@@ -90,7 +94,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     for section in self._graph.map_reference_links[lid]:
                         sections_length.append((section, roads.sections[section].length))
 
-                self._layer_link_length_mapping[lid] = LinkInfo(link_layer.vehicle_type.upper(), sections_length)
+                self._layer_link_length_mapping[lid] = LinkInfo(link, link_layer.vehicle_type.upper(), sections_length)
 
         res_links = {res.id: roads.zones[res.id] for res in self.reservoirs.values()}
         res_dict = {res.id: res for res in self.reservoirs.values()}
@@ -104,15 +108,15 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
     def initialize(self, walk_speed):
         # Check consistency of costs functions definition
-        if len(self._graph.layers) > 0:
-            costs_names = set(list(self._graph.layers.values())[0]._costs_functions.keys())
-            for layer in self._graph.layers.values():
-                if set(layer._costs_functions.keys()) != costs_names:
-                    log.error("Each cost function should be defined on all layers.")
-                    sys.exit()
-            if set(self._graph.transitlayer._costs_functions) != costs_names:
-                log.error("Each cost function should be defined on all layers, including transit layer.")
-                sys.exit()
+        # if len(self._graph.layers) > 0:
+        #     costs_names = set(list(self._graph.layers.values())[0]._costs_functions.keys())
+        #     for layer in self._graph.layers.values():
+        #         if set(layer._costs_functions.keys()) != costs_names:
+        #             log.error("Each cost function should be defined on all layers.")
+        #             sys.exit()
+        #     if set(self._graph.transitlayer._costs_functions) != costs_names:
+        #         log.error("Each cost function should be defined on all layers, including transit layer.")
+        #         sys.exit()
 
         # initialize costs on links
         link_layers = list()
@@ -120,17 +124,29 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             link_layers.append(layer.graph.links) # only non transit links concerned
 
         for link in self._graph.graph.links.values():
+            costs = {}
             if link.label == "TRANSIT":
                 layer = self._graph.transitlayer
                 speed = walk_speed
+                costs["WALK"] = {"speed": speed,
+                                 "travel_time": link.length / speed}
+                # NB: travel_time could be defined as a cost_function
+                for mservice, cost_functions in layer._costs_functions.items():
+                    for cost_name, cost_func in cost_functions.items():
+                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
             else:
                 layer = self._graph.layers[link.label]
                 speed = layer.default_speed
-            costs = {"speed": speed,
-                     "travel_time": link.length/speed}
+
+                link_layer_id = link.label
+                for mservice in self._graph.layers[link_layer_id].mobility_services.keys():
+                    costs[mservice] = {"speed": speed,
+                                       "travel_time": link.length/speed}
             # NB: travel_time could be defined as a cost_function
-            for k,f in layer._costs_functions.items():
-                costs[k] = f(self._graph, link, costs)
+                for mservice, cost_functions in layer._costs_functions.items():
+                    for cost_name, cost_func in cost_functions.items():
+                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
+
             link.update_costs(costs)
 
             for links in link_layers: # only non transit links concerned
@@ -200,10 +216,19 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             return dt
 
     def get_vehicle_zone(self, veh):
-        unode, dnode = veh.current_link
-        curr_link = self.graph_nodes[unode].adj[dnode]
-        lid = self._graph.map_reference_links[curr_link.id][0]  # take reservoir of first part of trip
-        res_id = self._graph.roads.sections[lid].zone
+        try:
+            unode, dnode = veh.current_link
+            curr_link = self.graph_nodes[unode].adj[dnode]
+            lid = self._graph.map_reference_links[curr_link.id][0]  # take reservoir of first part of trip
+            res_id = self._graph.roads.sections[lid].zone
+        except:
+            pos = veh.position
+            res_id = None
+            for res in self.reservoirs.values():
+                if res.zone.is_inside([pos]):
+                    res_id = res.id
+                    break
+
         return res_id
 
     def step(self, dt: Dt):
@@ -222,7 +247,9 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         # Calculate accumulations
         current_vehicles = dict()
         for veh_id, veh in self.veh_manager._vehicles.items():
-            if veh.activity is None or veh.activity.is_done:
+            if veh.activity is None:
+                veh.next_activity()
+            while veh.activity.is_done:
                 veh.next_activity()
             if veh.state is not VehicleState.STOP:
                 self.count_moving_vehicle(veh, current_vehicles)
@@ -291,16 +318,26 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     new_speed += length * graph.links[lid].cost["speed"]
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             if new_speed != 0:  # TODO: check if this condition is still useful
-                costs = {'travel_time': total_len / new_speed,
-                         'speed': new_speed,
-                         'length': total_len}
+                # costs = {'travel_time': total_len / new_speed,
+                #          'speed': new_speed,
+                #          'length': total_len}
+                costs = defaultdict(dict)
 
+                link = link_info.link
+
+                # Update critical costs first
+                for mservice in link.costs.keys():
+                    costs[mservice] = {'travel_time': total_len / new_speed,
+                                       'speed': new_speed,
+                                       'length': total_len}
+                graph.update_link_costs(lid, costs)
+
+                # The update the generalized one
                 layer = self._graph.layers[graph.links[lid].label]
                 costs_functions = layer._costs_functions
-                for k, f in costs_functions.items():
-                    costs[k] = f(self._graph, graph.links[lid], costs)
-
-                # Update of the big multi layer graph
+                for mservice, cost_funcs in costs_functions.items():
+                    for cost_name, cost_f in cost_funcs.items():
+                        costs[mservice][cost_name] = cost_f(self._graph, graph.links[lid], costs)
                 graph.update_link_costs(lid, costs)
 
                 # Update of the cost in the corresponding graph layer
@@ -308,7 +345,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     if lid in links:
                         links[lid].update_costs(costs)
                         break
-
 
     def write_result(self, step_affectation:int, step_flow:int):
         tcurrent = self._tcurrent.time

@@ -14,7 +14,7 @@ class Zone(object):
     contour: PointList
 
     def is_inside(self, points: List[Point]):
-        return points_in_polygon(self.contour, [points])
+        return points_in_polygon(self.contour, points)
 
 
 def points_in_polygon(polygon, pts):

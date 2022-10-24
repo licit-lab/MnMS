@@ -45,7 +45,7 @@ class TestCostsFunctions(unittest.TestCase):
         car_layer.create_node('C0', '0')
         car_layer.create_node('C1', '1')
 
-        car_layer.create_link('C0_C1', 'C0', 'C1', costs={'length': 2000}, road_links=['0_1'])
+        car_layer.create_link('C0_C1', 'C0', 'C1', costs={"PersonalVehicle": {'length': 2000}}, road_links=['0_1'])
 
         bus_layer = BusLayer(roads, default_speed=7,
                        services=[PublicTransportMobilityService('Bus')],
@@ -67,27 +67,31 @@ class TestCostsFunctions(unittest.TestCase):
         ## Add cost functions
         # CAR links
         def gc_car(mlgraph, link, costs, car_kmcost=0.0005, vot=0.003):
-            gc = link.length * car_kmcost + vot * link.length / costs['speed']
+            gc = link.length * car_kmcost + vot * link.length / costs["PersonalVehicle"]['speed']
             return gc
+
         mlgraph.add_cost_function('CAR', 'generalized_cost', gc_car)
         # BUS links
         def gc_bus(mlgraph, link, costs, vot=0.003):
-            gc = vot * link.length / costs['speed']
+            gc = vot * link.length / costs['Bus']['speed']
             return gc
+
         mlgraph.add_cost_function('BUS', 'generalized_cost', gc_bus)
         # TRANSIT links
         def gc_transit(mlgraph, link, costs, vot=0.003, transfer_penalty=1.44, parking_cost=3, bus_cost=2):
             olabel = mlgraph.graph.nodes[link.upstream].label
             dlabel = mlgraph.graph.nodes[link.downstream].label
+            speed_cost = costs["WALK"]['speed']
             if olabel == 'CAR' and dlabel == 'BUS':
-                gc = vot * link.length / costs['speed'] + transfer_penalty + parking_cost + bus_cost
+                gc = vot * link.length / speed_cost + transfer_penalty + parking_cost + bus_cost
             elif olabel == 'ODLAYER' and dlabel == 'CAR':
-                gc = vot * link.length / costs['speed']
+                gc = vot * link.length / speed_cost
             elif olabel == 'BUS' and dlabel == 'ODLAYER':
-                gc = vot * link.length / costs['speed']
+                gc = vot * link.length / speed_cost
             else:
                 raise ValueError(f'Cost not defined for transit link between layer {olabel} and layer {dlabel}')
             return gc
+
         mlgraph.add_cost_function('TRANSIT', 'generalized_cost', gc_transit)
         self.mlgraph = mlgraph
 
@@ -115,36 +119,38 @@ class TestCostsFunctions(unittest.TestCase):
         Vehicle._counter = 0
 
     def test_init(self):
-        self.assertEqual(set(self.mlgraph.transitlayer._costs_functions), set(['generalized_cost']))
+        self.assertIn("generalized_cost", self.mlgraph.transitlayer._costs_functions["WALK"])
         for lid, link in self.mlgraph.graph.links.items():
-            self.assertIn('generalized_cost', link.costs.keys())
-            self.assertEqual(link.costs['travel_time'], link.length / link.costs['speed'])
+            for mservice, costs in link.costs.items():
+                self.assertIn('generalized_cost', costs.keys())
+                self.assertEqual(link.costs[mservice]['travel_time'], link.length / link.costs[mservice]['speed'])
             if lid == 'CAR_BUS':
-                self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 20 / 1.42 + 3 + 2 + 1.44)
+                self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 20 / 1.42 + 3 + 2 + 1.44)
             elif lid in ['ORIGIN_C0', 'L1_B3_DESTINATION']:
-                self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 50 / 1.42)
+                self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 50 / 1.42)
             elif lid == 'C0_C1':
-                self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 2000 / 8.33 + 0.0005 * 2000)
+                self.assertAlmostEqual(link.costs["PersonalVehicle"]['generalized_cost'], 0.003 * 2000 / 8.33 + 0.0005 * 2000)
             elif lid in ['L1_B2_B3', 'L1_B1_B2']:
-                self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 1450 / 7)
+                self.assertAlmostEqual(link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 7)
 
     def test_cost_update(self):
         self.supervisor.run(Time("07:00:00"),
                        Time("09:00:00"),
                        Dt(seconds=1),
                        10)
-        self.assertEqual(set(self.mlgraph.transitlayer._costs_functions), set(['generalized_cost']))
+        self.assertIn("generalized_cost", self.mlgraph.transitlayer._costs_functions["WALK"])
         for lid, link in self.mlgraph.graph.links.items():
-            self.assertIn('generalized_cost', link.costs.keys())
-            self.assertEqual(link.costs['travel_time'], link.length / link.costs['speed'])
+            for mservice, costs in link.costs.items():
+                self.assertIn('generalized_cost', costs.keys())
+                self.assertEqual(link.costs[mservice]['travel_time'], link.length / link.costs[mservice]['speed'])
             if lid == 'CAR_BUS':
-                self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 20 / 1.42 + 3 + 2 + 1.44)
+                self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 20 / 1.42 + 3 + 2 + 1.44)
             elif lid in ['ORIGIN_C0', 'L1_B3_DESTINATION']:
-                self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 50 / 1.42)
+                self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 50 / 1.42)
             elif lid == 'C0_C1':
-                self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 2000 / 7 + 0.0005 * 2000)
+                self.assertAlmostEqual(link.costs["PersonalVehicle"]['generalized_cost'], 0.003 * 2000 / 7 + 0.0005 * 2000)
             elif lid in ['L1_B2_B3', 'L1_B1_B2']:
-                self.assertAlmostEqual(link.costs['generalized_cost'], 0.003 * 1450 / 7)
+                self.assertAlmostEqual(link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 7)
         # TODO: for now, estimated travel time and realized travel time are different,
         #       so as estimated travel cost and realized travel cost because the
         #       waiting time for a vehicle (PT, MoD, etc.) is not included in the
