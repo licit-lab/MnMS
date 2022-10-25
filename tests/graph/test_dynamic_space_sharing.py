@@ -1,10 +1,7 @@
-from jedi.plugins import pytest
-
-from build.lib.mnms.generation.roads import generate_line_road
+from mnms.generation.roads import generate_line_road
 from mnms.demand import BaseDemandManager, User
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.generation.layers import generate_layer_from_roads, generate_matching_origin_destination_layer
-from mnms.generation.roads import generate_manhattan_road
 from mnms.graph.layers import MultiLayerGraph
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.simulation import Supervisor
