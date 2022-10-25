@@ -8,6 +8,7 @@ from typing import List, Optional
 import numpy as np
 
 from mnms.demand import User
+from mnms.graph.dynamic_space_sharing import DynamicSpaceSharing
 from mnms.graph.layers import MultiLayerGraph
 from mnms.flow.abstract import AbstractMFDFlowMotor
 from mnms.flow.user_flow import UserFlow
@@ -110,6 +111,8 @@ class Supervisor(object):
 
         self._user_flow.set_time(tstart)
 
+        self._mlgraph.dynamic_space_sharing.cost = self._decision_model._cost
+
     def update_mobility_services(self, flow_dt:Dt):
         for layer in self._mlgraph.layers.values():
             for mservice in layer.mobility_services.values():
@@ -197,6 +200,8 @@ class Supervisor(object):
             progress.show()
             # try:
             log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
+
+            self._mlgraph.dynamic_space_sharing.update(self.tcurrent)
 
             new_users = self.get_new_users(principal_dt)
 
