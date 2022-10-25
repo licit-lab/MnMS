@@ -9,13 +9,14 @@ import os
 import sys
 
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, List, Optional
 
 import numpy as np
 
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.layers import MultiLayerGraph, CarLayer, PublicTransportLayer
-from mnms.graph.zone import Zone
+from mnms.graph.zone import construct_zone_from_contour
+from mnms.generation.layers import get_bounding_box
 from mnms.io.graph import save_graph
 from mnms.time import TimeTable, Time, Dt
 from mnms.vehicles.veh_type import Bus, Metro, Tram
@@ -34,7 +35,7 @@ _veh_type_convertor = {'METRO': Metro,
                        'TRAM': Tram}
 
 
-def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, car_only=False):
+def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, List[str]]=None, car_only=False, mono_res: Optional[str] = None):
     parser = etree.XMLParser(remove_comments=True)
     contents = etree.parse(file, parser=parser)
     root = contents.getroot()
@@ -107,15 +108,16 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
     for nid, pos in nodes.items():
         roads.register_node(nid, pos)
 
-    zones = defaultdict(set)
     for tid, tdata in troncons.items():
         roads.register_section(tid, tdata['up'], tdata['down'], tdata['length'])
-        if zone_dict is not None:
-            zones[zone_dict[tid]].add(tid)
 
-    if zones:
-        for zid, section in zones.items():
-            roads.add_zone(Zone(zid, section))
+    if mono_res is None:
+        for zid, contour in zone_dict.items():
+            roads.add_zone(construct_zone_from_contour(roads, zid, contour))
+    else:
+        bb = get_bounding_box(roads)
+        box = [[bb.xmin, bb.ymin], [bb.xmin, bb.ymax], [bb.xmax, bb.ymax], [bb.xmax, bb.ymin]]
+        roads.add_zone(construct_zone_from_contour(roads, mono_res, box))
 
 
 
@@ -174,7 +176,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, str]=None, c
     for trid in link_car:
         try:
             car_layer.create_link(trid, troncons[trid]['up'], troncons[trid]['down'],
-                                  {'length': troncons[trid]['length']}, road_links=[trid])
+                                  {}, road_links=[trid])
         except AssertionError:
             print(f"Skipping troncon: {trid}, nodes already connected")
 
@@ -294,7 +296,7 @@ if __name__ == "__main__":
 
     log.info(f"Writing MNMS graph at '{args.output_dir}' ...")
     if args.mono_res is not None:
-        convert_symuflow_to_mnms(args.symuflow_graph, args.output_dir, zone_dict=defaultdict(lambda: args.mono_res), car_only=args.car_only)
+        convert_symuflow_to_mnms(args.symuflow_graph, args.output_dir, zone_dict=None, car_only=args.car_only, mono_res=args.mono_res)
     elif args.multi_res is not None:
         with open(args.multi_res, 'r') as f:
             res_dict = json.load(f)
