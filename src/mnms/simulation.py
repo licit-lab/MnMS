@@ -168,16 +168,17 @@ class Supervisor(object):
                                                             {layer.id},
                                                             {layer.id: mservice_id})
 
-            mservice = layer.mobility_services[mservice_id]
-            new_veh_path = mservice.construct_veh_path(new_path)
+            if new_path:
+                mservice = layer.mobility_services[mservice_id]
+                new_veh_path = mservice.construct_veh_path(new_path)
 
-            if activity is veh.activity:
-                for i, (old_link, new_link) in enumerate(zip(activity.path, new_veh_path)):
-                    if old_link != new_link:
-                        new_veh_path = new_veh_path[i:]
-                        break
+                if activity is veh.activity:
+                    for i, (old_link, new_link) in enumerate(zip(activity.path, new_veh_path)):
+                        if old_link != new_link:
+                            new_veh_path = new_veh_path[i:]
+                            break
 
-            activity.modify_path(new_veh_path)
+                activity.modify_path(new_veh_path)
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:

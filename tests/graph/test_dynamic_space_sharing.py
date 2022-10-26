@@ -1,4 +1,6 @@
-from build.lib.mnms.tools.observer import CSVVehicleObserver
+import os
+
+from mnms.tools.observer import CSVVehicleObserver
 from mnms.demand import BaseDemandManager, User
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.generation.layers import generate_layer_from_roads, generate_matching_origin_destination_layer
@@ -30,7 +32,7 @@ def test_dynamic_space_sharing_initialize():
     road_db.add_zone(zone)
 
     personal_car = PersonalMobilityService()
-    personal_car.attach_vehicle_observer(CSVVehicleObserver('veh.csv'))
+    personal_car.attach_vehicle_observer(CSVVehicleObserver('_veh.csv'))
 
     car_layer = generate_layer_from_roads(road_db,
                                           'CAR',
@@ -71,6 +73,12 @@ def test_dynamic_space_sharing_initialize():
 
     assert mlgraph.graph.links['CAR_1_2'].costs['PersonalVehicle']['travel_time'] == float('inf')
 
-    df_veh = pd.read_csv('veh.csv', sep=";")
+    df_veh = pd.read_csv('_veh.csv', sep=";")
     path = df_veh['LINK'].unique()
     assert (path == ['CAR_0 CAR_1', 'CAR_1 CAR_3', 'CAR_3 CAR_2']).all()
+
+    try:
+        os.remove("_veh.csv")
+    except OSError:
+        pass
+
