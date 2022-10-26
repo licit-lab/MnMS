@@ -1,10 +1,6 @@
-import time
 from abc import ABC, abstractmethod
-from copy import deepcopy
-from functools import partial, reduce
-from typing import Literal, List, Tuple, Dict
+from typing import List, Dict, Set
 import csv
-from itertools import product
 import multiprocessing
 
 import numpy as np
@@ -253,3 +249,11 @@ class AbstractDecisionModel(ABC):
 
         if path_not_found:
             log.warning("Paths not found: %s", len(path_not_found))
+
+    def compute_path(self, origin: str, destination: str, accessible_layers: Set[str], chosen_services: Dict[str, str]):
+        return dijkstra(self._mlgraph.graph,
+                        origin,
+                        destination,
+                        self._cost,
+                        chosen_services,
+                        accessible_layers)

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod, ABCMeta
 from typing import List, Tuple, Optional, Dict
-from functools import cached_property
 
 from mnms.log import create_logger
 from mnms.demand.horizon import AbstractDemandHorizon
@@ -50,7 +49,7 @@ class AbstractMobilityService(ABC):
     def attach_vehicle_observer(self, observer):
         self._observer = observer
 
-    def _construct_veh_path(self, upath: List[str]):
+    def construct_veh_path(self, upath: List[str]):
         veh_path = list()
         for i in range(len(upath)-1):
             unode = upath[i]

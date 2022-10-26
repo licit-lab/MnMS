@@ -18,6 +18,7 @@ from mnms.mobility_service.public_transport import PublicTransportMobilityServic
 from mnms.time import Time, Dt
 from mnms.log import create_logger, attach_log_file, LOGLEVEL
 from mnms.tools.progress import ProgressBar
+from mnms.vehicles.manager import VehicleManager
 
 log = create_logger(__name__)
 
@@ -128,6 +129,8 @@ class Supervisor(object):
         end = time()
         log.info(f' Done [{end - start:.5} s]')
 
+        self.step_dynamic_space_sharing()
+
         log.info(f' Perform matching for mobility services ...')
         start = time()
         user_reach_dt_pickup = list()
@@ -150,6 +153,31 @@ class Supervisor(object):
         self._flow_motor.update_time(flow_dt)
         end = time()
         log.info(f' Done [{end - start:.5} s]')
+
+    def step_dynamic_space_sharing(self):
+        veh_to_reroute = self._mlgraph.dynamic_space_sharing.update(self.tcurrent,
+                                                                    list(VehicleManager._vehicles.values()))
+        for veh, activity in veh_to_reroute:
+            origin = activity.path[0][0][0]
+            dest = activity.path[-1][0][1]
+            mservice_id = veh.mobility_service
+
+            layer = self._mlgraph.mapping_layer_services[mservice_id]
+            new_path, _ = self._decision_model.compute_path(origin,
+                                                            dest,
+                                                            {layer.id},
+                                                            {layer.id: mservice_id})
+
+            mservice = layer.mobility_services[mservice_id]
+            new_veh_path = mservice.construct_veh_path(new_path)
+
+            if activity is veh.activity:
+                for i, (old_link, new_link) in enumerate(zip(activity.path, new_veh_path)):
+                    if old_link != new_link:
+                        new_veh_path = new_veh_path[i:]
+                        break
+
+            activity.modify_path(new_veh_path)
 
     def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
         if len(new_users) > 0:
@@ -200,8 +228,6 @@ class Supervisor(object):
             progress.show()
             # try:
             log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
-
-            self._mlgraph.dynamic_space_sharing.update(self.tcurrent)
 
             new_users = self.get_new_users(principal_dt)
 

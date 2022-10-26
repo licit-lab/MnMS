@@ -130,7 +130,7 @@ class ParkingService(AbstractOnDemandMobilityService):
 
             # first_link = veh.activity.path[0]
             pickup_path = [veh.current_link[0]] + pickup_path
-            pickup_activity.modify_path(self._construct_veh_path(pickup_path))
+            pickup_activity.modify_path(self.construct_veh_path(pickup_path))
             # pickup_activity.path.insert(0, first_link)
             next(pickup_activity.iter_path)
 
@@ -145,7 +145,7 @@ class ParkingService(AbstractOnDemandMobilityService):
             if cost == float('inf'):
                 raise PathNotFound(user.current_node, current_activity_serving.node)
 
-            current_activity_serving.modify_path(self._construct_veh_path(serving_path_current))
+            current_activity_serving.modify_path(self.construct_veh_path(serving_path_current))
 
             last_activity = new_plan[-1]
             last_node = last_activity.node
@@ -159,7 +159,7 @@ class ParkingService(AbstractOnDemandMobilityService):
             if cost == float('inf'):
                 raise PathNotFound(current_activity_serving.node, serving_activity.node)
 
-            serving_activity.modify_path(self._construct_veh_path(serving_path_next))
+            serving_activity.modify_path(self.construct_veh_path(serving_path_next))
 
             new_plan.insert(0, pickup_activity)
             new_plan.append(serving_activity)
@@ -171,7 +171,7 @@ class ParkingService(AbstractOnDemandMobilityService):
             if cost_pickup == float('inf'):
                 raise PathNotFound(veh._current_node, user.current_node)
 
-            pickup_activity.modify_path(self._construct_veh_path(pickup_path))
+            pickup_activity.modify_path(self.construct_veh_path(pickup_path))
 
             last_activity = veh.activities[-1] if veh.activities else veh.activity
             last_node = last_activity.node
@@ -180,7 +180,7 @@ class ParkingService(AbstractOnDemandMobilityService):
             if cost == float('inf'):
                 raise PathNotFound(veh._current_node, user.current_node)
 
-            serving_path = self._construct_veh_path(serving_path)
+            serving_path = self.construct_veh_path(serving_path)
             serving_activity.path = serving_path
             serving_activity.reset_path_iterator()
 

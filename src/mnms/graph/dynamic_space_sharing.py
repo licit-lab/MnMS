@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Callable, List, Tuple
 
 from mnms.time import Time
+from mnms.vehicles.veh_type import Vehicle, VehicleActivity
 
 
 @dataclass
@@ -27,7 +28,7 @@ class DynamicSpaceSharing(object):
         assert dt >= 0, "Dynamic Space Sharing dt must be strictly positive"
         self._dt = dt
 
-    def ban_link(self, lid: str, mobility_service: str, period: int):
+    def ban_link(self, lid: str, mobility_service: str, period: int, vehicles: List[Vehicle]) -> List[Tuple[Vehicle, VehicleActivity]]:
         link = self.graph.graph.links[lid]
         costs = link.costs
 
@@ -40,6 +41,33 @@ class DynamicSpaceSharing(object):
         layer = self.graph.mapping_layer_services[mobility_service]
         layer.graph.links[lid].update_costs(costs)
 
+
+        link_border = (link.upstream, link.downstream)
+
+        vehicles_to_reroute = []
+
+        for veh in vehicles:
+            current_link = veh.current_link
+
+            current_act = veh.activity
+            path = [p[0] for p in current_act.path]
+
+            ind_veh_link = path.index(current_link)
+
+            try:
+                ind_banned_link = path.index(link_border)
+            except ValueError:
+                for act in veh.activities:
+                    path = {p[0] for p in act.path}
+                    if link_border in path:
+                        vehicles_to_reroute.append((veh, act))
+                continue
+
+            if ind_banned_link > ind_veh_link:
+                vehicles_to_reroute.append((veh, current_act))
+
+        return vehicles_to_reroute
+
     def unban_link(self, lid: str):
         link = self.graph.graph.links[lid]
         costs = link.costs
@@ -48,8 +76,10 @@ class DynamicSpaceSharing(object):
         layer = self.graph.mapping_layer_services[self.banned_links[lid].mobility_service]
         layer.graph.links[lid].update_costs(costs)
 
-    def update(self, tcurrent: Time):
+    def update(self, tcurrent: Time, vehicles: List[Vehicle]) -> List[Tuple[Vehicle, VehicleActivity]]:
         to_del = list()
+
+        vehicle_to_reroute = []
         self._affectation_step_counter += 1
 
         for lid, banned_link in self.banned_links.items():
@@ -67,7 +97,10 @@ class DynamicSpaceSharing(object):
             new_banned_links = self._dynamic(self.graph, tcurrent)
 
             for lid, mobility_service, period in new_banned_links:
-                self.ban_link(lid, mobility_service, period)
+                if lid not in self.banned_links:
+                    vehicle_to_reroute.extend(self.ban_link(lid, mobility_service, period, vehicles))
+
+        return vehicle_to_reroute
 
     def set_dynamic(self, dynamic = Callable[["MultiLayerGraph", Time], List[Tuple[str, str, int]]]):
         self._dynamic = dynamic

@@ -16,12 +16,13 @@ class PersonalMobilityService(AbstractMobilityService):
     def matching(self, user: User, drop_node: str):
         upath = list(user.path.nodes)
         upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
-        veh_path = self._construct_veh_path(upath)
+        veh_path = self.construct_veh_path(upath)
         new_veh = self.fleet.create_vehicle(upath[0],
                                             capacity=self._veh_capacity,
-                                            activities=[VehicleActivityServing(node=user.destination,
+                                            activities=[VehicleActivityServing(node=upath[-1],
                                                                                path=veh_path,
                                                                                user=user)])
+
         if self._observer is not None:
             new_veh.attach(self._observer)
 
