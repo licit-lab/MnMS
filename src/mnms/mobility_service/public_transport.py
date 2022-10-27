@@ -134,7 +134,6 @@ class PublicTransportMobilityService(AbstractMobilityService):
         self._next_veh_departure: Dict[str, Optional[Tuple[Time, Vehicle]]] = defaultdict(lambda: None)
 
         self.gnodes = None
-        self._cache_request_vehicles = dict()
 
     @cached_property
     def lines(self):
@@ -271,85 +270,46 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         return dt
 
-    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
-        matched_user = dict()
-        for user, drop_node in users.values():
-            start = user._current_node
+    def request(self, user: User, drop_node: str) -> Dt:
+        # for user, drop_node in users.values():
+        start = user._current_node
 
-            # Select the proper line for user
-            for lid, line in self.lines.items():
-                if start in line['nodes']:
-                    user_line = line
-                    user_line_id = lid
+        chosen_veh = None
+        chosen_line = None
+
+        # Select the proper line for user
+        for lid, line in self.lines.items():
+            if start in line['nodes']:
+                chosen_line = line
+                user_line_id = lid
+                break
+        else:
+            log.error(f'{user} start is not in the PublicTransport mobility service {self.id}')
+            sys.exit(-1)
+
+        if not self.gnodes[start].radj:
+            departure_time, waiting_veh = self._next_veh_departure[user_line_id]
+            chosen_veh = waiting_veh
+        else:
+            ind_start = chosen_line["nodes"].index(start)
+            for veh in reversed(list(self.vehicles[user_line_id])):
+                ind_curr_veh = chosen_line["nodes"].index(veh.current_link[1])
+                if ind_curr_veh <= ind_start:
+                    chosen_veh = veh
                     break
             else:
-                log.error(f'{user} start is not in the PublicTransport mobility service {self.id}')
-                sys.exit(-1)
-
-            if not self.gnodes[start].radj:
                 departure_time, waiting_veh = self._next_veh_departure[user_line_id]
-                matched_user[user.id] = (waiting_veh, user_line)
-                # self.add_passenger(user, drop_node, waiting_veh, user_line["nodes"])
-                continue
-            else:
-                ind_start = user_line["nodes"].index(start)
-                for veh in reversed(list(self.vehicles[user_line_id])):
-                    ind_curr_veh = user_line["nodes"].index(veh.current_link[1])
-                    if ind_curr_veh <= ind_start:
-                        matched_user[user.id] = (veh, user_line)
-                        break
-                else:
-                    departure_time, waiting_veh = self._next_veh_departure[user_line_id]
-                    matched_user[user.id] = (waiting_veh, user_line)
+                chosen_veh = waiting_veh
 
-                # curr_veh = None
-                # next_veh = None
-                # it_veh = iter(self.vehicles[user_line_id])
-                # ind_start = user_line["nodes"].index(start)
-                # try:
-                #     curr_veh = next(it_veh)
-                #     next_veh = next(it_veh)
-                # except StopIteration:
-                #     if curr_veh is not None:
-                #         matched_user[user.id] = (curr_veh, user_line)
-                #         # self.add_passenger(user, drop_node, curr_veh, user_line["nodes"])
-                #         # curr_veh.take_next_user(user, drop_node)
-                #         continue
-                #     else:
-                #         raise VehicleNotFoundError(user, self)
-                #
-                # while True:
-                #     ind_curr_veh = user_line["nodes"].index(curr_veh.current_link[1])
-                #     ind_next_veh = user_line["nodes"].index(next_veh.current_link[1])
-                #     if ind_curr_veh <= ind_start < ind_next_veh:
-                #         # curr_veh.take_next_user(user, drop_node)
-                #         matched_user[user.id] = (curr_veh, user_line)
-                #         print(f"What should I do there?")
-                #         break
-                #     try:
-                #         curr_veh = next_veh
-                #         next_veh = next(it_veh)
-                #     except StopIteration:
-                #         ind_curr_veh = user_line["nodes"].index(curr_veh.current_link[1])
-                #         if ind_curr_veh <= ind_start:
-                #             # curr_veh.take_next_user(user, drop_node)
-                #             continue
-                #         else:
-                #             log.info(f"{user}, {user._current_node}")
-                #             log.info(f"{curr_veh.current_link}")
-                #             raise VehicleNotFoundError(user, self)
+        self._cache_request_vehicles[user.id] = (chosen_veh, chosen_line)
 
-        estimation_pickup = {u: self.estimation_pickup_time(users[u][0], veh, line) for u, (veh, line) in matched_user.items()}
-        self._cache_request_vehicles = matched_user
-
-        return estimation_pickup
+        return self.estimation_pickup_time(user, chosen_veh, chosen_line)
 
     def matching(self, user: User, drop_node: str):
         veh, line = self._cache_request_vehicles[user.id]
         self.add_passenger(user, drop_node, veh, line["nodes"])
 
     def step_maintenance(self, dt: Dt):
-        self._cache_request_vehicles = dict()
         self.gnodes = self.graph.nodes
         for lid in self.lines:
             for new_veh in self.new_departures(self._tcurrent, dt, lid):

@@ -10,8 +10,8 @@ class PersonalMobilityService(AbstractMobilityService):
     def __init__(self, _id: str = 'PersonalVehicle'):
         super(PersonalMobilityService, self).__init__(_id, veh_capacity=1, dt_matching=0, dt_periodic_maintenance=0)
 
-    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
-        return {u: Dt() for u in users}
+    def request(self, user: User, drop_node: str) -> Dt:
+        return Dt()
 
     def matching(self, user: User, drop_node: str):
         upath = list(user.path.nodes)

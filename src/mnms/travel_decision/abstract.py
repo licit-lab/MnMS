@@ -1,10 +1,7 @@
-import time
+import sys
 from abc import ABC, abstractmethod
-from copy import deepcopy
-from functools import partial, reduce
-from typing import Literal, List, Tuple, Dict
+from typing import List
 import csv
-from itertools import product
 import multiprocessing
 
 import numpy as np
@@ -126,8 +123,15 @@ class AbstractDecisionModel(ABC):
         new_users = []
         gnodes = self._mlgraph.graph.nodes
         for u in self._refused_user:
-            cnode = u._current_node
-            refused_mservice = gnodes[cnode].label
+            upath = u.path.nodes
+            ind_node_start = upath.index(u._current_node)
+            for ilayer, (layer, slice_nodes) in enumerate(u.path.layers):
+                if slice_nodes.start <= ind_node_start < slice_nodes.stop:
+                    refused_mservice = u.path.mobility_services[ilayer]
+                    break
+            else:
+                print("Mobility service not found in User path")
+                sys.exit(-1)
 
             # Get all available mobility services
             all_mob_services = [list(v.mobility_services.values()) for v in self._mlgraph.layers.values()]
@@ -150,8 +154,7 @@ class AbstractDecisionModel(ABC):
                     u.available_mobility_service.remove(personal_mob_service)
             # Check if user has no remaining available mobility_service
             if len(u.available_mobility_service) == 0:
-                log.error(f"User {u.id} has no available mobility service left.")
-                sys.exit()
+                continue
 
             # Create a new user representing refused user legacy
             u._continuous_journey = u.id
