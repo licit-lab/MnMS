@@ -8,7 +8,7 @@ from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import Zone
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.time import TimeTable, Dt
-from mnms.io.graph import save_graph, load_graph, save_transit_links, save_transit_link_odlayer
+from mnms.io.graph import save_graph, load_graph, save_transit_links, save_transit_link_odlayer, load_transit_links
 
 
 class TestIOGraphTransit(unittest.TestCase):
@@ -69,9 +69,32 @@ class TestIOGraphTransit(unittest.TestCase):
         with open(self.tempdir.name+"/all_transit.json", "r") as f:
             data = json.load(f)
 
+        car_layer = CarLayer(self.roads,
+                             services=[PersonalMobilityService()])
+
+        car_layer.create_node("C0", "0")
+        car_layer.create_node("C1", "1", {"0": {"2"}})
+        car_layer.create_node("C2", "2")
+        car_layer.create_link("C0_C1", "C0", "C1", {"PersonalVehicle": {"test": 34.3}}, ["0_1"])
+
+        bus_layer = BusLayer(self.roads)
+
+        bus_layer.create_line("L0",
+                              ["S0", "S1"],
+                              [["0_1", "1_2"]],
+                              TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
+                              True)
+
+        odlayer = generate_matching_origin_destination_layer(self.roads)
+
+        new_mlgraph = MultiLayerGraph([car_layer, bus_layer])
+        new_mlgraph.add_origin_destination_layer(odlayer)
+        load_transit_links(new_mlgraph, self.tempdir.name+"/all_transit.json")
+
         for link in data['LINKS']:
             link_id = link['ID']
             assert link_id in self.mlgraph.graph.links
+            assert link_id in new_mlgraph.graph.links
 
     def test_read_write_odlayer_links(self):
         save_transit_link_odlayer(self.mlgraph.odlayer, self.tempdir.name+"/odlayer_transit.json")
@@ -86,3 +109,28 @@ class TestIOGraphTransit(unittest.TestCase):
         for destination in self.mlgraph.odlayer.destinations.values():
             for link in destination.radj:
                 assert link.id in data
+
+
+        car_layer = CarLayer(self.roads,
+                             services=[PersonalMobilityService()])
+
+        car_layer.create_node("C0", "0")
+        car_layer.create_node("C1", "1", {"0": {"2"}})
+        car_layer.create_node("C2", "2")
+        car_layer.create_link("C0_C1", "C0", "C1", {"PersonalVehicle": {"test": 34.3}}, ["0_1"])
+
+        bus_layer = BusLayer(self.roads)
+
+        bus_layer.create_line("L0",
+                              ["S0", "S1"],
+                              [["0_1", "1_2"]],
+                              TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
+                              True)
+
+        odlayer = generate_matching_origin_destination_layer(self.roads)
+
+        new_mlgraph = MultiLayerGraph([car_layer, bus_layer])
+        new_mlgraph.add_origin_destination_layer(odlayer)
+        load_transit_links(new_mlgraph, self.tempdir.name+"/odlayer_transit.json")
+
+        assert "TEST" not in new_mlgraph.graph.links

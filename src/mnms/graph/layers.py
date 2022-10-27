@@ -336,25 +336,31 @@ class MultiLayerGraph(object):
         for l in layers:
             self.layers[l.id] = l
 
-        if odlayer is not None and connection_distance is not None:
-            self.connect_origin_destination_layer(odlayer, connection_distance)
+        if odlayer is not None:
+            self.add_origin_destination_layer(odlayer)
+            if connection_distance is not None:
+                self.connect_origin_destination_layer(connection_distance)
 
-    def connect_origin_destination_layer(self, odlayer:OriginDestinationLayer, connection_distance: float):
-        assert self.odlayer is None
-
+    def add_origin_destination_layer(self, odlayer: OriginDestinationLayer):
         self.odlayer = odlayer
+
+        [self.graph.add_node(n.id, n.position[0], n.position[1], n.label, n.exclude_movements) for n in
+         odlayer.origins.values()]
+        [self.graph.add_node(n.id, n.position[0], n.position[1], n.label, n.exclude_movements) for n in
+         odlayer.destinations.values()]
+
+    def connect_origin_destination_layer(self, connection_distance: float):
+        assert self.odlayer is not None
+
         _norm = np.linalg.norm
 
-        [self.graph.add_node(n.id, n.position[0], n.position[1], n.label, n.exclude_movements) for n in odlayer.origins.values()]
-        [self.graph.add_node(n.id, n.position[0], n.position[1], n.label, n.exclude_movements) for n in odlayer.destinations.values()]
-
         odlayer_nodes = set()
-        odlayer_nodes.update(odlayer.origins.keys())
-        odlayer_nodes.update(odlayer.destinations.keys())
+        odlayer_nodes.update(self.odlayer.origins.keys())
+        odlayer_nodes.update(self.odlayer.destinations.keys())
 
         graph_node_ids = np.array([nid for nid in self.graph.nodes])
         graph_node_pos = np.array([n.position for n in self.graph.nodes.values()])
-        for nid, node in odlayer.origins.items():
+        for nid, node in self.odlayer.origins.items():
             npos = np.array(node.position)
             dist_nodes = _norm(graph_node_pos-npos, axis=1)
             mask = dist_nodes < connection_distance
@@ -366,7 +372,7 @@ class MultiLayerGraph(object):
                     link_olayer_id = self.graph.nodes[nid].label
                     link_dlayer_id = self.graph.nodes[layer_nid].label
                     self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
-        for nid, node in odlayer.destinations.items():
+        for nid, node in self.odlayer.destinations.items():
             npos = np.array(node.position)
             dist_nodes = _norm(graph_node_pos-npos, axis=1)
             mask = dist_nodes < connection_distance
