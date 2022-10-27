@@ -97,4 +97,4 @@ def get_bounding_box(roads: RoadDescriptor):
 
 def generate_bbox_origin_destination_layer(roads: RoadDescriptor, nx: int, ny: Optional[int] = None):
     bbox = get_bounding_box(roads)
-    return generate_grid_origin_destination_layer(*bbox, nx, ny)
+    return generate_grid_origin_destination_layer(bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax, nx, ny)
