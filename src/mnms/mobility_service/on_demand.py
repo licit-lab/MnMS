@@ -67,6 +67,7 @@ class OnDemandMobilityService(AbstractMobilityService):
 
                     service_dt = Dt(seconds=len_path / choosen_veh.speed)
                     self._cache_request_vehicles[uid] = choosen_veh, veh_path
+                    break
 
         return service_dt
 
@@ -208,6 +209,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
 
                     service_dt = Dt(seconds=len_path / choosen_veh.speed)
                     self._cache_request_vehicles[user.id] = choosen_veh, veh_path
+                    break
 
         return service_dt
 
