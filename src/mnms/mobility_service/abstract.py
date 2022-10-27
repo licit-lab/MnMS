@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod, ABCMeta
 from typing import List, Tuple, Optional, Dict
-from functools import cached_property
 
 from mnms.log import create_logger
 from mnms.demand.horizon import AbstractDemandHorizon
@@ -114,35 +113,6 @@ class AbstractMobilityService(ABC):
             self._counter_matching += 1
 
         return refuse_user
-
-
-    # def launch_matching(self):
-    #     refuse_user = list()
-    #
-    #     if self._counter_matching == self._dt_matching:
-    #         self._counter_matching = 0
-    #         negotiation = self.request(self._user_buffer)
-    #
-    #         for uid, service_dt in negotiation.items():
-    #             user, drop_node = self._user_buffer[uid]
-    #             if user.pickup_dt[self.id] > service_dt:
-    #                 self.matching(user, drop_node)
-    #             else:
-    #                 log.info(f"{uid} refused {self.id} offer (predicted pickup time too long)")
-    #                 user.set_state_stop()
-    #                 user.notify(self._tcurrent)
-    #                 refuse_user.append(user)
-    #
-    #         self._user_buffer = dict()
-    #         # NB: we clean _user_buffer here because answer provided by the mobility
-    #         #     service should be YES I match with you or No I refuse you, but not
-    #         #     let's wait the next timestep to see if I can find a vehicle for you
-    #         #     Mob service has only one chance to propose a match to the user,
-    #         #     except if user request the service again
-    #     else:
-    #         self._counter_matching += 1
-    #
-    #     return refuse_user
 
     def periodic_maintenance(self, dt: Dt):
         """
