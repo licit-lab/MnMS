@@ -215,7 +215,7 @@ class Vehicle(TimeDependentSubject):
         if activity.state is not VehicleState.STOP:
             if activity.path:
                 self._current_link, self._remaining_link_length = next(activity.iter_path)
-                assert self._current_node == self._current_link[0]
+                assert self._current_node == self._current_link[0], f"Veh {self.id} current node {self._current_node} is not equal to the next upstream link {self._current_link[0]}"
             else:
                 activity.is_done = True
 
@@ -277,7 +277,7 @@ class Vehicle(TimeDependentSubject):
         self.passenger[userid] = (take_time, user)
 
     def default_activity(self):
-        return VehicleActivityStop(node=self._current_link[0],
+        return VehicleActivityStop(node=self._current_node,
                                    path=[],
                                    is_done=False)
 

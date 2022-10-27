@@ -233,7 +233,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
 
         activities = [
             pickup,
-            VehicleActivityServing(node=user.destination,
+            VehicleActivityServing(node=drop_node,
                                    path=user_path,
                                    user=user)
         ]
