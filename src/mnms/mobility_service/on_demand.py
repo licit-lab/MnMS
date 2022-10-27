@@ -21,7 +21,6 @@ class OnDemandMobilityService(AbstractMobilityService):
                  dt_matching: int,
                  dt_step_maintenance: int = 0):
         super(OnDemandMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
-        self._cache_request_vehicles = dict()
 
         self.gnodes = dict()
 
@@ -36,40 +35,40 @@ class OnDemandMobilityService(AbstractMobilityService):
             new_veh.attach(self._observer)
 
     def step_maintenance(self, dt: Dt):
-        self._cache_request_vehicles = dict()
         self.gnodes = self.graph.nodes
 
-    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
-        user_matched = dict()
-        for uid, (user, drop_node) in users.items():
-            upos = user.position
-            vehs = list(self.fleet.vehicles.keys())
+    def request(self, user: User, drop_node: str) -> Dt:
+        upos = user.position
+        uid = user.id
+        vehs = list(self.fleet.vehicles.keys())
 
-            while vehs:
-                veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
-                dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
-                nearest_veh_index = np.argmin(dist_vector)
-                nearest_veh = vehs[nearest_veh_index]
+        service_dt = Dt(hours=24)
 
-                vehs.remove(nearest_veh)
-                choosen_veh = self.fleet.vehicles[nearest_veh]
-                if not choosen_veh.is_full:
-                    if choosen_veh.is_empty:
-                        veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
-                        choosen_veh.activities[-1].node
-                        veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
-                        if cost == float('inf'):
-                            raise PathNotFound(choosen_veh._current_node, user.current_node)
+        while vehs:
+            veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
+            dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
+            nearest_veh_index = np.argmin(dist_vector)
+            nearest_veh = vehs[nearest_veh_index]
 
-                        len_path = 0
-                        for i in range(len(veh_path) - 1):
-                            j = i + 1
-                            len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
+            vehs.remove(nearest_veh)
+            choosen_veh = self.fleet.vehicles[nearest_veh]
+            if not choosen_veh.is_full:
+                if choosen_veh.is_empty:
+                    veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
+                    choosen_veh.activities[-1].node
+                    veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+                    if cost == float('inf'):
+                        raise PathNotFound(choosen_veh._current_node, user.current_node)
 
-                        user_matched[uid] = Dt(seconds=len_path / choosen_veh.speed)
-                        self._cache_request_vehicles[uid] = choosen_veh, veh_path
+                    len_path = 0
+                    for i in range(len(veh_path) - 1):
+                        j = i + 1
+                        len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
 
-        return user_matched
+                    service_dt = Dt(seconds=len_path / choosen_veh.speed)
+                    self._cache_request_vehicles[uid] = choosen_veh, veh_path
+
+        return service_dt
 
     def matching(self, user: User, drop_node: str):
         veh, veh_path = self._cache_request_vehicles[user.id]
@@ -111,7 +110,6 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                  dt_step_maintenance: int = 0):
         super(OnDemandDepotMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
         self.gnodes = None
-        self._cache_request_vehicles = None
         self.depot = dict()
 
     def _create_waiting_vehicle(self, node: str):
@@ -138,7 +136,6 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
         return self.depot[node]["capacity"] == len(self.depot[node]["vehicles"])
 
     def step_maintenance(self, dt: Dt):
-        self._cache_request_vehicles = dict()
         self.gnodes = self.graph.nodes
 
         depot = list(self.depot.keys())
@@ -176,46 +173,43 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                 else:
                     self.depot[veh._current_node]["vehicles"].add(veh.id)
 
-    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
-        user_matched = dict()
-        for uid, (user, drop_node) in users.items():
-            # user.available_mobility_service = frozenset([self.id])
+    def request(self, user: User, drop_node: str) -> Dt:
+        service_dt = Dt(hours=24)
+        upos = user.position
 
-            upos = user.position
+        vehs = list(self.fleet.vehicles.keys())
 
-            vehs = list(self.fleet.vehicles.keys())
+        while vehs:
+            veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
+            dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
+            nearest_veh_index = np.argmin(dist_vector)
+            nearest_veh = vehs[nearest_veh_index]
 
-            while vehs:
-                veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
-                dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
-                nearest_veh_index = np.argmin(dist_vector)
-                nearest_veh = vehs[nearest_veh_index]
+            vehs.remove(nearest_veh)
+            choosen_veh = self.fleet.vehicles[nearest_veh]
+            if not choosen_veh.is_full:
+                if choosen_veh.is_empty:
+                    veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
+                    choosen_veh.activities[-1].node
+                    veh_path, cost = dijkstra(self.graph,
+                                              veh_last_node,
+                                              user.current_node,
+                                              'travel_time',
+                                              {self.layer.id: self.id,
+                                               "TRANSIT": "WALK"},
+                                              {self.layer.id})
+                    if cost == float('inf'):
+                        raise PathNotFound(nearest_veh.origin, user.current_node)
 
-                vehs.remove(nearest_veh)
-                choosen_veh = self.fleet.vehicles[nearest_veh]
-                if not choosen_veh.is_full:
-                    if choosen_veh.is_empty:
-                        veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
-                        choosen_veh.activities[-1].node
-                        veh_path, cost = dijkstra(self.graph,
-                                                  veh_last_node,
-                                                  user.current_node,
-                                                  'travel_time',
-                                                  {self.layer.id: self.id,
-                                                   "TRANSIT": "WALK"},
-                                                  {self.layer.id})
-                        if cost == float('inf'):
-                            raise PathNotFound(nearest_veh.origin, user.current_node)
+                    len_path = 0
+                    for i in range(len(veh_path) - 1):
+                        j = i + 1
+                        len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
 
-                        len_path = 0
-                        for i in range(len(veh_path) - 1):
-                            j = i + 1
-                            len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
+                    service_dt = Dt(seconds=len_path / choosen_veh.speed)
+                    self._cache_request_vehicles[user.id] = choosen_veh, veh_path
 
-                        user_matched[uid] = Dt(seconds=len_path / choosen_veh.speed)
-                        self._cache_request_vehicles[uid] = choosen_veh, veh_path
-
-        return user_matched
+        return service_dt
 
     def matching(self, user: User, drop_node: str):
         veh, veh_path = self._cache_request_vehicles[user.id]
