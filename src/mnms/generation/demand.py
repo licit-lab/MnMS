@@ -1,14 +1,13 @@
 from operator import attrgetter
 from itertools import count
 import numpy as np
-from random import shuffle, choice
+from random import choice
 
 
 from hipop.shortest_path import dijkstra
 from mnms.demand.user import User
 from mnms.time import Time
 from mnms.demand.manager import BaseDemandManager
-from mnms.tools.exceptions import PathNotFound
 
 
 def generate_random_demand(mlgraph: "MultiLayerGraph",
