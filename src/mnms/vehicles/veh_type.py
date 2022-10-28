@@ -115,7 +115,7 @@ class VehicleActivityServing(VehicleActivity):
 
         self.user._remaining_link_length = 0
         upath = self.user.path.nodes
-        unode = veh._current_link[1]
+        unode = veh._current_link[1] if veh._current_link is not None else veh._current_node
         self.user._current_node = unode
         next_node_ind = upath.index(unode)+1
         self.user.set_position((unode, upath[next_node_ind]), 0, veh.position)
@@ -217,7 +217,7 @@ class Vehicle(TimeDependentSubject):
         if activity.state is not VehicleState.STOP:
             if activity.path:
                 self._current_link, self._remaining_link_length = next(activity.iter_path)
-                assert self._current_node == self._current_link[0]
+                assert self._current_node == self._current_link[0], f"Veh {self.id} current node {self._current_node} is not equal to the next upstream link {self._current_link[0]}"
             else:
                 activity.is_done = True
 

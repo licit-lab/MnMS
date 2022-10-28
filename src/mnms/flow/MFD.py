@@ -171,8 +171,12 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
         direction = dnode_pos - unode_pos
         norm_direction = np.linalg.norm(direction)
-        normalized_direction = direction / norm_direction
-        travelled = norm_direction - remaining_length
+        if norm_direction > 0:
+            normalized_direction = direction / norm_direction
+            travelled = norm_direction - remaining_length
+        else:
+            normalized_direction = direction
+            travelled = 0
         veh.set_position(unode_pos+normalized_direction*travelled)
 
     def move_veh(self, veh: Vehicle, tcurrent: Time, dt: float, speed: float) -> float:

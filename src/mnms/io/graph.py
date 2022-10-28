@@ -2,7 +2,7 @@ import json
 from typing import Union
 from pathlib import Path
 
-from hipop.graph import link_to_dict
+from hipop.graph import link_to_dict, dict_to_link
 
 from mnms.graph.layers import MultiLayerGraph, OriginDestinationLayer
 from mnms.graph.road import RoadDescriptor
@@ -61,6 +61,42 @@ def save_odlayer(odlayer: OriginDestinationLayer, filename: Union[str, Path], in
     d = odlayer.__dump__()
     with open(filename, 'w') as f:
         json.dump(d, f, indent=indent, cls=MNMSEncoder)
+
+
+def save_transit_link_odlayer(mlgraph: MultiLayerGraph, filename: Union[str, Path], indent=2):
+    links = []
+    gnodes = mlgraph.graph.nodes
+    for origin in mlgraph.odlayer.origins:
+        for link in gnodes[origin].adj.values():
+            links.append(link_to_dict(link))
+
+    for destination in mlgraph.odlayer.destinations:
+        for link in gnodes[destination].radj.values():
+            links.append(link_to_dict(link))
+
+    data = {"LINKS": links}
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=indent, cls=MNMSEncoder)
+
+
+def save_transit_links(mlgraph: MultiLayerGraph, filename: Union[str, Path], indent=2):
+    links = []
+    for link in mlgraph.graph.links.values():
+        if link.label == "TRANSIT":
+            links.append(link_to_dict(link))
+
+    data = {"LINKS": links}
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=indent, cls=MNMSEncoder)
+
+
+def load_transit_links(mlgraph: MultiLayerGraph, filename: Union[str, Path]):
+    with open(filename, 'r') as f:
+        data = json.load(f)
+
+    oriented_graph = mlgraph.graph
+    for link in data['LINKS']:
+        dict_to_link(oriented_graph, link)
 
 
 def load_odlayer(filename: Union[str, Path]) -> OriginDestinationLayer:

@@ -32,6 +32,8 @@ class AbstractMobilityService(ABC):
         self._counter_matching: int = 0
         self._dt_matching: int = dt_matching
 
+        self._cache_request_vehicles = dict()
+
     def set_time(self, time:Time):
         self._tcurrent = time.copy()
 
@@ -89,10 +91,9 @@ class AbstractMobilityService(ABC):
 
         if self._counter_matching == self._dt_matching:
             self._counter_matching = 0
-            negotiation = self.request(self._user_buffer)
 
-            for uid, service_dt in negotiation.items():
-                user, drop_node = self._user_buffer[uid]
+            for uid, (user, drop_node) in self._user_buffer.items():
+                service_dt = self.request(user, drop_node)
                 if user.pickup_dt[self.id] > service_dt:
                     self.matching(user, drop_node)
                 else:
@@ -100,13 +101,14 @@ class AbstractMobilityService(ABC):
                     user.set_state_stop()
                     user.notify(self._tcurrent)
                     refuse_user.append(user)
+                self._cache_request_vehicles = dict()
 
             self._user_buffer = dict()
             # NB: we clean _user_buffer here because answer provided by the mobility
             #     service should be YES I match with you or No I refuse you, but not
             #     let's wait the next timestep to see if I can find a vehicle for you
             #     Mob service has only one chance to propose a match to the user,
-            #     except if user request the service again 
+            #     except if user request the service again
         else:
             self._counter_matching += 1
 
@@ -131,7 +133,7 @@ class AbstractMobilityService(ABC):
         pass
 
     @abstractmethod
-    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
+    def request(self, users: User, drop_node: str) -> Dt:
         pass
 
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:

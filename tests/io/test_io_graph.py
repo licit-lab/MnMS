@@ -1,7 +1,7 @@
 import unittest
 from tempfile import TemporaryDirectory
 
-from mnms.generation.layers import generate_matching_origin_destination_layer
+from mnms.generation.layers import _generate_matching_origin_destination_layer
 from mnms.graph.layers import CarLayer, BusLayer, MultiLayerGraph
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import Zone
@@ -44,7 +44,7 @@ class TestIOGraph(unittest.TestCase):
                               TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
                               True)
 
-        odlayer = generate_matching_origin_destination_layer(self.roads)
+        odlayer = _generate_matching_origin_destination_layer(self.roads)
 
         self.mlgraph = MultiLayerGraph([car_layer, bus_layer],
                                        odlayer,
@@ -63,8 +63,9 @@ class TestIOGraph(unittest.TestCase):
         save_graph(self.mlgraph, tempdir_name+"/graph.json")
         new_graph = load_graph(tempdir_name+"/graph.json")
 
-        odlayer = generate_matching_origin_destination_layer(self.roads)
-        new_graph.connect_origin_destination_layer(odlayer, 1e-3)
+        odlayer = _generate_matching_origin_destination_layer(self.roads)
+        new_graph.add_origin_destination_layer(odlayer)
+        new_graph.connect_origin_destination_layer(1e-3)
 
         self.assertEqual(set(self.mlgraph.graph.nodes.keys()), set(new_graph.graph.nodes.keys()))
         self.assertEqual(set(self.mlgraph.graph.links.keys()), set(new_graph.graph.links.keys()))

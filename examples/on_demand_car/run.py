@@ -82,6 +82,6 @@ supervisor = Supervisor(mlgraph,
                         loglevel=LOGLEVEL.INFO)
 
 supervisor.run(Time("07:00:00"),
-               Time("18:00:00"),
+               Time("08:00:00"),
                Dt(seconds=1),
                10)

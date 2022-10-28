@@ -3,7 +3,7 @@ import pathlib
 from mnms import LOGLEVEL
 from mnms.demand import CSVDemandManager
 from mnms.flow.MFD import Reservoir, MFDFlowMotor
-from mnms.generation.layers import generate_matching_origin_destination_layer, generate_layer_from_roads, \
+from mnms.generation.layers import _generate_matching_origin_destination_layer, generate_layer_from_roads, \
     generate_grid_origin_destination_layer
 from mnms.generation.roads import generate_line_road, generate_manhattan_road
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
@@ -43,7 +43,7 @@ pblayer.create_line('L0',
                     [['0_1', '1_2'], ['1_2', '2_3']],
                     TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=10)))
 
-odlayer = generate_matching_origin_destination_layer(roads)
+odlayer = _generate_matching_origin_destination_layer(roads)
 
 road_db = generate_manhattan_road(10, 100)
 

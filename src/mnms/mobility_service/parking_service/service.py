@@ -79,7 +79,6 @@ class ParkingService(AbstractOnDemandMobilityService):
                  vehicle_filter: FilterProtocol = None):
         super(ParkingService, self).__init__(_id, veh_capacity, dt_matching, dt_rebalancing, horizon)
 
-        self._cache_request_vehicles: Dict[str, Tuple[Vehicle, List[VehicleActivity]]] = dict()
         self._vehicle_filter = IsWaiting() & InRadiusFilter(100) if vehicle_filter is None else vehicle_filter
         self._replanning_strategy = None
         self.include_all_user_disutility = False
@@ -122,7 +121,11 @@ class ParkingService(AbstractOnDemandMobilityService):
 
         if veh.state is not VehicleState.STOP:
             veh_next_node = veh.current_link[1]
-            pickup_path, cost_pickup = dijkstra(self.graph, veh_next_node, user.current_node, 'travel_time',
+            pickup_path, cost_pickup = dijkstra(self.graph,
+                                                veh_next_node,
+                                                user.current_node,
+                                                'travel_time',
+                                                {self.layer.id: self.id},
                                                 {self.layer.id})
 
             if cost_pickup == float('inf'):
@@ -140,6 +143,7 @@ class ParkingService(AbstractOnDemandMobilityService):
                                                   user.current_node,
                                                   current_activity_serving.node,
                                                   'travel_time',
+                                                  {self.layer.id: self.id},
                                                   {self.layer.id})
 
             if cost == float('inf'):
@@ -154,6 +158,7 @@ class ParkingService(AbstractOnDemandMobilityService):
                                                last_node,
                                                serving_activity.node,
                                                'travel_time',
+                                               {self.layer.id: self.id},
                                                {self.layer.id})
 
             if cost == float('inf'):
@@ -165,7 +170,11 @@ class ParkingService(AbstractOnDemandMobilityService):
             new_plan.append(serving_activity)
 
         else:
-            pickup_path, cost_pickup = dijkstra(self.graph, veh._current_node, user.current_node, 'travel_time',
+            pickup_path, cost_pickup = dijkstra(self.graph,
+                                                veh._current_node,
+                                                user.current_node,
+                                                'travel_time',
+                                                {self.layer.id: self.id},
                                                 {self.layer.id})
 
             if cost_pickup == float('inf'):
@@ -175,7 +184,12 @@ class ParkingService(AbstractOnDemandMobilityService):
 
             last_activity = veh.activities[-1] if veh.activities else veh.activity
             last_node = last_activity.node
-            serving_path, cost = dijkstra(self.graph, last_node, serving_activity.node, 'travel_time', {self.layer.id})
+            serving_path, cost = dijkstra(self.graph,
+                                          last_node,
+                                          serving_activity.node,
+                                          'travel_time',
+                                          {self.layer.id: self.id},
+                                          {self.layer.id})
 
             if cost == float('inf'):
                 raise PathNotFound(veh._current_node, user.current_node)
@@ -204,39 +218,37 @@ class ParkingService(AbstractOnDemandMobilityService):
 
         self.users[user.id] = UserInfo(user, user.distance, initial_path_dist)
 
-    def request(self, users: Dict[str, Tuple[User, str]]) -> Dict[str, Dt]:
-        user_matched = dict()
+    def request(self, user: User, drop_node: str) -> Dt:
+        service_dt = Dt(hours=24)
         all_vehicles = np.array(list(self.fleet.vehicles.values()))
-        for uid, (user, drop_node) in users.items():
-            mask = self._vehicle_filter.get_mask(self.layer, all_vehicles, user.position, list(self.depots.values()))
-            vehicles = all_vehicles[mask]
-            candidate_vehicles = PriorityQueue()
-            upath = list(user.path.nodes)
-            veh_pickup = dict()
-            veh_new_plan = dict()
-            for veh in vehicles:
-                if pre_compute_feasibility(veh):
-                    activities = [VehicleActivityPickup(node=user.current_node,
-                                                        user=user),
-                                  VehicleActivityServing(node=drop_node,
-                                                         user=user)]
-                    new_plan, pickup_dt = self.replanning(veh, activities)
-                    veh_pickup[veh.id] = pickup_dt
-                    veh_new_plan[veh.id] = new_plan
-                    disutility = self.quality_disutility(veh, new_plan, user if self.include_all_user_disutility else None)
+        uid = user.id
+        mask = self._vehicle_filter.get_mask(self.layer, all_vehicles, user.position, list(self.depots.values()))
+        vehicles = all_vehicles[mask]
+        candidate_vehicles = PriorityQueue()
+        veh_pickup = dict()
+        veh_new_plan = dict()
+        for veh in vehicles:
+            if pre_compute_feasibility(veh):
+                activities = [VehicleActivityPickup(node=user.current_node,
+                                                    user=user),
+                              VehicleActivityServing(node=drop_node,
+                                                     user=user)]
+                new_plan, pickup_dt = self.replanning(veh, activities)
+                veh_pickup[veh.id] = pickup_dt
+                veh_new_plan[veh.id] = new_plan
+                disutility = self.quality_disutility(veh, new_plan, user if self.include_all_user_disutility else None)
 
-                    if disutility != float("inf"):
-                        candidate_vehicles.put((disutility, veh))
+                if disutility != float("inf"):
+                    candidate_vehicles.put((disutility, veh))
 
-            if not candidate_vehicles.empty():
-                _, veh = candidate_vehicles.get()
-                user_matched[uid] = veh_pickup[veh.id]
-                self._cache_request_vehicles[uid] = veh, veh_new_plan[veh.id]
+        if not candidate_vehicles.empty():
+            _, veh = candidate_vehicles.get()
+            service_dt = veh_pickup[veh.id]
+            self._cache_request_vehicles[uid] = veh, veh_new_plan[veh.id]
 
-        return user_matched
+        return service_dt
 
     def step_maintenance(self, dt: Dt):
-        self._cache_request_vehicles: Dict[str, Tuple[Vehicle, List[VehicleActivity]]] = dict()
         for uid in self.users:
             self.users[uid].update_distance()
 
