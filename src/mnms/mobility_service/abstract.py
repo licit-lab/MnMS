@@ -51,7 +51,7 @@ class AbstractMobilityService(ABC):
     def attach_vehicle_observer(self, observer):
         self._observer = observer
 
-    def _construct_veh_path(self, upath: List[str]):
+    def construct_veh_path(self, upath: List[str]):
         veh_path = list()
         for i in range(len(upath)-1):
             unode = upath[i]

@@ -41,7 +41,7 @@ class VehicleActivity(ABC):
     def reset_path_iterator(self):
         self.iter_path = iter(self.path)
 
-    def modify_path(self, new_path:_TYPE_PATH):
+    def modify_path(self, new_path: _TYPE_PATH):
         self.path = new_path
         self.reset_path_iterator()
 
@@ -131,6 +131,7 @@ class Vehicle(TimeDependentSubject):
     def __init__(self,
                  node: str,
                  capacity: int,
+                 mobility_service: str,
                  initial_speed: float = 13.8,
                  activities: Optional[List[VehicleActivity]] = None):
 
@@ -138,6 +139,7 @@ class Vehicle(TimeDependentSubject):
         self._global_id = str(Vehicle._counter)
         Vehicle._counter += 1
 
+        self.mobility_service = mobility_service
         self._capacity = capacity
         self.passenger = dict()
 
@@ -232,6 +234,11 @@ class Vehicle(TimeDependentSubject):
             else:
                 next_activity.is_done = True
 
+    def iter_activities(self):
+        yield self.activity
+        for act in self.activities:
+            yield act
+
     def set_path(self, path: List[Tuple[Tuple[str, str], float]]):
         self._iter_path = iter(path)
         self._current_link, self._remaining_link_length = next(self._iter_path)
@@ -290,32 +297,37 @@ class Car(Vehicle):
     def __init__(self,
                  node: str,
                  capacity: int,
+                 mobility_service: str,
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Car, self).__init__(node, capacity, initial_speed, activities)
+        super(Car, self).__init__(node, capacity, mobility_service, initial_speed, activities)
 
 
 class Bus(Vehicle):
     def __init__(self,
                  node: str,
                  capacity: int,
+                 mobility_service: str,
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Bus, self).__init__(node, capacity, initial_speed, activities)
+        super(Bus, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+
 
 class Tram(Vehicle):
     def __init__(self,
                  node: str,
                  capacity: int,
+                 mobility_service: str,
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Tram, self).__init__(node, capacity, initial_speed, activities)
+        super(Tram, self).__init__(node, capacity, mobility_service, initial_speed, activities)
 
 
 class Metro(Vehicle):
     def __init__(self,
                  node: str,
                  capacity: int,
+                 mobility_service: str,
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Metro, self).__init__(node, capacity, initial_speed, activities)
+        super(Metro, self).__init__(node, capacity, mobility_service, initial_speed, activities)

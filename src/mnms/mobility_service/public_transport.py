@@ -148,7 +148,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 self.fleet.delete_vehicle(first_veh.id)
                 self.clean_arrived_vehicles(lid)
 
-    def construct_veh_path(self, lid):
+    def construct_public_transport_path(self, lid):
         veh_path = list()
         path = self.lines[lid]['nodes']
         for i in range(len(path) - 1):
@@ -160,7 +160,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         return veh_path
 
     def new_departures(self, time, dt, lid: str, all_departures=None):
-        veh_path = self.construct_veh_path(lid)
+        veh_path = self.construct_public_transport_path(lid)
         end_node = self.lines[lid]['nodes'][-1]
         start_node = self.lines[lid]['nodes'][0]
 

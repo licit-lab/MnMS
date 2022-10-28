@@ -6,6 +6,7 @@ import numpy as np
 from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph, Link
 
 from mnms.graph.abstract import AbstractLayer, CostFunctionLayer
+from mnms.graph.dynamic_space_sharing import DynamicSpaceSharing
 from mnms.graph.road import RoadDescriptor
 from mnms.io.utils import load_class_by_module_name
 from mnms.log import create_logger
@@ -325,6 +326,8 @@ class MultiLayerGraph(object):
         self.layers = dict()
         self.mapping_layer_services = dict()
         self.map_reference_links = ChainMap()
+
+        self.dynamic_space_sharing = DynamicSpaceSharing(self)
 
         for l in layers:
             self.map_reference_links.maps.append(l.map_reference_links)

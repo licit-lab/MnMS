@@ -3,7 +3,7 @@ from typing import List, Optional, Dict
 
 import numpy as np
 
-from mnms.graph.zone import Zone, points_in_polygon, construct_zone_from_contour
+from mnms.graph.zone import Zone, construct_zone_from_contour
 
 
 def _compute_dist(pos1: np.ndarray, pos2: np.ndarray):

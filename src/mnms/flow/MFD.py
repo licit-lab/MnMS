@@ -107,19 +107,9 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     break
 
     def initialize(self, walk_speed):
-        # Check consistency of costs functions definition
-        # if len(self._graph.layers) > 0:
-        #     costs_names = set(list(self._graph.layers.values())[0]._costs_functions.keys())
-        #     for layer in self._graph.layers.values():
-        #         if set(layer._costs_functions.keys()) != costs_names:
-        #             log.error("Each cost function should be defined on all layers.")
-        #             sys.exit()
-        #     if set(self._graph.transitlayer._costs_functions) != costs_names:
-        #         log.error("Each cost function should be defined on all layers, including transit layer.")
-        #         sys.exit()
-
         # initialize costs on links
         link_layers = list()
+
         for lid, layer in self._graph.layers.items():
             link_layers.append(layer.graph.links) # only non transit links concerned
 
@@ -196,6 +186,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             dist_travelled = veh.remaining_link_length
             elapsed_time = dist_travelled / speed
             veh.update_distance(dist_travelled)
+            veh._remaining_link_length = 0
             self.set_vehicle_position(veh)
             for passenger_id, passenger in veh.passenger.items():
                 passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
@@ -303,6 +294,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
     def update_graph(self):
         graph = self._graph.graph
+        banned_links = self._graph.dynamic_space_sharing.banned_links
+        banned_cost = self._graph.dynamic_space_sharing.cost
 
         link_layers = list()
         for lid, layer in self._graph.layers.items():
@@ -334,7 +327,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     costs[mservice] = {'travel_time': total_len / new_speed,
                                        'speed': new_speed,
                                        'length': total_len}
-                graph.update_link_costs(lid, costs)
 
                 # The update the generalized one
                 layer = self._graph.layers[graph.links[lid].label]
@@ -342,6 +334,12 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 for mservice, cost_funcs in costs_functions.items():
                     for cost_name, cost_f in cost_funcs.items():
                         costs[mservice][cost_name] = cost_f(self._graph, graph.links[lid], costs)
+
+                # Test if link is banned, if yes do not update the cost for the banned mobility service
+                if lid in banned_links:
+                    mservice = banned_links[lid].mobility_service
+                    costs[mservice].pop(banned_cost, None)
+
                 graph.update_link_costs(lid, costs)
 
                 # Update of the cost in the corresponding graph layer
@@ -350,7 +348,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                         links[lid].update_costs(costs)
                         break
 
-    def write_result(self, step_affectation:int, step_flow:int):
+    def write_result(self, step_affectation: int, step_flow:int):
         tcurrent = self._tcurrent.time
         for resid, res in self.reservoirs.items():
             resid = res.id

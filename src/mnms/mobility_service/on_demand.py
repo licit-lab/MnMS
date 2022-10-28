@@ -75,8 +75,8 @@ class OnDemandMobilityService(AbstractMobilityService):
         veh, veh_path = self._cache_request_vehicles[user.id]
         upath = list(user.path.nodes)
         upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
-        user_path = self._construct_veh_path(upath)
-        veh_path = self._construct_veh_path(veh_path)
+        user_path = self.construct_veh_path(upath)
+        veh_path = self.construct_veh_path(veh_path)
         activities = [
             VehicleActivityPickup(node=user._current_node,
                                   path=veh_path,
@@ -166,7 +166,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                     if cost == float('inf'):
                         raise PathNotFound(veh._current_node, depot)
 
-                    veh_path = self._construct_veh_path(veh_path)
+                    veh_path = self.construct_veh_path(veh_path)
                     repositioning = VehicleActivityRepositioning(node=nearest_depot,
                                                                  path=veh_path)
                     veh.activity.is_done = True
@@ -218,8 +218,8 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
         upath = list(user.path.nodes)
         upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
 
-        user_path = self._construct_veh_path(upath)
-        veh_path = self._construct_veh_path(veh_path)
+        user_path = self.construct_veh_path(upath)
+        veh_path = self.construct_veh_path(veh_path)
 
         if veh_path:
             pickup = VehicleActivityPickup(node=user._current_node,

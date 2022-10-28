@@ -61,7 +61,7 @@ class AbstractLayer(CostFunctionLayer):
 
     def add_mobility_service(self, service: AbstractMobilityService):
         service.layer = self
-        service.fleet = FleetManager(self._veh_type)
+        service.fleet = FleetManager(self._veh_type, service.id)
         self.mobility_services[service.id] = service
 
     # def add_cost_function(self, mobility_service: str, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
