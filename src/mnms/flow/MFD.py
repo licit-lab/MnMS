@@ -34,6 +34,14 @@ class Reservoir(AbstractReservoir):
                  zone: Zone,
                  modes: List[str],
                  f_speed: Callable[[Dict[str, float]], Dict[str, float]]):
+        """
+        Implementation of an MFD Reservoir
+
+        Args:
+            zone: The zone corresponding to the Reservoir
+            modes: The modes in the Reservoir
+            f_speed: The MFD speed function
+        """
         super(Reservoir, self).__init__(zone, modes)
         self.f_speed = f_speed
         self.update_speeds()

@@ -27,6 +27,16 @@ class CongestedReservoir(AbstractReservoir):
                  f_speed: Callable[[Dict[str, float], int], Dict[str, float]],
                  f_entry: Callable[[int, int], float],
                  n_car_max: int):
+        """
+        Implementation of a congested Reservoir
+
+        Args:
+            zone: The zone corresponding to the Reservoir
+            modes: The modes inside the Reservoir
+            f_speed: The MFD speed function
+            f_entry: The entry function
+            n_car_max: The max number of car
+        """
         super(CongestedReservoir, self).__init__(zone, modes)
         self.f_entry: Callable[[int, int], float] = f_entry
         self.f_speed = f_speed
@@ -56,6 +66,12 @@ class CongestedReservoir(AbstractReservoir):
 
 class CongestedMFDFlowMotor(MFDFlowMotor):
     def __init__(self, outfile: Optional[str] = None):
+        """
+        Congested flow motor with waiting queue between the reservoirs
+
+        Args:
+            outfile: If not None, write ouptut in that file
+        """
         super(CongestedMFDFlowMotor, self).__init__(outfile)
 
         self.reservoirs: Dict[str, CongestedReservoir] = dict()

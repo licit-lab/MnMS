@@ -15,6 +15,12 @@ class BannedLink:
 
 class DynamicSpaceSharing(object):
     def __init__(self, graph: "MultiLayerGraph"):
+        """
+        Allow to ban links in the MultiLayerGraph
+
+        Args:
+            graph: The MultiLayerGraph
+        """
         self.graph: Optional["MultiLayerGraph"] = graph
 
         self.cost: Optional[str] = None

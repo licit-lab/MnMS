@@ -19,26 +19,6 @@ class UserState(Enum):
 
 
 class User(TimeDependentSubject):
-    """User data class
-
-    Parameters
-    ----------
-    _id: str
-        Id of the User
-    origin: str
-        Origin of the User
-    destination:
-        Desitnation of the User
-    departure_time: Time
-        Departure time of the User
-    available_mobility_services: List[str]
-        List of available services by the User (default all mode are accessible)
-    scale_factor: int
-        Scale factor, one User can count for multiple User
-    path: List[str]
-        Path from origin to destination
-
-    """
     default_response_dt = Dt(minutes=2)
     default_pickup_dt = Dt(minutes=5)
 
@@ -48,11 +28,25 @@ class User(TimeDependentSubject):
                  destination: Union[str, Union[np.ndarray, List]],
                  departure_time: Time,
                  available_mobility_services=None,
-                 scale_factor=1,
                  path: Optional["Path"] = None,
                  response_dt: Optional[Dt] = None,
                  pickup_dt: Optional[Dt] = None,
                  continuous_journey: Optional[str] = None):
+        """
+        Class representing a User in the simulation.
+
+        Parameters
+        ----------
+        _id: The unique id of the User
+        origin: The origin of the User
+        destination: the destination of the User
+        departure_time: The departure time
+        available_mobility_services: The available mobility services
+        path: The path of the User
+        response_dt: The maximum dt a User is ok to wait from a mobility service
+        pickup_dt: The maximu dt a User is ok to wait for a pick up
+        continuous_journey: If not None, the User restarted its journey
+        """
         super(User, self).__init__()
         self.id = _id
         self.origin = origin if not isinstance(origin, list) else np.array(origin)
@@ -60,7 +54,7 @@ class User(TimeDependentSubject):
         self.departure_time = departure_time
         self.arrival_time = None
         self.available_mobility_service = available_mobility_services if available_mobility_services is None else set(available_mobility_services)
-        self.scale_factor = scale_factor
+        self.scale_factor = 1
 
         self._current_link = None
         self._remaining_link_length = None
@@ -148,7 +142,15 @@ class User(TimeDependentSubject):
 
 
 class Path(object):
-    def __init__(self, ind: int, cost=None, nodes: Union[List[str], Tuple[str]] = None):
+    def __init__(self, ind: int, cost: float=None, nodes: Union[List[str], Tuple[str]] = None):
+        """
+        Path object describing a User path in the simulation
+        Parameters
+        ----------
+        ind: The index of the path (multiple path are computed for one User)
+        cost: The cost of the path
+        nodes: The nodes describing the path
+        """
         self.ind = ind
         self.path_cost: float = cost
         self.layers: List[Tuple[str, slice]] = list()

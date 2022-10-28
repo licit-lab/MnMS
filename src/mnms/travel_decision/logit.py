@@ -17,16 +17,11 @@ class LogitDecisionModel(AbstractDecisionModel):
     def __init__(self, mmgraph: MultiLayerGraph, theta=0.01, n_shortest_path=3, cost='travel_time', outfile:str=None, verbose_file=False):
         """Logit decision model for the path of a user
 
-        Parameters
-        ----------
-        mmgraph: MultiModalGraph
-            The graph on which the model compute the path
-        theta: float
-            Parameter of the logit
-        n_shortest_path: int
-            Number of shortest path top compute
-        outfile: str
-            Path to result CSV file, nothing is written if None
+        Args:
+        mmgraph: The graph on which the model compute the path
+        theta: Parameter of the logit
+        n_shortest_path: Number of shortest path top compute
+        outfile: Path to result CSV file, nothing is written if None
         """
         super(LogitDecisionModel, self).__init__(mmgraph, n_shortest_path=n_shortest_path, outfile=outfile,
                                                  verbose_file=verbose_file, cost=cost)

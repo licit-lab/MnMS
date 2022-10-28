@@ -21,28 +21,18 @@ def generate_random_demand(mlgraph: "MultiLayerGraph",
     """Create a random demand by using the extremities of the mobility_graph as origin destination pair, the departure
     time use a distribution function to generate the departure between tstart and tend.
 
-    Parameters
-    ----------
-    mmgraph: MultiModalGraph
-        The graph use to generate the demand
-    tstart: Time
-        Lower bound of departure time
-    tend: Time
-        Upper boumd of departure time
-    min_cost: float
-        Minimal cost to accept an origin destination pair
-    cost_path: str
-        The name of the cost to use for shortest path
-    distrib_time: function
-        Distribution function to generate random departure dates
-    repeat: int
-        Repeat each origin destination pair
-    seed: int
-        Random seed
+    Args:
+        mmgraph: The graph use to generate the demand
+        tstart: Lower bound of departure time
+        tend: Upper boumd of departure time
+        min_cost: Minimal cost to accept an origin destination pair
+        cost_path: The name of the cost to use for shortest path
+        distrib_time: Distribution function to generate random departure dates
+        repeat: Repeat each origin destination pair
+        seed: Random seed
 
-    Returns
-    -------
-    BaseDemandManager
+    Returns:
+        The generated demand
 
     """
     if cost_path is None:

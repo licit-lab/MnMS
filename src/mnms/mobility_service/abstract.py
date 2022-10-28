@@ -18,6 +18,15 @@ class AbstractMobilityService(ABC):
                  veh_capacity: int,
                  dt_matching: int,
                  dt_periodic_maintenance: int):
+        """
+        Interface for edfining a new type of mobility serivce
+
+        Args:
+            _id: the id of the mobility service
+            veh_capacity: the capacity of the vehicles
+            dt_matching: the time of accumulation of request before matching
+            dt_periodic_maintenance: The dt of launching peridodic maintenance
+        """
         self._id: str = _id
         self.layer: "AbstractLayer" = None
         self._tcurrent: Optional[Time] = None

@@ -26,7 +26,21 @@ def generate_one_zone(roads: RoadDescriptor, zone_id: str) -> Zone:
     return Zone(zone_id, {s for s in roads.sections}, bbox)
 
 
-def generate_line_road(start: List[float], end: List[float], n: int, zone_id: Optional[str] = "RES", bothways: bool = True):
+def generate_line_road(start: List[float], end: List[float], n: int, zone_id: Optional[str] = "RES", bothways: bool = True) -> RoadDescriptor:
+    """
+    Generate a simple line road
+
+    Args:
+        start: the start of the line
+        end: the end of the line
+        n: the number of nodes in the line
+        zone_id: id of the zone to generate if setted
+        bothways:
+
+    Returns:
+        The RoadDescriptor
+
+    """
     roads = RoadDescriptor()
 
     start = np.array(start)
@@ -55,6 +69,17 @@ def generate_line_road(start: List[float], end: List[float], n: int, zone_id: Op
 
 
 def generate_square_road(link_length=None, zone_id='RES'):
+    """
+    Simple square road descriptor
+
+    Args:
+        link_length: the length of the links
+        zone_id: id of the zone
+
+    Returns:
+        The square RoadDescriptor
+
+    """
     roads = RoadDescriptor()
 
     roads.register_node('0', [0, 0])
@@ -83,6 +108,20 @@ def generate_square_road(link_length=None, zone_id='RES'):
 
 
 def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, prefix=""):
+    """
+    Generate a square Manhattan RoadDescriptor
+
+    Args:
+        n: Number of point in x and y direction
+        link_length: the length of the links
+        zone_id: the id of the zone
+        extended: if True, extend the border
+        prefix: the prefix of the nodes and links
+
+    Returns:
+        the manhattan RoadDescriptor
+
+    """
     roads = RoadDescriptor()
 
     for i in range(n):

@@ -14,6 +14,11 @@ log = create_logger(__name__)
 
 class UserFlow(object):
     def __init__(self, walk_speed=1.42):
+        """
+        Manage the flow of the User (walking and)
+        Args:
+            walk_speed: The speed of the User walk
+        """
         self._graph: Optional[MultiLayerGraph] = None
         self.users:Dict[str, User] = dict()
         self._walking: Dict = dict()

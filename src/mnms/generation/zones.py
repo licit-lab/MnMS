@@ -4,6 +4,17 @@ from mnms.graph.zone import construct_zone_from_contour
 
 
 def generate_one_zone(zid: str, roads: RoadDescriptor):
+    """
+    Generate a simple zone from the bounding box of the RoadDedscriptor
+
+    Args:
+        zid: The id of the zone
+        roads: The RoadDescriptor
+
+    Returns:
+        The generated RoadDescriptor
+
+    """
     bbox = get_bounding_box(roads)
     bbox.xmin -= 1
     bbox.ymin -= 1

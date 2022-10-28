@@ -10,6 +10,13 @@ from mnms.graph.layers import MultiLayerGraph
 
 class AbstractReservoir(ABC):
     def __init__(self, zone: Zone, modes: List[str]):
+        """
+        Abstract Reservoir class defining the interface for a MFD reservoir
+
+        Args:
+            zone: The zone object associated to the Reservoir
+            modes: The modes in the Reservoir
+        """
         self.id: str = zone.id
         self.zone = zone
         self.modes = modes
@@ -20,10 +27,27 @@ class AbstractReservoir(ABC):
 
     @abstractmethod
     def update_accumulations(self, dict_accumulations: Dict[str, int]):
+        """
+        Method updating the accumulation inside the Reservoir
+
+        Args:
+            dict_accumulations: The new accumulation
+
+        Returns
+        -------
+
+        """
         pass
 
     @abstractmethod
     def update_speeds(self):
+        """
+        Method updating the speed inside the Reservoir
+
+        Returns
+        -------
+
+        """
         pass
 
     def set_ghost_accumulation(self, f_acc: Callable[[Time], Dict[str, float]]):
@@ -31,15 +55,13 @@ class AbstractReservoir(ABC):
 
 
 class AbstractMFDFlowMotor(ABC):
-    """Abstraction of a flow motor, two methods must be overridden `step` and `update_graph`.
-    `step` define the core of the motor, i.e. the way `Vehicle` move. `update_graph` must update the cost of the graph.
-
-    Parameters
-    ----------
-    outfile: str
-        If not `None` store the `User` position at each `step`
-    """
     def __init__(self, outfile:str=None):
+        """Abstraction of a flow motor, two methods must be overridden `step` and `update_graph`.
+        `step` define the core of the motor, i.e. the way `Vehicle` move. `update_graph` must update the cost of the graph.
+
+        Args:
+            outfile: If not `None` store the `User` position at each `step`
+        """
         self._graph: MultiLayerGraph = None
         self._mobility_nodes = None
         self._flow_nodes = None

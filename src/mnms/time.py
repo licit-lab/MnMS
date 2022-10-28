@@ -15,7 +15,15 @@ class Dt(object):
                  hours: int = 0,
                  minutes: int = 0,
                  seconds: float = 0):
+        """
+        Class representing a delta time
 
+
+        Args:
+            hours: The hours
+            minutes: The minutes
+            seconds: The seconds
+        """
         assert hours >= 0, f"{hours}"
         assert minutes >= 0
         assert seconds >= 0

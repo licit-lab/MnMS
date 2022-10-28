@@ -1,6 +1,6 @@
 import sys
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Set, Dict
 import csv
 import multiprocessing
 
@@ -256,6 +256,7 @@ class AbstractDecisionModel(ABC):
 
         if path_not_found:
             log.warning("Paths not found: %s", len(path_not_found))
+
 
     def compute_path(self, origin: str, destination: str, accessible_layers: Set[str], chosen_services: Dict[str, str]):
         return dijkstra(self._mlgraph.graph,

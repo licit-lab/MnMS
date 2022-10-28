@@ -3,7 +3,7 @@ import os
 from mnms.tools.observer import CSVVehicleObserver
 from mnms.demand import BaseDemandManager, User
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
-from mnms.generation.layers import generate_layer_from_roads, generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_layer_from_roads, _generate_matching_origin_destination_layer
 from mnms.generation.zones import generate_one_zone
 from mnms.graph.layers import MultiLayerGraph
 from mnms.graph.road import RoadDescriptor
@@ -38,7 +38,7 @@ def test_dynamic_space_sharing_initialize():
                                           'CAR',
                                           mobility_services=[personal_car])
 
-    odlayer = generate_matching_origin_destination_layer(road_db)
+    odlayer = _generate_matching_origin_destination_layer(road_db)
 
     mlgraph = MultiLayerGraph([car_layer],
                               odlayer,
@@ -62,7 +62,7 @@ def test_dynamic_space_sharing_initialize():
             return []
 
 
-    mlgraph.dynamic_space_sharing.set_dynamic(dynamic)
+    mlgraph.dynamic_space_sharing.set_dynamic(dynamic, 0)
 
     supervisor = Supervisor(mlgraph,
                             demand,

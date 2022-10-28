@@ -37,6 +37,9 @@ class RoadDescriptor(object):
     __slots__ = ('nodes', 'sections', 'zones', 'stops')
 
     def __init__(self):
+        """
+        Object describing the physical roads
+        """
         self.nodes: Dict[str, RoadNode] = dict()
         self.stops: Dict[str, RoadStop] = dict()
         self.sections: Dict[str, RoadSection] = dict()

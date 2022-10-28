@@ -2,6 +2,7 @@ from typing import Optional, Type, List
 
 import numpy as np
 
+from mnms.graph.abstract import AbstractLayer
 from mnms.graph.layers import OriginDestinationLayer, SimpleLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.abstract import AbstractMobilityService
@@ -13,7 +14,21 @@ def generate_layer_from_roads(roads: RoadDescriptor,
                               layer_id: str,
                               veh_type:Type[Vehicle] = Car,
                               default_speed: float = 14,
-                              mobility_services: Optional[List[AbstractMobilityService]] = None):
+                              mobility_services: Optional[List[AbstractMobilityService]] = None) -> AbstractLayer:
+    """
+    Generate a whole layer from the RoadDescriptor.
+
+    Args
+        roads: The roads object
+        layer_id: the id of the generated layer
+        veh_type: the type of vehicle
+        default_speed: the default speed
+        mobility_services: the mobility services on the generated layer
+
+    Returns:
+        The generated Layer
+
+    """
 
     layer = SimpleLayer(roads, layer_id, veh_type, default_speed, mobility_services)
 
@@ -58,6 +73,21 @@ def generate_grid_origin_destination_layer(xmin: float,
                                            ymax: float,
                                            nx: int,
                                            ny: Optional[int] = None):
+    """
+    Generate a rectangular structured grid for the OriginDestinationLayer
+
+    Args:
+        xmin: the min x of the grid
+        ymin: the min y of the grid
+        xmax: the max x of the grid
+        ymax: the max y of the grid
+        nx: the number of point in the x direction
+        ny: the number of point in the y direction
+
+    Returns:
+        The OriginDestinationLayer
+
+    """
     if ny is None:
         ny = nx
 
@@ -78,6 +108,18 @@ def generate_grid_origin_destination_layer(xmin: float,
     return odlayer
 
 
-def generate_bbox_origin_destination_layer(roads: RoadDescriptor, nx: int, ny: Optional[int] = None):
+def generate_bbox_origin_destination_layer(roads: RoadDescriptor, nx: int, ny: Optional[int] = None) -> OriginDestinationLayer:
+    """
+    Generate a grid OriginDestinationLayer based on the bounding box of the roads nodes
+
+    Args:
+        roads: The OriginDestinationLayer from which the odlayer is created
+        nx: The number of point in the x direction
+        ny: The number of point in the y direction
+
+    Returns:
+        The generated layer
+
+    """
     bbox = get_bounding_box(roads)
     return generate_grid_origin_destination_layer(bbox.xmin - 1, bbox.ymin - 1, bbox.xmax + 1, bbox.ymax + 1, nx, ny)

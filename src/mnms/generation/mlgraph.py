@@ -5,6 +5,18 @@ from mnms.graph.layers import MultiLayerGraph
 
 
 def generate_manhattan_passenger_car(n, link_length, resid="RES") -> MultiLayerGraph:
+    """
+
+    Parameters
+    ----------
+    n
+    link_length
+    resid
+
+    Returns
+    -------
+
+    """
     roads = generate_manhattan_road(n, link_length, resid)
     layer_car = generate_layer_from_roads(roads,
                                           "CAR",

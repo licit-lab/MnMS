@@ -8,6 +8,13 @@ class FleetManager(object):
     def __init__(self,
                  veh_type: Type[Vehicle],
                  mobility_service: str):
+        """
+        Manage a fleet of Vehicles
+
+        Args:
+            veh_type: Type of vehicle
+            mobility_service: the associated mobility service
+        """
         self.__veh_manager = VehicleManager()
         self.vehicles: Dict[str, Vehicle] = dict()
         self._constructor: Type[Vehicle] = veh_type

@@ -12,18 +12,12 @@ from mnms.io.utils import MNMSEncoder, load_class_by_module_name
 def save_graph(mlgraph: MultiLayerGraph, filename: Union[str, Path], indent=2):
     """Save a MultiModalGraph as a JSON file
 
-    Parameters
-    ----------
-    mmgraph: MultiModalGraph
-        Graph to save
-    filename: str
-        Name of the JSON file
-    indent: int
-        Indentation of the JSON
+    Args:
+        mmgraph: Graph to save
+        filename: Name of the JSON file
+        indent: Indentation of the JSON
 
-    Returns
-    -------
-    None
+    Returns:
 
     """
 
@@ -36,6 +30,15 @@ def save_graph(mlgraph: MultiLayerGraph, filename: Union[str, Path], indent=2):
 
 
 def load_graph(filename: Union[str, Path]):
+    """
+    Load the graph from a JSON file
+
+    Args:
+        filename: the path to the JSON
+
+    Returns:
+
+    """
     with open(filename, 'r') as f:
         data = json.load(f)
 
@@ -58,12 +61,35 @@ def load_graph(filename: Union[str, Path]):
 
 
 def save_odlayer(odlayer: OriginDestinationLayer, filename: Union[str, Path], indent=2):
+    """
+    Save the OriginDestinationLayer
+
+    Args:
+        odlayer: The OriginDestinationLayer
+        filename: the path where to save the file
+        indent: the indentation of the JSON
+
+    Returns:
+
+
+    """
     d = odlayer.__dump__()
     with open(filename, 'w') as f:
         json.dump(d, f, indent=indent, cls=MNMSEncoder)
 
 
 def save_transit_link_odlayer(mlgraph: MultiLayerGraph, filename: Union[str, Path], indent=2):
+    """
+    Save only the transit links between the OriginDestinationLayer and the MultiLayerGraph
+
+    Args:
+        mlgraph: the MultiLayerGraph
+        filename: the path where to save the file
+        indent: the indentation of the JSON
+
+    Returns:
+
+    """
     links = []
     gnodes = mlgraph.graph.nodes
     for origin in mlgraph.odlayer.origins:
@@ -80,6 +106,17 @@ def save_transit_link_odlayer(mlgraph: MultiLayerGraph, filename: Union[str, Pat
 
 
 def save_transit_links(mlgraph: MultiLayerGraph, filename: Union[str, Path], indent=2):
+    """
+    Save all the transit links in the MultiLayerGraph
+
+    Args:
+        mlgraph: the MultiLayerGraph
+        filename: the path where to save the file
+        indent: the indentation of the JSON
+
+    Returns:
+
+    """
     links = []
     for link in mlgraph.graph.links.values():
         if link.label == "TRANSIT":
@@ -91,6 +128,17 @@ def save_transit_links(mlgraph: MultiLayerGraph, filename: Union[str, Path], ind
 
 
 def load_transit_links(mlgraph: MultiLayerGraph, filename: Union[str, Path]):
+    """
+    Load the transit kinks in a MultiLayerGraph
+
+    Args:
+        mlgraph: The MultiLayerGraph in which to insert the links
+        filename: The file where the links are stored
+
+    Returns:
+
+
+    """
     with open(filename, 'r') as f:
         data = json.load(f)
 
@@ -100,6 +148,16 @@ def load_transit_links(mlgraph: MultiLayerGraph, filename: Union[str, Path]):
 
 
 def load_odlayer(filename: Union[str, Path]) -> OriginDestinationLayer:
+    """
+    Load the OriginDestinationLayer from a file
+
+    Args:
+        filename: The path to the file
+
+    Returns:
+        The loaded OriginDestinationLayer
+
+    """
     with open(filename, 'r') as f:
         data = json.load(f)
 

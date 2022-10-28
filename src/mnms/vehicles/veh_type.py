@@ -134,6 +134,16 @@ class Vehicle(TimeDependentSubject):
                  mobility_service: str,
                  initial_speed: float = 13.8,
                  activities: Optional[List[VehicleActivity]] = None):
+        """
+        Class representing a vehicle in the simualtion
+
+        Args:
+            node: The node where the Vehicle is created
+            capacity: the capacity of the Vehicle
+            mobility_service: The associated mobility service
+            initial_speed: the initial speed of the Vehicle
+            activities: The initial activities of the Vehicle
+        """
 
         super(Vehicle, self).__init__()
         self._global_id = str(Vehicle._counter)
