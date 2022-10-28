@@ -7,7 +7,7 @@ from mnms.demand import User
 from mnms.demand.user import Path
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.generation.roads import generate_line_road
-from mnms.generation.layers import generate_layer_from_roads, generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_layer_from_roads, _generate_matching_origin_destination_layer
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import construct_zone_from_sections
@@ -124,7 +124,7 @@ def test_move_veh_activity_change():
                                           "CarLayer",
                                           mobility_services=[on_demand])
 
-    odlayer = generate_matching_origin_destination_layer(roads)
+    odlayer = _generate_matching_origin_destination_layer(roads)
 
     mlgraph = MultiLayerGraph([car_layer],
                               odlayer,
@@ -159,7 +159,9 @@ def test_move_veh_activity_change():
     assert 1 == pytest.approx(user.distance)
     assert 11 == pytest.approx(veh.distance)
 
+    print('test')
     VehicleManager.empty()
+    Vehicle._counter = 0
 
 
 def test_move_veh_res_change():
@@ -174,7 +176,7 @@ def test_move_veh_res_change():
                                           "CarLayer",
                                           mobility_services=[personal_car])
 
-    odlayer = generate_matching_origin_destination_layer(roads)
+    odlayer = _generate_matching_origin_destination_layer(roads)
 
     mlgraph = MultiLayerGraph([car_layer],
                               odlayer,
@@ -206,3 +208,4 @@ def test_move_veh_res_change():
     assert approx_dist == pytest.approx(veh.distance)
 
     VehicleManager.empty()
+    Vehicle._counter = 0

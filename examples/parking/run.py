@@ -2,7 +2,7 @@ from mnms import LOGLEVEL
 from mnms.demand import BaseDemandManager, User
 from mnms.demand.horizon import DemandHorizon
 from mnms.generation.roads import generate_manhattan_road
-from mnms.generation.layers import generate_matching_origin_destination_layer, generate_layer_from_roads
+from mnms.generation.layers import _generate_matching_origin_destination_layer, generate_layer_from_roads
 from mnms.graph.layers import MultiLayerGraph, CarLayer
 from mnms.log import set_mnms_logger_level
 
@@ -47,7 +47,7 @@ car_layer = generate_layer_from_roads(roads,
 
 parking_service.set_vehicle_filter(InRadiusFilter(1000))
 
-odlayer = generate_matching_origin_destination_layer(roads)
+odlayer = _generate_matching_origin_destination_layer(roads)
 #
 mlgraph = MultiLayerGraph([car_layer],
                           odlayer,

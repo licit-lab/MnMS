@@ -37,7 +37,7 @@ def generate_layer_from_roads(roads: RoadDescriptor,
     return layer
 
 
-def generate_matching_origin_destination_layer(roads: RoadDescriptor, with_stops: bool = True):
+def _generate_matching_origin_destination_layer(roads: RoadDescriptor, with_stops: bool = True):
 
     odlayer = OriginDestinationLayer()
 
@@ -97,4 +97,4 @@ def get_bounding_box(roads: RoadDescriptor):
 
 def generate_bbox_origin_destination_layer(roads: RoadDescriptor, nx: int, ny: Optional[int] = None):
     bbox = get_bounding_box(roads)
-    return generate_grid_origin_destination_layer(bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax, nx, ny)
+    return generate_grid_origin_destination_layer(bbox.xmin - 1, bbox.ymin - 1, bbox.xmax + 1, bbox.ymax + 1, nx, ny)

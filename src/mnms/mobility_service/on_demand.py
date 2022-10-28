@@ -200,7 +200,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                                                "TRANSIT": "WALK"},
                                               {self.layer.id})
                     if cost == float('inf'):
-                        raise PathNotFound(nearest_veh.origin, user.current_node)
+                        raise PathNotFound(veh_last_node, user.current_node)
 
                     len_path = 0
                     for i in range(len(veh_path) - 1):

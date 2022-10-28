@@ -28,9 +28,9 @@ def _process_shortest_path_inputs(mlgraph: MultiLayerGraph, users):
     chosen_mservice = [None] * len(users)
 
     origins_id = list(odlayer.origins.keys())
-    origins_pos = np.array([n.position for n in odlayer.origins.values()])
+    origins_pos = np.array([position for position in odlayer.origins.values()])
     destinations_id = list(odlayer.destinations.keys())
-    destinations_pos = np.array([n.position for n in odlayer.destinations.values()])
+    destinations_pos = np.array([position for position in odlayer.destinations.values()])
 
     for i, u in enumerate(users):
         if isinstance(u.origin, np.ndarray):

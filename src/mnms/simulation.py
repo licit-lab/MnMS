@@ -195,7 +195,6 @@ class Supervisor(object):
         while self.tcurrent < tend:
             progress.update()
             progress.show()
-            # try:
             log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
             new_users = self.get_new_users(principal_dt)
@@ -234,7 +233,7 @@ class Supervisor(object):
 
             log.info('-'*50)
             affectation_step += 1
-        # print(progress._index, affectation_step)
+
         self._flow_motor.finalize()
 
         if self._decision_model._write:

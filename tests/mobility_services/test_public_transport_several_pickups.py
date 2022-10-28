@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from mnms.demand import BaseDemandManager, User
 from mnms.demand.user import UserState
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
-from mnms.generation.layers import generate_matching_origin_destination_layer
+from mnms.generation.layers import _generate_matching_origin_destination_layer
 from mnms.generation.roads import generate_line_road
 from mnms.graph.layers import MultiLayerGraph, PublicTransportLayer
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
@@ -43,7 +43,7 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
                             [['0_1'], ['0_1'], ['0_1'], ['0_1'], ['0_1']],
                             TimeTable.create_table_freq('07:00:00', '08:30:00', Dt(minutes=10)))
 
-        odlayer = generate_matching_origin_destination_layer(roads)
+        odlayer = _generate_matching_origin_destination_layer(roads)
 
 
         mlgraph = MultiLayerGraph([pblayer],

@@ -63,14 +63,15 @@ def save_odlayer(odlayer: OriginDestinationLayer, filename: Union[str, Path], in
         json.dump(d, f, indent=indent, cls=MNMSEncoder)
 
 
-def save_transit_link_odlayer(odlayer: OriginDestinationLayer, filename: Union[str, Path], indent=2):
+def save_transit_link_odlayer(mlgraph: MultiLayerGraph, filename: Union[str, Path], indent=2):
     links = []
-    for origin in odlayer.origins.values():
-        for link in origin.adj:
+    gnodes = mlgraph.graph.nodes
+    for origin in mlgraph.odlayer.origins:
+        for link in gnodes[origin].adj.values():
             links.append(link_to_dict(link))
 
-    for destination in odlayer.destinations.values():
-        for link in destination.radj:
+    for destination in mlgraph.odlayer.destinations:
+        for link in gnodes[destination].radj.values():
             links.append(link_to_dict(link))
 
     data = {"LINKS": links}
@@ -96,7 +97,6 @@ def load_transit_links(mlgraph: MultiLayerGraph, filename: Union[str, Path]):
     oriented_graph = mlgraph.graph
     for link in data['LINKS']:
         dict_to_link(oriented_graph, link)
-
 
 
 def load_odlayer(filename: Union[str, Path]) -> OriginDestinationLayer:

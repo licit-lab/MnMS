@@ -2,7 +2,7 @@ import json
 import unittest
 from tempfile import TemporaryDirectory
 
-from mnms.generation.layers import generate_matching_origin_destination_layer
+from mnms.generation.layers import _generate_matching_origin_destination_layer
 from mnms.graph.layers import CarLayer, BusLayer, MultiLayerGraph
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import Zone
@@ -48,7 +48,7 @@ class TestIOGraphTransit(unittest.TestCase):
                               TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
                               True)
 
-        odlayer = generate_matching_origin_destination_layer(self.roads)
+        odlayer = _generate_matching_origin_destination_layer(self.roads)
 
         self.mlgraph = MultiLayerGraph([car_layer, bus_layer],
                                        odlayer,
@@ -85,7 +85,7 @@ class TestIOGraphTransit(unittest.TestCase):
                               TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
                               True)
 
-        odlayer = generate_matching_origin_destination_layer(self.roads)
+        odlayer = _generate_matching_origin_destination_layer(self.roads)
 
         new_mlgraph = MultiLayerGraph([car_layer, bus_layer])
         new_mlgraph.add_origin_destination_layer(odlayer)
@@ -97,17 +97,17 @@ class TestIOGraphTransit(unittest.TestCase):
             assert link_id in new_mlgraph.graph.links
 
     def test_read_write_odlayer_links(self):
-        save_transit_link_odlayer(self.mlgraph.odlayer, self.tempdir.name+"/odlayer_transit.json")
+        save_transit_link_odlayer(self.mlgraph, self.tempdir.name+"/odlayer_transit.json")
         with open(self.tempdir.name+"/odlayer_transit.json", "r") as f:
             data = json.load(f)
 
         data = set(l["ID"] for l in data["LINKS"])
 
-        for origin in self.mlgraph.odlayer.origins.values():
-            for link in origin.adj:
+        for origin in self.mlgraph.odlayer.origins:
+            for link in self.mlgraph.graph.nodes[origin].adj.values():
                 assert link.id in data
-        for destination in self.mlgraph.odlayer.destinations.values():
-            for link in destination.radj:
+        for destination in self.mlgraph.odlayer.destinations:
+            for link in self.mlgraph.graph.nodes[destination].radj.values():
                 assert link.id in data
 
 
@@ -127,7 +127,7 @@ class TestIOGraphTransit(unittest.TestCase):
                               TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
                               True)
 
-        odlayer = generate_matching_origin_destination_layer(self.roads)
+        odlayer = _generate_matching_origin_destination_layer(self.roads)
 
         new_mlgraph = MultiLayerGraph([car_layer, bus_layer])
         new_mlgraph.add_origin_destination_layer(odlayer)

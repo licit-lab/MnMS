@@ -9,7 +9,7 @@ from mnms.time import Dt, Time
 class AbstractDemandHorizon(ABC):
     def __init__(self, manager: AbstractDemandManager, dt: Dt):
         """
-        Abstraction of the demand horizon
+        Abstraction of the demand horizon, it provides the next demand for the current time until current time + dt
 
         Args:
             manager: The demand manager

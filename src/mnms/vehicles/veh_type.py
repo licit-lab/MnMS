@@ -115,7 +115,7 @@ class VehicleActivityServing(VehicleActivity):
 
         self.user._remaining_link_length = 0
         upath = self.user.path.nodes
-        unode = veh._current_link[1]
+        unode = veh._current_link[1] if veh._current_link is not None else veh._current_node
         self.user._current_node = unode
         next_node_ind = upath.index(unode)+1
         self.user.set_position((unode, upath[next_node_ind]), 0, veh.position)
