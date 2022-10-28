@@ -140,3 +140,5 @@ doc/_dvlpt/
 .DS_Store
 
 doc/tutorials/results/*
+docs/reference/*
+*.csv

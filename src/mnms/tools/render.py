@@ -1,110 +1,130 @@
-from itertools import cycle
-
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.collections import LineCollection
-from matplotlib.lines import Line2D
-import matplotlib.colors as mcolors
+from matplotlib.patches import Patch
 
-import numpy as np
+from mnms.time import Time
 
 
-def draw_flow_graph(ax, G, color='black', linkwidth=1, nodesize=2, node_label=True, show_length=False, cmap=plt.cm.jet):
+def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=True, draw_stops=True, label_size=5):
     lines = list()
 
-    if show_length:
-        lengths = list()
-        for (unode, dnode), l in G.links.items():
-            lines.append([G.nodes[unode].pos, G.nodes[dnode].pos])
-            lengths.append(l.length)
-        line_segment = LineCollection(lines, linestyles='solid', array=lengths, linewidths=linkwidth, cmap=cmap)
-        ax.add_collection(line_segment)
-        plt.colorbar(line_segment)
-    else:
-        for unode, dnode in G.links:
-            lines.append([G.nodes[unode].pos, G.nodes[dnode].pos])
-        line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
-        ax.add_collection(line_segment)
+    for section_data in roads.sections.values():
+        unode = section_data.upstream
+        dnode = section_data.downstream
+        lines.append([roads.nodes[unode].position, roads.nodes[dnode].position])
+    line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
+    ax.add_collection(line_segment)
 
-    x, y = zip(*[n.pos for n in G.nodes.values()])
+    x, y = zip(*[rn.position.tolist() for rn in roads.nodes.values()])
     ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
 
+    if draw_stops and roads.stops:
+        x, y = zip(*[stop.absolute_position.tolist() for stop in roads.stops.values()])
+        ax.plot(x, y, 'o', markerfacecolor='red', markeredgecolor=color, fillstyle='full', markersize=nodesize)
+
     if node_label:
-        [ax.annotate(n.id, n.pos) for n in G.nodes.values()]
+        [ax.annotate(n, rn.position, size=label_size) for n, rn in roads.nodes.items()]
+        if draw_stops:
+            [ax.annotate(s, data.absolute_position, size=label_size, color="red") for s, data in roads.stops.items()]
 
     ax.margins(0.05, 0.05)
     ax.axis("equal")
     plt.tight_layout()
 
 
-def draw_path(ax, mmgraph, path, color='red', linkwidth=2, alpha=1):
+def draw_path(ax, mlgraph, path, color='red', linkwidth=2, alpha=1):
     lines = list()
+    gnodes = mlgraph.graph.nodes
     if path is not None:
-        for ni in range(len(path)-1):
+        pnodes = path.nodes
+        for ni in range(len(pnodes) - 1):
             nj = ni + 1
-            unode = mmgraph.mobility_graph.nodes[path[ni]].reference_node
-            dnode = mmgraph.mobility_graph.nodes[path[nj]].reference_node
-            lines.append([mmgraph.flow_graph.nodes[unode].pos, mmgraph.flow_graph.nodes[dnode].pos])
+            unode = gnodes[pnodes[ni]].position
+            dnode = gnodes[pnodes[nj]].position
+            lines.append([unode, dnode])
 
         line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth, alpha=alpha)
         ax.add_collection(line_segment)
 
-
-def draw_multimodal_graph(ax, mmgraph, linkwidth=1, nodesize=5, node_label=True, dy=0.4, defo_scale=0.25):
-    flow_graph= mmgraph.flow_graph
-
+def draw_line(ax, mlgraph, line, color='green', linkwidth=6, alpha=0.6, draw_stops=True,
+    nodesize=6, line_label='', label_size=5):
     lines = list()
-    deformation_matrix = np.array([[1, defo_scale], [0, defo_scale]])
-    defo_app = lambda x: deformation_matrix.dot(x)
-
-    for unode, dnode in flow_graph.links:
-        lines.append([defo_app(flow_graph.nodes[unode].pos), defo_app(flow_graph.nodes[dnode].pos)])
-
-    line_segment = LineCollection(lines, linestyles='solid', colors='black', linewidths=linkwidth)
+    starting_stop = mlgraph.roads.stops[line['stops'][0]]
+    ending_stop = mlgraph.roads.stops[line['stops'][-1]]
+    for i,sections in enumerate(line['sections']):
+        for j,section in enumerate(sections):
+            section_data = mlgraph.roads.sections[section]
+            unode_pos = mlgraph.roads.nodes[section_data.upstream].position
+            dnode_pos = mlgraph.roads.nodes[section_data.downstream].position
+            if i == 0 and j == 0:
+                # Use strating stop position as unode
+                unode_pos = starting_stop.absolute_position
+            if i == len(line['sections'])-1 and j == len(sections)-1:
+                # Use ending stop position as dnode
+                dnode_pos = ending_stop.absolute_position
+            lines.append([unode_pos, dnode_pos])
+    line_segment = LineCollection(lines, linestyles='solid', colors=color,
+        linewidths=linkwidth, alpha=alpha)
     ax.add_collection(line_segment)
-    x, y = zip(*[defo_app(n.pos) for n in flow_graph.nodes.values()])
 
-    ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor='black', fillstyle='full', markersize=nodesize)
+    if line_label != '':
+        ax.annotate(line_label, starting_stop.absolute_position, size=label_size)
 
-    if node_label:
-        [ax.annotate(n.id, defo_app(n.pos)) for n in flow_graph.nodes.values()]
+    if draw_stops:
+        x, y = zip(*[mlgraph.roads.stops[stop].absolute_position.tolist() for stop in line['stops']])
+        ax.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='black',
+            fillstyle='full', markersize=nodesize)
 
-    ax.margins(0.05, 0.05)
-    ax.axis("equal")
 
-    all_color = list(mcolors.BASE_COLORS.keys())
-    all_color.remove('w')
-    colors = cycle(all_color)
-    yshift = dy
+def draw_odlayer(ax, mlgraph, color='blue', nodesize=2):
+    ods = list(mlgraph.odlayer.origins.keys()) + list(mlgraph.odlayer.destinations.keys())
+    x, y = zip(*[mlgraph.graph.nodes[od].position for od in ods])
+    ax.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='black',
+        fillstyle='full', markersize=nodesize)
 
-    service_shift = dict()
-    custom_legend = []
-    for sid, service in mmgraph._mobility_services.items():
-        c = next(colors)
-        custom_legend.append(Line2D([0], [0], color=c, lw=2))
-        defo_app = lambda x: deformation_matrix.dot(x) + [0, yshift]
-        lines = list()
-        nodes = set()
-        for (unode, dnode) in service.links:
-            link = mmgraph.mobility_graph.links[(unode, dnode)]
-            nodes.add(unode)
-            nodes.add(dnode)
-            for lid in link.reference_links:
-                unode, dnode = mmgraph.flow_graph._map_lid_nodes[lid]
-                lines.append(
-                    [defo_app(mmgraph.flow_graph.nodes[unode].pos), defo_app(mmgraph.flow_graph.nodes[dnode].pos)])
 
-        line_segment = LineCollection(lines, linestyles='solid', colors=c, linewidths=linkwidth)
-        ax.add_collection(line_segment)
+def draw_veh_activity(ax, veh_result_file: str, veh_id: str):
+    c_dict = {'STOP': '#E64646', 'PICKUP': '#E69646', 'SERVING': '#34D05C',
+              'REPOSITIONING': '#34D0C3'}
+    df = pd.read_csv(veh_result_file, sep=";")
+    df = df[df["ID"] == int(veh_id)]
+    current_state = df.iloc[0]["STATE"]
+    start_time = Time(df.iloc[0]["TIME"])
+    current_passengers = df.iloc[0]["PASSENGERS"] if not pd.isna(df.iloc[0]["PASSENGERS"]) else ""
+    xticks = []
+    i = 0
+    for idx, row in df.iterrows():
+        next_state = row.STATE
+        next_passengers = row.PASSENGERS if not pd.isna(row.PASSENGERS) else ""
+        end_time = Time(row.TIME)
+        xticks.append(end_time.to_seconds())
+        if next_state != current_state:
+            ax.barh(f"ACTIVITY_{i}", (end_time - start_time).to_seconds(), left=start_time.to_seconds(), height=0.5,
+                    color=c_dict[current_state])
+            ax.axvline(x=start_time.to_seconds(), color='k', ls='--')
+            ax.text(end_time.to_seconds() + 1, f"ACTIVITY_{i}",
+                    next_passengers,
+                    va='center', alpha=0.8)
+            current_state = next_state
+            current_passengers = next_passengers
+            start_time = end_time
+        elif next_passengers != current_passengers:
+            ax.barh(f"ACTIVITY_{i}", (end_time - start_time).to_seconds(), left=start_time.to_seconds(), height=0.5,
+                    color=c_dict[current_state])
+            ax.axvline(x=start_time.to_seconds(), color='k', ls='--')
+            ax.text(end_time.to_seconds() + 1, f"ACTIVITY_{i}",
+                    next_passengers,
+                    va='center', alpha=0.8)
+            current_state = next_state
+            start_time = end_time
+            current_passengers = next_passengers
+        i += 1
 
-        x, y = zip(*[defo_app(mmgraph.flow_graph.nodes[mmgraph.mobility_graph.nodes[n].reference_node].pos) for n in nodes if mmgraph.mobility_graph.nodes[n].reference_node is not None])
-        ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=c, fillstyle='full', markersize=nodesize)
-
-        if node_label:
-            [ax.annotate(n, defo_app((mmgraph.flow_graph.nodes[mmgraph.mobility_graph.nodes[n].reference_node].pos))) for n in nodes if mmgraph.mobility_graph.nodes[n].reference_node is not None]
-
-        service_shift[sid] = yshift
-        yshift += dy
-
-    ax.add_collection(line_segment)
-    ax.legend(custom_legend, list(mmgraph._mobility_services.keys()))
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([Time.from_seconds(x).time for x in xticks])
+    plt.xticks(rotation=45)
     plt.tight_layout()
+    legend_elements = [Patch(facecolor=c_dict[i], label=i) for i in c_dict]
+    plt.legend(handles=legend_elements)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(20))

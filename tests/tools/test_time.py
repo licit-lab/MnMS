@@ -1,7 +1,7 @@
 import unittest
 from decimal import Decimal
 
-from mnms.tools.time import Time, TimeTable, Dt
+from mnms.time import Time, Dt
 
 
 class TestTime(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestTime(unittest.TestCase):
         self.assertAlmostEqual(23.67, t.seconds)
 
     def test_time_from_seconds(self):
-        t = Time.fromSeconds(12345)
+        t = Time.from_seconds(12345)
         self.assertEqual(3, t.hours)
         self.assertEqual(25, t.minutes)
         self.assertAlmostEqual(45, t.seconds)
@@ -59,8 +59,6 @@ class TestDt(unittest.TestCase):
         self.assertEqual(14, dt._hours)
         self.assertEqual(16, dt._minutes)
         self.assertAlmostEqual(Decimal(13.45), dt._seconds)
-
-        dt.__repr__()
 
     def test_to_sec(self):
         dt = Dt(12, 35, 13.45)

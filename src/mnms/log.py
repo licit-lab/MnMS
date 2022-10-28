@@ -12,16 +12,16 @@ class LOGLEVEL():
 
 def create_logger(logname,
                   base_level=LOGLEVEL.WARNING,
-                  stream_level=LOGLEVEL.INFO,
+                  # stream_level=LOGLEVEL.INFO,
                   ):
-    format = f'%(levelname)s(%(name)s): %(message)s'
+    # format = f'%(levelname)s(%(name)s): %(message)s'
     logger = logging.getLogger(logname)
     logger.setLevel(base_level)
-    formatter = logging.Formatter(format)
-    stream = logging.StreamHandler()
-    stream.setLevel(stream_level)
-    stream.setFormatter(formatter)
-    logger.addHandler(stream)
+    # formatter = logging.Formatter(format)
+    # stream = logging.StreamHandler()
+    # stream.setLevel(stream_level)
+    # stream.setFormatter(formatter)
+    # logger.addHandler(stream)
     logger.propagate = False
     return logger
 
@@ -34,8 +34,13 @@ def get_logger(logger_name):
     return logging.getLogger(logger_name)
 
 
+def set_mnms_logger_level(level, loggers=[]):
+    [logging.getLogger(logger).setLevel(level) if isinstance(logger, str) else logger.setLevel(level) for logger in loggers]
+
+
 def set_all_mnms_logger_level(level):
-    [logger.setLevel(level) for logger in get_all_mnms_logger()]
+    set_mnms_logger_level(level, get_all_mnms_logger())
+
 
 def attach_log_file(filename:str, file_level=LOGLEVEL.INFO):
     loggers = get_all_mnms_logger()

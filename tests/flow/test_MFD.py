@@ -1,192 +1,211 @@
 import unittest
 from tempfile import TemporaryDirectory
 
-from mnms.flow.MFD import Reservoir, MFDFlow, construct_leg, get_user_position
-from mnms.tools.time import Time, Dt
-from mnms.graph.core import MultiModalGraph
-from mnms.mobility_service.base import BaseMobilityService
-from mnms.demand.user import User
-from mnms.graph.shortest_path import compute_shortest_path
-from mnms.flow.MFD import log
-from mnms.log import LOGLEVEL
+import numpy as np
+import pytest
+from mnms.demand import User
+from mnms.demand.user import Path
+from mnms.flow.MFD import MFDFlowMotor, Reservoir
+from mnms.generation.roads import generate_line_road
+from mnms.generation.layers import generate_layer_from_roads, _generate_matching_origin_destination_layer
+from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
+from mnms.graph.road import RoadDescriptor
+from mnms.graph.zone import construct_zone_from_sections
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
+from mnms.mobility_service.on_demand import OnDemandMobilityService
+from mnms.mobility_service.public_transport import PublicTransportMobilityService
+from mnms.time import Dt, TimeTable, Time
+from mnms.vehicles.manager import VehicleManager
+from mnms.vehicles.veh_type import Vehicle
 
 
-log.setLevel(LOGLEVEL.WARNING)
-
-
-class TestMFD(unittest.TestCase):
+class TestMFDFlow(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
         self.tempfile = TemporaryDirectory()
         self.pathdir = self.tempfile.name+'/'
 
-        mmgraph = MultiModalGraph()
-        flow_graph = mmgraph.flow_graph
+        roads = RoadDescriptor()
 
-        flow_graph.add_node('0', [0, 0])
-        flow_graph.add_node('1', [0, 40000])
-        flow_graph.add_node('2', [1200, 0])
-        flow_graph.add_node('3', [1400, 0])
-        flow_graph.add_node('4', [3400, 0])
+        roads.register_node('0', [0, 0])
+        roads.register_node('1', [0, 40000])
+        roads.register_node('2', [1200, 0])
+        roads.register_node('3', [1400, 0])
+        roads.register_node('4', [3400, 0])
 
-        flow_graph.add_link('0_1', '0', '1')
-        flow_graph.add_link('0_2', '0', '2')
-        flow_graph.add_link('2_3', '2', '3')
-        flow_graph.add_link('3_4', '3', '4')
+        roads.register_section('0_1', '0', '1')
+        roads.register_section('0_2', '0', '2')
+        roads.register_section('2_3', '2', '3')
+        roads.register_section('3_4', '3', '4')
 
-        mmgraph.add_zone('res1', ['0_1', '0_2', '2_3'])
-        mmgraph.add_zone('res2', ['3_4'])
+        roads.register_stop("B2", "2_3", 0)
+        roads.register_stop("B3", "3_4", 0)
+        roads.register_stop("B4", "3_4", 1)
 
-        car = BaseMobilityService('car', 10)
-        car.add_node('C0', '0')
-        car.add_node('C1', '1')
-        car.add_node('C2', '2')
+        roads.add_zone(construct_zone_from_sections(roads, "res1", ["0_1", "0_2", "2_3"]))
+        roads.add_zone(construct_zone_from_sections(roads, "res2", ["3_4"]))
 
-        car.add_link('C0_C1', 'C0', 'C1', costs={'length':40000}, reference_links=['0_1'])
-        car.add_link('C0_C2', 'C0', 'C2', costs={'length':1200}, reference_links=['0_2'])
+        self.personal_car = PersonalMobilityService()
+        car_layer = CarLayer(roads, services=[self.personal_car])
+        car_layer.create_node('C0', '0')
+        car_layer.create_node('C1', '1')
+        car_layer.create_node('C2', '2')
 
-        bus = BaseMobilityService('bus', 10)
-        bus.add_node('B2', '2')
-        bus.add_node('B3', '3')
-        bus.add_node('B4', '4')
+        car_layer.create_link('C0_C1', 'C0', 'C1', costs={"PersonalVehicle": {'length': 40000}}, road_links=['0_1'])
+        car_layer.create_link('C0_C2', 'C0', 'C2', costs={"PersonalVehicle": {'length': 1200}}, road_links=['0_2'])
 
-        bus.add_link('B2_B3', 'B2', 'B3', costs={'length':200}, reference_links=['2_3'])
-        bus.add_link('B3_B4', 'B3', 'B4', costs={'length':2000}, reference_links=['3_4'])
+        bus_layer = BusLayer(roads,
+                       services=[PublicTransportMobilityService('Bus')])
 
-        mmgraph.add_mobility_service(bus)
-        mmgraph.add_mobility_service(car)
+        bus_layer.create_line("L1",
+                        ["B2", "B3", "B4"],
+                        [["2_3"], ["3_4"]],
+                        TimeTable.create_table_freq('00:00:00', '01:00:00', Dt(minutes=2)))
 
-        mmgraph.connect_mobility_service('CAR_BUS', 'C2', 'B2', costs={'length':0, 'time':0})
+        mlgraph = MultiLayerGraph([car_layer, bus_layer])
 
-        def res_fct1(dict_accumulations):
-            v_car = 10 * (1 - (dict_accumulations['car'] + 2*dict_accumulations['bus']) / 80)
-            v_car = max(v_car, 0.001)
-            v_bus = v_car / 2
-            dict_speeds = {'car': v_car, 'bus': v_bus}
-            return dict_speeds
+        mlgraph.connect_layers('CAR_BUS', 'C2', 'L1_B2', 0, {'time': 0})
 
-        def res_fct2(dict_accumulations):
-            v_car = 12 * (1 - (dict_accumulations['car'] + dict_accumulations['bus']) / 50)
-            v_car = max(v_car, 0.001)
-            v_bus = v_car / 3
-            dict_speeds = {'car': v_car, 'bus': v_bus}
-            return dict_speeds
+        self.mlgraph = mlgraph
 
-        res1 = Reservoir('res1', ['car', 'bus'], res_fct1)
-        res2 = Reservoir('res2', ['car', 'bus'], res_fct2)
+        self.flow = MFDFlowMotor()
+        self.flow.set_graph(mlgraph)
 
-        self.mfd_flow = MFDFlow(outfile=self.pathdir + 'test.csv')
-        self.mfd_flow.add_reservoir(res1)
-        self.mfd_flow.add_reservoir(res2)
-        self.mfd_flow.set_graph(mmgraph)
+        res1 = Reservoir(roads.zones["res1"], ["CAR", "BUS"], lambda x: {k: 42 for k in x})
+        res2 = Reservoir(roads.zones['res2'], ["CAR", "BUS"], lambda x: {k: 0.23 for k in x})
 
-        # self.mfd_flow._demand = [[Time.fromSeconds(100), [{'length': 1200, 'mode': 'car', 'reservoir': "res1"},
-        #                                                {'length': 200, 'mode': 'bus', 'reservoir': "res1"},
-        #                                                {'length': 2000, 'mode': 'bus', 'reservoir': "res2"}]],
-        #                       [Time.fromSeconds(2000), [{'length': 40000, 'mode': 'car', 'reservoir': "res1"}]]]
+        self.flow.add_reservoir(res1)
+        self.flow.add_reservoir(res2)
+        self.flow.set_time(Time('09:00:00'))
 
-        self.user1 = User('1', '0', '4', Time.fromSeconds(100), scale_factor=2)
-        self.user2 = User('2', '0', '1', Time.fromSeconds(2000), scale_factor=4)
-
-        compute_shortest_path(mmgraph, self.user1, cost='length')
-        compute_shortest_path(mmgraph, self.user2, cost='length')
-
-        self.mfd_flow.nb_user = 2
-        self.mfd_flow.initialize()
-        self.mfd_flow._tcurrent = Time.fromSeconds(0)
-        dt = Dt(seconds=30)
-        for step in range(100):
-            if self.mfd_flow._tcurrent < Time.fromSeconds(100) < self.mfd_flow._tcurrent.add_time(dt):
-                self.mfd_flow.step(dt.to_seconds(), [self.user1])
-            elif self.mfd_flow._tcurrent < Time.fromSeconds(2000) < self.mfd_flow._tcurrent.add_time(dt):
-                self.mfd_flow.step(dt.to_seconds(), [self.user2])
-            else:
-                self.mfd_flow.step(dt.to_seconds(), [])
-            self.mfd_flow.update_time(dt)
-            self.mfd_flow.write_result(step_affectation=0, step_flow=step)
+        self.flow.initialize(1.42)
 
     def tearDown(self):
         """Concludes and closes the test.
         """
         self.tempfile.cleanup()
+        VehicleManager.empty()
+        Vehicle._counter = 0
 
-    def test_mfd(self):
-        self.assertEqual(self.mfd_flow.dict_accumulations, {'res1': {'car': 4.0, 'bus': 0}, 'res2': {'car': 0, 'bus': 0}, None: {None:0, 'car': 0, 'bus': 0}})
-        self.assertEqual(self.mfd_flow.dict_speeds, {'res1': {'car': 9.5, 'bus': 4.75}, 'res2': {'car': 12.0, 'bus': 4.0}, None: {None:0, 'car': 0, 'bus': 0}})
-        # self.assertTrue(self.mfd_flow.remaining_length['1'] <= 0)
-        self.assertAlmostEqual(self.mfd_flow.remaining_length['2']/3e4, 1, places=1)
-        self.assertTrue(self.mfd_flow.started_trips)
-        self.assertTrue(not self.mfd_flow.completed_trips['2'])
-        self.assertEqual(self.mfd_flow.current_reservoir, {'2': 'res1'})
-        # self.assertAlmostEqual(self.mfd_flow.time_completion_legs['1'][2] / 770, 1, places=1)
-        self.assertAlmostEqual(self.user1.arrival_time.to_seconds() / 770, 1, places=1)
-        self.assertEqual(self.mfd_flow.time_completion_legs['2'][0], -1)
-        # self.assertEqual(self.mfd_flow.current_leg['1'], 2)
-        self.assertEqual(self.mfd_flow.current_leg['2'], 0)
-        # self.assertEqual(self.mfd_flow.current_mode['1'], 'bus')
+    def test_fill(self):
+        self.assertIn('res1', self.flow.dict_speeds)
+        self.assertIn('res2', self.flow.dict_speeds)
+        self.assertIn(None, self.flow.dict_speeds)
+        self.assertEqual('09:00:00.00', self.flow.time)
+
+    def test_accumulation_speed(self):
+        user = User('U0', '0', '4', Time('00:01:00'))
+        user.set_path(Path(0,
+                           3400,
+                           ['C0', 'C2', 'B2', 'B3', 'B4']))
+        self.personal_car.request_vehicle(user, 'C2')
+        self.personal_car.matching(user, "C2")
+        self.flow.step(Dt(seconds=1))
+        self.assertDictEqual({'CAR': 1, 'BUS': 0}, self.flow.dict_accumulations['res1'])
+        self.assertDictEqual({'BUS': 42, 'CAR': 42}, self.flow.dict_speeds['res1'])
+        self.assertAlmostEqual(1158.0, self.personal_car.fleet.vehicles['0']._remaining_link_length)
+
+    def test_ghost_accumulation(self):
+        self.flow.reservoirs['res1'].set_ghost_accumulation(lambda x: {"CAR": 21})
+        self.flow.step(Dt(seconds=1))
+        self.assertEqual(self.flow.dict_accumulations["res1"]["CAR"], 21)
+        self.assertEqual(self.flow.reservoirs["res1"].dict_accumulations["CAR"], 21)
+        self.assertEqual(self.flow.dict_accumulations["res1"]["BUS"], 0)
 
 
-class TestPath(unittest.TestCase):
-    def setUp(self) -> None:
-        mmgraph = MultiModalGraph()
-        flow_graph = mmgraph.flow_graph
+def test_move_veh_activity_change():
+    roads = generate_line_road([0, 0], [0, 20], 3)
+    roads.add_zone(construct_zone_from_sections(roads, "LEFT", ["0_1"]))
+    roads.add_zone(construct_zone_from_sections(roads, "RIGHT", ["1_2"]))
 
-        flow_graph.add_node('0', [0, 0])
-        flow_graph.add_node('1', [0, 40000])
-        flow_graph.add_node('2', [1200, 0])
-        flow_graph.add_node('3', [1400, 0])
-        flow_graph.add_node('4', [3400, 0])
+    on_demand = OnDemandMobilityService("Uber", 0)
+    car_layer = generate_layer_from_roads(roads,
+                                          "CarLayer",
+                                          mobility_services=[on_demand])
 
-        flow_graph.add_link('0_1', '0', '1')
-        flow_graph.add_link('0_2', '0', '2')
-        flow_graph.add_link('2_3', '2', '3')
-        flow_graph.add_link('3_4', '3', '4')
+    odlayer = _generate_matching_origin_destination_layer(roads)
 
-        mmgraph.add_zone('res1', ['0_1', '0_2', '2_3'])
-        mmgraph.add_zone('res2', ['3_4'])
+    mlgraph = MultiLayerGraph([car_layer],
+                              odlayer,
+                              1e-3)
 
-        car = BaseMobilityService('car', 10)
-        car.add_node('C0', '0')
-        car.add_node('C1', '1')
-        car.add_node('C2', '2')
+    on_demand.create_waiting_vehicle("CarLayer_0")
 
-        car.add_link('C0_C1', 'C0', 'C1', costs={'length':40000}, reference_links=['0_1'])
-        car.add_link('C0_C2', 'C0', 'C2', costs={'length':1200}, reference_links=['0_2'])
+    flow = MFDFlowMotor()
+    flow.set_graph(mlgraph)
 
-        bus = BaseMobilityService('bus', 10)
-        bus.add_node('B2', '2')
-        bus.add_node('B3', '3')
-        bus.add_node('B4', '4')
+    res1 = Reservoir(roads.zones["LEFT"], ["CAR"], lambda x: {k: 20 for k in x})
+    res2 = Reservoir(roads.zones['RIGHT'], ["CAR"], lambda x: {k: 2 for k in x})
 
-        bus.add_link('B2_B3', 'B2', 'B3', costs={'length':200}, reference_links=['2_3'])
-        bus.add_link('B3_B4', 'B3', 'B4', costs={'length':2000}, reference_links=['3_4'])
+    flow.add_reservoir(res1)
+    flow.add_reservoir(res2)
+    flow.set_time(Time('09:00:00'))
 
-        mmgraph.add_mobility_service(bus)
-        mmgraph.add_mobility_service(car)
+    flow.initialize(1.42)
 
-        mmgraph.connect_mobility_service('CAR_BUS', 'C2', 'B2', costs={'length':0, 'time':0})
+    user = User('U0', 'CarLayer_1', 'CarLayer_2', Time('00:01:00'))
+    user._position = np.array([0, 10])
+    user.set_path(Path(0,
+                       3400,
+                       ['CarLayer_1', 'CarLayer_2']))
+    on_demand.step_maintenance(Dt(seconds=1))
+    on_demand.request(user, "CarLayer_2")
+    on_demand.matching(user, "CarLayer_2")
 
-        self.legs = [{'length': 1200, 'mode': 'car', 'reservoir': "res1"},
-                     {'length': 200, 'mode': 'bus', 'reservoir': "res1"},
-                     {'length': 2000, 'mode': 'bus', 'reservoir': "res2"}]
+    flow.step(Dt(seconds=1))
 
-        self.user = User('1', '0', '4', Time.fromSeconds(100), scale_factor=2)
-        compute_shortest_path(mmgraph, self.user, cost='length')
+    veh = on_demand.fleet.vehicles["0"]
+    assert 1 == pytest.approx(user.distance)
+    assert 11 == pytest.approx(veh.distance)
 
-        self.mmgraph = mmgraph
+    print('test')
+    VehicleManager.empty()
+    Vehicle._counter = 0
 
-    def tearDown(self) -> None:
-        """Concludes and closes the test.
-        """
-        pass
 
-    def test_construct_legs(self):
-        legs = construct_leg(self.mmgraph, self.user.path)
-        self.assertListEqual(self.legs, legs)
+def test_move_veh_res_change():
+    from mnms.vehicles.manager import VehicleManager
 
-    def test_user_pos(self):
-        legs = construct_leg(self.mmgraph, self.user.path)
-        pos = get_user_position(self.mmgraph, self.user, legs, 2100)
-        self.assertAlmostEqual(1300, pos[0])
+    roads = generate_line_road([0, 0], [0, 20], 3)
+    roads.add_zone(construct_zone_from_sections(roads, "LEFT", ["0_1"]))
+    roads.add_zone(construct_zone_from_sections(roads, "RIGHT", ["1_2"]))
 
+    personal_car = PersonalMobilityService()
+    car_layer = generate_layer_from_roads(roads,
+                                          "CarLayer",
+                                          mobility_services=[personal_car])
+
+    odlayer = _generate_matching_origin_destination_layer(roads)
+
+    mlgraph = MultiLayerGraph([car_layer],
+                              odlayer,
+                              1e-3)
+
+    flow = MFDFlowMotor()
+    flow.set_graph(mlgraph)
+
+    res1 = Reservoir(roads.zones["LEFT"], ["CAR"], lambda x: {k: 20 for k in x})
+    res2 = Reservoir(roads.zones['RIGHT'], ["CAR"], lambda x: {k: 2 for k in x})
+
+    flow.add_reservoir(res1)
+    flow.add_reservoir(res2)
+    flow.set_time(Time('09:00:00'))
+
+    flow.initialize(1.42)
+
+    user = User('U0', '0', '4', Time('00:01:00'))
+    user.set_path(Path(0,
+                       3400,
+                       ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
+    personal_car.request_vehicle(user, 'C2')
+    personal_car.matching(user, "CarLayer_2")
+    flow.step(Dt(seconds=1))
+
+    veh = list(personal_car.fleet.vehicles.values())[0]
+    approx_dist = 11
+    assert approx_dist == pytest.approx(user.distance)
+    assert approx_dist == pytest.approx(veh.distance)
+
+    VehicleManager.empty()
+    Vehicle._counter = 0

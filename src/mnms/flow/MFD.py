@@ -1,325 +1,369 @@
-from typing import List
-from copy import deepcopy
+import sys
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, Union
 from typing import Callable, Dict
 
 import numpy as np
 
-from mnms.flow.abstract import AbstractFlowMotor
-from mnms.graph.core import MultiModalGraph
-from mnms.graph.elements import ConnectionLink, TransitLink
-from mnms.log import create_logger
-from mnms.demand.user import User
-from mnms.tools.time import Dt, Time
+from hipop.graph import Link
 
+from mnms.demand import User
+from mnms.flow.abstract import AbstractMFDFlowMotor, AbstractReservoir
+from mnms.graph.zone import Zone
+from mnms.log import create_logger
+from mnms.time import Dt, Time
+from mnms.vehicles.manager import VehicleManager
+from mnms.vehicles.veh_type import Vehicle, VehicleState
+from mnms.graph.layers import PublicTransportLayer
 
 log = create_logger(__name__)
 
-
-def construct_leg(mmgraph: MultiModalGraph, path:List[str]):
-    res = list()
-    last_res = None
-    last_mob = None
-    length = 0
-
-    for ni in range(len(path) - 1):
-        nj = ni + 1
-        link = mmgraph.mobility_graph.links[(path[ni], path[nj])]
-        if isinstance(link, ConnectionLink):
-            for lid in link.reference_links:
-                flow_link = mmgraph.flow_graph.links[mmgraph.flow_graph._map_lid_nodes[lid]]
-                curr_res = flow_link.zone
-                curr_mob = link.mobility_service
-                if curr_res != last_res or curr_mob != last_mob:
-                    if last_mob is not None:
-                        res.append({"reservoir": last_res, "mode": last_mob, "length": length})
-                    length = flow_link.length
-                    last_mob = curr_mob
-                    last_res = curr_res
-                else:
-                    length += flow_link.length
-        elif isinstance(link, TransitLink):
-            res.append({"reservoir": last_res, "mode": last_mob, "length": length})
-            length = 0
-            last_mob = None
-            last_res = None
+_dist = np.linalg.norm
 
 
-    res.append({"reservoir": last_res, "mode": last_mob, "length": length})
-    return res
+@dataclass
+class LinkInfo:
+    link: Link
+    veh: str
+    sections: List[Tuple[str, float]]
 
 
-def get_user_position(mmgraph: MultiModalGraph, user:User, legs:List[Dict], remaining_length:float):
-    """Get the User position from a leg.
+class Reservoir(AbstractReservoir):
+    def __init__(self,
+                 zone: Zone,
+                 modes: List[str],
+                 f_speed: Callable[[Dict[str, float]], Dict[str, float]]):
+        """
+        Implementation of an MFD Reservoir
 
-    Parameters
-    ----------
-    mmgraph: MultiModalGraph
-        The mulitmodal graph
-    user: User
-        The user to compute the position
-    legs: list[dict]
-        The User legs
-    remaining_length: float
-        Remaining length of the User on its path
-
-    Returns
-    -------
-    np.ndarray
-        The User position
-
-    """
-    total_length = sum(d["length"] for d in legs)
-    current_length = total_length - remaining_length
-    flow_graph = mmgraph.flow_graph
-    flow_links = mmgraph.flow_graph.links
-    mobility_links = mmgraph.mobility_graph.links
-    flow_nodes = mmgraph.flow_graph.nodes
-    mobility_nodes = mmgraph.mobility_graph.nodes
-    upath = user.path
-
-    traveled_distance = 0
-    fnode = mobility_nodes[upath[0]].reference_node
-    upos = flow_nodes[fnode].pos
-    for i in range(len(upath)-1):
-        j = i + 1
-        flink = mobility_links[(upath[i], upath[j])]
-        if isinstance(flink, TransitLink):
-            length_link = 0
-        else:
-            length_link = sum(flow_links[flow_graph._map_lid_nodes[l]].length for l in flink.reference_links)
-        traveled_distance += length_link
-        fnode = mobility_nodes[upath[j]].reference_node
-        upos = flow_nodes[fnode].pos
-        if traveled_distance >= current_length:
-            diff_distance = length_link - (traveled_distance - current_length)
-            fnode = mobility_nodes[upath[i]].reference_node
-            prev_pos = flow_nodes[fnode].pos
-
-            direction = upos - prev_pos
-            norm_direction = np.linalg.norm(direction)
-            direction = direction/norm_direction
-
-            upos = prev_pos + direction*diff_distance
-
-    return upos
-
-
-
-
-class Reservoir(object):
-    # id to identify the sensor, is not used for now, could be a string
-    # modes are the transportation modes available for the sensor
-    # fct_MFD_speed is the function returning the mean speeds as a function of the accumulations
-    def __init__(self, id: str, modes, fct_MFD_speed: Callable[[Dict[str, float]], Dict[str, float]]):
-        self.id = id
-        self.modes = modes
-        self.compute_MFD_speed = fct_MFD_speed
-        dict_accumulations = {}
-        for mode in modes:
-            dict_accumulations[mode] = 0
-        self.dict_accumulations = dict_accumulations
-        self.dict_speeds = {}
+        Args:
+            zone: The zone corresponding to the Reservoir
+            modes: The modes in the Reservoir
+            f_speed: The MFD speed function
+        """
+        super(Reservoir, self).__init__(zone, modes)
+        self.f_speed = f_speed
         self.update_speeds()
-
 
     def update_accumulations(self, dict_accumulations):
         for mode in dict_accumulations.keys():
             if mode in self.modes:
                 self.dict_accumulations[mode] = dict_accumulations[mode]
-        return
 
     def update_speeds(self):
-        self.dict_speeds = self.compute_MFD_speed(self.dict_accumulations)
+        self.dict_speeds.update(self.f_speed(self.dict_accumulations))
         return self.dict_speeds
 
-    @classmethod
-    def fromZone(cls, mmgraph:"MultiModalGraph", zid:str, fct_MFD_speed):
-        modes = set()
-        for lid in mmgraph.zones[zid].links:
-            nodes = mmgraph.flow_graph._map_lid_nodes[lid]
-            for mobility_node in mmgraph.mobility_graph.get_node_references(nodes[0])+ mmgraph.mobility_graph.get_node_references(nodes[1]):
-                modes.add(mmgraph.mobility_graph.nodes[mobility_node].mobility_service)
 
-        new_res = Reservoir(zid, modes, fct_MFD_speed)
-        return new_res
-
-
-class MFDFlow(AbstractFlowMotor):
-    def __init__(self, outfile:str=None):
-        super(MFDFlow, self).__init__(outfile=outfile)
+class MFDFlowMotor(AbstractMFDFlowMotor):
+    def __init__(self, outfile: str = None):
+        super(MFDFlowMotor, self).__init__(outfile=outfile)
         if outfile is not None:
             self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'MODE', 'SPEED', 'ACCUMULATION'])
 
-        self.reservoirs: List[Reservoir] = list()
-        self.users = dict()
+        self.reservoirs: Dict[str, Reservoir] = dict()
+        self.users: Optional[Dict[str, User]] = dict()
 
-        self.dict_accumulations = None
-        self.dict_speeds = None
-        self.current_leg = None
-        self.remaining_length = None
-        self.current_mode = None
-        self.current_reservoir = None
-        self.time_completion_legs = None
-        self.started_trips = None
-        self.completed_trips = None
-        self.nb_user = 0
-        self.departure_times = None
+        self.dict_accumulations: Optional[Dict] = None
+        self.dict_speeds: Optional[Dict] = None
+        self.remaining_length: Optional[Dict] = None
 
-    def initialize(self):
+        self.veh_manager: Optional[VehicleManager] = None
+        self.graph_nodes: Optional[Dict] = None
+
+        self._layer_link_length_mapping: Dict[str, LinkInfo] = dict()
+        self._section_to_reservoir: Dict[str, Union[str, None]] = dict()
+
+    def _reset_mapping(self):
+        graph = self._graph.graph
+        roads = self._graph.roads
+        for lid, link in graph.links.items():
+            if link.label != "TRANSIT":
+                sections_length = list()
+                link_layer = self._graph.layers[link.label]
+                if isinstance(link_layer, PublicTransportLayer):
+                    unode_pos = np.array(graph.nodes[link.upstream].position)
+                    dnode_pos = np.array(graph.nodes[link.downstream].position)
+                    if len(self._graph.map_reference_links[lid]) > 1:
+                        for i, section in enumerate(self._graph.map_reference_links[lid]):
+                            if i == 0:
+                                l_dnode_pos = roads.nodes[roads.sections[section].downstream].position
+                                sections_length.append((section, _dist(unode_pos - l_dnode_pos)))
+                            if i == len(self._graph.map_reference_links[lid])-1:
+                                l_unode_pos = roads.nodes[roads.sections[section].upstream].position
+                                sections_length.append((section, _dist(l_unode_pos - dnode_pos)))
+                            else:
+                                sections_length.append((section, roads.sections[section].length))
+                    else:
+                        section = self._graph.map_reference_links[lid][0]
+                        sections_length.append((section, _dist(unode_pos - dnode_pos)))
+                else:
+                    for section in self._graph.map_reference_links[lid]:
+                        sections_length.append((section, roads.sections[section].length))
+
+                self._layer_link_length_mapping[lid] = LinkInfo(link, link_layer.vehicle_type.upper(), sections_length)
+
+        res_links = {res.id: roads.zones[res.id] for res in self.reservoirs.values()}
+        res_dict = {res.id: res for res in self.reservoirs.values()}
+        for section in roads.sections.keys():
+            self._section_to_reservoir[section] = None
+            for resid, zone in res_links.items():
+                res = res_dict[resid]
+                if section in res.zone.sections:
+                    self._section_to_reservoir[section] = res.id
+                    break
+
+    def initialize(self, walk_speed):
+        # initialize costs on links
+        link_layers = list()
+
+        for lid, layer in self._graph.layers.items():
+            link_layers.append(layer.graph.links) # only non transit links concerned
+
+        for link in self._graph.graph.links.values():
+            costs = {}
+            if link.label == "TRANSIT":
+                layer = self._graph.transitlayer
+                speed = walk_speed
+                costs["WALK"] = {"speed": speed,
+                                 "travel_time": link.length / speed}
+                # NB: travel_time could be defined as a cost_function
+                for mservice, cost_functions in layer._costs_functions.items():
+                    for cost_name, cost_func in cost_functions.items():
+                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
+            else:
+                layer = self._graph.layers[link.label]
+                speed = layer.default_speed
+
+                link_layer_id = link.label
+                for mservice in self._graph.layers[link_layer_id].mobility_services.keys():
+                    costs[mservice] = {"speed": speed,
+                                       "travel_time": link.length/speed}
+            # NB: travel_time could be defined as a cost_function
+                for mservice, cost_functions in layer._costs_functions.items():
+                    for cost_name, cost_func in cost_functions.items():
+                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
+
+            link.update_costs(costs)
+
+            for links in link_layers: # only non transit links concerned
+                layer_link = links.get(link.id, None)
+                if layer_link is not None:
+                    layer_link.update_costs(costs)
+
+        # Other initializations
         self.dict_accumulations = {}
         self.dict_speeds = {}
-        for res in self.reservoirs:
+        for res in self.reservoirs.values():
             self.dict_accumulations[res.id] = res.dict_accumulations
             self.dict_speeds[res.id] = res.dict_speeds
-        self.dict_accumulations[None] = {m: 0 for r in self.reservoirs for m in r.modes} | {None: 0}
-        self.dict_speeds[None] = {m: 0 for r in self.reservoirs for m in r.modes} | {None: 0}
-        self.current_leg = dict()
+        self.dict_accumulations[None] = {m: 0 for r in self.reservoirs.values() for m in r.modes} | {None: 0}
+        self.dict_speeds[None] = {m: 0 for r in self.reservoirs.values() for m in r.modes} | {None: 0}
         self.remaining_length = dict()
-        self.current_mode = dict()
-        self.current_reservoir = dict()
-        self.time_completion_legs = dict()
-        self.started_trips = dict()
-        self.completed_trips = dict()
-        self.nb_user = 0
-        self.departure_times = dict()
+
+        self.veh_manager = VehicleManager()
+        self.graph_nodes = self._graph.graph.nodes
+
+        self._reset_mapping()
 
     def add_reservoir(self, res: Reservoir):
-        self.reservoirs.append(res)
+        self.reservoirs[res.id] = res
 
-    # TODO: del User that finish their path
-    def step(self, dt: Dt, new_users:List[User]):
-        time = self._tcurrent.to_seconds()
+    def set_vehicle_position(self, veh: Vehicle):
+        unode, dnode = veh.current_link
+        remaining_length = veh.remaining_link_length
+
+        unode_pos = np.array(self.graph_nodes[unode].position)
+        dnode_pos = np.array(self.graph_nodes[dnode].position)
+
+        direction = dnode_pos - unode_pos
+        norm_direction = np.linalg.norm(direction)
+        if norm_direction > 0:
+            normalized_direction = direction / norm_direction
+            travelled = norm_direction - remaining_length
+        else:
+            normalized_direction = direction
+            travelled = 0
+        veh.set_position(unode_pos+normalized_direction*travelled)
+
+    def move_veh(self, veh: Vehicle, tcurrent: Time, dt: float, speed: float) -> float:
+        dist_travelled = dt*speed
+
+        if dist_travelled > veh.remaining_link_length:
+            dist_travelled = veh.remaining_link_length
+            elapsed_time = dist_travelled / speed
+            veh.update_distance(dist_travelled)
+            veh._remaining_link_length = 0
+            self.set_vehicle_position(veh)
+            for passenger_id, passenger in veh.passenger.items():
+                passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
+
+            try:
+                current_link, remaining_link_length = next(veh.activity.iter_path)
+                veh._current_link = current_link
+                veh._current_node = current_link[0]
+                veh._remaining_link_length = remaining_link_length
+            except StopIteration:
+                veh._current_node = veh.current_link[1]
+                veh.next_activity()
+                if veh.state is VehicleState.STOP:
+                    elapsed_time = dt
+            return elapsed_time
+        else:
+            veh._remaining_link_length -= dist_travelled
+            veh.update_distance(dist_travelled)
+            self.set_vehicle_position(veh)
+            for passenger_id, passenger in veh.passenger.items():
+                passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
+            return dt
+
+    def get_vehicle_zone(self, veh):
+        try:
+            unode, dnode = veh.current_link
+            curr_link = self.graph_nodes[unode].adj[dnode]
+            lid = self._graph.map_reference_links[curr_link.id][0]  # take reservoir of first part of trip
+            res_id = self._graph.roads.sections[lid].zone
+        except:
+            pos = veh.position
+            res_id = None
+            for res in self.reservoirs.values():
+                if res.zone.is_inside([pos]):
+                    res_id = res.id
+                    break
+
+        return res_id
+
+    def step(self, dt: Dt):
+
         log.info(f'MFD step {self._tcurrent}')
-        user_to_del = set()
+
+        for res in self.reservoirs.values():
+            ghost_acc = res.ghost_accumulation(self._tcurrent)
+            for mode in res.modes:
+                res.dict_accumulations[mode] = ghost_acc.get(mode, 0)
+
+        while self.veh_manager.has_new_vehicles:
+            new_veh = self.veh_manager._new_vehicles.pop()
+            new_veh.notify(self._tcurrent)
+
+        # Calculate accumulations
+        current_vehicles = dict()
+        for veh_id, veh in self.veh_manager._vehicles.items():
+            if veh.activity is None:
+                veh.next_activity()
+            while veh.activity.is_done:
+                veh.next_activity()
+            if veh.state is not VehicleState.STOP:
+                self.count_moving_vehicle(veh, current_vehicles)
+
+        log.info(f"Moving {len(current_vehicles)} vehicles")
+
         # Update the traffic conditions
-        for i_res, res in enumerate(self.reservoirs):
-            res.update_accumulations(self.dict_accumulations[res.id])
-            self.dict_speeds[res.id] = res.update_speeds()
+        for res in self.reservoirs.values():
+            self.update_reservoir_speed(res, self.dict_accumulations[res.id])
 
-        # Update data structure for new users
-        for nu in new_users:
-            path = construct_leg(self._graph, nu.path)
-            self._demand[nu.id] = path
-            self.remaining_length[nu.id] = path[0]['length']
-            self.current_mode[nu.id] = path[0]['mode']
-            self.current_reservoir[nu.id] = path[0]['reservoir']
-            self.current_leg[nu.id] = 0
-            self.time_completion_legs[nu.id] = [-1] * len(path)
+        # Move the vehicles
+        for veh_id, veh in current_vehicles.items():
+            veh_dt = dt.to_seconds()
+            veh_type = veh.type.upper()
+            while veh_dt > 0:
+                res_id = self.get_vehicle_zone(veh)
+                speed = self.dict_speeds[res_id][veh_type]
+                veh.speed = speed
+                elapsed_time = self.move_veh(veh, self._tcurrent, veh_dt, speed)
+                veh_dt -= elapsed_time
+            new_time = self._tcurrent.add_time(dt)
+            veh.notify(new_time)
+            veh.notify_passengers(new_time)
 
-            self.departure_times[nu.id] = nu.departure_time
-            self.started_trips[nu.id] = False
-            self.completed_trips[nu.id] = False
-            self.users[nu.id] = nu
+    def update_reservoir_speed(self, res, dict_accumulations):
+        res.update_accumulations(dict_accumulations)
+        self.dict_speeds[res.id] = res.update_speeds()
 
-        self.nb_user += len(new_users)
-        # Move the agents
-        for i_user, user in self.users.items():
-            remaining_time = dt
-            # Agent enters the network
-            # log.debug(f"USER {self.departure_times[i_user].to_seconds()}")
-            # log.info(f"{user}, {self.started_trips[i_user]}, {self.departure_times[i_user].to_seconds()}, {time}")
-            if (not self.started_trips[i_user]) and (self.departure_times[i_user].to_seconds() <= time):
-                # log.info(f'New user entering the Network: {user}')
-                self.started_trips[i_user] = True
-                self.dict_accumulations[self.current_reservoir[i_user]][self.current_mode[i_user]] += user.scale_factor
-                remaining_time = time - self.departure_times[i_user].to_seconds()
+    def count_moving_vehicle(self, veh: Vehicle, current_vehicles):
+        # log.info(f"{veh} -> {veh.current_link}")
+        res_id = self.get_vehicle_zone(veh)
+        veh_type = veh.type.upper()
+        self.dict_accumulations[res_id][veh_type] += 1
+        current_vehicles[veh.id] = veh
 
-            # Agent is on the network
-            if self.started_trips[i_user]:
-                # Complete current trip leg
-                remaining_length = self.remaining_length[i_user]
-                curr_res = self.current_reservoir[i_user]
-                curr_mode = self.current_mode[i_user]
-                curr_leg = self.current_leg[i_user]
-                while remaining_length <= remaining_time * self.dict_speeds[curr_res][
-                    curr_mode] and curr_leg < len(self._demand[i_user]) - 1:
-                    remaining_time -= remaining_length / self.dict_speeds[curr_res][curr_mode]
-                    self.dict_accumulations[curr_res][curr_mode] -= user.scale_factor
-                    # TODO discuss saving completion time of legs
-                    self.time_completion_legs[i_user][curr_leg] = time - remaining_time
-                    self.current_leg[i_user] += 1
-
-                    path = self._demand[i_user]
-                    curr_leg = self.current_leg[i_user]
-                    self.remaining_length[i_user] = path[curr_leg]['length']
-                    self.current_mode[i_user] = path[curr_leg]['mode']
-                    self.current_reservoir[i_user] = path[curr_leg]['reservoir']
-                    curr_mode = self.current_mode[i_user]
-                    curr_res = self.current_reservoir[i_user]
-                    self.dict_accumulations[curr_res][curr_mode] += user.scale_factor
-                # Remove agent who reached destinations
-                if remaining_length < remaining_time * self.dict_speeds[curr_res][curr_mode]:
-                    self.dict_accumulations[curr_res][curr_mode] -= user.scale_factor
-                    user_to_del.add(i_user)
-                    arrival_time = Time.fromSeconds(time - remaining_length/self.dict_speeds[curr_res][curr_mode])
-                    user.finish_trip(arrival_time)
-                    # remaining_time -= self.remaining_length[i_user] / self.dict_speeds[curr_res][curr_mode]
-                    # self.time_completion_legs[i_user][curr_leg] = time - remaining_time
-                    # self.completed_trips[i_user] = True
-                    # self.remaining_length[i_user] = 0
-                else:
-                    # Remove accomplished distance when staying in on the network
-                    self.remaining_length[i_user] -= remaining_time * self.dict_speeds[curr_res][curr_mode]
-
-        # log.info(f"{self.completed_trips}")
-        for iu in user_to_del:
-            del self.users[iu]
-            del self.completed_trips[iu]
-            del self.started_trips[iu]
-            del self.remaining_length[iu]
-            del self.current_mode[iu]
-            del self.current_leg[iu]
-            del self.current_reservoir[iu]
-            del self.time_completion_legs[iu]
-            self.nb_user -= 1
+    def finish_vehicle_activities(self, veh: Vehicle):
+        elapsed_time = Dt(seconds=veh.remaining_link_length / veh.speed)
+        log.info(f"{veh} finished its activity {veh.state}")
+        veh.update_distance(veh.remaining_link_length)
+        veh._remaining_link_length = 0
+        veh._current_node = veh._current_link[1]
+        self.set_vehicle_position(veh)
+        veh.next_activity()
+        new_time = self._tcurrent.add_time(elapsed_time)
+        veh.notify(new_time)
+        veh.notify_passengers(new_time)
 
     def update_graph(self):
-        mobility_graph = self._graph.mobility_graph
-        flow_graph = self._graph.flow_graph
-        topolink_lenghts = dict()
-        res_links = {res.id: self._graph.zones[res.id].links for res in self.reservoirs}
-        res_dict = {res.id: res for res in self.reservoirs}
+        graph = self._graph.graph
+        banned_links = self._graph.dynamic_space_sharing.banned_links
+        banned_cost = self._graph.dynamic_space_sharing.cost
 
-        for tid, topolink in mobility_graph.links.items():
-            if isinstance(topolink, ConnectionLink):
-                link_service = topolink.mobility_service
-                topolink_lenghts[topolink.id] = {'lengths': {},
-                                                 'speeds': {}}
-                for l in topolink.reference_links:
-                    topolink_lenghts[topolink.id]['lengths'][l] = flow_graph.links[flow_graph._map_lid_nodes[l]].length
-                    topolink_lenghts[topolink.id]['speeds'][l] = None
-                    for resid, reslinks in res_links.items():
-                        res = res_dict[resid]
-                        if l in reslinks:
-                            mspeed = res.dict_speeds[link_service]
-                            topolink_lenghts[topolink.id]['speeds'][l] = mspeed
-                            break
+        link_layers = list()
+        for lid, layer in self._graph.layers.items():
+            link_layers.append(layer.graph.links)
 
-        for tid, tdata in topolink_lenghts.items():
+        for lid, link_info in self._layer_link_length_mapping.items():
             total_len = 0
             new_speed = 0
-            for gid, length in tdata['lengths'].items():
-                speed = tdata['speeds'][gid]
+            for section, length in link_info.sections:
+                res_id = self._section_to_reservoir[section]
+                res = self.reservoirs[res_id]
+                speed = res.dict_speeds[link_info.veh]
                 total_len += length
                 if speed is not None:
                     new_speed += length * speed
                 else:
-                    link_node = mobility_graph._map_lid_nodes[tid]
-                    link = mobility_graph.links[link_node]
-                    new_speed = self._graph._mobility_services[link.mobility_service].default_speed
+                    new_speed += length * graph.links[lid].cost["speed"]
             new_speed = new_speed / total_len if total_len != 0 else new_speed
-            mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['speed'] = new_speed
-            if new_speed != 0:
-                mobility_graph.links[mobility_graph._map_lid_nodes[tid]].costs['time'] = total_len/new_speed
+            if new_speed != 0:  # TODO: check if this condition is still useful
+                # costs = {'travel_time': total_len / new_speed,
+                #          'speed': new_speed,
+                #          'length': total_len}
+                costs = defaultdict(dict)
 
-    def write_result(self, step_affectation:int, step_flow:int):
+                link = link_info.link
+
+                # Update critical costs first
+                for mservice in link.costs.keys():
+                    costs[mservice] = {'travel_time': total_len / new_speed,
+                                       'speed': new_speed,
+                                       'length': total_len}
+
+                # The update the generalized one
+                layer = self._graph.layers[graph.links[lid].label]
+                costs_functions = layer._costs_functions
+                for mservice, cost_funcs in costs_functions.items():
+                    for cost_name, cost_f in cost_funcs.items():
+                        costs[mservice][cost_name] = cost_f(self._graph, graph.links[lid], costs)
+
+                # Test if link is banned, if yes do not update the cost for the banned mobility service
+                if lid in banned_links:
+                    mservice = banned_links[lid].mobility_service
+                    costs[mservice].pop(banned_cost, None)
+
+                graph.update_link_costs(lid, costs)
+
+                # Update of the cost in the corresponding graph layer
+                for links in link_layers:
+                    if lid in links:
+                        links[lid].update_costs(costs)
+                        break
+
+    def write_result(self, step_affectation: int, step_flow:int):
         tcurrent = self._tcurrent.time
-        for res in self.reservoirs:
+        for resid, res in self.reservoirs.items():
             resid = res.id
             for mode in res.modes:
                 self._csvhandler.writerow([str(step_affectation), str(step_flow), tcurrent, resid, mode, res.dict_speeds[mode], res.dict_accumulations[mode]])
 
     def finalize(self):
-        super(MFDFlow, self).finalize()
+        super(MFDFlowMotor, self).finalize()
         for u in self.users.values():
             u.finish_trip(None)

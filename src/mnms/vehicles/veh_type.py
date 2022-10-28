@@ -1,0 +1,343 @@
+from abc import ABC, abstractmethod
+from collections import deque
+from copy import deepcopy
+from typing import List, Tuple, Deque, Optional, Generator, Callable
+from enum import Enum
+from dataclasses import dataclass, field
+
+import numpy as np
+
+from mnms.tools.observer import TimeDependentSubject
+from mnms.log import create_logger
+from mnms.time import Time
+
+log = create_logger(__name__)
+_norm = np.linalg.norm
+
+
+_TYPE_ITEM_PATH = Tuple[Tuple[str, str], float]
+_TYPE_PATH = List[_TYPE_ITEM_PATH]
+
+
+class VehicleState(Enum):
+    STOP = 0
+    REPOSITIONING = 1
+    PICKUP = 2
+    SERVING = 3
+
+
+@dataclass(slots=True)
+class VehicleActivity(ABC):
+    state: VehicleState
+    node: str
+    path: _TYPE_PATH = field(default_factory=list)
+    user: "User" = None
+    is_done: bool = False
+    iter_path: Generator[_TYPE_ITEM_PATH, None, None] = field(default=None, init=False)
+
+    def __post_init__(self):
+        self.reset_path_iterator()
+
+    def reset_path_iterator(self):
+        self.iter_path = iter(self.path)
+
+    def modify_path(self, new_path: _TYPE_PATH):
+        self.path = new_path
+        self.reset_path_iterator()
+
+    @abstractmethod
+    def done(self, veh: "Vehicle"):
+        return None
+
+    @abstractmethod
+    def start(self, veh: "Vehicle"):
+        return None
+
+    def copy(self):
+        return self.__class__(deepcopy(self.node),
+                              deepcopy(self.path),
+                              self.user,
+                              self.is_done)
+
+
+@dataclass(slots=True)
+class VehicleActivityStop(VehicleActivity):
+    state: VehicleState = field(default=VehicleState.STOP, init=False)
+
+    def start(self, veh: "Vehicle"):
+        return None
+
+    def done(self, veh: "Vehicle"):
+        if self.user is not None:
+            self.user._vehicle = veh
+
+
+@dataclass(slots=True)
+class VehicleActivityRepositioning(VehicleActivity):
+    state: VehicleState = field(default=VehicleState.REPOSITIONING, init=False)
+
+    def start(self, veh: "Vehicle"):
+        return None
+
+    def done(self, veh: "Vehicle"):
+        return None
+
+
+@dataclass(slots=True)
+class VehicleActivityPickup(VehicleActivity):
+    state: VehicleState = field(default=VehicleState.PICKUP, init=False)
+
+    def start(self, veh: "Vehicle"):
+        self.user._waiting_vehicle = True
+        self.user.set_state_waiting_vehicle()
+
+    def done(self, veh: "Vehicle"):
+        self.user._waiting_vehicle = False
+        self.user._vehicle = veh
+        veh.passenger[self.user.id] = self.user
+        self.user.set_state_inside_vehicle()
+
+
+@dataclass(slots=True)
+class VehicleActivityServing(VehicleActivity):
+    state: VehicleState = field(default=VehicleState.SERVING, init=False)
+
+    def start(self, veh: "Vehicle"):
+        self.user._waiting_vehicle = False
+        self.user._vehicle = veh
+        veh.passenger[self.user.id] = self.user
+        self.user.set_state_inside_vehicle()
+
+    def done(self, veh: "Vehicle"):
+        self.user._waiting_vehicle = False
+        self.user._vehicle = None
+        veh.passenger.pop(self.user.id)
+
+        self.user._remaining_link_length = 0
+        upath = self.user.path.nodes
+        unode = veh._current_link[1] if veh._current_link is not None else veh._current_node
+        self.user._current_node = unode
+        next_node_ind = upath.index(unode)+1
+        self.user.set_position((unode, upath[next_node_ind]), 0, veh.position)
+        self.user._vehicle = None
+        # self.user._vehicle = None
+        # self.user.notify(tcurrent)
+        self.user.set_state_stop()
+
+
+class Vehicle(TimeDependentSubject):
+    _counter = 0
+
+    def __init__(self,
+                 node: str,
+                 capacity: int,
+                 mobility_service: str,
+                 initial_speed: float = 13.8,
+                 activities: Optional[List[VehicleActivity]] = None):
+        """
+        Class representing a vehicle in the simualtion
+
+        Args:
+            node: The node where the Vehicle is created
+            capacity: the capacity of the Vehicle
+            mobility_service: The associated mobility service
+            initial_speed: the initial speed of the Vehicle
+            activities: The initial activities of the Vehicle
+        """
+
+        super(Vehicle, self).__init__()
+        self._global_id = str(Vehicle._counter)
+        Vehicle._counter += 1
+
+        self.mobility_service = mobility_service
+        self._capacity = capacity
+        self.passenger = dict()
+
+        self._current_link = None
+        self._current_node = node
+        self._remaining_link_length = None
+        self._position = None
+        self._distance = 0
+        self._iter_path = None
+        self.speed = initial_speed
+
+        self.activities: Deque[VehicleActivity] = deque([])
+        self.activity = None
+
+        if activities is not None:
+            self.add_activities(activities)
+            self.next_activity()
+        else:
+            self.activity: VehicleActivity = self.default_activity()
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}('{self._global_id}', '{self.state.name if self.state is not None else None}')"
+
+    @property
+    def distance(self):
+        return self._distance
+
+    @property
+    def is_full(self):
+        return len(self.passenger) >= self._capacity
+
+    @property
+    def is_empty(self):
+        return not bool(self.passenger)
+
+    @property
+    def id(self):
+        return self._global_id
+
+    @property
+    def type(self):
+        return self.__class__.__name__
+
+    @property
+    def current_link(self):
+        return self._current_link
+
+    @property
+    def remaining_link_length(self):
+        return self._remaining_link_length
+
+    @property
+    def position(self):
+        return self._position
+
+    @property
+    def state(self) -> VehicleState:
+        return self.activity.state if self.activity is not None else None
+
+    def add_activities(self, activities:List[VehicleActivity]):
+        for a in activities:
+            self.activities.append(a)
+
+    def next_activity(self):
+        if self.activity is not None:
+            self.activity.done(self)
+
+        try:
+            activity = self.activities.popleft()
+        except IndexError:
+            activity = self.default_activity()
+
+        self.activity = activity
+        self.activity.start(self)
+        if activity.state is not VehicleState.STOP:
+            if activity.path:
+                self._current_link, self._remaining_link_length = next(activity.iter_path)
+                assert self._current_node == self._current_link[0], f"Veh {self.id} current node {self._current_node} is not equal to the next upstream link {self._current_link[0]}"
+            else:
+                activity.is_done = True
+
+    def override_current_activity(self):
+        next_activity = self.activities.popleft()
+        last_activity = self.activity
+        self.activity = next_activity
+        self.activity.start(self)
+
+        if last_activity.state is VehicleState.STOP:
+            if next_activity.path:
+                self._current_link, self._remaining_link_length = next(next_activity.iter_path)
+                assert self._current_node == self._current_link[0]
+            else:
+                next_activity.is_done = True
+
+    def iter_activities(self):
+        yield self.activity
+        for act in self.activities:
+            yield act
+
+    def set_path(self, path: List[Tuple[Tuple[str, str], float]]):
+        self._iter_path = iter(path)
+        self._current_link, self._remaining_link_length = next(self._iter_path)
+
+    def update_distance(self, dist: float):
+        self._distance += dist
+        for user in self.passenger.values():
+            user.update_distance(dist)
+
+    def set_position(self, position: np.ndarray):
+        self._position = position
+
+    def drop_user(self, tcurrent:Time, user:'User', drop_pos:np.ndarray):
+        log.info(f"{user} is dropped at {self._current_link[0]}")
+        user._remaining_link_length = 0
+        upath = user.path.nodes
+        unode = self._current_link[0]
+        user._current_node = unode
+        next_node_ind = upath.index(unode)+1
+        user.set_position((unode, upath[next_node_ind]), 0, drop_pos)
+        user._vehicle = None
+        user.notify(tcurrent)
+
+        del self.passenger[user.id]
+
+    def drop_all_passengers(self, tcurrent:Time):
+        for _, user in self.passenger.values():
+            log.info(f"{user} is dropped at {self._current_link[1]}")
+            unode = self._current_link[1]
+            user._current_node = unode
+            user._remaining_link_length = 0
+            user._position = self._position
+            user.notify(tcurrent)
+            user._vehicle = None
+
+        self.passenger = dict()
+
+    def start_user_trip(self, userid, take_node):
+        log.info(f'Passenger {userid} has been taken by {self} at {take_node}')
+        take_time, user = self._next_passenger.pop(userid)
+        user._vehicle = self.id
+        user._waiting_vehicle = False
+        self.passenger[userid] = (take_time, user)
+
+    def default_activity(self):
+        return VehicleActivityStop(node=self._current_node,
+                                   path=[],
+                                   is_done=False)
+
+    def notify_passengers(self, tcurrent: Time):
+        for user in self.passenger.values():
+            user.notify(tcurrent)
+
+
+class Car(Vehicle):
+    def __init__(self,
+                 node: str,
+                 capacity: int,
+                 mobility_service: str,
+                 initial_speed=13.8,
+                 activities: Optional[VehicleActivity] = None):
+        super(Car, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+
+
+class Bus(Vehicle):
+    def __init__(self,
+                 node: str,
+                 capacity: int,
+                 mobility_service: str,
+                 initial_speed=13.8,
+                 activities: Optional[VehicleActivity] = None):
+        super(Bus, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+
+
+class Tram(Vehicle):
+    def __init__(self,
+                 node: str,
+                 capacity: int,
+                 mobility_service: str,
+                 initial_speed=13.8,
+                 activities: Optional[VehicleActivity] = None):
+        super(Tram, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+
+
+class Metro(Vehicle):
+    def __init__(self,
+                 node: str,
+                 capacity: int,
+                 mobility_service: str,
+                 initial_speed=13.8,
+                 activities: Optional[VehicleActivity] = None):
+        super(Metro, self).__init__(node, capacity, mobility_service, initial_speed, activities)

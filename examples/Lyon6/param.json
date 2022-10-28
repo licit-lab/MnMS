@@ -1,0 +1,51 @@
+{
+  "INPUT": {
+    "indir": "data/INPUTS",
+    "network_file": "/network_lyon6_V3-test.json",
+    "demand_file": "/demand_coords.csv",
+    "mfd_file": "/MFD_10_201802.csv"
+  },
+  "OUTPUT": {
+    "outdir": "data/OUTPUTS",
+    "log_file": "/simulation.log",
+    "path_file": "/path.csv",
+    "user_file": "/user.csv",
+    "flow_file": "/flow.csv",
+    "travel_time_file": "/travel_time_link.csv",
+	"vehicle_file": "/veh.csv"
+  },
+  "SUPERVISOR": {
+    "log_level": "LOGLEVEL.WARNING",
+    "demand_type": "coordinate",
+    "start_time": "00:00:00",
+    "end_time": "01:00:00",
+    "flow_dt": 1,
+    "unit_flow_dt": "minutes",
+    "affectation_factor": 10
+  },
+  "RESERVOIRS": [
+    {
+      "id": "RES1",
+      "zone": "1",
+      "function": ""
+    },
+    {
+      "id": "RES2",
+      "zone": "2",
+      "function": ""
+    }
+  ],
+  "TRAVEL_DECISION": {
+    "n_shortest_path": 3,
+    "radius_sp": 500.0,
+    "radius_growth_sp": 50.0,
+    "walk_speed": 1.4,
+    "scale_factor_sp": 10,
+    "algorithm": "astar",
+    "decision_model": "LogitDecisionModel",
+    "available_mobility_services": [
+     "WALK",
+     "PersonalCar"
+    ]
+  }
+}
