@@ -4,7 +4,7 @@ pkgs = find_packages('src')
 
 setup_kwds = dict(
     name='mnms',
-    version="1.0.0",
+    version="1.0.1",
     zip_safe=False,
     packages=pkgs,
     package_dir={'': 'src'},
