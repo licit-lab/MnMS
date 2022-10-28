@@ -21,7 +21,7 @@ class DynamicSpaceSharing(object):
         self.banned_links: Dict[str, BannedLink] = dict()
         self._dt = 0
 
-        self._affectation_step_counter = 0
+        self._flow_step_counter = 0
         self._dynamic: Callable[["MultiLayerGraph", Time], List[Tuple[str, str, int]]] = lambda x, tcurrent: list()
 
     def set_dt(self, dt: int):
@@ -80,7 +80,7 @@ class DynamicSpaceSharing(object):
         to_del = list()
 
         vehicle_to_reroute = []
-        self._affectation_step_counter += 1
+        self._flow_step_counter += 1
 
         for lid, banned_link in self.banned_links.items():
             banned_link.period -= 1
@@ -92,8 +92,8 @@ class DynamicSpaceSharing(object):
 
             del self.banned_links[lid]
 
-        if self._affectation_step_counter >= self._dt:
-            self._affectation_step_counter = 0
+        if self._flow_step_counter >= self._dt:
+            self._flow_step_counter = 0
             new_banned_links = self._dynamic(self.graph, tcurrent)
 
             for lid, mobility_service, period in new_banned_links:
@@ -102,8 +102,9 @@ class DynamicSpaceSharing(object):
 
         return vehicle_to_reroute
 
-    def set_dynamic(self, dynamic = Callable[["MultiLayerGraph", Time], List[Tuple[str, str, int]]]):
+    def set_dynamic(self, dynamic: Callable[["MultiLayerGraph", Time], List[Tuple[str, str, int]]], call_every: int):
         self._dynamic = dynamic
+        self.set_dt(call_every)
 
 
 
