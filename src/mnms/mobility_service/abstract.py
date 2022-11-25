@@ -66,7 +66,7 @@ class AbstractMobilityService(ABC):
             unode = upath[i]
             dnode = upath[i+1]
             key = (unode, dnode)
-            link_length = self.graph.nodes[unode].adj[dnode].length
+            link_length = self.graph.get_length(unode,dnode)
             veh_path.append((key, link_length))
         return veh_path
 
