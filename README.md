@@ -1,6 +1,6 @@
 # mnms :candy:
 
-`mnms` (**M**ultimodal **N**etwork **M**odelling and **S**imulation) is a multimodal dynamic traffic simulator designed for large-urban scale. It results from all research activites carried out within the ERC MAGnUM project. In a nutshell, users make travelling decisions considering all multimodal options on the city transportation network but motions are governed by regional multimodal MFD (macroscopic fundamental diagram) curves. SO, all users share the same speed within a region and a transportation mode at a given time.
+`mnms` (**M**ultimodal **N**etwork **M**odelling and **S**imulation) is a multimodal dynamic traffic simulator designed for large-urban scale. It results from all research activites carried out within the ERC MAGnUM project. In a nutshell, users make travelling decisions considering all multimodal options on the city transportation network but motions are governed by regional multimodal MFD (macroscopic fundamental diagram) curves. So, all users share the same speed within a region and a transportation mode at a given time.
 
 ## Installation
 
