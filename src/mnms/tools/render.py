@@ -77,12 +77,14 @@ def draw_line(ax, mlgraph, line, color='green', linkwidth=6, alpha=0.6, draw_sto
             fillstyle='full', markersize=nodesize)
 
 
-def draw_odlayer(ax, mlgraph, color='blue', nodesize=2):
+def draw_odlayer(ax, mlgraph, color='blue', nodesize=2, node_label=True, label_size=5):
     ods = list(mlgraph.odlayer.origins.keys()) + list(mlgraph.odlayer.destinations.keys())
     x, y = zip(*[mlgraph.graph.nodes[od].position for od in ods])
     ax.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='black',
         fillstyle='full', markersize=nodesize)
 
+    if node_label:
+        [ax.annotate(od,mlgraph.graph.nodes[od].position, size=label_size) for od in ods]
 
 def draw_veh_activity(ax, veh_result_file: str, veh_id: str):
     c_dict = {'STOP': '#E64646', 'PICKUP': '#E69646', 'SERVING': '#34D05C',

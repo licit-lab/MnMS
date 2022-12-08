@@ -242,7 +242,7 @@ class OriginDestinationLayer(object):
 
     def __dump__(self):
         return {'ORIGINS': {node: self.origins[node] for node in self.origins},
-                'DESTINATIONS': {node: self.origins[node] for node in self.origins}}
+                'DESTINATIONS': {node: self.destinations[node] for node in self.destinations}}
 
     @classmethod
     def __load__(cls, data) -> "OriginDestinationLayer":
