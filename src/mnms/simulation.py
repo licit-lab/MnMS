@@ -180,11 +180,13 @@ class Supervisor(object):
 
                 activity.modify_path(new_veh_path)
 
-    def step(self, affectation_factor, affectation_step, flow_dt, flow_step, new_users):
+    def step(self, affectation_factor, affectation_step, flow_dt, new_users):
         if len(new_users) > 0:
             iter_new_users = iter(new_users)
             u = next(iter_new_users)
-            for _ in range(affectation_factor):
+
+            for it_flow_step in range(affectation_factor):
+
                 next_time = self.tcurrent.add_time(flow_dt)
                 users_step = list()
                 try:
@@ -197,38 +199,39 @@ class Supervisor(object):
                 self.update_mobility_services(flow_dt)
 
                 self.step_flow(flow_dt, users_step)
-                if self._flow_motor._write:
-                    self._flow_motor.write_result(affectation_step, flow_step)
-                self.tcurrent = next_time
-                flow_step += 1
 
+                if self._flow_motor._write:
+                    self._flow_motor.write_result(affectation_step, it_flow_step)
+                self.tcurrent = next_time
         else:
-            for _ in range(affectation_factor):
+            for it_flow_step in range(affectation_factor):
                 next_time = self.tcurrent.add_time(flow_dt)
                 self.update_mobility_services(flow_dt)
                 self.step_flow(flow_dt, [])
                 if self._flow_motor._write:
-                    self._flow_motor.write_result(affectation_step, flow_step)
+                    self._flow_motor.write_result(affectation_step, it_flow_step)
                 self.tcurrent = next_time
-                flow_step += 1
 
     def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
+
         log.info(f'Start run from {tstart} to {tend}')
 
         self.initialize(tstart)
 
         affectation_step = 0
-        flow_step = 0
         principal_dt = flow_dt * affectation_factor
 
         self.tcurrent = tstart
 
         progress = ProgressBar(ceil((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor)))
+
         while self.tcurrent < tend:
+
             progress.update()
             progress.show()
             log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
+            # Retrieves new users to be processed during the current main step
             new_users = self.get_new_users(principal_dt)
 
             # Set pickup_dt to infinite for all PT mobility services
@@ -243,7 +246,7 @@ class Supervisor(object):
 
             log.info(f'Launching {affectation_factor} step of flow ...')
             start = time()
-            self.step(affectation_factor, affectation_step, flow_dt, flow_step, new_users)
+            self.step(affectation_factor, affectation_step, flow_dt, new_users)
             end = time()
             log.info(f'Done [{end-start:.5} s]')
 

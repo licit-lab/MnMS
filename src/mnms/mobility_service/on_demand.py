@@ -144,6 +144,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
 
         for veh in self.fleet.vehicles.values():
             if veh.state is VehicleState.STOP:
+                # The vehicle must return to a depot (the closest not full)
                 if veh._current_node not in self.depot:
                     veh_position = veh.position
                     dist_vector = np.linalg.norm(depot_pos - veh_position, axis=1)

@@ -43,8 +43,8 @@ class User(TimeDependentSubject):
         departure_time: The departure time
         available_mobility_services: The available mobility services
         path: The path of the User
-        response_dt: The maximum dt a User is ok to wait from a mobility service
-        pickup_dt: The maximu dt a User is ok to wait for a pick up
+        response_dt: The maximum response time a user is willing to wait for a request to a mobility service
+        pickup_dt: The maximum time a user is willing to wait for a pickup
         continuous_journey: If not None, the User restarted its journey
         """
         super(User, self).__init__()
