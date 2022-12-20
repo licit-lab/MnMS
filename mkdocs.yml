@@ -1,9 +1,12 @@
 site_name: MnMS
 site_url: ""
 use_directory_urls: false
+site_description: 'MnMS ''s documentation'
 nav:
     - Home: index.md
+    - Installation: installation.md
     - Tutorials:
+        - Main: TutorialSeminar.ipynb
         - Graph: TutorialGraph.ipynb
         - Demand and Decision Model: TutorialDemandTravelDecision.ipynb
     - Code Reference:
@@ -12,8 +15,12 @@ nav:
 theme:
   name: material
   palette:
-    scheme: slate
-    primary: black
+    scheme: default
+    primary: indigo
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/licit-lab/mnms
 
 plugins:
   - search
@@ -27,3 +34,4 @@ plugins:
       include: ["*.ipynb"]
 #      execute: true
       include_source: True
+
