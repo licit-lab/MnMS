@@ -51,7 +51,7 @@ def generate_layer_from_roads(roads: RoadDescriptor,
     return layer
 
 
-def _generate_matching_origin_destination_layer(roads: RoadDescriptor, with_stops: bool = True):
+def generate_matching_origin_destination_layer(roads: RoadDescriptor, with_stops: bool = True):
 
     odlayer = OriginDestinationLayer()
 
