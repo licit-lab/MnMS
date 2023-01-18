@@ -197,15 +197,19 @@ class AbstractDecisionModel(ABC):
                     if p[0]:
                         p = Path(path_index, p[1], p[0])
                         p.construct_layers(gnodes)
-                        path_index += 1
-
-                        user_chosen_services = chosen_services[i]
-                        user_mobility_services = [user_chosen_services[layer_id] for layer_id, slice_nodes in p.layers]
-                        p.mobility_services = user_mobility_services
-                        user_paths.append(p)
-
-                        service_costs = sum_cost_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services)))
-                        p.service_costs = service_costs
+                        # Check that path layers are all available for this user
+                        # (this check is useful for path of type ...-> CARnode - TRANSIT -> BUSnode - TRANSIT -> DESTINATIONnode for e.g.
+                        # where BUS is not an available layer, path do not pass through BUS links but only one BUSnode
+                        if set([lid for lid,slice in p.layers]).issubset(available_layers[i]):
+                            path_index += 1
+                            user_chosen_services = chosen_services[i]
+                            user_mobility_services = [user_chosen_services[layer_id] for layer_id, slice_nodes in p.layers]
+                            p.mobility_services = user_mobility_services
+                            user_paths.append(p)
+                            service_costs = sum_cost_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services)))
+                            p.service_costs = service_costs
+                        else:
+                            log.warning(f"Incorrect path {p.layers} ignored for user {user.id} with available_layers {available_layers[i]}")
                     else:
                         path_not_found.append(user.id)
                         log.warning(f"Path not found for %s", user.id)
