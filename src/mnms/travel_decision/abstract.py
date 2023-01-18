@@ -48,8 +48,8 @@ def _process_shortest_path_inputs(mlgraph: MultiLayerGraph, users):
         services = {}
         if available_layers[i]:
             for layer in available_layers[i]:
-                #services[layer] = list(mlgraph.layers[layer].mobility_services.keys())[0]
-                services[layer] = list(u.available_mobility_service)[0]
+                services[layer] = [ms for ms in u.available_mobility_service \
+                    if ms in list(mlgraph.layers[layer].mobility_services.keys())][0]
             available_layers[i].add("TRANSIT")
         else:
             for layer in mlgraph.layers.values():
