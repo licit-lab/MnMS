@@ -200,7 +200,7 @@ class AbstractDecisionModel(ABC):
                         # Check that path layers are all available for this user
                         # (this check is useful for path of type ...-> CARnode - TRANSIT -> BUSnode - TRANSIT -> DESTINATIONnode for e.g.
                         # where BUS is not an available layer, path do not pass through BUS links but only one BUSnode
-                        if set([lid for lid,slice in p.layers]).issubset(available_layers[i]):
+                        if available_layers[i] and set([lid for lid,slice in p.layers]).issubset(available_layers[i]):
                             path_index += 1
                             user_chosen_services = chosen_services[i]
                             user_mobility_services = [user_chosen_services[layer_id] for layer_id, slice_nodes in p.layers]
