@@ -404,6 +404,47 @@ class MultiLayerGraph(object):
         link_dlayer_id = self.graph.nodes[downstream].label
         self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
 
+    def initialize_costs(self,walk_speed):
+
+        # initialize costs on links
+        link_layers = list()
+
+        for lid, layer in self.layers.items():
+            link_layers.append(layer.graph.links)  # only non transit links concerned
+
+        for link in self.graph.links.values():
+            costs = {}
+            if link.label == "TRANSIT":
+                layer = self.transitlayer
+                speed = walk_speed
+                costs["WALK"] = {"speed": speed,
+                                 "travel_time": link.length / speed,
+                                 "distance": link.length}
+                # NB: travel_time could be defined as a cost_function
+                for mservice, cost_functions in layer._costs_functions.items():
+                    for cost_name, cost_func in cost_functions.items():
+                        costs[mservice][cost_name] = cost_func(self, link, costs)
+            else:
+                layer = self.layers[link.label]
+                speed = layer.default_speed
+
+                link_layer_id = link.label
+                for mservice in self.layers[link_layer_id].mobility_services.keys():
+                    costs[mservice] = {"speed": speed,
+                                       "travel_time": link.length / speed,
+                                       "distance": link.length}
+                # NB: travel_time could be defined as a cost_function
+                for mservice, cost_functions in layer._costs_functions.items():
+                    for cost_name, cost_func in cost_functions.items():
+                        costs[mservice][cost_name] = cost_func(self, link, costs)
+
+            link.update_costs(costs)
+
+            for links in link_layers: # only non transit links concerned
+                layer_link = links.get(link.id, None)
+                if layer_link is not None:
+                    layer_link.update_costs(costs)
+
     def add_cost_function(self, layer_id: str, cost_name: str, cost_function: Callable, mobility_service: Optional[str] = None):
         # Retrieve layer
         if layer_id == 'TRANSIT':

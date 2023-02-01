@@ -115,42 +115,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     break
 
     def initialize(self, walk_speed):
-        # initialize costs on links
-        link_layers = list()
 
-        for lid, layer in self._graph.layers.items():
-            link_layers.append(layer.graph.links) # only non transit links concerned
-
-        for link in self._graph.graph.links.values():
-            costs = {}
-            if link.label == "TRANSIT":
-                layer = self._graph.transitlayer
-                speed = walk_speed
-                costs["WALK"] = {"speed": speed,
-                                 "travel_time": link.length / speed}
-                # NB: travel_time could be defined as a cost_function
-                for mservice, cost_functions in layer._costs_functions.items():
-                    for cost_name, cost_func in cost_functions.items():
-                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
-            else:
-                layer = self._graph.layers[link.label]
-                speed = layer.default_speed
-
-                link_layer_id = link.label
-                for mservice in self._graph.layers[link_layer_id].mobility_services.keys():
-                    costs[mservice] = {"speed": speed,
-                                       "travel_time": link.length/speed}
-            # NB: travel_time could be defined as a cost_function
-                for mservice, cost_functions in layer._costs_functions.items():
-                    for cost_name, cost_func in cost_functions.items():
-                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
-
-            link.update_costs(costs)
-
-            for links in link_layers: # only non transit links concerned
-                layer_link = links.get(link.id, None)
-                if layer_link is not None:
-                    layer_link.update_costs(costs)
+        self._graph.initialize_costs(walk_speed)
 
         # Other initializations
         self.dict_accumulations = {}
