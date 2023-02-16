@@ -64,15 +64,17 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
             veh.activity = None
             for a in reversed([pu_activity, do_activity, activity_to_modify]):
                 if decrement_insert_index:
-                    ind = max(0, ind-1)
-                veh.activities.insert(ind, a)
+                    veh.activities.insert(max(0, ind-1), a)
+                else:
+                    veh.activities.insert(ind, a)
         else:
             # Only insert the new activities, path of activity_to_modify has
             # already been modified
             for a in reversed([pu_activity, do_activity]):
                 if decrement_insert_index:
-                    ind = max(0, ind-1)
-                veh.activities.insert(ind, a)
+                    veh.activities.insert(max(0, ind-1), a)
+                else:
+                    veh.activities.insert(ind, a)
     else:
         assert ind_pu < ind_do, "Index where pickup activity is going to be inserted in "\
             "vehicle's activities is greater than index where serving activity is going "\
@@ -86,8 +88,9 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
                                             user=user)
         activity_to_modify_do.modify_path(activity_to_modify_do.path[do_ind_inpath:])
         if decrement_insert_index:
-            ind_do = max(0, ind_do-1)
-        veh.activities.insert(ind_do, do_activity)
+            veh.activities.insert(max(0, ind_do-1), do_activity)
+        else:
+            veh.activities.insert(ind_do, do_activity)
         # Then insert pickup activity
         activity_to_modify_pu = activities_including_curr[ind_pu]
         pu_ind_inpath = _to_nodes(activity_to_modify_pu.path, veh).index(pu_node)
@@ -106,14 +109,16 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
             veh.activity = None
             for a in reversed([pu_activity, activity_to_modify_pu]):
                 if decrement_insert_index:
-                    ind_pu = max(0, ind_pu-1)
-                veh.activities.insert(ind_pu, a)
+                    veh.activities.insert(max(0, ind_pu-1), a)
+                else:
+                    veh.activities.insert(ind_pu, a)
         else:
             # Only insert the pickup activity, path of activity_to_modify_pu has
             # already been modified
             if decrement_insert_index:
-                ind_pu = max(0, ind_pu-1)
-            veh.activities.insert(ind_pu, pu_activity)
+                veh.activities.insert(max(0, ind_pu-1), pu_activity)
+            else:
+                veh.activities.insert(ind_pu, pu_activity)
 
 
 class PublicTransportMobilityService(AbstractMobilityService):
