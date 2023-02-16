@@ -3,7 +3,7 @@ import pytest
 from mnms.demand import User
 from mnms.demand.user import Path
 from mnms.flow.congested_MFD import CongestedMFDFlowMotor, CongestedReservoir
-from mnms.generation.layers import generate_layer_from_roads, _generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_layer_from_roads, generate_matching_origin_destination_layer
 from mnms.generation.roads import generate_line_road
 from mnms.graph.layers import MultiLayerGraph
 from mnms.graph.zone import construct_zone_from_sections
@@ -23,7 +23,7 @@ def test_congested_mfd_no_congestion():
                                           "CarLayer",
                                           mobility_services=[personal_car])
 
-    odlayer = _generate_matching_origin_destination_layer(roads)
+    odlayer = generate_matching_origin_destination_layer(roads)
 
     mlgraph = MultiLayerGraph([car_layer],
                               odlayer,
@@ -77,7 +77,7 @@ def test_congested_mfd_congestion():
                                           "CarLayer",
                                           mobility_services=[personal_car])
 
-    odlayer = _generate_matching_origin_destination_layer(roads)
+    odlayer = generate_matching_origin_destination_layer(roads)
 
     mlgraph = MultiLayerGraph([car_layer],
                               odlayer,

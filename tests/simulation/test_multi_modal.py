@@ -5,7 +5,7 @@ from pathlib import Path
 from mnms.demand import BaseDemandManager, User
 from mnms.generation.roads import generate_line_road
 from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer, \
-    _generate_matching_origin_destination_layer
+    generate_matching_origin_destination_layer
 from mnms.graph.layers import MultiLayerGraph, PublicTransportLayer, CarLayer
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 
@@ -52,7 +52,7 @@ class TestMultiModal(unittest.TestCase):
                             [["3_4"], ["4_5"]],
                             timetable=TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=1)))
 
-        odlayer = _generate_matching_origin_destination_layer(roads)
+        odlayer = generate_matching_origin_destination_layer(roads)
         #
         mlgraph = MultiLayerGraph([car_layer, pblayer],
                                   odlayer,

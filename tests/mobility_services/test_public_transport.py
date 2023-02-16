@@ -4,7 +4,7 @@ from pathlib import Path
 
 from mnms.demand import BaseDemandManager, User
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
-from mnms.generation.layers import _generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_matching_origin_destination_layer
 from mnms.generation.roads import generate_line_road
 from mnms.graph.layers import MultiLayerGraph, PublicTransportLayer
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
@@ -37,7 +37,7 @@ class TestPublicTransport(unittest.TestCase):
                             [['0_1', '1_2'], ['1_2', '2_3']],
                             TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=10)))
 
-        odlayer = _generate_matching_origin_destination_layer(roads)
+        odlayer = generate_matching_origin_destination_layer(roads)
 
 
         mlgraph = MultiLayerGraph([pblayer],

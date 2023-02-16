@@ -2,7 +2,7 @@ import json
 import unittest
 from tempfile import TemporaryDirectory
 
-from mnms.generation.layers import _generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_matching_origin_destination_layer
 from mnms.graph.layers import CarLayer, BusLayer, MultiLayerGraph
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import Zone
@@ -48,7 +48,7 @@ class TestIOGraphTransit(unittest.TestCase):
                               TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
                               True)
 
-        odlayer = _generate_matching_origin_destination_layer(self.roads)
+        odlayer = generate_matching_origin_destination_layer(self.roads)
 
         self.mlgraph = MultiLayerGraph([car_layer, bus_layer],
                                        odlayer,
@@ -85,7 +85,7 @@ class TestIOGraphTransit(unittest.TestCase):
                               TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
                               True)
 
-        odlayer = _generate_matching_origin_destination_layer(self.roads)
+        odlayer = generate_matching_origin_destination_layer(self.roads)
 
         new_mlgraph = MultiLayerGraph([car_layer, bus_layer])
         new_mlgraph.add_origin_destination_layer(odlayer)
@@ -127,7 +127,7 @@ class TestIOGraphTransit(unittest.TestCase):
                               TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
                               True)
 
-        odlayer = _generate_matching_origin_destination_layer(self.roads)
+        odlayer = generate_matching_origin_destination_layer(self.roads)
 
         new_mlgraph = MultiLayerGraph([car_layer, bus_layer])
         new_mlgraph.add_origin_destination_layer(odlayer)
