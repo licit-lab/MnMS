@@ -9,7 +9,7 @@ class DummyDecisionModel(AbstractDecisionModel):
     def __init__(self, mmgraph: MultiLayerGraph, outfile:str=None, cost='travel_time', verbose_file=False):
         """
         Simple decision model that choose the first path of the ls
-        
+
         Args:
             mmgraph:
             outfile:
@@ -20,4 +20,6 @@ class DummyDecisionModel(AbstractDecisionModel):
                                                  cost=cost)
 
     def path_choice(self, paths:List[Path]) -> Path:
+        # Sort paths by ascending cost before returning the best path
+        paths.sort(key=lambda p: p.path_cost)
         return paths[0]
