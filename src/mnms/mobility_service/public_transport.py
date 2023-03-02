@@ -62,6 +62,11 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
             # Interrupt current activity and insert the new activities plus the
             # modified one
             veh.activity = None
+            # Modify length to travel on the first link of pu_activity.path with
+            # current remaining_link_length to prevent restarting the travel of
+            # this link
+            pu_activity.path[0] = (pu_activity.path[0][0], veh._remaining_link_length)
+            pu_activity.reset_path_iterator()
             for a in reversed([pu_activity, do_activity, activity_to_modify]):
                 if decrement_insert_index:
                     veh.activities.insert(max(0, ind-1), a)
@@ -107,6 +112,11 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
             # Interrupt current activity and insert the pickup activity plus the
             # modified one
             veh.activity = None
+            # Modify length to travel on the first link of pu_activity.path with
+            # current remaining_link_length to prevent restarting the travel of
+            # this link
+            pu_activity.path[0] = (pu_activity.path[0][0], veh._remaining_link_length)
+            pu_activity.reset_path_iterator()
             for a in reversed([pu_activity, activity_to_modify_pu]):
                 if decrement_insert_index:
                     veh.activities.insert(max(0, ind_pu-1), a)
