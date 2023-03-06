@@ -96,23 +96,34 @@ class AbstractMobilityService(ABC):
             self._counter_maintenance += 1
 
     def launch_matching(self):
-        refuse_user = list()
+        """
+        Method that launch passenger-vehicles matching, through 1. requesting and 2. matching.
+        Returns: empty list # TODO - should be cleaned
+
+        """
+        # refuse_user = list()
 
         if self._counter_matching == self._dt_matching:
             self._counter_matching = 0
 
-            for uid, (user, drop_node) in self._user_buffer.items():
+            for uid, (user, drop_node) in list(self._user_buffer.items()):
+                # User makes service request
                 service_dt = self.request(user, drop_node)
                 if user.pickup_dt[self.id] > service_dt:
+                    # If pick-up time is below passengers' waiting tolerance
+                    # Match user with vehicle
                     self.matching(user, drop_node)
+                    # Remove user from list of users waiting to be matched
+                    self._user_buffer.pop(uid)
                 else:
+                    # If pick-up time exceeds passengers' waiting tolerance
                     log.info(f"{uid} refused {self.id} offer (predicted pickup time too long)")
-                    user.set_state_stop()
-                    user.notify(self._tcurrent)
-                    refuse_user.append(user)
+                    # user.set_state_stop()
+                    # user.notify(self._tcurrent)
+                    # Therefuse_user.append(user)
                 self._cache_request_vehicles = dict()
 
-            self._user_buffer = dict()
+            # self._user_buffer = dict()
             # NB: we clean _user_buffer here because answer provided by the mobility
             #     service should be YES I match with you or No I refuse you, but not
             #     let's wait the next timestep to see if I can find a vehicle for you
@@ -121,7 +132,7 @@ class AbstractMobilityService(ABC):
         else:
             self._counter_matching += 1
 
-        return refuse_user
+        return list()  # refuse_user
 
     def periodic_maintenance(self, dt: Dt):
         """
