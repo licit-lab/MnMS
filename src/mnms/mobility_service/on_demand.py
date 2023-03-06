@@ -38,6 +38,15 @@ class OnDemandMobilityService(AbstractMobilityService):
         self.gnodes = self.graph.nodes
 
     def request(self, user: User, drop_node: str) -> Dt:
+        """
+
+        Args:
+            user: User requesting a ride
+            drop_node:
+
+        Returns: waiting time before pick-up
+
+        """
 
         upos = user.position
         uid = user.id
@@ -56,13 +65,19 @@ class OnDemandMobilityService(AbstractMobilityService):
             vehs.remove(nearest_veh)
 
             choosen_veh = self.fleet.vehicles[nearest_veh]
-            if not choosen_veh.is_full:
-                if choosen_veh.is_empty:
+#            if not choosen_veh.is_full:
+            if choosen_veh.is_empty:
+                # Vehicle available if either stopped or repositioning, and has no activity planned afterwards
+                available = True if ((choosen_veh.state in [VehicleState.STOP, VehicleState.REPOSITIONING]) and (not choosen_veh.activities)) else False
+                if available:
+                    # Compute pick-up path and cost from end of current activity
                     veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
                     choosen_veh.activities[-1].node
                     veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+                    # If vehicle cannot reach user, skip and consider next vehicle
                     if cost == float('inf'):
-                        raise PathNotFound(choosen_veh._current_node, user.current_node)
+                        continue
+                        # raise PathNotFound(choosen_veh._current_node, user.current_node)
 
                     len_path = 0
                     for i in range(len(veh_path) - 1):
@@ -179,6 +194,16 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                     self.depot[veh._current_node]["vehicles"].add(veh.id)
 
     def request(self, user: User, drop_node: str) -> Dt:
+        """
+
+        Args:
+            user: User requesting a ride
+            drop_node:
+
+        Returns: waiting time before pick-up
+
+        """
+
         service_dt = Dt(hours=24)
         upos = user.position
 
@@ -192,30 +217,33 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
 
             vehs.remove(nearest_veh)
             choosen_veh = self.fleet.vehicles[nearest_veh]
-            if not choosen_veh.is_full:
-                if choosen_veh.is_empty:
-                    available = True if not choosen_veh.activities else choosen_veh.activities[0].state is not VehicleState.PICKUP
-                    if available:
-                        veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
-                        choosen_veh.activities[-1].node
-                        veh_path, cost = dijkstra(self.graph,
-                                                  veh_last_node,
-                                                  user.current_node,
-                                                  'travel_time',
-                                                  {self.layer.id: self.id,
-                                                   "TRANSIT": "WALK"},
-                                                  {self.layer.id})
-                        if cost == float('inf'):
-                            continue
+            #if not choosen_veh.is_full:
+            if choosen_veh.is_empty:
+                # Vehicle available if either stopped or repositioning, and has no activity planned afterwards
+                available = True if ((choosen_veh.state in [VehicleState.STOP, VehicleState.REPOSITIONING]) and (not choosen_veh.activities)) else False
+                if available:
+                    # Compute pick-up path and cost from end of current activity
+                    veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
+                    choosen_veh.activities[-1].node
+                    veh_path, cost = dijkstra(self.graph,
+                                              veh_last_node,
+                                              user.current_node,
+                                              'travel_time',
+                                              {self.layer.id: self.id,
+                                               "TRANSIT": "WALK"},
+                                              {self.layer.id})
+                    # If vehicle cannot reach user, skip and consider next vehicle
+                    if cost == float('inf'):
+                        continue
 
-                        len_path = 0
-                        for i in range(len(veh_path) - 1):
-                            j = i + 1
-                            len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
+                    len_path = 0
+                    for i in range(len(veh_path) - 1):
+                        j = i + 1
+                        len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
 
-                        service_dt = Dt(seconds=len_path / choosen_veh.speed)
-                        self._cache_request_vehicles[user.id] = choosen_veh, veh_path
-                        break
+                    service_dt = Dt(seconds=len_path / choosen_veh.speed)
+                    self._cache_request_vehicles[user.id] = choosen_veh, veh_path
+                    break
 
         return service_dt
 
