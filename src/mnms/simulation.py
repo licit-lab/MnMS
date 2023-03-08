@@ -98,9 +98,10 @@ class Supervisor(object):
     def compute_user_paths(self, new_users: List[User]):
         log.info('Computing paths for new users ..')
         start = time()
-        self._decision_model(new_users, self.tcurrent)
+        all_users = self._decision_model(new_users, self.tcurrent)
         end = time()
         log.info(f'Done [{end - start:.5} s]')
+        return all_users
 
     def initialize(self, tstart:Time):
         for layer in self._mlgraph.layers.values():
@@ -239,11 +240,12 @@ class Supervisor(object):
                 for pt_ms in pt_mob_services_names:
                     user.pickup_dt[pt_ms] = Dt(hours=24)
 
-            self.compute_user_paths(new_users)
+            # Get continuous users and new users
+            all_users = self.compute_user_paths(new_users)
 
             log.info(f'Launching {affectation_factor} step of flow ...')
             start = time()
-            self.step(affectation_factor, affectation_step, flow_dt, flow_step, new_users)
+            self.step(affectation_factor, affectation_step, flow_dt, flow_step, all_users)
             end = time()
             log.info(f'Done [{end-start:.5} s]')
 

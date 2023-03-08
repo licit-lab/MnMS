@@ -172,10 +172,10 @@ class AbstractDecisionModel(ABC):
     # TODO: restrict combination of paths (ex: we dont want Uber->Bus)
     def __call__(self, new_users: List[User], tcurrent: Time):
         legacy_users = self._check_refused_users(tcurrent)
-        new_users.extend(legacy_users)
+        all_users = legacy_users+new_users
 
         if len(new_users)>0:
-            origins, destinations, available_layers, chosen_services = _process_shortest_path_inputs(self._mlgraph, new_users)
+            origins, destinations, available_layers, chosen_services = _process_shortest_path_inputs(self._mlgraph, all_users)
             paths = parallel_k_shortest_path(self._mlgraph.graph,
                                              origins,
                                              destinations,
@@ -264,6 +264,8 @@ class AbstractDecisionModel(ABC):
 
             if path_not_found:
                 log.warning("Paths not found: %s", len(path_not_found))
+
+        return all_users
 
 
     def compute_path(self, origin: str, destination: str, accessible_layers: Set[str], chosen_services: Dict[str, str]):
