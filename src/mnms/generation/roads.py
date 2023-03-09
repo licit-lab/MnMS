@@ -269,3 +269,41 @@ def generate_nested_manhattan_road(n_list, link_length_list, zone_id='RES'):
     merged_road.add_zone(generate_one_zone(merged_road, zone_id))
 
     return merged_road
+
+def generate_pt_line_road(roads, start: List[float], end: List[float], n: int, line_id, length, bothways: bool = True):
+    """
+    Generate a Public Transportation line,
+    Can be used to create Metro or Tram lines where all the stops belongs between two nodes
+
+    Args:
+        roads: road descriptor where the line will be added
+        start: the start of the line [x,y]
+        end: the end of the line [x,y]
+        n: the number of nodes in the line
+        length: length of the line, float
+        bothways: True will create the other line in opposite direction
+
+    Returns:
+
+    """
+
+    start = np.array(start)
+    end = np.array(end)
+    dir = end-start
+    dist = np.linalg.norm(dir)
+    dx = dist/(n-1)
+    dir_dx = (dir/dist)*dx
+
+    for i in range(n):
+        roads.register_node(line_id + '_' + str(i), start+dir_dx*i)
+
+    for i in range(n-1):
+        roads.register_section(line_id + '_' + '_'.join([str(i), str(i+1)]),
+                                line_id + '_' + str(i),
+                                line_id + '_' + str(i+1),
+                                length)
+        if bothways:
+            roads.register_section(line_id + '_' + '_'.join([str(i + 1), str(i)]),
+                                    line_id + '_' + str(i+1),
+                                    line_id + '_' + str(i),
+                                    length)

@@ -60,6 +60,11 @@ class RoadDescriptor(object):
 
         self.stops[sid] = RoadStop(sid, lid, relative_position, abs_pos)
 
+    def register_stop_abs(self, sid: str, lid: str, relative_position: float, abs_pos):
+        assert 0 <= relative_position <= 1, f"relative_position must be between 0 and 1"
+
+        self.stops[sid] = RoadStop(sid, lid, relative_position, abs_pos)
+
     def register_section(self, lid: str, upstream: str, downstream: str, length: Optional[float] = None):
         assert upstream in self.nodes, f"{upstream} node is not registered"
         assert downstream in self.nodes, f"{downstream} node is not registered "
