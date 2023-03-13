@@ -19,6 +19,7 @@ from mnms.time import Time, Dt
 from mnms.log import create_logger, attach_log_file, LOGLEVEL
 from mnms.tools.progress import ProgressBar
 from mnms.vehicles.manager import VehicleManager
+from mnms.vehicles.veh_type import Vehicle
 
 log = create_logger(__name__)
 
