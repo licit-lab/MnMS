@@ -284,6 +284,10 @@ class Supervisor(object):
                 if mservice._observer is not None:
                     mservice._observer.finish()
 
+        # Clean the class attributes
+        VehicleManager.empty()
+        Vehicle.reset_counter()
+
         progress.update()
         progress.show()
         progress.end()

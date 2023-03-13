@@ -302,6 +302,10 @@ class Vehicle(TimeDependentSubject):
         for user in self.passenger.values():
             user.notify(tcurrent)
 
+    @classmethod
+    def reset_counter(cls):
+        cls._counter = 0
+
 
 class Car(Vehicle):
     def __init__(self,
