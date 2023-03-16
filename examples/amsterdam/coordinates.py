@@ -144,6 +144,10 @@ def wgs_to_utm(latitude, longitude):
     return (easting, northing)
 
 
+def rd_to_utm(x, y):
+    phi, lam = rd_to_wgs(x, y)
+    easting, northing = wgs_to_utm(phi, lam)
+    return (easting, northing)
 
 
 ## EXAMPLE
@@ -158,4 +162,5 @@ def wgs_to_utm(latitude, longitude):
 #
 # for x, y in coord_wgs:
 #     print(wgs_to_utm(x, y))
+# rd_to_utm(121687, 487484)
 
