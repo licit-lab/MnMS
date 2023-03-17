@@ -100,7 +100,7 @@ class OnDemandMobilityService(AbstractMobilityService):
             VehicleActivityPickup(node=user._current_node,
                                   path=veh_path,
                                   user=user),
-            VehicleActivityServing(node=user.destination,
+            VehicleActivityServing(node=drop_node,
                                    path=user_path,
                                    user=user)
         ]
