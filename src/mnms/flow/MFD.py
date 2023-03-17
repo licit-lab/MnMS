@@ -90,7 +90,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                             if i == 0:
                                 l_dnode_pos = roads.nodes[roads.sections[section].downstream].position
                                 sections_length.append((section, _dist(unode_pos - l_dnode_pos)))
-                            if i == len(self._graph.map_reference_links[lid])-1:
+                            elif i == len(self._graph.map_reference_links[lid])-1:
                                 l_unode_pos = roads.nodes[roads.sections[section].upstream].position
                                 sections_length.append((section, _dist(l_unode_pos - dnode_pos)))
                             else:
