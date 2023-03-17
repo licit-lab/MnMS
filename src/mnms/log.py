@@ -44,7 +44,7 @@ def set_all_mnms_logger_level(level):
 
 def attach_log_file(filename:str, file_level=LOGLEVEL.INFO):
     loggers = get_all_mnms_logger()
-    file_handler = logging.FileHandler(filename)
+    file_handler = logging.FileHandler(filename, mode="w")
     file_handler.setLevel(file_level)
     format = f'%(levelname)s(%(name)s): %(message)s'
     formatter = logging.Formatter(format)
