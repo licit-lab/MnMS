@@ -31,8 +31,9 @@ def extract_amsterdam_stops():
     ## TRAM ############################################################################################################
 
     tram_files = os.listdir(tram_xml_directory)
+    tram_files_xml = list(filter(lambda f: f.endswith('.xml'), tram_files))
 
-    for tram_file in tram_files:
+    for tram_file in tram_files_xml:
         xml_tree = ET.parse(tram_xml_directory + "/" + tram_file)
 
         stop_list = xml_tree.findall(".//{*}USRSTOPbegin")
@@ -60,8 +61,9 @@ def extract_amsterdam_stops():
     ## METRO ###########################################################################################################
 
     metro_files = os.listdir(metro_xml_directory)
+    metro_files_xml = list(filter(lambda f: f.endswith('.xml'), metro_files))
 
-    for metro_file in metro_files:
+    for metro_file in metro_files_xml:
         xml_tree = ET.parse(metro_xml_directory + "/" + metro_file)
 
         stop_list = xml_tree.findall(".//{*}USRSTOPbegin")
@@ -89,8 +91,9 @@ def extract_amsterdam_stops():
     ## BUS #############################################################################################################
 
     bus_files = os.listdir(bus_xml_directory)
+    bus_files_xml = list(filter(lambda f: f.endswith('.xml'), bus_files))
 
-    for bus_file in bus_files:
+    for bus_file in bus_files_xml:
         xml_tree = ET.parse(bus_xml_directory + "/" + bus_file)
 
         stop_list = xml_tree.findall(".//{*}USRSTOPbegin")
@@ -117,14 +120,14 @@ def extract_amsterdam_stops():
 
 
 def convert_amsterdam_to_mnms():
+    roads = RoadDescriptor()
+
     ## POINTS CSV DATA
 
     df_points = pd.read_csv(csv_filepath, sep='|', converters={"DATAOWNERCODE": str})
     df_points = df_points[["DATAOWNERCODE", "LOCATIONXEW", "LOCATIONYNS"]]
 
     ## TRAM
-
-    roads = RoadDescriptor()
 
     tram_service = PublicTransportMobilityService('TRAM')
     tram_layer = PublicTransportLayer(roads, "TRAMLayer", Tram, 40, services=[tram_service])
@@ -160,13 +163,13 @@ def convert_amsterdam_to_mnms():
 
         # # for each stops
         for i in range(nb_stops):
-            stop_code = tram_line.loc[i, "STOP_CODE"]
+            stop_code = tram_line["STOP_CODE"].iloc[i]
             stop_coord_x = float(df_points["LOCATIONXEW"].loc[df_points["DATAOWNERCODE"] == stop_code])
             stop_coord_y = float(df_points["LOCATIONYNS"].loc[df_points["DATAOWNERCODE"] == stop_code])
 
             stop_coord_x_utm, stop_coord_y_utm = rd_to_utm(stop_coord_x, stop_coord_y)
 
-            stop_name = tram_line.loc[i, "STOP_NAME"]
+            stop_name = tram_line["STOP_NAME"].iloc[i]
 
             sid_0 = stop_name
             sid_1 = stop_name + "2"
@@ -199,10 +202,87 @@ def convert_amsterdam_to_mnms():
                                sections_1,
                                TimeTable.create_table_freq('07:00:00', '10:00:00', Dt(minutes=5)))
 
+
+        ## METRO
+
+        metro_service = PublicTransportMobilityService('METRO')
+        metro_layer = PublicTransportLayer(roads, "METROLayer", Metro, 60, services=[metro_service])
+
+        for metro_line in list_metro_lines:
+
+            line_number = metro_line["LINE_ID"].iloc[0]
+
+            terminus_0_stop_code = metro_line["STOP_CODE"].iloc[0]
+            terminus_1_stop_code = metro_line["STOP_CODE"].iloc[-1]
+
+            coord_terminus_0_x = float(df_points["LOCATIONXEW"].loc[df_points["DATAOWNERCODE"] == terminus_0_stop_code])
+            coord_terminus_0_y = float(df_points["LOCATIONYNS"].loc[df_points["DATAOWNERCODE"] == terminus_0_stop_code])
+            coord_terminus_1_x = float(df_points["LOCATIONXEW"].loc[df_points["DATAOWNERCODE"] == terminus_1_stop_code])
+            coord_terminus_1_y = float(df_points["LOCATIONYNS"].loc[df_points["DATAOWNERCODE"] == terminus_1_stop_code])
+
+            coord_terminus_0_x_utm, coord_terminus_0_y_utm = rd_to_utm(coord_terminus_0_x, coord_terminus_0_y)
+            coord_terminus_1_x_utm, coord_terminus_1_y_utm = rd_to_utm(coord_terminus_1_x, coord_terminus_1_y)
+
+            line_id = "METRO_" + str(line_number)
+            line_length = 0
+
+            generate_pt_line_road(roads, [coord_terminus_0_x_utm, coord_terminus_0_y_utm],
+                                  [coord_terminus_1_x_utm, coord_terminus_1_y_utm], 2, line_id, line_length)
+
+            # # for each direction
+            lid_0 = line_id + "_0_1"
+            lid_1 = line_id + "_1_0"
+            nb_stops = len(metro_line)
+
+            stops_0 = []
+            stops_1 = []
+
+            # # for each stops
+            for i in range(nb_stops):
+                stop_code = metro_line["STOP_CODE"].iloc[i]
+                stop_coord_x = float(df_points["LOCATIONXEW"].loc[df_points["DATAOWNERCODE"] == stop_code])
+                stop_coord_y = float(df_points["LOCATIONYNS"].loc[df_points["DATAOWNERCODE"] == stop_code])
+
+                stop_coord_x_utm, stop_coord_y_utm = rd_to_utm(stop_coord_x, stop_coord_y)
+
+                stop_name = metro_line["STOP_NAME"].iloc[i]
+
+                sid_0 = stop_name
+                sid_1 = stop_name + "2"
+
+                rel_0 = float(i / nb_stops)
+                rel_1 = float(1 - (i / nb_stops))
+
+                roads.register_stop_abs(sid_0, lid_0, rel_0, [stop_coord_x_utm, stop_coord_y_utm])
+                roads.register_stop_abs(sid_1, lid_1, rel_1, [stop_coord_x_utm, stop_coord_y_utm])
+
+                stops_0.append(sid_0)
+                stops_1.append(sid_1)
+
+            stops_1.reverse()
+
+            sections_0 = []
+            sections_1 = []
+
+            for i in range(nb_stops - 1):
+                sections_0.append([lid_0])
+                sections_1.append([lid_1])
+
+            metro_layer.create_line(lid_0,
+                                   stops_0,
+                                   sections_0,
+                                   TimeTable.create_table_freq('07:00:00', '10:00:00', Dt(minutes=3)))
+
+            metro_layer.create_line(lid_1,
+                                   stops_1,
+                                   sections_1,
+                                   TimeTable.create_table_freq('07:00:00', '10:00:00', Dt(minutes=3)))
+
+
     roads.add_zone(generate_one_zone("RES", roads))
 
     od_layer = generate_matching_origin_destination_layer(roads)
-    amsterdam_graph = MultiLayerGraph([tram_layer], od_layer, 1000)
+    amsterdam_graph = MultiLayerGraph([tram_layer, metro_layer], od_layer, 1000)
 
     save_graph(amsterdam_graph, "amsterdam_tc.json")
 
