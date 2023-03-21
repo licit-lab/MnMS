@@ -282,6 +282,14 @@ class TimeTable(object):
             current_time = ntime
         return cls(table)
 
+    @classmethod
+    def convert_table_freq(cls, departures: List[str]):
+        table = []
+        for departure in departures:
+            ntime = Time(departure)
+            table.append(ntime)
+        return cls(table)
+
     def get_next_departure(self, date):
         for d in self.table:
             if date < d:
