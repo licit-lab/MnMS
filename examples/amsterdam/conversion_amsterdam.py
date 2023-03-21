@@ -1,4 +1,5 @@
 import os
+import math
 
 import pandas as pd
 import re
@@ -148,7 +149,11 @@ def convert_amsterdam_to_mnms():
         coord_terminus_1_x_utm, coord_terminus_1_y_utm = rd_to_utm(coord_terminus_1_x, coord_terminus_1_y)
 
         line_id = "TRAM_" + str(line_number)
-        line_length = 0
+
+        # Simple length of the "whole" link
+        # TODO: calculate real length by adding each length between stops
+        line_length = math.dist([coord_terminus_0_x_utm, coord_terminus_0_y_utm],
+                                [coord_terminus_1_x_utm, coord_terminus_1_y_utm])
 
         generate_pt_line_road(roads, [coord_terminus_0_x_utm, coord_terminus_0_y_utm],
                               [coord_terminus_1_x_utm, coord_terminus_1_y_utm], 2, line_id, line_length)
@@ -224,7 +229,11 @@ def convert_amsterdam_to_mnms():
             coord_terminus_1_x_utm, coord_terminus_1_y_utm = rd_to_utm(coord_terminus_1_x, coord_terminus_1_y)
 
             line_id = "METRO_" + str(line_number)
-            line_length = 0
+
+            # Simple length of the "whole" link
+            # TODO: calculate real length by adding each length between stops
+            line_length = math.dist([coord_terminus_0_x_utm, coord_terminus_0_y_utm],
+                                    [coord_terminus_1_x_utm, coord_terminus_1_y_utm])
 
             generate_pt_line_road(roads, [coord_terminus_0_x_utm, coord_terminus_0_y_utm],
                                   [coord_terminus_1_x_utm, coord_terminus_1_y_utm], 2, line_id, line_length)
