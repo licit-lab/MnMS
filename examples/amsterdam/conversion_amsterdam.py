@@ -16,7 +16,9 @@ from mnms.mobility_service.public_transport import PublicTransportMobilityServic
 from mnms.time import TimeTable, Dt, Time
 from mnms.io.graph import save_graph
 
-csv_filepath = "KV1_GVB_2609_2/Csv/POINT.csv"
+coord_csv_filepath = "KV1_GVB_2609_2/Csv/POINT.csv"
+time_csv_filepath = "KV1_GVB_2609_2/Csv/PUJOPASS.csv"
+
 metro_xml_directory = "KV1_GVB_2609_2/Xml/METRO"
 tram_xml_directory = "KV1_GVB_2609_2/Xml/TRAM"
 bus_xml_directory = "KV1_GVB_2609_2/Xml/BUS"
@@ -125,8 +127,11 @@ def convert_amsterdam_to_mnms():
 
     ## POINTS CSV DATA
 
-    df_points = pd.read_csv(csv_filepath, sep='|', converters={"DATAOWNERCODE": str})
+    df_points = pd.read_csv(coord_csv_filepath, sep='|', converters={"DATAOWNERCODE": str})
     df_points = df_points[["DATAOWNERCODE", "LOCATIONXEW", "LOCATIONYNS"]]
+
+    df_time = pd.read_csv(coord_csv_filepath, sep='|', converters={"USERSTOPCODE": str})
+    df_time = df_time[["USERSTOPCODE", "TARGETARRIVALTIME"]]
 
     ## TRAM
 
@@ -197,15 +202,19 @@ def convert_amsterdam_to_mnms():
             sections_0.append([lid_0])
             sections_1.append([lid_1])
 
+        departures_0 = df_time[df_time["USERSTOPCODE"] == terminus_0_stop_code]
+        departures = departures_0["TARGETARRIVALTIME"].values.tolist()
+        departures.sort()
+
         tram_layer.create_line(lid_0,
                                stops_0,
                                sections_0,
-                               TimeTable.create_table_freq('07:00:00', '10:00:00', Dt(minutes=5)))
+                               TimeTable.convert_table_freq(departures))
 
         tram_layer.create_line(lid_1,
                                stops_1,
                                sections_1,
-                               TimeTable.create_table_freq('07:00:00', '10:00:00', Dt(minutes=5)))
+                               TimeTable.convert_table_freq(departures))
 
 
         ## METRO
@@ -277,15 +286,19 @@ def convert_amsterdam_to_mnms():
                 sections_0.append([lid_0])
                 sections_1.append([lid_1])
 
+            departures_0 = df_time[df_time["USERSTOPCODE"] == terminus_0_stop_code]
+            departures = departures_0["TARGETARRIVALTIME"].values.tolist()
+            departures.sort()
+
             metro_layer.create_line(lid_0,
                                    stops_0,
                                    sections_0,
-                                   TimeTable.create_table_freq('07:00:00', '10:00:00', Dt(minutes=3)))
+                                   TimeTable.convert_table_freq(departures))
 
             metro_layer.create_line(lid_1,
                                    stops_1,
                                    sections_1,
-                                   TimeTable.create_table_freq('07:00:00', '10:00:00', Dt(minutes=3)))
+                                   TimeTable.convert_table_freq(departures))
 
 
     roads.add_zone(generate_one_zone("RES", roads))
