@@ -181,8 +181,8 @@ def convert_amsterdam_to_mnms():
 
             stop_name = tram_line["STOP_NAME"].iloc[i]
 
-            sid_0 = stop_name
-            sid_1 = stop_name + "2"
+            sid_0 = stop_name + "_" + line_number
+            sid_1 = stop_name + "_" + line_number + "_2"
 
             rel_0 = float(i / nb_stops)
             rel_1 = float(1 - (i / nb_stops))
@@ -265,8 +265,8 @@ def convert_amsterdam_to_mnms():
 
                 stop_name = metro_line["STOP_NAME"].iloc[i]
 
-                sid_0 = stop_name
-                sid_1 = stop_name + "2"
+                sid_0 = stop_name + "_" + line_number
+                sid_1 = stop_name + "_" + line_number + "_2"
 
                 rel_0 = float(i / nb_stops)
                 rel_1 = float(1 - (i / nb_stops))
