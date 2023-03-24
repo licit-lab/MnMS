@@ -14,10 +14,11 @@ from mnms.vehicles.veh_type import Tram, Metro, Bus
 from mnms.generation.zones import generate_one_zone
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable, Dt, Time
-from mnms.io.graph import save_graph
+from mnms.io.graph import load_graph, save_graph
 
 coord_csv_filepath = "KV1_GVB_2609_2/Csv/POINT.csv"
 time_csv_filepath = "KV1_GVB_2609_2/Csv/PUJOPASS.csv"
+amsterdam_json_filepath = "new_network.json"
 
 metro_xml_directory = "KV1_GVB_2609_2/Xml/METRO"
 tram_xml_directory = "KV1_GVB_2609_2/Xml/TRAM"
@@ -123,7 +124,8 @@ def extract_amsterdam_stops():
 
 
 def convert_amsterdam_to_mnms():
-    roads = RoadDescriptor()
+    
+    amsterdam_graph = load_graph(amsterdam_json_filepath)
 
     ## POINTS CSV DATA
 
@@ -136,7 +138,7 @@ def convert_amsterdam_to_mnms():
     ## TRAM
 
     tram_service = PublicTransportMobilityService('TRAM')
-    tram_layer = PublicTransportLayer(roads, "TRAMLayer", Tram, 40, services=[tram_service])
+    tram_layer = PublicTransportLayer(amsterdam_graph.roads, "TRAMLayer", Tram, 40, services=[tram_service])
 
     for tram_line in list_tram_lines:
 
@@ -160,7 +162,7 @@ def convert_amsterdam_to_mnms():
         line_length = math.dist([coord_terminus_0_x_utm, coord_terminus_0_y_utm],
                                 [coord_terminus_1_x_utm, coord_terminus_1_y_utm])
 
-        generate_pt_line_road(roads, [coord_terminus_0_x_utm, coord_terminus_0_y_utm],
+        generate_pt_line_road(amsterdam_graph.roads, [coord_terminus_0_x_utm, coord_terminus_0_y_utm],
                               [coord_terminus_1_x_utm, coord_terminus_1_y_utm], 2, line_id, line_length)
 
         # # for each direction
@@ -187,8 +189,8 @@ def convert_amsterdam_to_mnms():
             rel_0 = float(i / nb_stops)
             rel_1 = float(1 - (i / nb_stops))
 
-            roads.register_stop_abs(sid_0, lid_0, rel_0, [stop_coord_x_utm, stop_coord_y_utm])
-            roads.register_stop_abs(sid_1, lid_1, rel_1, [stop_coord_x_utm, stop_coord_y_utm])
+            amsterdam_graph.roads.register_stop_abs(sid_0, lid_0, rel_0, [stop_coord_x_utm, stop_coord_y_utm])
+            amsterdam_graph.roads.register_stop_abs(sid_1, lid_1, rel_1, [stop_coord_x_utm, stop_coord_y_utm])
 
             stops_0.append(sid_0)
             stops_1.append(sid_1)
@@ -220,7 +222,7 @@ def convert_amsterdam_to_mnms():
         ## METRO
 
         metro_service = PublicTransportMobilityService('METRO')
-        metro_layer = PublicTransportLayer(roads, "METROLayer", Metro, 60, services=[metro_service])
+        metro_layer = PublicTransportLayer(amsterdam_graph.roads, "METROLayer", Metro, 60, services=[metro_service])
 
         for metro_line in list_metro_lines:
 
@@ -244,7 +246,7 @@ def convert_amsterdam_to_mnms():
             line_length = math.dist([coord_terminus_0_x_utm, coord_terminus_0_y_utm],
                                     [coord_terminus_1_x_utm, coord_terminus_1_y_utm])
 
-            generate_pt_line_road(roads, [coord_terminus_0_x_utm, coord_terminus_0_y_utm],
+            generate_pt_line_road(amsterdam_graph.roads, [coord_terminus_0_x_utm, coord_terminus_0_y_utm],
                                   [coord_terminus_1_x_utm, coord_terminus_1_y_utm], 2, line_id, line_length)
 
             # # for each direction
@@ -271,8 +273,8 @@ def convert_amsterdam_to_mnms():
                 rel_0 = float(i / nb_stops)
                 rel_1 = float(1 - (i / nb_stops))
 
-                roads.register_stop_abs(sid_0, lid_0, rel_0, [stop_coord_x_utm, stop_coord_y_utm])
-                roads.register_stop_abs(sid_1, lid_1, rel_1, [stop_coord_x_utm, stop_coord_y_utm])
+                amsterdam_graph.roads.register_stop_abs(sid_0, lid_0, rel_0, [stop_coord_x_utm, stop_coord_y_utm])
+                amsterdam_graph.roads.register_stop_abs(sid_1, lid_1, rel_1, [stop_coord_x_utm, stop_coord_y_utm])
 
                 stops_0.append(sid_0)
                 stops_1.append(sid_1)
@@ -301,12 +303,12 @@ def convert_amsterdam_to_mnms():
                                    TimeTable.convert_table_freq(departures))
 
 
-    roads.add_zone(generate_one_zone("RES", roads))
+    amsterdam_graph.roads.add_zone(generate_one_zone("RES", amsterdam_graph.roads))
 
-    od_layer = generate_matching_origin_destination_layer(roads)
-    amsterdam_graph = MultiLayerGraph([tram_layer, metro_layer], od_layer, 1000)
+    od_layer = generate_matching_origin_destination_layer(amsterdam_graph.roads)
+    new_amsterdam_graph = MultiLayerGraph([tram_layer, metro_layer], od_layer, 1000)
 
-    save_graph(amsterdam_graph, "amsterdam_tc.json")
+    save_graph(new_amsterdam_graph, "amsterdam_tc.json")
 
 
 extract_amsterdam_stops()
