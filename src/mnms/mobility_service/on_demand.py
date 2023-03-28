@@ -84,7 +84,7 @@ class OnDemandMobilityService(AbstractMobilityService):
                         j = i + 1
                         len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
 
-                    service_dt = Dt(seconds=len_path / choosen_veh.speed)
+                    service_dt = Dt(seconds=cost)
                     self._cache_request_vehicles[uid] = choosen_veh, veh_path
                     break
 
@@ -241,7 +241,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                         j = i + 1
                         len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
 
-                    service_dt = Dt(seconds=len_path / choosen_veh.speed)
+                    service_dt = Dt(seconds=cost)
                     self._cache_request_vehicles[user.id] = choosen_veh, veh_path
                     break
 
