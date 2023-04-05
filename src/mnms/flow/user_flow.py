@@ -8,6 +8,7 @@ from mnms.demand.user import User, UserState
 # from mnms.graph.core import ConnectionLink, TransitLink
 from mnms.time import Dt, Time
 from mnms.log import create_logger
+from mnms.mobility_service.abstract import AbstractMobilityService
 
 log = create_logger(__name__)
 
