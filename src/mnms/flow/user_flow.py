@@ -25,7 +25,7 @@ class UserFlow(object):
         self._walk_speed: float = walk_speed
         self._tcurrent: Optional[Time] = None
 
-        self._waiting_answer: Dict[str, Time] = dict()
+        self._waiting_answer: Dict[str, tuple[Time, AbstractMobilityService]] = dict()
 
         self._gnodes = None
 
@@ -105,7 +105,11 @@ class UserFlow(object):
             del self._walking[user.id]
             # self._transiting[user.id] = user
 
-        [self._request_user_vehicles(u) for u in finish_walk]
+        for u in finish_walk:
+            log.info(f'{u.id} is about to request a vehicle because he has finished walking')
+            u.set_state_waiting_answer()
+            requested_mservice = self._request_user_vehicles(u)
+            self._waiting_answer.setdefault(u.id, (u.response_dt.copy(),requested_mservice))
 
         for u in finish_trip:
             del self.users[u.id]
@@ -154,9 +158,9 @@ class UserFlow(object):
                 if slice_nodes.start <= ind_node_start < slice_nodes.stop:
                     mservice_id = user.path.mobility_services[ilayer]
                     mservice = self._graph.layers[layer].mobility_services[mservice_id]
-                    log.info(f"{user} request {mservice}")
+                    log.info(f"{user} request {mservice._id}")
                     mservice.request_vehicle(user, upath[slice_nodes][-1])
-                    break
+                    return mservice
             else:
                 log.warning(f"No mobility service found for user {user}")
 
@@ -211,12 +215,11 @@ class UserFlow(object):
                 else:
                     self._walking.pop(u.id, None)
                     u.set_state_waiting_answer()
-                    self._request_user_vehicles(u)
+                    log.info(f'{u.id} is about to request a vehicle because he is stopped')
+                    requested_mservice = self._request_user_vehicles(u)
+                    self._waiting_answer.setdefault(u.id, (u.response_dt.copy(),requested_mservice))
 
                 u.notify(self._tcurrent)
-
-            if u.state is UserState.WAITING_ANSWER:
-                self._waiting_answer.setdefault(u.id, u.response_dt.copy())
 
         for uid in to_del:
             self.users.pop(uid)
@@ -225,18 +228,19 @@ class UserFlow(object):
         to_del = list()
         refused_users = list()
 
-        for uid, time in self._waiting_answer.items():
+        for uid, (time, requested_mservice) in self._waiting_answer.items():
             if self.users[uid].state is UserState.WAITING_ANSWER:
                 new_time = time.to_seconds() - dt.to_seconds()
                 if new_time < 0:
-                    log.info(f"{uid} waited answer to long")
+                    log.info(f"{uid} waited answer too long, cancels his request for {requested_mservice._id}")
+                    requested_mservice.cancel_request(uid)
                     refused_users.append(self.users[uid])
                     self.users[uid].set_state_stop()
                     self.users[uid].notify(self._tcurrent)
                     del self.users[uid]
                     to_del.append(uid)
                 else:
-                    self._waiting_answer[uid] = Time.from_seconds(new_time)
+                    self._waiting_answer[uid] = (Time.from_seconds(new_time), requested_mservice)
             else:
                 to_del.append(uid)
 
