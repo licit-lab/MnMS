@@ -158,6 +158,7 @@ class AbstractDecisionModel(ABC):
             # Check if user has no remaining available mobility_service
             if len(u.available_mobility_service) == 0:
                 log.warning(f'{u.id} has no more available mobility service to continue her path')
+                u.set_state_deadend() # user is now blocked
                 continue
 
             # Create a new user representing refused user legacy
