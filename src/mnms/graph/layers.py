@@ -390,6 +390,35 @@ class MultiLayerGraph(object):
                     link_dlayer_id = self.graph.nodes[nid].label
                     self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
 
+    def connect_intra_layer(self, layer_id: str, connection_distance: float):
+        assert self.odlayer is not None
+        _norm = np.linalg.norm
+
+        odlayer_nodes = set()
+        odlayer_nodes.update(self.odlayer.origins.keys())
+        odlayer_nodes.update(self.odlayer.destinations.keys())
+
+        graph_node_ids = np.array([nid for nid in self.graph.nodes])
+        graph_node_pos = np.array([n.position for n in self.graph.nodes.values()])
+
+        graph_nodes = self.graph.nodes
+        for nid in graph_nodes:
+            if nid not in odlayer_nodes:
+                node = graph_nodes[nid]
+                npos = np.array(node.position)
+                dist_nodes = _norm(graph_node_pos-npos, axis=1)
+                mask = dist_nodes < connection_distance
+                for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                    if layer_nid != nid:
+                        if layer_nid not in odlayer_nodes:
+                            olayer = self.graph.nodes[nid].label
+                            dlayer = self.graph.nodes[layer_nid].label
+                            if olayer == layer_id and dlayer == layer_id:
+                                lid = f"{nid}_{layer_nid}"
+                                self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
+                                # Add the transit link into the transit layer
+                                self.transitlayer.add_link(lid, olayer, dlayer)
+
     def construct_layer_service_mapping(self):
         for layer in self.layers.values():
             for service in layer.mobility_services:
