@@ -215,7 +215,7 @@ class AbstractDecisionModel(ABC):
                         else:
                             log.warning(f"Incorrect path {p.layers} ignored for user {user.id} with available_layers {available_layers[i]}")
                     else:
-                        path_not_found.append(user.id)
+                        path_not_found.append(user)
                         log.warning(f"Path not found for %s", user.id)
 
                 # Check if every possible User mobility service option has been explored
@@ -268,6 +268,12 @@ class AbstractDecisionModel(ABC):
 
             if path_not_found:
                 log.warning("Paths not found: %s", len(path_not_found))
+                for u in path_not_found:
+                    self._csvhandler.writerow([u.id,
+                                               "INF",
+                                               u._current_node,
+                                               "INF",
+                                               ''])
 
         return all_users
 
