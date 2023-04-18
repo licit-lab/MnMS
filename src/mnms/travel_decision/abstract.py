@@ -164,6 +164,7 @@ class AbstractDecisionModel(ABC):
             # Create a new user representing refused user legacy
             u._continuous_journey = u.id
             u.id = f"{u.id}_CONTINUOUS"
+            u.path = None
             new_users.append(u)
             u.origin = np.array(current_pos)
             u.departure_time = tcurrent.copy()
