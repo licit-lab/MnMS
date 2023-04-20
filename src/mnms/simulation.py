@@ -211,6 +211,7 @@ class Supervisor(object):
             for _ in range(affectation_factor):
                 next_time = self.tcurrent.add_time(flow_dt)
                 self.update_mobility_services(flow_dt)
+                users_step = list()
                 if self._decision_model._refused_user != []:
                     new_users = self._decision_model([], self.tcurrent)
                     users_step = users_step + new_users
