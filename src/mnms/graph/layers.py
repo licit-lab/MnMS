@@ -160,6 +160,7 @@ class PublicTransportLayer(AbstractLayer):
             down = stops[i+1]
             link_id = '_'.join([lid, up, down])
             self.lines[lid]['links'].append(link_id)
+
             self._connect_stops(link_id,
                                 lid,
                                 up,
@@ -317,9 +318,9 @@ class MultiLayerGraph(object):
         Multi layer graph class, the graph representation is based on hipop
 
         Args:
-            layers:
-            odlayer:
-            connection_distance:
+            layers: list of mobility service layer to add to the multilayer graph
+            odlayer: origin destination layer
+            connection_distance: distance to be considered for connecting an origin destination layer node to mobility service layer nodes
         """
         self.graph: OrientedGraph = merge_oriented_graph([l.graph for l in layers])
 
