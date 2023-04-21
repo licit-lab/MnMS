@@ -157,11 +157,14 @@ class AbstractDecisionModel(ABC):
                     u.available_mobility_service.remove(personal_mob_service)
             # Check if user has no remaining available mobility_service
             if len(u.available_mobility_service) == 0:
+                log.warning(f'{u.id} has no more available mobility service to continue her path')
+                u.set_state_deadend() # user is now blocked
                 continue
 
             # Create a new user representing refused user legacy
             u._continuous_journey = u.id
             u.id = f"{u.id}_CONTINUOUS"
+            u.path = None
             new_users.append(u)
             u.origin = np.array(current_pos)
             u.departure_time = tcurrent.copy()
@@ -172,9 +175,10 @@ class AbstractDecisionModel(ABC):
     # TODO: restrict combination of paths (ex: we dont want Uber->Bus)
     def __call__(self, new_users: List[User], tcurrent: Time):
         legacy_users = self._check_refused_users(tcurrent)
+        log.info(f'There are {len(new_users)} new users and {len(legacy_users)} legacy users')
         all_users = legacy_users+new_users
 
-        if len(new_users)>0:
+        if len(all_users)>0:
             origins, destinations, available_layers, chosen_services = _process_shortest_path_inputs(self._mlgraph, all_users)
             paths = parallel_k_shortest_path(self._mlgraph.graph,
                                              origins,
@@ -191,7 +195,7 @@ class AbstractDecisionModel(ABC):
 
             for i, kpath in enumerate(paths):
                 user_paths = []
-                user = new_users[i]
+                user = all_users[i]
                 path_index = 0
                 for p in kpath:
                     if p[0]:
@@ -211,7 +215,7 @@ class AbstractDecisionModel(ABC):
                         else:
                             log.warning(f"Incorrect path {p.layers} ignored for user {user.id} with available_layers {available_layers[i]}")
                     else:
-                        path_not_found.append(user.id)
+                        path_not_found.append(user)
                         log.warning(f"Path not found for %s", user.id)
 
                 # Check if every possible User mobility service option has been explored
@@ -245,7 +249,7 @@ class AbstractDecisionModel(ABC):
                         log.warning(f"Path %s is not valid for %s", str(path), user.id)
                         raise PathNotFound(user.origin, user.destination)
 
-                    log.info(f"Computed path for %s", user.id)
+                    log.info(f"Computed path for {user.id} is {path}")
 
                     if self._verbose_file:
                         for p in user_paths:
@@ -264,6 +268,12 @@ class AbstractDecisionModel(ABC):
 
             if path_not_found:
                 log.warning("Paths not found: %s", len(path_not_found))
+                for u in path_not_found:
+                    self._csvhandler.writerow([u.id,
+                                               "INF",
+                                               u._current_node,
+                                               "INF",
+                                               ''])
 
         return all_users
 

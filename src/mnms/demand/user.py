@@ -16,6 +16,7 @@ class UserState(Enum):
     WALKING = 3
     INSIDE_VEHICLE = 4
     STOP = 5
+    DEADEND = 6
 
 
 class User(TimeDependentSubject):
@@ -139,6 +140,9 @@ class User(TimeDependentSubject):
 
     def set_state_stop(self):
         self._state = UserState.STOP
+
+    def set_state_deadend(self):
+        self._state = UserState.DEADEND
 
 
 class Path(object):

@@ -84,7 +84,10 @@ class AbstractMobilityService(ABC):
         return create_service_costs()
 
     def request_vehicle(self, user: "User", drop_node:str) -> None:
-        self._user_buffer[user.id] = (user, drop_node)
+        self._user_buffer[user.id] = (user, drop_node) #NB: works only for at most one simulatneous request per user...
+
+    def cancel_request(self, uid: str) -> None:
+        self._user_buffer.pop(uid)
 
     def update(self, dt: Dt):
         self.step_maintenance(dt)
@@ -117,7 +120,7 @@ class AbstractMobilityService(ABC):
                     self._user_buffer.pop(uid)
                 else:
                     # If pick-up time exceeds passengers' waiting tolerance
-                    log.info(f"{uid} refused {self.id} offer (predicted pickup time too long)")
+                    log.info(f"{uid} refused {self.id} offer (predicted pickup time too long, wait for better proposition...")
                     # user.set_state_stop()
                     # user.notify(self._tcurrent)
                     # Therefuse_user.append(user)
