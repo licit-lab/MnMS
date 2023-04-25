@@ -163,16 +163,15 @@ class Path(object):
         self.service_costs = dict()
 
     def construct_layers(self, gnodes):
-        layer = gnodes[self.nodes[1]].label
-        start = 1
         nodes_number = len(self.nodes)
-        for i in range(2, nodes_number-1):
-            ilayer = gnodes[self.nodes[i]].label
-            linklayer = gnodes[self.nodes[i-1]].adj[self.nodes[i]].label
-            # If we change layer or we temporary leave the layer to re-enter it
-            # with a transit link, this is the case when user transfer from one
-            # bus line to another bus line belonging to the same layer for example
-            if ilayer != layer or linklayer == 'TRANSIT':
+        # Initialize first layer used from section
+        layer = gnodes[self.nodes[0]].adj[self.nodes[1]].label
+        start = 0
+        for i in range(1, nodes_number):
+            ilayer = gnodes[self.nodes[i]].adj[self.nodes[i+1]].label
+            # If we change layer from one section to another
+            if ilayer != layer:
+                # Save used layer to path.layers
                 self.layers.append((layer, slice(start, i, 1)))
                 layer = ilayer
                 start = i
