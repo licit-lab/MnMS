@@ -19,7 +19,7 @@ class AbstractMobilityService(ABC):
                  dt_matching: int,
                  dt_periodic_maintenance: int):
         """
-        Interface for edfining a new type of mobility serivce
+        Interface for defining a new type of mobility service
 
         Args:
             _id: the id of the mobility service

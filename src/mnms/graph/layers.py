@@ -3,7 +3,7 @@ from collections import ChainMap, defaultdict
 from typing import Optional, Dict, Set, List, Type, Callable
 
 import numpy as np
-from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph, Link
+from hipop.graph import Node, node_to_dict, link_to_dict, OrientedGraph, merge_oriented_graph, Link, graph_to_dict
 
 from mnms.graph.abstract import AbstractLayer, CostFunctionLayer
 from mnms.graph.dynamic_space_sharing import DynamicSpaceSharing
@@ -106,6 +106,8 @@ class CarLayer(SimpleLayer):
 
 
 class PublicTransportLayer(AbstractLayer):
+    """Public transport layer class
+    """
     def __init__(self,
                  roads: RoadDescriptor,
                  _id: str,
@@ -421,6 +423,17 @@ class MultiLayerGraph(object):
                                 self.transitlayer.add_link(lid, olayer, dlayer)
 
     def connect_inter_layers(self, layer_id_list: List[str], connection_distance: float):
+        """
+                Implement a public transport mobility service, it can create lines
+
+                Args:
+                    _id: The id of the service
+                    veh_capacity: The capacity of the vehicle using this service
+
+                Returns:
+                    Nothing
+        """
+
         assert self.odlayer is not None
         _norm = np.linalg.norm
 
@@ -428,26 +441,28 @@ class MultiLayerGraph(object):
         odlayer_nodes.update(self.odlayer.origins.keys())
         odlayer_nodes.update(self.odlayer.destinations.keys())
 
-        graph_node_ids = np.array([nid for nid in self.graph.nodes])
-        graph_node_pos = np.array([n.position for n in self.graph.nodes.values()])
+        nodes=graph_to_dict(self.graph)['NODES']
 
-        graph_nodes = self.graph.nodes
-        for nid in graph_nodes:
+        graph_node_ids = np.array([n['ID'] for n in nodes if n['LABEL'] in layer_id_list])
+        graph_node_label = np.array([n['LABEL'] for n in nodes if n['LABEL'] in layer_id_list])
+        graph_node_pos = np.array([np.array([n['X'],n['Y']]) for n in nodes if n['LABEL'] in layer_id_list])
+
+        for nid in graph_node_ids:
             if nid not in odlayer_nodes:
-                node = graph_nodes[nid]
-                npos = np.array(node.position)
+                idx=np.where(graph_node_ids==nid)
+                npos = graph_node_pos[idx]
+                olayer=graph_node_label[idx][0]
                 dist_nodes = _norm(graph_node_pos-npos, axis=1)
                 mask = dist_nodes < connection_distance
                 for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                     if layer_nid != nid:
                         if layer_nid not in odlayer_nodes:
-                            olayer = self.graph.nodes[nid].label
-                            dlayer = self.graph.nodes[layer_nid].label
-                            if olayer in layer_id_list and dlayer in layer_id_list:
-                                lid = f"{nid}_{layer_nid}"
-                                self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
-                                # Add the transit link into the transit layer
-                                self.transitlayer.add_link(lid, olayer, dlayer)
+                            idxd = np.where(graph_node_ids == layer_nid)
+                            dlayer=graph_node_label[idxd][0]
+                            lid = f"{nid}_{layer_nid}"
+                            self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
+                            # Add the transit link into the transit layer
+                            self.transitlayer.add_link(lid, olayer, dlayer)
 
     def construct_layer_service_mapping(self):
         for layer in self.layers.values():
