@@ -29,19 +29,18 @@ class AbstractMobilityService(ABC):
         """
         self._id: str = _id
         self.layer: "AbstractLayer" = None
-        self._tcurrent: Optional[Time] = None
         self.fleet: Optional[FleetManager] = None
-        self._observer: Optional = None
-        self._user_buffer: Dict[str, Tuple[User, str]] = dict()
         self._veh_capacity: int = veh_capacity
-
-        self._counter_maintenance: int = 0
         self._dt_periodic_maintenance: int = dt_periodic_maintenance
-
-        self._counter_matching: int = 0
         self._dt_matching: int = dt_matching
 
-        self._cache_request_vehicles = dict()
+        self._tcurrent: Optional[Time] = None
+        self._counter_maintenance: int = 0
+        self._counter_matching: int = 0
+        self._user_buffer: Dict[str, Tuple[User, str]] = dict()     # Dynamic list of user to process
+        self._cache_request_vehicles = dict() # Result of requests for each user
+
+        self._observer: Optional = None
 
     def set_time(self, time:Time):
         self._tcurrent = time.copy()

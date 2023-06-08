@@ -312,17 +312,26 @@ class TransitLayer(CostFunctionLayer):
 
 
 class MultiLayerGraph(object):
+    """
+    Multi layer graph class
+
+    Attributes:
+        graph (OrientedGraph): the graph representation based on HiPOP
+        layers (dict): the layers
+        odlayer (OriginDestinationLayer): the origin destination layer
+        transitlayer (TransitLayer): the transit layer between the layers
+        roads (RoadDescriptor): the road descriptor
+    """
+
     def __init__(self,
                  layers:List[AbstractLayer] = [],
                  odlayer:Optional[OriginDestinationLayer] = None,
                  connection_distance:Optional[float] = None):
         """
-        Multi layer graph class, the graph representation is based on hipop
-
         Args:
-            layers: list of mobility service layer to add to the multilayer graph
-            odlayer: origin destination layer
-            connection_distance: distance to be considered for connecting an origin destination layer node to mobility service layer nodes
+            layers: List of mobility service layer to add to the multilayer graph
+            odlayer: Origin destination layer
+            connection_distance: Distance to be considered for connecting an origin destination layer node to mobility service layer nodes
         """
         self.graph: OrientedGraph = merge_oriented_graph([l.graph for l in layers])
 
@@ -354,6 +363,13 @@ class MultiLayerGraph(object):
         [self.graph.add_node(nid, pos[0], pos[1], odlayer.id) for nid, pos  in odlayer.destinations.items()]
 
     def connect_origin_destination_layer(self, connection_distance: float):
+        """
+        Connects the origin destination layer to the other layers
+
+        Args:
+            connection_distance: Each node of the origin destination layer is connected to the nodes of all other layers
+            within a radius defined by connection_distance (m)
+        """
         assert self.odlayer is not None
 
         _norm = np.linalg.norm
@@ -379,6 +395,7 @@ class MultiLayerGraph(object):
                     link_olayer_id = self.graph.nodes[nid].label
                     link_dlayer_id = self.graph.nodes[layer_nid].label
                     self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
+
         for nid in self.odlayer.destinations:
             node = graph_nodes[nid]
             npos = np.array(node.position)
@@ -394,6 +411,16 @@ class MultiLayerGraph(object):
                     self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
 
     def connect_intra_layer(self, layer_id: str, connection_distance: float):
+        """
+                Connects each node to the others within a predefined radius
+
+                Args:
+                    connection_distance: each node  is connected to the nodes within a radius defined by
+                        connection_distance (m)
+
+                Returns:
+                    Nothing
+                """
         assert self.odlayer is not None
         _norm = np.linalg.norm
 
