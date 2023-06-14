@@ -177,7 +177,7 @@ def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, prefix
             roads.register_section(f"{up}_{down}", up, down, link_length)
             roads.register_section(f"{down}_{up}", down, up, link_length)
 
-        roads.add_zone(generate_one_zone(roads, zone_id))
+    roads.add_zone(generate_one_zone(roads, zone_id))
 
     return roads
 
