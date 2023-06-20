@@ -112,7 +112,7 @@ def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, prefix
     Generate a square Manhattan RoadDescriptor
 
     Args:
-        n: Number of point in x and y direction
+        n: Number of points in x and y direction
         link_length: the length of the links
         zone_id: the id of the zone
         extended: if True, extend the border
@@ -176,6 +176,83 @@ def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, prefix
             roads.register_node(up, [counter*link_length, -link_length])
             roads.register_section(f"{up}_{down}", up, down, link_length)
             roads.register_section(f"{down}_{up}", down, up, link_length)
+
+    roads.add_zone(generate_one_zone(roads, zone_id))
+
+    return roads
+
+
+def generate_manhattan_road_rectangle(n, m, link_length_n, link_length_m, zone_id='RES', extended=True, prefix=""):
+    """
+    Generate a rectangle Manhattan RoadDescriptor
+
+    Args:
+        n: Number of points in x direction
+        m: Number of points in y direction
+        link_length_n: the length of the links in x direction
+        link_length_m: the length of the links in y direction
+        zone_id: the id of the zone
+        extended: if True, extend the border
+        prefix: the prefix of the nodes and links
+
+    Returns:
+        the manhattan RoadDescriptor
+
+    """
+    roads = RoadDescriptor()
+
+    for i in range(n):
+        for j in range(m):
+            roads.register_node(prefix + str(i * m + j), [i*link_length_n, j*link_length_m])
+
+    for i in range(n):
+        for j in range(m):
+            ind = i * m + j
+            if j < m - 1:
+                roads.register_section(f"{prefix}{ind}_{prefix}{ind + 1}",
+                    prefix + str(ind), prefix + str(ind + 1), link_length_m)
+            if j > 0:
+                roads.register_section(f"{prefix}{ind}_{prefix}{ind - 1}",
+                    prefix + str(ind), prefix + str(ind - 1), link_length_m)
+            if i < n - 1:
+                roads.register_section(f"{prefix}{ind}_{prefix}{ind + m}",
+                    prefix + str(ind), prefix + str(ind + m), link_length_n)
+            if i > 0:
+                roads.register_section(f"{prefix}{ind}_{prefix}{ind - m}",
+                    prefix + str(ind), prefix + str(ind - m), link_length_n)
+
+    if extended:
+        # WEST
+        for i in range(m):
+            roads.register_node(f"WEST_{prefix}{i}", [-link_length_n, i*link_length_m])
+            up = f"WEST_{prefix}{i}"
+            down = prefix + str(i)
+            roads.register_section(f"{up}_{down}", up, down, link_length_n)
+            roads.register_section(f"{down}_{up}", down, up, link_length_n)
+
+        # EAST
+        for counter, i in enumerate(range(m*(n-1), n*m)):
+            up = f"EAST_{prefix}{counter}"
+            down = prefix + str(i)
+            roads.register_node(up, [n*link_length_n, counter*link_length_m])
+            roads.register_section(f"{up}_{down}", up, down, link_length_n)
+            roads.register_section(f"{down}_{up}", down, up, link_length_n)
+
+        # SOUTH
+        for counter, i in enumerate(range(m-1, n*m, m)):
+            up = f"SOUTH_{prefix}{counter}"
+            down = prefix + str(i)
+            roads.register_node(up, [counter*link_length_n, m*link_length_m])
+            roads.register_section(f"{up}_{down}", up, down, link_length_m)
+            roads.register_section(f"{down}_{up}", down, up, link_length_m)
+
+        # NORTH
+        for counter, i in enumerate(range(0, n*m, m)):
+            up = f"NORTH_{prefix}{counter}"
+            down = prefix + str(i)
+            roads.register_node(up, [counter*link_length_n, -link_length_m])
+            roads.register_section(f"{up}_{down}", up, down, link_length_m)
+            roads.register_section(f"{down}_{up}", down, up, link_length_m)
 
     roads.add_zone(generate_one_zone(roads, zone_id))
 
