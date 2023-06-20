@@ -91,6 +91,7 @@ class OnDemandMobilityService(AbstractMobilityService):
         return service_dt
 
     def matching(self, user: User, drop_node: str):
+
         veh, veh_path = self._cache_request_vehicles[user.id]
         upath = list(user.path.nodes)
         upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
@@ -128,6 +129,12 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                  _id: str,
                  dt_matching: int,
                  dt_step_maintenance: int = 0):
+        """
+        Class for modelling an on-demand mobility service with depots
+
+        Args:
+            depot: the list of depot (defined by location -a node-, the waiting vehicles and the capacity)
+        """
         super(OnDemandDepotMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
         self.gnodes = None
         self.depot = dict()
