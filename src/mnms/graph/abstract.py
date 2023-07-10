@@ -28,7 +28,7 @@ class AbstractLayer(CostFunctionLayer):
                  services: Optional[List[AbstractMobilityService]] = None,
                  observer: Optional[CSVVehicleObserver] = None):
         """
-        The base class for implementation of a layer graph
+        The class for implementation of a layer graph
 
         Args:
             roads: The road object used to construct the graph

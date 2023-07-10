@@ -353,14 +353,10 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
     def service_level_costs(self, nodes: List[str]) -> dict:
         """
-        Must return a dict of costs representing the cost of the service computed from a path
-        Parameters
-        ----------
-        path
+                Returns the dict of costs representing the cost of the service computed from a path
 
-        Returns
-        -------
-
+                Args:
+                    nodes: path (list of nodes)
         """
         return create_service_costs()
 

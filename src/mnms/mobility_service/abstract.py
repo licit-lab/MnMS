@@ -19,7 +19,7 @@ class AbstractMobilityService(ABC):
                  dt_matching: int,
                  dt_periodic_maintenance: int):
         """
-        Interface for edfining a new type of mobility serivce
+        Interface for defining a new type of mobility service
 
         Args:
             _id: the id of the mobility service
@@ -29,19 +29,18 @@ class AbstractMobilityService(ABC):
         """
         self._id: str = _id
         self.layer: "AbstractLayer" = None
-        self._tcurrent: Optional[Time] = None
         self.fleet: Optional[FleetManager] = None
-        self._observer: Optional = None
-        self._user_buffer: Dict[str, Tuple[User, str]] = dict()
         self._veh_capacity: int = veh_capacity
-
-        self._counter_maintenance: int = 0
         self._dt_periodic_maintenance: int = dt_periodic_maintenance
-
-        self._counter_matching: int = 0
         self._dt_matching: int = dt_matching
 
-        self._cache_request_vehicles = dict()
+        self._tcurrent: Optional[Time] = None
+        self._counter_maintenance: int = 0
+        self._counter_matching: int = 0
+        self._user_buffer: Dict[str, Tuple[User, str]] = dict()     # Dynamic list of user to process
+        self._cache_request_vehicles = dict() # Result of requests for each user
+
+        self._observer: Optional = None
 
     def set_time(self, time:Time):
         self._tcurrent = time.copy()
@@ -139,7 +138,7 @@ class AbstractMobilityService(ABC):
 
     def periodic_maintenance(self, dt: Dt):
         """
-        This method is called every n step to perform maintenance
+        This method is called every n steps to perform maintenance
         Args:
             dt:
 
@@ -149,15 +148,42 @@ class AbstractMobilityService(ABC):
         pass
 
     def step_maintenance(self, dt: Dt):
+        """
+        This method is called every step to perform maintenance
+        Parameters
+        ----------
+        path
+
+        Returns
+        -------
+
+        """
         pass
 
     @abstractmethod
     def matching(self, user: User, drop_node: str):
+        """
+        Match the user and the vehicle
+        Args:
+            user: User requesting a ride
+            drop_node: The node where the user wants to go down
+
+        Returns:
+        """
         pass
 
     @abstractmethod
-    def request(self, users: User, drop_node: str) -> Dt:
-        pass
+    def request(self, user: User, drop_node: str) -> Dt:
+        """
+        Request the mobility service for a user
+        Args:
+            user: User requesting a ride
+            drop_node: The node where the user wants to go down
+
+        Returns: waiting time before pick-up
+
+        """
+    pass
 
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
         pass
