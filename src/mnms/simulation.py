@@ -248,7 +248,7 @@ class Supervisor(object):
                 for pt_ms in pt_mob_services_names:
                     user.pickup_dt[pt_ms] = Dt(hours=24)
 
-            # Get continuous users and new users
+            # Get new users and continuous users (replanned because of a refusal) users
             all_users = self.compute_user_paths(new_users)
 
             log.info(f'Launching {affectation_factor} step of flow ...')
