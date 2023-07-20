@@ -25,7 +25,7 @@ class AbstractMobilityService(ABC):
             _id: the id of the mobility service
             veh_capacity: the capacity of the vehicles
             dt_matching: the time of accumulation of request before matching
-            dt_periodic_maintenance: The dt of launching peridodic maintenance
+            dt_periodic_maintenance: duration in number of time steps of the maintenance period
         """
         self._id: str = _id
         self.layer: "AbstractLayer" = None
@@ -89,6 +89,7 @@ class AbstractMobilityService(ABC):
         self._user_buffer.pop(uid)
 
     def update(self, dt: Dt):
+
         self.step_maintenance(dt)
 
         if self._counter_maintenance == self._dt_periodic_maintenance:
@@ -136,9 +137,10 @@ class AbstractMobilityService(ABC):
 
         return list()  # refuse_user
 
+    @abstractmethod
     def periodic_maintenance(self, dt: Dt):
         """
-        This method is called every n steps to perform maintenance
+        This method is called every Dt steps to perform maintenance
         Args:
             dt:
 
@@ -147,6 +149,7 @@ class AbstractMobilityService(ABC):
         """
         pass
 
+    @abstractmethod
     def step_maintenance(self, dt: Dt):
         """
         This method is called every step to perform maintenance
@@ -185,6 +188,7 @@ class AbstractMobilityService(ABC):
         """
     pass
 
+    @abstractmethod
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
         pass
 
