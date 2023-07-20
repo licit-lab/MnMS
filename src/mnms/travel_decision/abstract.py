@@ -12,7 +12,7 @@ from mnms.graph.layers import MultiLayerGraph
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.log import create_logger
 from mnms.time import Time
-from mnms.tools.dict_tools import sum_cost_dict
+from mnms.tools.dict_tools import sum_dict
 from mnms.tools.exceptions import PathNotFound
 
 from hipop.shortest_path import parallel_k_shortest_path, dijkstra, compute_path_length
@@ -210,7 +210,7 @@ class AbstractDecisionModel(ABC):
                             user_mobility_services = [user_chosen_services[layer_id] for layer_id, slice_nodes in p.layers]
                             p.mobility_services = user_mobility_services
                             user_paths.append(p)
-                            service_costs = sum_cost_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services)))
+                            service_costs = sum_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services)))
                             p.service_costs = service_costs
                         else:
                             log.warning(f"Incorrect path {p.layers} ignored for user {user.id} with available_layers {available_layers[i]}")

@@ -314,6 +314,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     mservice = banned_links[lid].mobility_service
                     costs[mservice].pop(banned_cost, None)
 
+                print(lid)
                 graph.update_link_costs(lid, costs)
 
                 # Update of the cost in the corresponding graph layer

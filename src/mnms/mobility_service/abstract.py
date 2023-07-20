@@ -11,7 +11,6 @@ from mnms.vehicles.veh_type import Vehicle, VehicleActivity
 
 log = create_logger(__name__)
 
-
 class AbstractMobilityService(ABC):
     def __init__(self,
                  _id: str,
@@ -31,14 +30,17 @@ class AbstractMobilityService(ABC):
         self.layer: "AbstractLayer" = None
         self.fleet: Optional[FleetManager] = None
         self._veh_capacity: int = veh_capacity
+
         self._dt_periodic_maintenance: int = dt_periodic_maintenance
         self._dt_matching: int = dt_matching
 
         self._tcurrent: Optional[Time] = None
+
         self._counter_maintenance: int = 0
         self._counter_matching: int = 0
-        self._user_buffer: Dict[str, Tuple[User, str]] = dict()     # Dynamic list of user to process
-        self._cache_request_vehicles = dict() # Result of requests for each user
+
+        self._user_buffer: Dict[str, Tuple[User, str]] = dict()     # Dynamic list of user with their drop node to process
+        self._cache_request_vehicles = dict()                       # Result of requests for each user
 
         self._observer: Optional = None
 
@@ -69,9 +71,10 @@ class AbstractMobilityService(ABC):
             veh_path.append((key, link_length))
         return veh_path
 
+    @abstractmethod
     def service_level_costs(self, nodes:List[str]) -> dict:
         """
-        Must return a dict of costs representing the cost of the service computed from a path
+        Returns a dict of costs representing the cost of the service computed from a path
         Parameters
         ----------
         path
@@ -80,15 +83,50 @@ class AbstractMobilityService(ABC):
         -------
 
         """
-        return create_service_costs()
+        #return create_service_costs()
+        pass
 
-    def request_vehicle(self, user: "User", drop_node:str) -> None:
+    def add_request(self, user: "User", drop_node:str) -> None:
+        """
+        Add a new request to the mobility service defined by the users and its drop node
+
+        Parameters
+        ----------
+        user: user object
+        drop_node: drop node id
+
+        Returns
+        -------
+
+        """
         self._user_buffer[user.id] = (user, drop_node) #NB: works only for at most one simulatneous request per user...
 
     def cancel_request(self, uid: str) -> None:
+        """
+        Remove a user from the list of users to process
+
+        Parameters
+        ----------
+        uid: user id
+
+        Returns
+        -------
+
+        """
         self._user_buffer.pop(uid)
 
     def update(self, dt: Dt):
+        """
+        Update mobility service
+
+        Parameters
+        ----------
+        dt: current time
+
+        Returns
+        -------
+
+        """
 
         self.step_maintenance(dt)
 
@@ -100,7 +138,7 @@ class AbstractMobilityService(ABC):
 
     def launch_matching(self):
         """
-        Method that launch passenger-vehicles matching, through 1. requesting and 2. matching.
+        Method that launch (user / vehicle) requesting then matching
         Returns: empty list # TODO - should be cleaned
 
         """
@@ -142,7 +180,7 @@ class AbstractMobilityService(ABC):
         """
         This method is called every Dt steps to perform maintenance
         Args:
-            dt:
+            dt:current time
 
         Returns:
             None
@@ -155,7 +193,7 @@ class AbstractMobilityService(ABC):
         This method is called every step to perform maintenance
         Parameters
         ----------
-        path
+        dt:current time
 
         Returns
         -------
@@ -189,7 +227,35 @@ class AbstractMobilityService(ABC):
     pass
 
     @abstractmethod
+    def rebalancing(self, next_demand: List[User], horizon: Dt):
+        """
+        Rebalancing of the mobility service fleet
+
+        Parameters
+        ----------
+        next_demand: next demand
+        horizon
+
+        Returns
+        -------
+
+        """
+        pass
+
+    @abstractmethod
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
+        """
+        Update the activities of a vehicle
+
+        Parameters
+        ----------
+        veh: vehicle object
+        new_activities: vehicle new activities
+
+        Returns
+        -------
+
+        """
         pass
 
     @classmethod

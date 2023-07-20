@@ -160,7 +160,7 @@ class UserFlow(object):
                     mservice_id = user.path.mobility_services[ilayer]
                     mservice = self._graph.layers[layer].mobility_services[mservice_id]
                     log.info(f"{user} request {mservice._id}")
-                    mservice.request_vehicle(user, upath[slice_nodes][-1])
+                    mservice.add_request(user, upath[slice_nodes][-1])
                     return mservice
             else:
                 log.warning(f"No mobility service found for user {user}")
