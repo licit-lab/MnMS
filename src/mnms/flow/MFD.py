@@ -267,6 +267,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         veh.notify_passengers(new_time)
 
     def update_graph(self):
+
         graph = self._graph.graph
         banned_links = self._graph.dynamic_space_sharing.banned_links
         banned_cost = self._graph.dynamic_space_sharing.cost
@@ -274,6 +275,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         link_layers = list()
         for lid, layer in self._graph.layers.items():
             link_layers.append(layer.graph.links)
+
+        linkcosts = defaultdict(dict)
 
         for lid, link_info in self._layer_link_length_mapping.items():
             total_len = 0
@@ -303,7 +306,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                                        'length': total_len}
 
                 # The update the generalized one
-                layer = self._graph.layers[graph.links[lid].label]
+                layer=self._graph.layers[self._graph.map_linkid_layerid[lid]]
                 costs_functions = layer._costs_functions
                 for mservice, cost_funcs in costs_functions.items():
                     for cost_name, cost_f in cost_funcs.items():
@@ -314,14 +317,15 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     mservice = banned_links[lid].mobility_service
                     costs[mservice].pop(banned_cost, None)
 
-                print(lid)
-                graph.update_link_costs(lid, costs)
+                linkcosts[lid]=costs
 
                 # Update of the cost in the corresponding graph layer
                 for links in link_layers:
                     if lid in links:
                         links[lid].update_costs(costs)
                         break
+
+        graph.update_costs(linkcosts)
 
     def write_result(self, step_affectation: int, step_flow:int):
         tcurrent = self._tcurrent.time

@@ -336,13 +336,18 @@ class MultiLayerGraph(object):
         self.graph: OrientedGraph = merge_oriented_graph([l.graph for l in layers])
 
         self.layers = dict()
+
         self.mapping_layer_services = dict()
         self.map_reference_links = ChainMap()
+
+        self.map_linkid_layerid=dict()  # Link and layer mapping
 
         self.dynamic_space_sharing = DynamicSpaceSharing(self)
 
         for l in layers:
             self.map_reference_links.maps.append(l.map_reference_links)
+            for lid in l.map_reference_links.keys():
+                self.map_linkid_layerid[lid]= l.id
 
         self.odlayer = None
         self.transitlayer = TransitLayer()
@@ -391,6 +396,7 @@ class MultiLayerGraph(object):
                 if layer_nid not in odlayer_nodes:
                     lid = f"{nid}_{layer_nid}"
                     self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
+                    self.map_linkid_layerid(lid,"TRANSIT")
                     # Add the transit link into the transit layer
                     link_olayer_id = self.graph.nodes[nid].label
                     link_dlayer_id = self.graph.nodes[layer_nid].label
@@ -405,6 +411,7 @@ class MultiLayerGraph(object):
                 if layer_nid not in odlayer_nodes:
                     lid = f"{layer_nid}_{nid}"
                     self.graph.add_link(lid, layer_nid, nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
+                    self.map_linkid_layerid(lid, "TRANSIT")
                     # Add the transit link into the transit layer
                     link_olayer_id = self.graph.nodes[layer_nid].label
                     link_dlayer_id = self.graph.nodes[nid].label
@@ -446,6 +453,7 @@ class MultiLayerGraph(object):
                             if olayer == layer_id and dlayer == layer_id:
                                 lid = f"{nid}_{layer_nid}"
                                 self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
+                                self.map_linkid_layerid(lid, "TRANSIT")
                                 # Add the transit link into the transit layer
                                 self.transitlayer.add_link(lid, olayer, dlayer)
 
@@ -488,6 +496,7 @@ class MultiLayerGraph(object):
                             dlayer=graph_node_label[idxd][0]
                             lid = f"{nid}_{layer_nid}"
                             self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
+                            self.map_linkid_layerid(lid, "TRANSIT")
                             # Add the transit link into the transit layer
                             self.transitlayer.add_link(lid, olayer, dlayer)
 
@@ -500,6 +509,7 @@ class MultiLayerGraph(object):
         if "WALK" not in costs:
             costs = {"WALK": costs}
         self.graph.add_link(lid, upstream, downstream, length, costs, "TRANSIT")
+        self.map_linkid_layerid(lid, "TRANSIT")
         # Add the transit link into the transit layer
         link_olayer_id = self.graph.nodes[upstream].label
         link_dlayer_id = self.graph.nodes[downstream].label
