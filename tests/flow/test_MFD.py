@@ -99,7 +99,7 @@ class TestMFDFlow(unittest.TestCase):
         user.set_path(Path(0,
                            3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
-        self.personal_car.request_vehicle(user, 'C2')
+        self.personal_car.add_request(user, 'C2')
         self.personal_car.matching(user, "C2")
         self.flow.step(Dt(seconds=1))
         self.assertDictEqual({'CAR': 1, 'BUS': 0}, self.flow.dict_accumulations['res1'])
@@ -198,7 +198,7 @@ def test_move_veh_res_change():
     user.set_path(Path(0,
                        3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
-    personal_car.request_vehicle(user, 'C2')
+    personal_car.add_request(user, 'C2')
     personal_car.matching(user, "CarLayer_2")
     flow.step(Dt(seconds=1))
 

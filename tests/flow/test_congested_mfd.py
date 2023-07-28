@@ -53,7 +53,7 @@ def test_congested_mfd_no_congestion():
     user.set_path(Path(0,
                        3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
-    personal_car.request_vehicle(user, 'C2')
+    personal_car.add_request(user, 'C2')
     personal_car.matching(user, "CarLayer_2")
     flow.step(Dt(seconds=1))
 
@@ -107,7 +107,7 @@ def test_congested_mfd_congestion():
     user.set_path(Path(0,
                        3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
-    personal_car.request_vehicle(user, 'C2')
+    personal_car.add_request(user, 'C2')
     personal_car.matching(user, "CarLayer_2")
     flow.step(Dt(seconds=1))
 
@@ -115,7 +115,7 @@ def test_congested_mfd_congestion():
     user2.set_path(Path(0,
                        3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
-    personal_car.request_vehicle(user2, 'C2')
+    personal_car.add_request(user2, 'C2')
     personal_car.matching(user2, "CarLayer_2")
     flow.step(Dt(seconds=1))
     flow.step(Dt(seconds=0))

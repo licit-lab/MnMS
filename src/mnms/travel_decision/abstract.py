@@ -12,7 +12,7 @@ from mnms.graph.layers import MultiLayerGraph
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.log import create_logger
 from mnms.time import Time
-from mnms.tools.dict_tools import sum_cost_dict
+from mnms.tools.dict_tools import sum_dict
 from mnms.tools.exceptions import PathNotFound
 
 from hipop.shortest_path import parallel_k_shortest_path, dijkstra, compute_path_length
@@ -54,7 +54,8 @@ def _process_shortest_path_inputs(mlgraph: MultiLayerGraph, users):
         else:
             for layer in mlgraph.layers.values():
                 # Take the first registered mobility service
-                services[layer.id] = list(layer.mobility_services.keys())[0]
+                if len(layer.mobility_services)>0:
+                    services[layer.id] = list(layer.mobility_services.keys())[0]
 
         services["TRANSIT"] = "WALK"
         chosen_mservice[i] = services
@@ -200,20 +201,24 @@ class AbstractDecisionModel(ABC):
                 for p in kpath:
                     if p[0]:
                         p = Path(path_index, p[1], p[0])
-                        p.construct_layers(gnodes)
-                        # Check that path layers are all available for this user
-                        # (this check is useful for path of type ...-> CARnode - TRANSIT -> BUSnode - TRANSIT -> DESTINATIONnode for e.g.
-                        # where BUS is not an available layer, path do not pass through BUS links but only one BUSnode
-                        if len(available_layers[i]) == 0 or set([lid for lid,slice in p.layers]).issubset(available_layers[i]):
-                            path_index += 1
-                            user_chosen_services = chosen_services[i]
-                            user_mobility_services = [user_chosen_services[layer_id] for layer_id, slice_nodes in p.layers]
-                            p.mobility_services = user_mobility_services
-                            user_paths.append(p)
-                            service_costs = sum_cost_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services)))
-                            p.service_costs = service_costs
-                        else:
+                        if len(p.nodes)<=3:
                             log.warning(f"Incorrect path {p.layers} ignored for user {user.id} with available_layers {available_layers[i]}")
+                            break
+                        else:
+                            p.construct_layers(gnodes)
+                            # Check that path layers are all available for this user
+                            # (this check is useful for path of type ...-> CARnode - TRANSIT -> BUSnode - TRANSIT -> DESTINATIONnode for e.g.
+                            # where BUS is not an available layer, path do not pass through BUS links but only one BUSnode
+                            if len(available_layers[i]) == 0 or set([lid for lid,slice in p.layers]).issubset(available_layers[i]):
+                                path_index += 1
+                                user_chosen_services = chosen_services[i]
+                                user_mobility_services = [user_chosen_services[layer_id] for layer_id, slice_nodes in p.layers]
+                                p.mobility_services = user_mobility_services
+                                user_paths.append(p)
+                                service_costs = sum_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services)))
+                                p.service_costs = service_costs
+                            else:
+                                log.warning(f"Incorrect path {p.layers} ignored for user {user.id} with available_layers {available_layers[i]}")
                     else:
                         path_not_found.append(user)
                         log.warning(f"Path not found for %s", user.id)

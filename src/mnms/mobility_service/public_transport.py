@@ -236,7 +236,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         pu_node_ind = line_nodes.index(user._current_node)
         do_node_ind = line_nodes.index(drop_node)
 
-        assert pu_node_ind < do_node_ind, f'Pickup index {pu_node_ind} should necessarily take place '\
+        assert pu_node_ind <= do_node_ind, f'Pickup index {pu_node_ind} should necessarily take place '\
             f'before dropoff index {do_node_ind} on the public transport line for User {user.id}.'
 
         # Get the indexes of veh.activities where pickup and serving activities
@@ -348,7 +348,13 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
             self.clean_arrived_vehicles(lid)
 
+    def periodic_maintenance(self, dt: Dt):
+        pass
+
     def replanning(self):
+        pass
+
+    def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
         pass
 
     def service_level_costs(self, nodes: List[str]) -> dict:
