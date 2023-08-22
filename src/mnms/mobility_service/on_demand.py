@@ -14,8 +14,8 @@ from mnms.vehicles.veh_type import VehicleState, VehicleActivityServing, Vehicle
 
 log = create_logger(__name__)
 
-
 class OnDemandMobilityService(AbstractMobilityService):
+
     def __init__(self,
                  _id: str,
                  dt_matching: int,
