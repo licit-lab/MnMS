@@ -9,6 +9,9 @@ log = create_logger(__name__)
 
 
 class Observer(ABC):
+    """
+                Represents a observer
+    """
     @abstractmethod
     def update(self, subject:'Subject'):
         pass
@@ -19,6 +22,9 @@ class Observer(ABC):
 
 
 class TimeDependentObserver(ABC):
+    """
+                    Represents a time dependant observer
+    """
     @abstractmethod
     def update(self, subject:'TimeDependentSubject', time:Time):
         pass
@@ -29,31 +35,51 @@ class TimeDependentObserver(ABC):
 
 
 class Subject(ABC):
+    """
+            Represents what is being observed
+    """
+
     def __init__(self):
+        """Create an empty observer list"""
         self._observers: List[Observer] = []
 
     def attach(self, obs):
-        self._observers.append(obs)
+        """If the observer is not in the list,
+        append it into the list"""
+        if obs not in self._observers:
+            self._observers.append(obs)
 
     def detach(self, obs):
+        """Remove the observer from the observer list"""
         self._observers.remove(obs)
 
     def notify(self):
+        """Alerts the observers"""
         for obs in self._observers:
             obs.update(self)
 
 
 class TimeDependentSubject(ABC):
+    """
+        Represents time-dependent observations
+    """
+
     def __init__(self):
+        """Create an empty observer list"""
         self._observers: List[TimeDependentObserver] = []
 
     def attach(self, obs):
-        self._observers.append(obs)
+        """If the observer is not in the list,
+        append it into the list"""
+        if obs not in self._observers:
+            self._observers.append(obs)
 
     def detach(self, obs):
+        """Remove the observer from the observer list"""
         self._observers.remove(obs)
 
     def notify(self, time: Time):
+        """Alerts the observers"""
         for obs in self._observers:
             obs.update(self, time)
 

@@ -94,7 +94,7 @@ class VehicleActivityPickup(VehicleActivity):
     def done(self, veh: "Vehicle"):
         self.user._waiting_vehicle = False
         self.user._vehicle = veh
-        veh.passenger[self.user.id] = self.user
+        veh.passengers[self.user.id] = self.user
         self.user.set_state_inside_vehicle()
 
 
@@ -105,13 +105,13 @@ class VehicleActivityServing(VehicleActivity):
     def start(self, veh: "Vehicle"):
         self.user._waiting_vehicle = False
         self.user._vehicle = veh
-        veh.passenger[self.user.id] = self.user
+        veh.passengers[self.user.id] = self.user
         self.user.set_state_inside_vehicle()
 
     def done(self, veh: "Vehicle"):
         self.user._waiting_vehicle = False
         self.user._vehicle = None
-        veh.passenger.pop(self.user.id)
+        veh.passengers.pop(self.user.id)
 
         self.user._remaining_link_length = 0
         upath = self.user.path.nodes
@@ -126,6 +126,7 @@ class VehicleActivityServing(VehicleActivity):
 
 
 class Vehicle(TimeDependentSubject):
+
     _counter = 0
 
     def __init__(self,
@@ -146,23 +147,25 @@ class Vehicle(TimeDependentSubject):
         """
 
         super(Vehicle, self).__init__()
+
         self._global_id = str(Vehicle._counter)
         Vehicle._counter += 1
 
-        self.mobility_service = mobility_service
         self._capacity = capacity
-        self.passenger = dict()
+        self.mobility_service = mobility_service
+
+        self.passengers = dict()                     # id_user, user
 
         self._current_link = None
         self._current_node = node
         self._remaining_link_length = None
-        self._position = None
-        self._distance = 0
+        self._position = None                       # current vehicle coordinates
+        self._distance = 0                          # travelled distance ( reset to zero if other trip ?)
         self._iter_path = None
-        self.speed = initial_speed
+        self.speed = initial_speed                  # current speed
 
         self.activities: Deque[VehicleActivity] = deque([])
-        self.activity = None
+        self.activity = None                        # current activity
 
         if activities is not None:
             self.add_activities(activities)
@@ -179,11 +182,11 @@ class Vehicle(TimeDependentSubject):
 
     @property
     def is_full(self):
-        return len(self.passenger) >= self._capacity
+        return len(self.passengers) >= self._capacity
 
     @property
     def is_empty(self):
-        return not bool(self.passenger)
+        return not bool(self.passengers)
 
     @property
     def id(self):
@@ -255,7 +258,7 @@ class Vehicle(TimeDependentSubject):
 
     def update_distance(self, dist: float):
         self._distance += dist
-        for user in self.passenger.values():
+        for user in self.passengers.values():
             user.update_distance(dist)
 
     def set_position(self, position: np.ndarray):
@@ -272,10 +275,10 @@ class Vehicle(TimeDependentSubject):
         user._vehicle = None
         user.notify(tcurrent)
 
-        del self.passenger[user.id]
+        del self.passengers[user.id]
 
     def drop_all_passengers(self, tcurrent:Time):
-        for _, user in self.passenger.values():
+        for _, user in self.passengers.values():
             log.info(f"{user} is dropped at {self._current_link[1]}")
             unode = self._current_link[1]
             user._current_node = unode
@@ -284,14 +287,14 @@ class Vehicle(TimeDependentSubject):
             user.notify(tcurrent)
             user._vehicle = None
 
-        self.passenger = dict()
+        self.passengers = dict()
 
     def start_user_trip(self, userid, take_node):
         log.info(f'Passenger {userid} has been taken by {self} at {take_node}')
         take_time, user = self._next_passenger.pop(userid)
         user._vehicle = self.id
         user._waiting_vehicle = False
-        self.passenger[userid] = (take_time, user)
+        self.passengers[userid] = (take_time, user)
 
     def default_activity(self):
         return VehicleActivityStop(node=self._current_node,
@@ -299,7 +302,7 @@ class Vehicle(TimeDependentSubject):
                                    is_done=False)
 
     def notify_passengers(self, tcurrent: Time):
-        for user in self.passenger.values():
+        for user in self.passengers.values():
             user.notify(tcurrent)
 
     @classmethod
