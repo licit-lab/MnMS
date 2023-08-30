@@ -44,11 +44,7 @@ class AbstractMobilityService(ABC):
 
         self._observer: Optional = None
 
-    def set_time(self, time:Time):
-        self._tcurrent = time.copy()
-
-    def update_time(self, dt:Dt):
-        self._tcurrent = self._tcurrent.add_time(dt)
+        self._observer: Optional = None
 
     @property
     def id(self):
@@ -57,6 +53,12 @@ class AbstractMobilityService(ABC):
     @property
     def graph(self):
         return self.layer.graph
+
+    def set_time(self, time:Time):
+        self._tcurrent = time.copy()
+
+    def update_time(self, dt:Dt):
+        self._tcurrent = self._tcurrent.add_time(dt)
 
     def attach_vehicle_observer(self, observer):
         self._observer = observer
