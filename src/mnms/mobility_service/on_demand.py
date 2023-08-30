@@ -137,7 +137,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
         """
         super(OnDemandDepotMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
         self.gnodes = None
-        self.depot = dict()
+        self.depots = dict()
 
     def _create_waiting_vehicle(self, node: str):
         assert node in self.graph.nodes
@@ -152,25 +152,25 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
         return new_veh
 
     def add_depot(self, node: str, capacity: int):
-        self.depot[node] = {"capacity": capacity,
+        self.depots[node] = {"capacity": capacity,
                             "vehicles": set()}
 
         for _ in range(capacity):
             new_veh = self._create_waiting_vehicle(node)
-            self.depot[node]["vehicles"].add(new_veh.id)
+            self.depots[node]["vehicles"].add(new_veh.id)
 
     def is_depot_full(self, node: str):
-        return self.depot[node]["capacity"] == len(self.depot[node]["vehicles"])
+        return self.depots[node]["capacity"] == len(self.depots[node]["vehicles"])
 
     def step_maintenance(self, dt: Dt):
         self.gnodes = self.graph.nodes
 
-        depot = list(self.depot.keys())
-        depot_pos = np.array([self.gnodes[d].position for d in self.depot.keys()])
+        depot = list(self.depots.keys())
+        depot_pos = np.array([self.gnodes[d].position for d in self.depots.keys()])
 
         for veh in self.fleet.vehicles.values():
             if veh.state is VehicleState.STOP:
-                if veh._current_node not in self.depot:
+                if veh._current_node not in self.depots:
                     veh_position = veh.position
                     dist_vector = np.linalg.norm(depot_pos - veh_position, axis=1)
                     sorted_ind = np.argsort(dist_vector)
@@ -198,7 +198,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
                     veh.activity.is_done = True
                     veh.add_activities([repositioning])
                 else:
-                    self.depot[veh._current_node]["vehicles"].add(veh.id)
+                    self.depots[veh._current_node]["vehicles"].add(veh.id)
 
     def request(self, user: User, drop_node: str) -> Dt:
         """
@@ -284,8 +284,8 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
 
         if veh.state is VehicleState.STOP:
             veh.activity.is_done = True
-            if veh._current_node in self.depot:
-                self.depot[veh._current_node]["vehicles"].remove(veh.id)
+            if veh._current_node in self.depots:
+                self.depots[veh._current_node]["vehicles"].remove(veh.id)
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
