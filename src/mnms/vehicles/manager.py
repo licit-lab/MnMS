@@ -10,7 +10,7 @@ log = create_logger(__name__)
 class VehicleManager(object):
 
     # Class attribute (shared by all instances)
-    _vehicles: Dict[str, Vehicle] = dict()
+    _vehicles: Dict[str, Vehicle] = dict()                      # id_veh, Vehicle
     _type_vehicles: Dict[str, Set[str]] = defaultdict(set)
     _new_vehicles: List[Vehicle] = list()
 
