@@ -419,7 +419,8 @@ class MultiLayerGraph(object):
 
     def connect_intra_layer(self, layer_id: str, connection_distance: float):
         """
-                Connects each node to the others within a predefined radius
+                Connects by a transit link each node of a layer to the others within a predefined radius
+                Useful, for example, for a public transport layer to get to another stop
 
                 Args:
                     connection_distance: each node  is connected to the nodes within a radius defined by
@@ -459,7 +460,7 @@ class MultiLayerGraph(object):
 
     def connect_inter_layers(self, layer_id_list: List[str], connection_distance: float):
         """
-                Implement a public transport mobility service, it can create lines
+                Connect different layers with transit links
 
                 Args:
                     _id: The id of the service

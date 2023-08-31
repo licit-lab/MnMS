@@ -255,7 +255,7 @@ class ParkingService(AbstractOnDemandMobilityService):
     def quality_disutility(self, vehicle: Vehicle, new_plan: List[VehicleActivity], new_user: Optional[User]):
         total_disutility = 0
 
-        users = list(vehicle.passenger.values())
+        users = list(vehicle.passengers.values())
         if new_user is not None:
             users.append(new_user)
 

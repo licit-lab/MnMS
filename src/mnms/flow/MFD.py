@@ -162,7 +162,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             veh.update_distance(dist_travelled)
             veh._remaining_link_length = 0
             self.set_vehicle_position(veh)
-            for passenger_id, passenger in veh.passenger.items():
+            for passenger_id, passenger in veh.passengers.items():
                 passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
 
             try:
@@ -180,7 +180,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             veh._remaining_link_length -= dist_travelled
             veh.update_distance(dist_travelled)
             self.set_vehicle_position(veh)
-            for passenger_id, passenger in veh.passenger.items():
+            for passenger_id, passenger in veh.passengers.items():
                 passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
             return dt
 

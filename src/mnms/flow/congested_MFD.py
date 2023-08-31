@@ -134,7 +134,7 @@ class CongestedMFDFlowMotor(MFDFlowMotor):
                     veh.update_distance(veh_remaining_length-link_length)
                     veh.speed = 0
                     self.set_vehicle_position(veh)
-                    for passenger_id, passenger in veh.passenger.items():
+                    for passenger_id, passenger in veh.passengers.items():
                         passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
                     return dt
         else:
