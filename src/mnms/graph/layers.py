@@ -14,8 +14,61 @@ from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable
 from mnms.vehicles.veh_type import Vehicle, Car, Bus
+from mnms.graph.specific_layers import OriginDestinationLayer
 
 log = create_logger(__name__)
+
+class TransitLayer(CostFunctionLayer):
+    def __init__(self):
+        super(TransitLayer, self).__init__()
+        self.links: defaultdict[str, defaultdict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
+
+    def add_link(self, lid, olayer, dlayer):
+        """
+        lid: id of link
+        olayer: name of the layer origin node of link belongs to
+        dlayer: name of the layer destination node of link belongs to
+        """
+        self.links[olayer][dlayer].append(lid)
+
+    def iter_links(self):
+        """
+        Iter through all links that connects different layer including the origin destination layer
+
+        Yields:
+            str: The id of the transit link
+
+        """
+        for olayer in self.links:
+            for links in self.links[olayer].values():
+                for lid in links:
+                    yield lid
+
+    def iter_inter_links(self):
+        """
+        Iter through all links that connects different layer except the origin destination layer
+
+        Yields:
+            str: The id of the transit link
+
+        """
+        for olayer in self.links:
+            for dlayer, links in self.links[olayer].items():
+                if "ODLAYER" not in (olayer, dlayer):
+                    for lid in links:
+                        yield lid
+
+    def __dump__(self):
+        return dict(self.links)
+
+    @classmethod
+    def __load__(cls, data):
+        new_obj = cls()
+        for olayer in data:
+            for dlayer, lid in data[olayer].items():
+                new_obj.add_link(lid, olayer, dlayer)
+
+        return new_obj
 
 
 class SimpleLayer(AbstractLayer):
@@ -116,6 +169,7 @@ class PublicTransportLayer(AbstractLayer):
                  services: Optional[List[PublicTransportMobilityService]] = None,
                  observer: Optional = None):
         super(PublicTransportLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
+
         self.lines = dict()
 
     def _create_stop(self, sid, dbnode):
@@ -215,6 +269,102 @@ class PublicTransportLayer(AbstractLayer):
 
         return new_obj
 
+class SharedVehicleLayer(AbstractLayer):
+    def __init__(self,
+                 roads: RoadDescriptor,
+                 _id: str,
+                 veh_type: Type[Vehicle],
+                 default_speed,
+                 services: Optional[List[AbstractMobilityService]] = None,  # TODO
+                 observer: Optional = None):
+        super(SharedVehicleLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
+
+        self.stations = []
+
+        def create_station(self, sid, dbnode):
+
+            assert dbnode in self.roads.nodes
+            assert dbnode in self.graph.nodes
+
+            self.stations.append({'id': sid, 'node': dbnode})
+
+        def remove_stations(self, sid):
+
+            self.stations=[x for x in self.stations if not (sid == x.get('id'))]
+
+            # TODO : remove transit links ?
+
+        def connect_origindestination(self, odlayer: OriginDestinationLayer, connection_distance: float):
+            """
+            Connects the origin destination layer to a shared vehicle layer (only the stations are linked to the origin
+            destination nodes
+
+            Args:
+                odlayer: Origin destination layer to connect
+                connection_distance: Each node of the origin destination layer is connected to the nodes of the current layer
+                within a radius defined by connection_distance (m)
+            Return:
+                transit_links: List of transit link to add
+            """
+            transit_links = []
+
+            assert odlayer is not None
+
+            _norm = np.linalg.norm
+
+            odlayer_nodes = set()
+            odlayer_nodes.update(odlayer.origins.keys())
+            odlayer_nodes.update(odlayer.destinations.keys())
+
+            graph_node_ids = np.array([s['id'] for s in self.stations])
+            graph_node_pos = np.array([s['id'].position for s in self.stations])
+
+            for nid in odlayer.origins:
+                npos = np.array(odlayer.origins[nid])
+                dist_nodes = _norm(graph_node_pos - npos, axis=1)
+                mask = dist_nodes < connection_distance
+                for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                    if layer_nid not in odlayer_nodes:
+                        lid = f"{nid}_{layer_nid}"
+                        transit_links.append(
+                            {'id': lid, 'upstream_node': nid, 'downstream_node': layer_nid, 'dist': dist})
+
+            for nid in odlayer.destinations:
+                npos = np.array(odlayer.destinations[nid])
+                dist_nodes = _norm(graph_node_pos - npos, axis=1)
+                mask = dist_nodes < connection_distance
+                for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                    if layer_nid not in odlayer_nodes:
+                        lid = f"{layer_nid}_{nid}"
+                        transit_links.append(
+                            {'id': lid, 'upstream_node': layer_nid, 'downstream_node': nid, 'dist': dist})
+
+            return transit_links
+
+    def __dump__(self):
+        return {'ID': self.id,
+                'TYPE': ".".join([self.__class__.__module__, self.__class__.__name__]),
+                'VEH_TYPE': ".".join([self._veh_type.__module__, self._veh_type.__name__]),
+                'DEFAULT_SPEED': self.default_speed,
+                'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
+                'STATIONS': [{'ID': s['id'],
+                           'NODE': s['node']} for s in self.stations]}
+
+    @classmethod
+    def __load__(cls, data: Dict, roads: RoadDescriptor):
+        new_obj = cls(roads,
+                      data['ID'],
+                      load_class_by_module_name(data['VEH_TYPE']),
+                      data['DEFAULT_SPEED'])
+
+        for sdata in data['STATIONS']:
+            new_obj.create_station(sdata['ID'], sdata['NODE'])
+
+        for sdata in data['SERVICES']:
+            serv_type = load_class_by_module_name(sdata['TYPE'])
+            new_obj.add_mobility_service(serv_type.__load__(sdata))
+
+        return new_obj
 
 class BusLayer(PublicTransportLayer):
     def __init__(self,
@@ -226,89 +376,6 @@ class BusLayer(PublicTransportLayer):
                  observer: Optional = None):
         super(BusLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
 
-
-class OriginDestinationLayer(object):
-    def __init__(self):
-        self.origins = dict()
-        self.destinations = dict()
-        self.id = "ODLAYER"
-
-    def create_origin_node(self, nid, pos: np.ndarray):
-        # new_node = Node(nid, pos[0], pos[1], self.id)
-
-        self.origins[nid] = pos
-
-    def create_destination_node(self, nid, pos: np.ndarray):
-        # new_node = Node(nid, pos[0], pos[1], self.id)
-
-        self.destinations[nid] = pos
-
-    def __dump__(self):
-        return {'ORIGINS': {node: self.origins[node] for node in self.origins},
-                'DESTINATIONS': {node: self.destinations[node] for node in self.destinations}}
-
-    @classmethod
-    def __load__(cls, data) -> "OriginDestinationLayer":
-        new_obj = cls()
-        for nid, pos in data['ORIGINS'].items():
-            new_obj.create_origin_node(nid, pos)
-        for nid, pos in data['DESTINATIONS'].items():
-            new_obj.create_destination_node(nid, pos)
-
-        return new_obj
-
-
-class TransitLayer(CostFunctionLayer):
-    def __init__(self):
-        super(TransitLayer, self).__init__()
-        self.links: defaultdict[str, defaultdict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
-
-    def add_link(self, lid, olayer, dlayer):
-        """
-        lid: id of link
-        olayer: name of the layer origin node of link belongs to
-        dlayer: name of the layer destination node of link belongs to
-        """
-        self.links[olayer][dlayer].append(lid)
-
-    def iter_links(self):
-        """
-        Iter through all links that connects different layer including the origin destination layer
-
-        Yields:
-            str: The id of the transit link
-
-        """
-        for olayer in self.links:
-            for links in self.links[olayer].values():
-                for lid in links:
-                    yield lid
-
-    def iter_inter_links(self):
-        """
-        Iter through all links that connects different layer except the origin destination layer
-
-        Yields:
-            str: The id of the transit link
-
-        """
-        for olayer in self.links:
-            for dlayer, links in self.links[olayer].items():
-                if "ODLAYER" not in (olayer, dlayer):
-                    for lid in links:
-                        yield lid
-
-    def __dump__(self):
-        return dict(self.links)
-
-    @classmethod
-    def __load__(cls, data):
-        new_obj = cls()
-        for olayer in data:
-            for dlayer, lid in data[olayer].items():
-                new_obj.add_link(lid, olayer, dlayer)
-
-        return new_obj
 
 
 class MultiLayerGraph(object):
@@ -367,7 +434,7 @@ class MultiLayerGraph(object):
         [self.graph.add_node(nid, pos[0], pos[1], odlayer.id) for nid, pos in odlayer.origins.items()]
         [self.graph.add_node(nid, pos[0], pos[1], odlayer.id) for nid, pos  in odlayer.destinations.items()]
 
-    def connect_origin_destination_layer(self, connection_distance: float):
+    def connect_origindestination_layers(self, connection_distance: float):
         """
         Connects the origin destination layer to the other layers
 
@@ -375,47 +442,16 @@ class MultiLayerGraph(object):
             connection_distance: Each node of the origin destination layer is connected to the nodes of all other layers
             within a radius defined by connection_distance (m)
         """
-        assert self.odlayer is not None
 
-        _norm = np.linalg.norm
-
-        odlayer_nodes = set()
-        odlayer_nodes.update(self.odlayer.origins.keys())
-        odlayer_nodes.update(self.odlayer.destinations.keys())
-
-        graph_node_ids = np.array([nid for nid in self.graph.nodes])
-        graph_node_pos = np.array([n.position for n in self.graph.nodes.values()])
-
-        graph_nodes = self.graph.nodes
-        for nid in self.odlayer.origins:
-            node = graph_nodes[nid]
-            npos = np.array(node.position)
-            dist_nodes = _norm(graph_node_pos-npos, axis=1)
-            mask = dist_nodes < connection_distance
-            for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
-                if layer_nid not in odlayer_nodes:
-                    lid = f"{nid}_{layer_nid}"
-                    self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
-                    self.map_linkid_layerid[lid]="TRANSIT"
-                    # Add the transit link into the transit layer
-                    link_olayer_id = self.graph.nodes[nid].label
-                    link_dlayer_id = self.graph.nodes[layer_nid].label
-                    self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
-
-        for nid in self.odlayer.destinations:
-            node = graph_nodes[nid]
-            npos = np.array(node.position)
-            dist_nodes = _norm(graph_node_pos-npos, axis=1)
-            mask = dist_nodes < connection_distance
-            for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
-                if layer_nid not in odlayer_nodes:
-                    lid = f"{layer_nid}_{nid}"
-                    self.graph.add_link(lid, layer_nid, nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
-                    self.map_linkid_layerid[lid]="TRANSIT"
-                    # Add the transit link into the transit layer
-                    link_olayer_id = self.graph.nodes[layer_nid].label
-                    link_dlayer_id = self.graph.nodes[nid].label
-                    self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
+        for l in self.layers:
+            transit_links = self.layers[l].connect_origindestination(self.odlayer, connection_distance)
+            for tl in transit_links:
+                self.graph.add_link(tl['id'], tl['upstream_node'], tl['downstream_node'], tl['dist'], {"WALK": {'length': tl['dist']}}, "TRANSIT")
+                self.map_linkid_layerid[tl['id']] = "TRANSIT"
+                # Add the transit link into the transit layer
+                up_layer = self.graph.nodes[tl['upstream_node']].label
+                down_layer = self.graph.nodes[tl['downstream_node']].label
+                self.transitlayer.add_link(tl['id'], up_layer, down_layer)
 
     def connect_intra_layer(self, layer_id: str, connection_distance: float):
         """

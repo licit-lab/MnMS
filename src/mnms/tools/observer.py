@@ -146,6 +146,6 @@ class CSVVehicleObserver(TimeDependentObserver):
                f"{subject.speed:.{self._prec}f}",
                subject.state.name if subject.state is not None else None,
                f"{subject.distance:.{self._prec}f}",
-               ' '.join(p for p in subject.passenger)]
+               ' '.join(p for p in subject.passengers)]
         # log.info(f"OBS {time}: {row}")
         self._csvhandler.writerow(row)

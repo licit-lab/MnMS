@@ -348,3 +348,12 @@ class Metro(Vehicle):
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
         super(Metro, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+
+class Bike(Vehicle):
+    def __init__(self,
+                 node: str,
+                 capacity: int,
+                 mobility_service: str,
+                 initial_speed=5.5,
+                 activities: Optional[VehicleActivity] = None):
+        super(Car, self).__init__(node, capacity, mobility_service, initial_speed, activities)

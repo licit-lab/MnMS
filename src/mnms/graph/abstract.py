@@ -9,7 +9,9 @@ from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.tools.observer import CSVVehicleObserver
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import Vehicle
+from mnms.graph.specific_layers import OriginDestinationLayer
 
+import numpy as np
 
 class CostFunctionLayer(object):
     def __init__(self):
@@ -66,6 +68,51 @@ class AbstractLayer(CostFunctionLayer):
 
     # def add_cost_function(self, mobility_service: str, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
     #     self._costs_functions[mobility_service][cost_name] = cost_function
+
+    def connect_origindestination(self, odlayer:OriginDestinationLayer, connection_distance: float):
+        """
+        Connects the origin destination layer to a layer
+
+        Args:
+            odlayer: Origin destination layer to connect
+            connection_distance: Each node of the origin destination layer is connected to the nodes of the current layer
+            within a radius defined by connection_distance (m)
+        Return:
+            transit_links: List of transit link to add
+        """
+        transit_links=[]
+
+        assert odlayer is not None
+
+        _norm = np.linalg.norm
+
+        odlayer_nodes = set()
+        odlayer_nodes.update(odlayer.origins.keys())
+        odlayer_nodes.update(odlayer.destinations.keys())
+
+        graph_nodes = self.graph.nodes
+        graph_node_ids = np.array([nid for nid in graph_nodes])
+        graph_node_pos = np.array([n.position for n in graph_nodes.values()])
+
+        for nid in odlayer.origins:
+            npos = np.array(odlayer.origins[nid])
+            dist_nodes = _norm(graph_node_pos - npos, axis=1)
+            mask = dist_nodes < connection_distance
+            for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                if layer_nid not in odlayer_nodes:
+                    lid = f"{nid}_{layer_nid}"
+                    transit_links.append({'id': lid,'upstream_node':nid,'downstream_node':layer_nid,'dist':dist})
+
+        for nid in odlayer.destinations:
+            npos = np.array(odlayer.destinations[nid])
+            dist_nodes = _norm(graph_node_pos - npos, axis=1)
+            mask = dist_nodes < connection_distance
+            for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                if layer_nid not in odlayer_nodes:
+                    lid = f"{layer_nid}_{nid}"
+                    transit_links.append({'id': lid, 'upstream_node': layer_nid, 'downstream_node': nid, 'dist': dist})
+
+        return transit_links
 
     @property
     def default_speed(self):
