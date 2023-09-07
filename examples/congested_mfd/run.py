@@ -1,7 +1,7 @@
 from mnms import LOGLEVEL
 from mnms.demand import BaseDemandManager, User
 from mnms.flow.congested_MFD import CongestedMFDFlowMotor, CongestedReservoir
-from mnms.generation.layers import _generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_matching_origin_destination_layer
 from mnms.generation.roads import generate_line_road
 from mnms.graph.layers import MultiLayerGraph, CarLayer
 from mnms.graph.zone import construct_zone_from_sections
@@ -37,7 +37,7 @@ car_layer.create_link("CAR_0_1", "CAR_0", "CAR_1", {}, ["0_1"])
 car_layer.create_link("CAR_1_2", "CAR_1", "CAR_2", {}, ["1_2"])
 
 
-odlayer = _generate_matching_origin_destination_layer(roads)
+odlayer = generate_matching_origin_destination_layer(roads)
 
 mlgraph = MultiLayerGraph([car_layer],
                           odlayer,

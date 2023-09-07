@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 
 import numpy as np
 
@@ -10,7 +10,8 @@ from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.time import Dt
 from mnms.tools.exceptions import PathNotFound
 from mnms.vehicles.veh_type import VehicleState, VehicleActivityServing, VehicleActivityStop, \
-    VehicleActivityPickup, VehicleActivityRepositioning
+    VehicleActivityPickup, VehicleActivityRepositioning, Vehicle, VehicleActivity
+from mnms.tools.cost import create_service_costs
 
 log = create_logger(__name__)
 
@@ -36,6 +37,9 @@ class OnDemandMobilityService(AbstractMobilityService):
 
     def step_maintenance(self, dt: Dt):
         self.gnodes = self.graph.nodes
+
+    def periodic_maintenance(self, dt: Dt):
+        pass
 
     def request(self, user: User, drop_node: str) -> Dt:
         """
@@ -112,6 +116,15 @@ class OnDemandMobilityService(AbstractMobilityService):
         if veh.state is VehicleState.STOP:
             veh.activity.is_done = True
 
+    def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
+        pass
+
+    def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
+        pass
+
+    def service_level_costs(self, nodes: List[str]) -> dict:
+        return create_service_costs()
+
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
                 "DT_MATCHING": self._dt_matching,
@@ -124,7 +137,7 @@ class OnDemandMobilityService(AbstractMobilityService):
         return new_obj
 
 
-class OnDemandDepotMobilityService(AbstractMobilityService):
+class OnDemandDepotMobilityService(OnDemandMobilityService):
     def __init__(self,
                  _id: str,
                  dt_matching: int,
@@ -135,7 +148,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
         Args:
             depot: the list of depot (defined by location -a node-, the waiting vehicles and the capacity)
         """
-        super(OnDemandDepotMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
+        super(OnDemandDepotMobilityService, self).__init__(_id, dt_matching, dt_step_maintenance)
         self.gnodes = None
         self.depots = dict()
 

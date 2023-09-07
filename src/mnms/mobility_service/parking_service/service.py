@@ -17,6 +17,7 @@ from mnms.time import Dt, Time
 from mnms.tools.exceptions import PathNotFound
 from mnms.vehicles.veh_type import Vehicle, VehicleActivity, VehicleState, VehicleActivityStop, VehicleActivityPickup, \
     VehicleActivityServing
+from mnms.tools.cost import create_service_costs
 
 log = create_logger(__name__)
 
@@ -251,6 +252,12 @@ class ParkingService(AbstractOnDemandMobilityService):
     def step_maintenance(self, dt: Dt):
         for uid in self.users:
             self.users[uid].update_distance()
+
+    def periodic_maintenance(self, dt: Dt):
+        pass
+
+    def service_level_costs(self, nodes: List[str]) -> dict:
+        return create_service_costs()
 
     def quality_disutility(self, vehicle: Vehicle, new_plan: List[VehicleActivity], new_user: Optional[User]):
         total_disutility = 0

@@ -13,7 +13,7 @@ from mnms.mobility_service.public_transport import PublicTransportMobilityServic
 import os
 import json
 
-param_file_path = "data/param.json"
+param_file_path = "/param.json"
 param_file = open(os.getcwd() + param_file_path, 'r')
 param_json = json.load(param_file)
 
@@ -34,7 +34,7 @@ network_file = input_params['network_file'] # path to json network file, ex: "/L
 demand_file = input_params['demand_file'] # path to csv demand file 
 mfd_file = input_params['mfd_file'] # path to csv MFD file
 # outputs
-outdir = output_params['output_dir'] # name of output folder, ex: "OUTPUTS"
+outdir = output_params['outdir'] # name of output folder, ex: "OUTPUTS"
 log_file = output_params['log_file'] # path to log file, ex: "/simulation.log"
 path_file = output_params['path_file'] # path to csv path file
 user_file = output_params['user_file'] # path to csv user file
