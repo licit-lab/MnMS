@@ -11,7 +11,7 @@ from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
-
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 
 set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation'])
                                       # 'mnms.vehicles.veh_type',
@@ -37,10 +37,11 @@ road_db = generate_manhattan_road(3, 100)
 uber = OnDemandDepotMobilityService("UBER", 0)
 uber.attach_vehicle_observer(CSVVehicleObserver("veh.csv"))
 
+car_service = PersonalMobilityService('perso')
 
 car_layer = generate_layer_from_roads(road_db,
                                       'CAR',
-                                      mobility_services=[uber])
+                                      mobility_services=[car_service,uber])
 
 odlayer = generate_grid_origin_destination_layer(0, 0, 300, 300, 3, 3)
 #
