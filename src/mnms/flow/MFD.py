@@ -137,6 +137,16 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         self.reservoirs[res.id] = res
 
     def set_vehicle_position(self, veh: Vehicle):
+        """
+                Estimates vehicle position from current link and remaining link length
+
+                Args:
+                    veh: The vehicle
+
+                Note:
+                    This estimate can be improved if the length is taken into account and the specific case of the
+                    vehicle on the upstream or downstream node is considered separately
+        """
         unode, dnode = veh.current_link
         remaining_length = veh.remaining_link_length
 
@@ -211,6 +221,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
         while self.veh_manager.has_new_vehicles:
             new_veh = self.veh_manager._new_vehicles.pop()
+            if new_veh.position is None:
+                self.set_vehicle_position(new_veh)
             new_veh.notify(self._tcurrent)
 
         # Calculate accumulations

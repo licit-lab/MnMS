@@ -328,7 +328,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
     def step_maintenance(self, dt: Dt):
         self.gnodes = self.graph.nodes
         for lid in self.lines:
-            for new_veh in self.new_departures(self._tcurrent, dt, lid):
+            nd = self.new_departures(self._tcurrent, dt, lid)
+            for new_veh in nd:
                 # Mark the Stop state to done to start vehicle journey
                 if new_veh.activity.state is VehicleState.STOP:
                     new_veh.activity.is_done = True

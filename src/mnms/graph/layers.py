@@ -281,65 +281,71 @@ class SharedVehicleLayer(AbstractLayer):
 
         self.stations = []
 
-        def create_station(self, sid, dbnode):
+        for l in roads.sections:
+            self.map_reference_links[l]=roads.sections[l].id
 
-            assert dbnode in self.roads.nodes
-            assert dbnode in self.graph.nodes
+        for n in roads.nodes:
+            self.map_reference_nodes[n]=roads.nodes[n].id
 
-            self.stations.append({'id': sid, 'node': dbnode})
+    def create_station(self, sid, dbnode):
 
-        def remove_stations(self, sid):
+        assert dbnode in self.roads.nodes
+        assert dbnode in self.graph.nodes
 
-            self.stations=[x for x in self.stations if not (sid == x.get('id'))]
+        self.stations.append({'id': sid, 'node': dbnode})
 
-            # TODO : remove transit links ?
+    def remove_stations(self, sid):
 
-        def connect_origindestination(self, odlayer: OriginDestinationLayer, connection_distance: float):
-            """
-            Connects the origin destination layer to a shared vehicle layer (only the stations are linked to the origin
-            destination nodes
+        self.stations=[x for x in self.stations if not (sid == x.get('id'))]
 
-            Args:
-                odlayer: Origin destination layer to connect
-                connection_distance: Each node of the origin destination layer is connected to the nodes of the current layer
-                within a radius defined by connection_distance (m)
-            Return:
-                transit_links: List of transit link to add
-            """
-            transit_links = []
+        # TODO : remove transit links ?
 
-            assert odlayer is not None
+    def connect_origindestination(self, odlayer: OriginDestinationLayer, connection_distance: float):
+        """
+        Connects the origin destination layer to a shared vehicle layer (only the stations are linked to the origin
+        destination nodes
 
-            _norm = np.linalg.norm
+        Args:
+            odlayer: Origin destination layer to connect
+            connection_distance: Each node of the origin destination layer is connected to the nodes of the current layer
+            within a radius defined by connection_distance (m)
+        Return:
+            transit_links: List of transit link to add
+        """
+        transit_links = []
 
-            odlayer_nodes = set()
-            odlayer_nodes.update(odlayer.origins.keys())
-            odlayer_nodes.update(odlayer.destinations.keys())
+        assert odlayer is not None
 
-            graph_node_ids = np.array([s['id'] for s in self.stations])
-            graph_node_pos = np.array([s['id'].position for s in self.stations])
+        _norm = np.linalg.norm
 
-            for nid in odlayer.origins:
-                npos = np.array(odlayer.origins[nid])
-                dist_nodes = _norm(graph_node_pos - npos, axis=1)
-                mask = dist_nodes < connection_distance
-                for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
-                    if layer_nid not in odlayer_nodes:
-                        lid = f"{nid}_{layer_nid}"
-                        transit_links.append(
-                            {'id': lid, 'upstream_node': nid, 'downstream_node': layer_nid, 'dist': dist})
+        odlayer_nodes = set()
+        odlayer_nodes.update(odlayer.origins.keys())
+        odlayer_nodes.update(odlayer.destinations.keys())
 
-            for nid in odlayer.destinations:
-                npos = np.array(odlayer.destinations[nid])
-                dist_nodes = _norm(graph_node_pos - npos, axis=1)
-                mask = dist_nodes < connection_distance
-                for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
-                    if layer_nid not in odlayer_nodes:
-                        lid = f"{layer_nid}_{nid}"
-                        transit_links.append(
-                            {'id': lid, 'upstream_node': layer_nid, 'downstream_node': nid, 'dist': dist})
+        graph_node_ids = np.array([s['id'] for s in self.stations])
+        graph_node_pos = np.array([s['id'].position for s in self.stations])
 
-            return transit_links
+        for nid in odlayer.origins:
+            npos = np.array(odlayer.origins[nid])
+            dist_nodes = _norm(graph_node_pos - npos, axis=1)
+            mask = dist_nodes < connection_distance
+            for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                if layer_nid not in odlayer_nodes:
+                    lid = f"{nid}_{layer_nid}"
+                    transit_links.append(
+                        {'id': lid, 'upstream_node': nid, 'downstream_node': layer_nid, 'dist': dist})
+
+        for nid in odlayer.destinations:
+            npos = np.array(odlayer.destinations[nid])
+            dist_nodes = _norm(graph_node_pos - npos, axis=1)
+            mask = dist_nodes < connection_distance
+            for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                if layer_nid not in odlayer_nodes:
+                    lid = f"{layer_nid}_{nid}"
+                    transit_links.append(
+                        {'id': lid, 'upstream_node': layer_nid, 'downstream_node': nid, 'dist': dist})
+
+        return transit_links
 
     def __dump__(self):
         return {'ID': self.id,
