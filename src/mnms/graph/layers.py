@@ -270,7 +270,7 @@ class PublicTransportLayer(AbstractLayer):
         return new_obj
 
 class SharedVehicleLayer(AbstractLayer):
-    def __init__(self,
+    def    __init__(self,
                  roads: RoadDescriptor,
                  _id: str,
                  veh_type: Type[Vehicle],
@@ -281,18 +281,25 @@ class SharedVehicleLayer(AbstractLayer):
 
         self.stations = []
 
-        for l in roads.sections:
-            self.map_reference_links[l]=roads.sections[l].id
-
         for n in roads.nodes:
+            nid=roads.nodes[n].id
+            self.graph.add_node(nid, roads.nodes[n].position[0], roads.nodes[n].position[1], self.id)
             self.map_reference_nodes[n]=roads.nodes[n].id
+
+        for l in roads.sections:
+            lid=roads.sections[l].id
+            length = roads.sections[l].length
+            upstream = roads.sections[l].upstream
+            downstream = roads.sections[l].downstream
+            self.graph.add_link(lid, upstream, downstream, length, {self.id:{'length':15}}, self.id)
+            self.map_reference_links[l]=roads.sections[l].id
 
     def create_station(self, sid, dbnode):
 
         assert dbnode in self.roads.nodes
-        assert dbnode in self.graph.nodes
+        #assert dbnode in self.graph.nodes
 
-        self.stations.append({'id': sid, 'node': dbnode})
+        self.stations.append({'id': sid, 'node': dbnode, 'position':self.roads.nodes[dbnode].position })
 
     def remove_stations(self, sid):
 
@@ -322,8 +329,9 @@ class SharedVehicleLayer(AbstractLayer):
         odlayer_nodes.update(odlayer.origins.keys())
         odlayer_nodes.update(odlayer.destinations.keys())
 
-        graph_node_ids = np.array([s['id'] for s in self.stations])
-        graph_node_pos = np.array([s['id'].position for s in self.stations])
+        #graph_node_ids = np.array([s['id'] for s in self.stations])
+        graph_node_ids = np.array([s['node'] for s in self.stations])
+        graph_node_pos = np.array([s['position'] for s in self.stations])
 
         for nid in odlayer.origins:
             npos = np.array(odlayer.origins[nid])
@@ -432,7 +440,7 @@ class MultiLayerGraph(object):
         if odlayer is not None:
             self.add_origin_destination_layer(odlayer)
             if connection_distance is not None:
-                self.connect_origin_destination_layer(connection_distance)
+                self.connect_origindestination_layers(connection_distance)
 
     def add_origin_destination_layer(self, odlayer: OriginDestinationLayer):
         self.odlayer = odlayer
