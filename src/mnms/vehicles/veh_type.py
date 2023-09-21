@@ -201,6 +201,10 @@ class Vehicle(TimeDependentSubject):
         return self._current_link
 
     @property
+    def current_node(self):
+        return self._current_node
+
+    @property
     def remaining_link_length(self):
         return self._remaining_link_length
 
@@ -356,4 +360,4 @@ class Bike(Vehicle):
                  mobility_service: str,
                  initial_speed=5.5,
                  activities: Optional[VehicleActivity] = None):
-        super(Car, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+        super(Bike, self).__init__(node, capacity, mobility_service, initial_speed, activities)

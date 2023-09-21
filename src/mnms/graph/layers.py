@@ -292,20 +292,8 @@ class SharedVehicleLayer(AbstractLayer):
             upstream = roads.sections[l].upstream
             downstream = roads.sections[l].downstream
             self.graph.add_link(lid, upstream, downstream, length, {self.id:{'length':15}}, self.id)
-            self.map_reference_links[l]=roads.sections[l].id
-
-    def create_station(self, sid, dbnode):
-
-        assert dbnode in self.roads.nodes
-        #assert dbnode in self.graph.nodes
-
-        self.stations.append({'id': sid, 'node': dbnode, 'position':self.roads.nodes[dbnode].position })
-
-    def remove_stations(self, sid):
-
-        self.stations=[x for x in self.stations if not (sid == x.get('id'))]
-
-        # TODO : remove transit links ?
+            self.map_reference_links[l]=[]
+            self.map_reference_links[l].append(roads.sections[l].id)
 
     def connect_origindestination(self, odlayer: OriginDestinationLayer, connection_distance: float):
         """
