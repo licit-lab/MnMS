@@ -147,7 +147,7 @@ class AbstractDecisionModel(ABC):
             self._write = True
             self._outfile = open(outfile, 'w')
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
-            self._csvhandler.writerow(['ID', 'COST', 'PATH', 'LENGTH', 'SERVICE'])
+            self._csvhandler.writerow(['ID', 'COST', 'PATH', 'LENGTH', 'SERVICES'])
 
     @abstractmethod
     def path_choice(self, paths: List[Path]) -> Path:

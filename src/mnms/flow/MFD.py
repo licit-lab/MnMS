@@ -60,7 +60,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
     def __init__(self, outfile: str = None):
         super(MFDFlowMotor, self).__init__(outfile=outfile)
         if outfile is not None:
-            self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'MODE', 'SPEED', 'ACCUMULATION'])
+            self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'VEHICLE_TYPE', 'SPEED', 'ACCUMULATION'])
 
         self.reservoirs: Dict[str, Reservoir] = dict()
         self.users: Optional[Dict[str, User]] = dict()
