@@ -30,22 +30,25 @@ cwd = pathlib.Path(__file__).parent.joinpath('demand.csv').resolve()
 
 # Graph
 
-roads = generate_line_road([0, 0], [0, 3000], 4)
-roads.register_stop('S0', '0_1', 0.10)
-roads.register_stop('S1', '1_2', 0.50)
-roads.register_stop('S2', '2_3', 0.99)
+roads = generate_line_road([0, 0], [0, 3000], 2)
+roads.register_stop('SO', '0_1', 0.1)
+roads.register_stop('S1', '0_1', 0.4)
+roads.register_stop('S2', '0_1', 0.6)
+roads.register_stop('SD', '0_1', 0.9)
 
 bus_service = PublicTransportMobilityService('B0')
-pblayer = PublicTransportLayer(roads, 'BUS', Bus, 13, services=[bus_service], observer=CSVVehicleObserver("veh.csv"))
+
+veh = pathlib.Path(__file__).parent.joinpath('veh.csv').resolve()
+pblayer = PublicTransportLayer(roads, 'BUS', Bus, 13, services=[bus_service], observer=CSVVehicleObserver(veh))
 
 pblayer.create_line('L0',
-                    ['S0', 'S1', 'S2'],
-                    [['0_1', '1_2'], ['1_2', '2_3']],
+                    ['SO', 'S1', 'S2','SD'],
+                    [['0_1'], ['0_1'],['0_1']],
                     TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=10)))
 
 odlayer = generate_matching_origin_destination_layer(roads)
 
-road_db = generate_manhattan_road(10, 100)
+#road_db = generate_manhattan_road(10, 100)
 
 mlgraph = MultiLayerGraph([pblayer],
                           odlayer,
@@ -53,8 +56,8 @@ mlgraph = MultiLayerGraph([pblayer],
 
 # Demand
 
-demand = CSVDemandManager(cwd)
-demand.add_user_observer(CSVUserObserver('user.csv'))
+#demand = CSVDemandManager(cwd)
+#demand.add_user_observer(CSVUserObserver('user.csv'))
 
 # Decison Model
 
@@ -70,11 +73,11 @@ flow_motor = MFDFlowMotor()
 flow_motor.add_reservoir(Reservoir(roads.zones['RES'], ['BUS'], mfdspeed))
 
 supervisor = Supervisor(mlgraph,
-                        demand,
+                        None,
                         flow_motor,
                         decision_model)
 
 supervisor.run(Time("07:00:00"),
-               Time("07:21:10"),
+               Time("08:00:10"),
                Dt(minutes=1),
                1)

@@ -90,8 +90,13 @@ class Supervisor(object):
 
     def get_new_users(self, principal_dt):
         log.info(f'Getting next departures {self.tcurrent}->{self.tcurrent.add_time(principal_dt)} ..')
-        new_users = self._demand.get_next_departures(self.tcurrent, self.tcurrent.add_time(principal_dt))
-        self._demand.construct_user_parameters(new_users)
+
+        new_users=[]
+
+        if self._demand:
+            new_users = self._demand.get_next_departures(self.tcurrent, self.tcurrent.add_time(principal_dt))
+            self._demand.construct_user_parameters(new_users)
+
         log.info(f'Done, {len(new_users)} new departure')
 
         return new_users
@@ -284,8 +289,9 @@ class Supervisor(object):
         if self._write:
             self._outfile.close()
 
-        for obs in self._demand._observers:
-            obs.finish()
+        if self._demand:
+            for obs in self._demand._observers:
+                obs.finish()
 
         for layer in self._mlgraph.layers.values():
             for mservice in layer.mobility_services.values():
