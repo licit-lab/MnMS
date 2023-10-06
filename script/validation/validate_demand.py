@@ -1,34 +1,76 @@
 import os
 import argparse
+import math
+
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from datetime import datetime
 
-
-def validate_demand(file):
+def extract_file(file):
     df_users = pd.read_csv(file, sep=';')
 
+    return df_users
+
+
+def validate_demand(df_users, radius):
     invalid_users_count = 0
+    warning_users_count = 0
 
     for index, user in df_users.iterrows():
         user_valid = True
+        user_warning = False
 
         user_valid = validate_user_id(user)
         user_valid = validate_user_departure_time(user)
         user_valid = validate_user_origin(user)
         user_valid = validate_user_destination(user)
-        user_valid = validate_user_journey(user)
+        user_valid, user_warning = validate_user_journey(user, radius)
 
         if not user_valid:
             print(f"User: {user} invalid")
             invalid_users_count = invalid_users_count + 1
+
+        if user_warning:
+            warning_users_count = warning_users_count + 1
 
     total_users = len(df_users)
     validation = 100 - invalid_users_count * 100 / total_users
 
     print(f"Total number of users: {len(df_users)}")
     print(f"Number of invalid users: {invalid_users_count}")
+    print(f"Number of warning users: {warning_users_count}")
     print(f"Validation : {validation}%")
+
+
+def analyze_demand(df_users):
+
+    user_ms_defined_count = 0
+    for index, user in df_users.iterrows():
+        user_ms_defined = check_user_ms_defined(user)
+
+        if user_ms_defined:
+            user_ms_defined_count = user_ms_defined_count + 1
+
+    print(f"Number of users with at least one mandatory mobility service : {user_ms_defined_count}")
+
+
+def visualize_demand(df_users):
+
+    # Origins
+
+    for index, user in df_users.iterrows():
+        origin = user[2].split(' ')
+        plt.scatter(float(origin[0]), float(origin[1]), color="blue", s=0.1)
+
+    # Destinations
+
+    for index, user in df_users.iterrows():
+        destination = user[3].split(' ')
+        plt.scatter(float(destination[0]), float(destination[1]), color="green", s=0.1)
+
+    plt.show()
+
 
 
 def validate_demand_columns(df_users):
@@ -85,13 +127,10 @@ def validate_user_id(user):
 
     if user[0]:
         user_id = user[0]
-        if not isinstance(user_id, int):
+        if not isinstance(user_id, str):
             print(f"Invalid user id for user: {user[0]}")
             valid = False
-
-        if not user_id > 0:
-            print(f"Invalid user id for user: {user[0]}")
-            valid = False
+            
     else:
         print(f"No id found for user: {user}")
         valid = False
@@ -145,7 +184,24 @@ def validate_user_origin(user):
     valid = True
 
     if user[2]:
-        user_origin = user[2]
+        user_origin = user[2].split(' ')
+
+        if user_origin[0]:
+            if not isinstance(float(user_origin[0]), float):
+                print(f"Invalid user origin x coordinate for user: {user[0]}")
+                valid = False
+        else:
+            print(f"No origin x coordinate found for user: {user[0]}")
+            valid = False
+
+        if user_origin[1]:
+            if not isinstance(float(user_origin[1]), float):
+                print(f"Invalid user origin y coordinate for user: {user[0]}")
+                valid = False
+        else:
+            print(f"No origin y coordinate found for user: {user[0]}")
+            valid = False
+
     else:
         print(f"No origin found for user: {user[0]}")
         valid = False
@@ -169,7 +225,24 @@ def validate_user_destination(user):
     valid = True
 
     if user[3]:
-        user_destination = user[3]
+        user_destination = user[3].split(' ')
+
+        if user_destination[0]:
+            if not isinstance(float(user_destination[0]), float):
+                print(f"Invalid user destination x coordinate for user: {user[0]}")
+                valid = False
+        else:
+            print(f"No destination x coordinate found for user: {user[0]}")
+            valid = False
+
+        if user_destination[1]:
+            if not isinstance(float(user_destination[1]), float):
+                print(f"Invalid user destination y coordinate for user: {user[0]}")
+                valid = False
+        else:
+            print(f"No destination y coordinate found for user: {user[0]}")
+            valid = False
+
     else:
         print(f"No destination found for user: {user[0]}")
         valid = False
@@ -177,7 +250,7 @@ def validate_user_destination(user):
     return valid
 
 
-def validate_user_journey(user):
+def validate_user_journey(user, radius):
     """Validate user journey
 
                     Parameters
@@ -191,12 +264,30 @@ def validate_user_journey(user):
                     """
 
     valid = True
+    warning = False
+
+    origin = user[2].split(' ')
+    destination = user[3].split(' ')
+    distance = math.dist([float(origin[0]), float(origin[1])], [float(destination[0]), float(destination[1])])
 
     if user[2] == user[3]:
         print(f"Warning: origin equals destination for user {user[0]}, origin = destination = {user[2]}")
+        warning = True
 
-    return valid
+    elif distance < radius:
+        print(f"Warning: origin/destination distance lesser than radius {radius}, for user {user[0]}, distance = {distance}")
+        warning = True
 
+    return valid, warning
+
+def check_user_ms_defined(user):
+
+    ms_defined = False
+
+    if user[4]:
+        ms_defined = True
+
+    return ms_defined
 
 def check_user_id_duplicates(users):
     """Validate user id
@@ -215,16 +306,25 @@ def check_user_id_duplicates(users):
 
     return valid
 
+
 def _path_file_type(path):
     if os.path.isfile(path):
         return path
     else:
         raise argparse.ArgumentTypeError(f"{path} is not a valid path")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Validate a CSV demand file for MnMS")
-    parser.add_argument('demand_file', type=_path_file_type, help='Path to the demand csv file')
+    parser.add_argument("demand_file", type=_path_file_type, help="Path to the demand csv file")
+    parser.add_argument("--radius", default=0, type=float, help="Tolerance radius in meters")
+    parser.add_argument("--visualize", default=False, type=bool, help="Visualize demand origin/destination, True or False")
 
     args = parser.parse_args()
 
-    validate_demand(args.demand_file)
+    df_users = extract_file(args.demand_file)
+    validate_demand(df_users, args.radius)
+    analyze_demand(df_users)
+
+    if args.visualize:
+        visualize_demand(df_users)
