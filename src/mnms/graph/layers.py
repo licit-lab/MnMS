@@ -87,7 +87,8 @@ class CarLayer(SimpleLayer):
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescriptor):
         new_obj = cls(roads,
-                      data['DEFAULT_SPEED'])
+                      data['DEFAULT_SPEED'],
+                      _id=data['ID'] )
 
         node_ref = data["MAP_ROADDB"]["NODES"]
         for ndata in data['NODES']:

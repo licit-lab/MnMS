@@ -4,6 +4,7 @@ from mnms.generation.roads import generate_manhattan_road
 from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer
 from mnms.graph.layers import MultiLayerGraph
 from mnms.demand.manager import CSVDemandManager
+from mnms.io.graph import save_graph
 from mnms.log import set_mnms_logger_level, LOGLEVEL, attach_log_file
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.mobility_service.on_demand import OnDemandMobilityService, OnDemandDepotMobilityService
@@ -34,10 +35,12 @@ demand.add_user_observer(CSVUserObserver('user.csv'))
 
 road_db = generate_manhattan_road(3, 100)
 
+obs_veh=CSVVehicleObserver("veh.csv")
 uber = OnDemandDepotMobilityService("UBER", 0)
-uber.attach_vehicle_observer(CSVVehicleObserver("veh.csv"))
+uber.attach_vehicle_observer(obs_veh)
 
-car_service = PersonalMobilityService('perso')
+car_service = PersonalMobilityService('PV')
+car_service.attach_vehicle_observer(obs_veh)
 
 car_layer = generate_layer_from_roads(road_db,
                                       'CAR',
@@ -54,7 +57,7 @@ mlgraph = MultiLayerGraph([car_layer],
 uber.add_depot("CAR_1", capacity=1)
 
 #
-# save_graph(mlgraph, cwd.parent.joinpath('graph.json'))
+#save_graph(mlgraph, cwd.parent.joinpath('graph.json'))
 #
 # load_graph(cwd.parent.joinpath('graph.json'))
 
