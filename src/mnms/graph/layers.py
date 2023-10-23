@@ -349,8 +349,7 @@ class SharedVehicleLayer(AbstractLayer):
                 'VEH_TYPE': ".".join([self._veh_type.__module__, self._veh_type.__name__]),
                 'DEFAULT_SPEED': self.default_speed,
                 'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
-                'STATIONS': [{'ID': s['id'],
-                           'NODE': s['node']} for s in self.stations]}
+                }
 
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescriptor):
@@ -358,9 +357,6 @@ class SharedVehicleLayer(AbstractLayer):
                       data['ID'],
                       load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
-
-        for sdata in data['STATIONS']:
-            new_obj.create_station(sdata['ID'], sdata['NODE'])
 
         for sdata in data['SERVICES']:
             serv_type = load_class_by_module_name(sdata['TYPE'])

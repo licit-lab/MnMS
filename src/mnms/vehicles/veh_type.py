@@ -28,12 +28,16 @@ class VehicleState(Enum):
 
 @dataclass(slots=True)
 class VehicleActivity(ABC):
+
+    # Class attributes
     state: VehicleState
-    node: str
+    node: str               # Node activity (the node is depending on the child class)
     path: _TYPE_PATH = field(default_factory=list)
-    user: "User" = None
-    is_done: bool = False
     iter_path: Generator[_TYPE_ITEM_PATH, None, None] = field(default=None, init=False)
+
+    user: "User" = None
+
+    is_done: bool = False
 
     def __post_init__(self):
         self.reset_path_iterator()

@@ -12,6 +12,7 @@ from mnms.simulation import Supervisor
 from mnms.demand import CSVDemandManager
 from mnms.time import TimeTable, Time, Dt
 from mnms.log import set_mnms_logger_level, LOGLEVEL, attach_log_file
+from mnms.io.graph import save_graph, load_graph
 
 # set_all_mnms_logger_level(LOGLEVEL.WARNING)
 set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
@@ -19,8 +20,10 @@ set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
 # get_logger("mnms.graph.shortest_path").setLevel(LOGLEVEL.WARNING)
 attach_log_file('simulation.log')
 
+mlgraph2=load_graph('mlgraph.json')
+
 # Graph
-road_db = generate_manhattan_road(3, 100)
+road_db = generate_manhattan_road(3, 1000)
 
 # Vehicle sharing mobility service
 velov = OnVehicleSharingMobilityService("velov", 0)
@@ -34,11 +37,13 @@ odlayer = generate_grid_origin_destination_layer(0, 0, 300, 300, 3, 3)
 mlgraph = MultiLayerGraph([velov_layer],odlayer)
 
 # Add stations
-velov.create_station('S1','0',20,5)
+velov.create_station('S1','1',20,5)
 velov.create_station('S2','8',20,0)
 
 # Connect od layer and velov layer
 mlgraph.connect_origindestination_layers(10)
+
+save_graph(mlgraph, 'mlgraph.json')
 
 # Desicion model
 decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
