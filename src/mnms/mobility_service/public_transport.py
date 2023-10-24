@@ -58,7 +58,7 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
         # Modify activity_to_modify
         activity_to_modify.modify_path(activity_to_modify.path[do_ind_inpath:])
         # Insert the new activities and the modified one
-        if ind == 0 and veh.activity is not None and veh.activity.state is not ActivityType.STOP:
+        if ind == 0 and veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
             # Interrupt current activity and insert the new activities plus the
             # modified one
             veh.activity = None

@@ -38,6 +38,7 @@ class VehicleActivity(ABC):
             user: the user linked to the activity
             is_done: indicates if the activity is terminated
             iter_path: the iterator of the path
+
     """
     activity_type: ActivityType
     is_moving: bool
@@ -62,19 +63,21 @@ class VehicleActivity(ABC):
     def done(self, veh: "Vehicle"):
         """Update when the activity is done (abstract method)
 
-        Parameters:
-            veh (Vehicle): The vehicle performing the activity
+            Parameters:
+                veh (Vehicle): The vehicle performing the activities
         """
-        return None
+
+        return
 
     @abstractmethod
     def start(self, veh: "Vehicle"):
         """Update when the activity is started (abstract method)
 
-        Parameters:
-            veh (Vehicle): The vehicle performing the activity
+            Parameters:
+                veh (Vehicle): The vehicle performing the activity
         """
-        return None
+
+        return
 
     def copy(self):
         return self.__class__(deepcopy(self.node),
@@ -91,9 +94,21 @@ class VehicleActivityStop(VehicleActivity):
     is_moving: bool = field(default=False, init=False)
 
     def start(self, veh: "Vehicle"):
-        return None
+        """Update when the activity is started
+
+            Parameters:
+                veh (Vehicle): The vehicle performing the activities
+        """
+
+        return
 
     def done(self, veh: "Vehicle"):
+        """Update when the activity is done
+
+            Parameters:
+                veh (Vehicle): The vehicle performing the activities
+        """
+
         if self.user is not None:
             self.user._vehicle = veh
 
@@ -106,10 +121,22 @@ class VehicleActivityRepositioning(VehicleActivity):
     is_moving: bool = field(default=True, init=False)
 
     def start(self, veh: "Vehicle"):
-        return None
+        """Update when the activity is started
+
+            Parameters:
+                veh (Vehicle): The vehicle performing the activities
+        """
+
+        return
 
     def done(self, veh: "Vehicle"):
-        return None
+        """Update when the activity is done
+
+            Parameters:
+                veh (Vehicle): The vehicle performing the activities
+        """
+
+        return
 
 
 @dataclass(slots=True)
@@ -119,10 +146,22 @@ class VehicleActivityPickup(VehicleActivity):
     is_moving: bool = field(default=True, init=False)
 
     def start(self, veh: "Vehicle"):
+        """Update when the activity is started
+
+            Parameters:
+                veh (Vehicle): The vehicle performing the activities
+        """
+
         self.user._waiting_vehicle = True
         self.user.set_state_waiting_vehicle()
 
     def done(self, veh: "Vehicle"):
+        """Update when the activity is done
+
+            Parameters:
+                veh (Vehicle): The vehicle performing the activities
+        """
+
         self.user._waiting_vehicle = False
         self.user._vehicle = veh
         veh.passengers[self.user.id] = self.user
@@ -136,12 +175,22 @@ class VehicleActivityServing(VehicleActivity):
     is_moving: bool = field(default=True, init=False)
 
     def start(self, veh: "Vehicle"):
+        """Update when the activity is started
+
+            Parameters:
+                veh (Vehicle): The vehicle performing the activities
+        """
         self.user._waiting_vehicle = False
         self.user._vehicle = veh
         veh.passengers[self.user.id] = self.user
         self.user.set_state_inside_vehicle()
 
     def done(self, veh: "Vehicle"):
+        """Update when the activity is done
+
+             Parameters:
+                 veh (Vehicle): The vehicle performing the activities
+         """
         self.user._waiting_vehicle = False
         self.user._vehicle = None
         veh.passengers.pop(self.user.id)
