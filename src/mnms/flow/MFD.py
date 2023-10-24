@@ -14,7 +14,7 @@ from mnms.graph.zone import Zone
 from mnms.log import create_logger
 from mnms.time import Dt, Time
 from mnms.vehicles.manager import VehicleManager
-from mnms.vehicles.veh_type import Vehicle, VehicleState
+from mnms.vehicles.veh_type import Vehicle, ActivityType
 from mnms.graph.layers import PublicTransportLayer
 
 log = create_logger(__name__)
@@ -154,6 +154,13 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         veh.set_position(unode_pos+normalized_direction*travelled)
 
     def move_veh(self, veh: Vehicle, tcurrent: Time, dt: float, speed: float) -> float:
+        """Move a vehicle
+
+            Parameters
+
+            Returns
+        """
+
         dist_travelled = dt*speed
 
         if dist_travelled > veh.remaining_link_length:
@@ -173,8 +180,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             except StopIteration:
                 veh._current_node = veh.current_link[1]
                 veh.next_activity()
-                if veh.state is VehicleState.STOP:
-                    elapsed_time = dt
+                #if veh.is_moving:
+                elapsed_time = dt
             return elapsed_time
         else:
             veh._remaining_link_length -= dist_travelled
@@ -220,7 +227,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 veh.next_activity()
             while veh.activity.is_done:
                 veh.next_activity()
-            if veh.state is not VehicleState.STOP:
+            if veh.is_moving:
                 self.count_moving_vehicle(veh, current_vehicles)
 
         log.info(f"Moving {len(current_vehicles)} vehicles")
@@ -256,7 +263,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
     def finish_vehicle_activities(self, veh: Vehicle):
         elapsed_time = Dt(seconds=veh.remaining_link_length / veh.speed)
-        log.info(f"{veh} finished its activity {veh.state}")
+        log.info(f"{veh} finished its activity {veh.activity_type}")
         veh.update_distance(veh.remaining_link_length)
         veh._remaining_link_length = 0
         veh._current_node = veh._current_link[1]

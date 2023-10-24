@@ -14,12 +14,12 @@ from mnms.time import Time
 log = create_logger(__name__)
 _norm = np.linalg.norm
 
-
 _TYPE_ITEM_PATH = Tuple[Tuple[str, str], float]
 _TYPE_PATH = List[_TYPE_ITEM_PATH]
 
+class ActivityType(Enum):
+    """Enumerate activity types."""
 
-class VehicleState(Enum):
     STOP = 0
     REPOSITIONING = 1
     PICKUP = 2
@@ -28,7 +28,20 @@ class VehicleState(Enum):
 
 @dataclass(slots=True)
 class VehicleActivity(ABC):
-    state: VehicleState
+    """Class representing a vehicle activity.
+
+        Attributes:
+            activity_type (ActivityType): the type of the activity
+            is_moving (bool): indicates if the vehicle moves or not during the activity
+            node (str): the ID of the node (linked to the activity type)
+            path (_TYPE_PATH): the path linked to the activity
+            user: the user linked to the activity
+            is_done: indicates if the activity is terminated
+            iter_path: the iterator of the path
+    """
+    activity_type: ActivityType
+    is_moving: bool
+
     node: str
     path: _TYPE_PATH = field(default_factory=list)
     user: "User" = None
@@ -47,10 +60,20 @@ class VehicleActivity(ABC):
 
     @abstractmethod
     def done(self, veh: "Vehicle"):
+        """Update when the activity is done (abstract method)
+
+        Parameters:
+            veh (Vehicle): The vehicle performing the activity
+        """
         return None
 
     @abstractmethod
     def start(self, veh: "Vehicle"):
+        """Update when the activity is started (abstract method)
+
+        Parameters:
+            veh (Vehicle): The vehicle performing the activity
+        """
         return None
 
     def copy(self):
@@ -62,7 +85,10 @@ class VehicleActivity(ABC):
 
 @dataclass(slots=True)
 class VehicleActivityStop(VehicleActivity):
-    state: VehicleState = field(default=VehicleState.STOP, init=False)
+    """Class representing a no activity."""
+
+    activity_type: ActivityType = field(default=ActivityType.STOP, init=False)
+    is_moving: bool = field(default=False, init=False)
 
     def start(self, veh: "Vehicle"):
         return None
@@ -74,7 +100,10 @@ class VehicleActivityStop(VehicleActivity):
 
 @dataclass(slots=True)
 class VehicleActivityRepositioning(VehicleActivity):
-    state: VehicleState = field(default=VehicleState.REPOSITIONING, init=False)
+    """Class representing a repositionning activity."""
+
+    activity_type: ActivityType = field(default=ActivityType.REPOSITIONING, init=False)
+    is_moving: bool = field(default=True, init=False)
 
     def start(self, veh: "Vehicle"):
         return None
@@ -85,7 +114,9 @@ class VehicleActivityRepositioning(VehicleActivity):
 
 @dataclass(slots=True)
 class VehicleActivityPickup(VehicleActivity):
-    state: VehicleState = field(default=VehicleState.PICKUP, init=False)
+    """Class representing a pick-up activity."""
+    activity_type: ActivityType = field(default=ActivityType.PICKUP, init=False)
+    is_moving: bool = field(default=True, init=False)
 
     def start(self, veh: "Vehicle"):
         self.user._waiting_vehicle = True
@@ -100,7 +131,9 @@ class VehicleActivityPickup(VehicleActivity):
 
 @dataclass(slots=True)
 class VehicleActivityServing(VehicleActivity):
-    state: VehicleState = field(default=VehicleState.SERVING, init=False)
+    """Class representing a serving activity."""
+    activity_type: ActivityType = field(default=ActivityType.SERVING, init=False)
+    is_moving: bool = field(default=True, init=False)
 
     def start(self, veh: "Vehicle"):
         self.user._waiting_vehicle = False
@@ -136,7 +169,7 @@ class Vehicle(TimeDependentSubject):
                  initial_speed: float = 13.8,
                  activities: Optional[List[VehicleActivity]] = None):
         """
-        Class representing a vehicle in the simualtion
+        Class representing a vehicle in the simulation
 
         Args:
             node: The node where the Vehicle is created
@@ -174,7 +207,7 @@ class Vehicle(TimeDependentSubject):
             self.activity: VehicleActivity = self.default_activity()
 
     def __repr__(self):
-        return f"{self.__class__.__name__}('{self._global_id}', '{self.state.name if self.state is not None else None}')"
+        return f"{self.__class__.__name__}('{self._global_id}', '{self.activity_type.name if self.activity_type is not None else None}')"
 
     @property
     def distance(self):
@@ -209,8 +242,12 @@ class Vehicle(TimeDependentSubject):
         return self._position
 
     @property
-    def state(self) -> VehicleState:
-        return self.activity.state if self.activity is not None else None
+    def activity_type(self) -> ActivityType:
+        return self.activity.activity_type if self.activity is not None else None
+
+    @property
+    def is_moving(self) -> bool:
+        return self.activity.is_moving if self.activity is not None else False
 
     def add_activities(self, activities:List[VehicleActivity]):
         for a in activities:
@@ -227,7 +264,7 @@ class Vehicle(TimeDependentSubject):
 
         self.activity = activity
         self.activity.start(self)
-        if activity.state is not VehicleState.STOP:
+        if activity.activity_type is not ActivityType.STOP:
             if activity.path:
                 self._current_link, self._remaining_link_length = next(activity.iter_path)
                 assert self._current_node == self._current_link[0], f"Veh {self.id} current node {self._current_node} is not equal to the next upstream link {self._current_link[0]}"
@@ -240,7 +277,7 @@ class Vehicle(TimeDependentSubject):
         self.activity = next_activity
         self.activity.start(self)
 
-        if last_activity.state is VehicleState.STOP:
+        if last_activity.activity_type is ActivityType.STOP:
             if next_activity.path:
                 self._current_link, self._remaining_link_length = next(next_activity.iter_path)
                 assert self._current_node == self._current_link[0]

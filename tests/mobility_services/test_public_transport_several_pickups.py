@@ -15,7 +15,7 @@ from mnms.time import Time, Dt, TimeTable
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.vehicles.veh_type import Bus
-from mnms.vehicles.veh_type import VehicleState
+from mnms.vehicles.veh_type import ActivityType
 
 
 class TestPublicTransportSeveralPickups(unittest.TestCase):
@@ -108,5 +108,5 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
     def test_buses_arrival(self):
         # Check that buses from id 0 to id 5 have arrived
         for veh in self.supervisor._flow_motor.veh_manager._vehicles.values():
-            self.assertEqual(veh.state, VehicleState.STOP)
+            self.assertEqual(veh.activity_type, ActivityType.STOP)
             self.assertEqual(veh._current_node, 'L0_S5')

@@ -10,7 +10,7 @@ from mnms.time import Dt, Time
 from mnms.tools.cost import create_service_costs
 from mnms.tools.exceptions import VehicleNotFoundError
 from mnms.vehicles.veh_type import VehicleActivityServing, Vehicle, VehicleActivityStop, VehicleActivityRepositioning, \
-    VehicleState, VehicleActivityPickup, VehicleActivity
+    ActivityType, VehicleActivityPickup, VehicleActivity
 
 log = create_logger(__name__)
 
@@ -23,10 +23,10 @@ def _to_nodes(path, veh):
 
 
 def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
-    if veh.activity is not None and veh.activity.state is not VehicleState.STOP:
+    if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
         activities_including_curr = [veh.activity] + [a for a in veh.activities]
         decrement_insert_index = True
-    elif veh.activity is not None and veh.activity.state == VehicleState.STOP:
+    elif veh.activity is not None and veh.activity.activity_type == ActivityType.STOP:
         activities_including_curr = [a for a in veh.activities] + [veh.activity]
         decrement_insert_index = False
     else:
@@ -58,7 +58,7 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
         # Modify activity_to_modify
         activity_to_modify.modify_path(activity_to_modify.path[do_ind_inpath:])
         # Insert the new activities and the modified one
-        if ind == 0 and veh.activity is not None and veh.activity.state is not VehicleState.STOP:
+        if ind == 0 and veh.activity is not None and veh.activity.state is not ActivityType.STOP:
             # Interrupt current activity and insert the new activities plus the
             # modified one
             veh.activity = None
@@ -108,7 +108,7 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
                                             path=pu_path,
                                             user=user)
         activity_to_modify_pu.modify_path(activity_to_modify_pu.path[pu_ind_inpath:])
-        if ind_pu == 0 and veh.activity is not None and veh.activity.state is not VehicleState.STOP:
+        if ind_pu == 0 and veh.activity is not None and veh.activity.state is not ActivityType.STOP:
             # Interrupt current activity and insert the pickup activity plus the
             # modified one
             veh.activity = None
@@ -157,7 +157,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
     def clean_arrived_vehicles(self, lid: str):
         if len(self.vehicles[lid]) > 0:
             first_veh = self.vehicles[lid][-1]
-            if first_veh.state is VehicleActivityStop:
+            if first_veh.activity_type is VehicleActivityStop:
                 log.info(f"Deleting arrived veh: {first_veh}")
                 self.vehicles[lid].pop()
                 self.fleet.delete_vehicle(first_veh.id)
@@ -241,9 +241,9 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         # Get the indexes of veh.activities where pickup and serving activities
         # should be inserted
-        if veh.activity is not None and veh.activity.state is not VehicleState.STOP:
+        if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
             activities_including_curr = [veh.activity] + [a for a in veh.activities]
-        elif veh.activity is not None and veh.activity.state == VehicleState.STOP:
+        elif veh.activity is not None and veh.activity.activity_type == ActivityType.STOP:
             activities_including_curr = [a for a in veh.activities] + [veh.activity]
         else:
             activities_including_curr = [a for a in veh.activities]
@@ -329,11 +329,11 @@ class PublicTransportMobilityService(AbstractMobilityService):
         self.gnodes = self.graph.nodes
         for lid in self.lines:
             for new_veh in self.new_departures(self._tcurrent, dt, lid):
-                # Mark the Stop state to done to start vehicle journey
-                if new_veh.activity.state is VehicleState.STOP:
+                # Mark the Stop activity_type to done to start vehicle journey
+                if new_veh.activity.activity_type is ActivityType.STOP:
                     new_veh.activity.is_done = True
 
-                # If no user are waiting for this bus, switch state to repositioning to end of line
+                # If no user are waiting for this bus, switch activity_type to repositioning to end of line
                 # if not new_veh.activities:
                 #     stop_activity = new_veh.activity
                 #     repo_activity = VehicleActivityRepositioning(stop_activity.node,
