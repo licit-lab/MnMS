@@ -37,7 +37,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
     def create_station(self, id_station:str, node:str, capacity:int, nb_initial_veh: int = 0):
 
-        assert node in self.graph.nodes
+        #assert node in self.graph.nodes
 
         station=Station(id_station,node,capacity)
 
@@ -131,9 +131,14 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         return {"TYPE": ".".join([OnVehicleSharingMobilityService.__module__, OnVehicleSharingMobilityService.__name__]),
                 "DT_MATCHING": self._dt_matching,
                 "VEH_CAPACITY": self._veh_capacity,
-                "ID": self.id}
+                "ID": self.id,
+                'STATIONS': [{'ID': s._id,'NODE': s.node, 'CAPACITY':s.capacity} for s in self.stations.values()]
+                }
 
     @classmethod
     def __load__(cls, data):
         new_obj = cls(data['ID'], data["DT_MATCHING"], data["VEH_CAPACITY"])
+
+        # TODO: stations loading (complex...)
+
         return new_obj
