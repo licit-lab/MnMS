@@ -108,7 +108,7 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
                                             path=pu_path,
                                             user=user)
         activity_to_modify_pu.modify_path(activity_to_modify_pu.path[pu_ind_inpath:])
-        if ind_pu == 0 and veh.activity is not None and veh.activity.state is not ActivityType.STOP:
+        if ind_pu == 0 and veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
             # Interrupt current activity and insert the pickup activity plus the
             # modified one
             veh.activity = None
