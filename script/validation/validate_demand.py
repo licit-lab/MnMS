@@ -55,16 +55,19 @@ def analyze_demand(df_users):
     print(f"First user departure time: {df_users['DEPARTURE'].min()}")
     print(f"Last user departure time: {df_users['DEPARTURE'].max()}")
 
+    user_ms_defined_count = 0
+    ms_occurences = {}
+
     if "MOBILITY SERVICES" in df_users.columns:
-        user_ms_defined_count = 0
         for index, user in df_users.iterrows():
             user_ms_defined = check_user_ms_defined(user)
             if user_ms_defined:
                 user_ms_defined_count = user_ms_defined_count + 1
 
-            ms_occurences = count_ms_occurences(df_users)
-            print(f"Number of users with at least one mandatory mobility service : {user_ms_defined_count}")
-            print(f"Mandatory mobility services and occurences: {ms_occurences}")
+        ms_occurences = count_ms_occurences(df_users)
+
+    print(f"Number of users with at least one mandatory mobility service : {user_ms_defined_count}")
+    print(f"Mandatory mobility services and occurences: {ms_occurences}")
 
 
 def scatter_density(fig, x, y, title):
