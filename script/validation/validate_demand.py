@@ -6,7 +6,7 @@ import mpl_scatter_density
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def extract_file(file):
@@ -89,7 +89,6 @@ def scatter_density(fig, x, y, title):
 
 
 def visualize_demand(df_users):
-
     # Origins
     ox = []
     oy = []
@@ -113,6 +112,29 @@ def visualize_demand(df_users):
 
     fig2 = plt.figure(figsize=(20,12))
     scatter_density(fig2, dx, dy, "Destination coordinates density")
+
+    # Dynamic
+    dnx = []
+    dny = []
+
+    time_format = "%H:%M:%S"
+    df_users["DEPARTURE"] = pd.to_datetime(df_users["DEPARTURE"], format=time_format)
+    df_users = df_users.set_index(pd.DatetimeIndex(df_users["DEPARTURE"]))
+
+    start_time = df_users["DEPARTURE"].min()
+    end_time = df_users["DEPARTURE"].max()
+
+    time_cur = start_time
+    while time_cur < end_time:
+        time_inc = time_cur + timedelta(minutes=0, seconds=59)
+        user_range = df_users.between_time(time_cur.time(), time_inc.time())
+        dnx.append(time_cur)
+        dny.append(len(user_range))
+        time_cur = time_inc + timedelta(seconds=1)
+
+    fig3 = plt.figure(figsize=(20,12))
+    fig3.suptitle("Demand dynamic")
+    plt.plot(dnx, dny)
 
     plt.show()
 
