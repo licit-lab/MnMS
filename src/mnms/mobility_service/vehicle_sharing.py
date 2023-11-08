@@ -53,6 +53,8 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         self.stations[id_station]=station
 
         self.layer.stations.append({'id': id_station, 'node': node, 'position': self.layer.roads.nodes[node].position})
+
+        # TO DO: 2 stations may be on the same node (free-floating stations)
         self.map_node_station[node]=id_station
 
     def remove_station(self, id_station:str):
