@@ -35,6 +35,7 @@ class AbstractLayer(CostFunctionLayer):
         Args:
             roads: The road object used to construct the graph
             id: The id of the layer
+            ml_parent_graph : The multi-layer parent graph
             veh_type: The type of the vehicle on the layer
             default_speed: The default speed of the vehicle on the layer
             services: The services that used the layer
@@ -42,6 +43,7 @@ class AbstractLayer(CostFunctionLayer):
         """
         super(AbstractLayer, self).__init__()
         self._id: str = id
+
         self.graph: OrientedGraph = OrientedGraph()
         self.roads: RoadDescriptor = roads
 

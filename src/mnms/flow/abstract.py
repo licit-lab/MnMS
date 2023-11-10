@@ -5,8 +5,7 @@ import csv
 
 from mnms.graph.zone import Zone
 from mnms.time import Time, Dt
-from mnms.graph.layers import MultiLayerGraph
-
+from mnms.graph.multilayer_graph import MultiLayerGraph
 
 class AbstractReservoir(ABC):
     def __init__(self, zone: Zone, modes: List[str]):

@@ -11,18 +11,21 @@ from mnms.vehicles.veh_type import VehicleState, VehicleActivityStop, VehicleAct
 
 log = create_logger(__name__)
 
+
 class Station(TimeDependentSubject):
 
     def __init__(self,
                  _id: str,
                  node: str,
                  capacity: int,
-                 free_floating: bool=False):
-
+                 free_floating: bool = False):
         self._id = _id
         self.node = node
         self.capacity = capacity
         self.free_floating = free_floating
+
+        self.waiting_vehicles = []
+
 
 class OnVehicleSharingMobilityService(AbstractMobilityService):
 
@@ -32,48 +35,100 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
                  dt_step_maintenance: int = 0):
         super(OnVehicleSharingMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
 
-        self.stations=dict()
-        self.map_node_station=dict()
+        self.stations = dict()
+        self.map_node_station = dict()
 
-    def create_station(self, id_station:str, node:str, capacity:int, nb_initial_veh: int = 0):
+    def create_station(self, id_station: str, node: str, capacity: int, nb_initial_veh: int = 0, free_floating=False) \
+            -> Station:
 
-        #assert node in self.graph.nodes
+        # assert node in self.graph.nodes
 
-        station=Station(id_station,node,capacity)
+        station = Station(id_station, node, capacity, free_floating)
 
         for v in range(nb_initial_veh):
             v = self.fleet.create_vehicle(node,
-                                        capacity=self._veh_capacity,
-                                        activities=[VehicleActivityStop(node=node)])
+                                          capacity=self._veh_capacity,
+                                          activities=[VehicleActivityStop(node=node)])
             v.set_position(self.graph.nodes[node].position)
+            station.waiting_vehicles.append(v)
 
             if self._observer is not None:
                 v.attach(self._observer)
 
-        self.stations[id_station]=station
+        self.stations[id_station] = station
 
         self.layer.stations.append({'id': id_station, 'node': node, 'position': self.layer.roads.nodes[node].position})
 
         # TO DO: 2 stations may be on the same node (free-floating stations)
-        self.map_node_station[node]=id_station
+        self.map_node_station[node] = id_station
 
-    def remove_station(self, id_station:str):
+        return station
 
-        self.stations=[x for x in self.stations if not (id_station == x.get('id'))]
+    def remove_station(self, id_station: str):
+
+        self.stations = [x for x in self.stations if not (id_station == x.get('id'))]
         self.map_node_station.pop(self.stations[id_station].node)
 
-        # TODO : remove transit links ?
+        # TODO : remove transit links
 
-    def available_vehicles(self, id_station:str):
+    def init_free_floating_vehicles(self, id_node: str, nb_veh: int):
+        """
+        Create the vehicles and the corresponding free-floating station
+
+        Parameters
+        ----------
+        id_node: Node where the vehicles are
+        nb_veh: Number of shared vehicles to be created at this node
+
+        """
+        id_station = 'ff_station_' + self.id + '_' + id_node
+        self.create_station(id_station, id_node, nb_veh, nb_veh, True)
+
+    def create_free_floating_station(self, veh: Vehicle):
+        """
+        Create the free floating station corresponding to the vehicle
+
+        Parameters
+        ----------
+        veh: Vehicle
+
+        Returns
+        -------
+
+        """
+        assert (veh.state == 'STOP')
+
+        id_station = 'ff_station_' + self.id + '_' + veh.current_node
+
+        if id_station in self.stations.keys:
+            self.stations[id_station].waiting_vehicles.append(veh)
+        else:
+            station = self.create_station(id_station, veh.current_node, 1, 0, True)
+            station.waiting_vehicles.append(veh)
+
+    def available_vehicles(self, id_station: str):
 
         assert id_station in self.stations
 
-        node=self.stations[id_station].node
+        node = self.stations[id_station].node
 
-        return [v.id for v in self.fleet.vehicles.values() if (node==v.current_node and v.state==VehicleState.STOP)]
+        return [v.id for v in self.fleet.vehicles.values() if (node == v.current_node and v.state == VehicleState.STOP)]
 
     def step_maintenance(self, dt: Dt):
-        pass
+
+        # TO DO: optimisation (not manage all the vehicle)
+        for veh in self.fleet.vehicles.values():
+            if veh.state is VehicleState.STOP:
+                _current_node = veh.current_node
+
+                if self.map_node_station.get(_current_node):
+                    station_id = self.map_node_station[_current_node]
+
+                    if veh not in self.stations[station_id].waiting_vehicles:
+                        self.stations[station_id].waiting_vehicles.append(veh)
+                else:
+                    if self.free_floating_possible:
+                        self.create_free_floating_station(veh)
 
     def periodic_maintenance(self, dt: Dt):
         pass
@@ -90,10 +145,10 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
                 """
         uid = user.id
 
-        station=self.map_node_station[user.current_node]
+        station = self.map_node_station[user.current_node]
         vehs = self.available_vehicles(station)
 
-        if len(vehs)>0:
+        if len(vehs) > 0:
             choosen_veh = vehs[0]
             self._cache_request_vehicles[uid] = choosen_veh, ''
             service_dt = Dt()
@@ -120,6 +175,14 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         self.fleet.vehicles[veh].next_activity()
         user.set_state_inside_vehicle()
 
+        station = self.map_node_station[user._current_node]
+        # Delete the vehicle from the waiting vehicle list
+        station.waiting_vehicles.remove(veh)
+
+        # Delete the station if it is free-floating and empty
+        if station.free_floating and len(station.waiting_vehicles) == 0:
+            self.remove_station(station.id)
+
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
         pass
 
@@ -130,12 +193,13 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         return create_service_costs()
 
     def __dump__(self):
-        return {"TYPE": ".".join([OnVehicleSharingMobilityService.__module__, OnVehicleSharingMobilityService.__name__]),
-                "DT_MATCHING": self._dt_matching,
-                "VEH_CAPACITY": self._veh_capacity,
-                "ID": self.id,
-                'STATIONS': [{'ID': s._id,'NODE': s.node, 'CAPACITY':s.capacity} for s in self.stations.values()]
-                }
+        return {
+            "TYPE": ".".join([OnVehicleSharingMobilityService.__module__, OnVehicleSharingMobilityService.__name__]),
+            "DT_MATCHING": self._dt_matching,
+            "VEH_CAPACITY": self._veh_capacity,
+            "ID": self.id,
+            'STATIONS': [{'ID': s._id, 'NODE': s.node, 'CAPACITY': s.capacity} for s in self.stations.values()]
+            }
 
     @classmethod
     def __load__(cls, data):

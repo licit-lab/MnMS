@@ -3,7 +3,8 @@ from mnms.generation.roads import generate_manhattan_road
 from mnms.mobility_service.vehicle_sharing import OnVehicleSharingMobilityService
 from mnms.tools.observer import CSVVehicleObserver, CSVUserObserver
 from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer
-from mnms.graph.layers import MultiLayerGraph, SharedVehicleLayer
+from mnms.graph.layers import SharedVehicleLayer
+from mnms.graph.multilayer_graph import MultiLayerGraph
 from mnms.vehicles.veh_type import Bike
 from mnms.generation.demand import generate_random_demand
 from mnms.travel_decision.dummy import DummyDecisionModel
@@ -41,7 +42,7 @@ velov.create_station('S1','1',20,5)
 velov.create_station('S2','8',20,0)
 
 # Connect od layer and velov layer
-mlgraph.connect_origindestination_layers(10)
+mlgraph.connect_origindestination_layers(1000)
 
 save_graph(mlgraph, 'mlgraph.json')
 

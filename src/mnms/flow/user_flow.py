@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 
-from mnms.graph.layers import MultiLayerGraph
+from mnms.graph.multilayer_graph import MultiLayerGraph
 from mnms.demand.user import User, UserState
 # from mnms.graph.core import ConnectionLink, TransitLink
 from mnms.time import Dt, Time
