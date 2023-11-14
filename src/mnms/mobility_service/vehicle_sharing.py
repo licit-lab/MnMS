@@ -175,7 +175,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         self.fleet.vehicles[veh].next_activity()
         user.set_state_inside_vehicle()
 
-        station = self.map_node_station[user._current_node]
+        station = self.stations[self.map_node_station[user._current_node]]
         # Delete the vehicle from the waiting vehicle list
         station.waiting_vehicles.remove(veh)
 

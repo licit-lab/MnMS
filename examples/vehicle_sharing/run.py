@@ -21,7 +21,7 @@ set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
 # get_logger("mnms.graph.shortest_path").setLevel(LOGLEVEL.WARNING)
 attach_log_file('simulation.log')
 
-mlgraph2=load_graph('mlgraph.json')
+#mlgraph2=load_graph('mlgraph.json')
 
 # Graph
 road_db = generate_manhattan_road(3, 1000)
@@ -32,17 +32,17 @@ velov = OnVehicleSharingMobilityService("velov", 0)
 velov_layer = SharedVehicleLayer(road_db, 'velov_layer', Bike, 3, services=[velov], observer=CSVVehicleObserver("velov.csv"))
 
 # OD layer
-odlayer = generate_grid_origin_destination_layer(0, 0, 300, 300, 3, 3)
+odlayer = generate_grid_origin_destination_layer(-1000, -1000, 3000, 3000, 5, 5)
 
 # Multilayer graph
 mlgraph = MultiLayerGraph([velov_layer],odlayer)
 
 # Add stations
-velov.create_station('S1','1',20,5)
-velov.create_station('S2','8',20,0)
+velov.create_station('S1','2',20,5)
+velov.create_station('S2','SOUTH_2',20,0)
 
 # Connect od layer and velov layer
-mlgraph.connect_origindestination_layers(1000)
+mlgraph.connect_origindestination_layers(500)
 
 save_graph(mlgraph, 'mlgraph.json')
 
