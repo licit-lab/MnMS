@@ -115,8 +115,9 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
             # Modify length to travel on the first link of pu_activity.path with
             # current remaining_link_length to prevent restarting the travel of
             # this link
-            pu_activity.path[0] = (pu_activity.path[0][0], veh._remaining_link_length)
-            pu_activity.reset_path_iterator()
+            if pu_activity.path:
+                pu_activity.path[0] = (pu_activity.path[0][0], veh._remaining_link_length)
+                pu_activity.reset_path_iterator()
             for a in reversed([pu_activity, activity_to_modify_pu]):
                 if decrement_insert_index:
                     veh.activities.insert(max(0, ind_pu-1), a)
@@ -262,7 +263,6 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
     def estimation_pickup_time(self, user: User, veh: Vehicle, line: dict):
         user_node = user._current_node
-        veh_node = veh._current_node
         veh_link_borders = veh.current_link
         veh_link_length = self.gnodes[veh_link_borders[0]].adj[veh_link_borders[1]].length
         veh_remaining_length = veh.remaining_link_length
@@ -270,7 +270,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         line_stops = line["nodes"]
         ind_user = line_stops.index(user_node)
-        ind_veh = line_stops.index(veh_node)
+        ind_veh = line_stops.index(veh_link_borders[0])
 
         path = line_stops[ind_veh:ind_user+1]
         dist = 0
