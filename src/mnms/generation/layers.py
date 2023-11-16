@@ -14,7 +14,9 @@ def generate_layer_from_roads(roads: RoadDescriptor,
                               layer_id: str,
                               veh_type:Type[Vehicle] = Car,
                               default_speed: float = 14,
-                              mobility_services: Optional[List[AbstractMobilityService]] = None) -> AbstractLayer:
+                              mobility_services: Optional[List[AbstractMobilityService]] = None,
+                              banned_nodes: List[str] = None,
+                              banned_sections: List[str] = None) -> AbstractLayer:
     """
     Generate a whole layer from the RoadDescriptor.
 
@@ -24,6 +26,10 @@ def generate_layer_from_roads(roads: RoadDescriptor,
         veh_type: the type of vehicle
         default_speed: the default speed
         mobility_services: the mobility services on the generated layer
+        banned_nodes: specifies the list of nodes for which no layer node should
+                      be created
+        banned_sections: specifies the list of sections for which no layer link
+                         should be created
 
     Returns:
         The generated Layer
@@ -33,17 +39,19 @@ def generate_layer_from_roads(roads: RoadDescriptor,
     layer = SimpleLayer(roads, layer_id, veh_type, default_speed, mobility_services)
 
     for n in roads.nodes:
-        layer.create_node(f"{layer_id}_{n}", n, {})
+        if banned_nodes is None or (banned_nodes is not None and n not in banned_nodes):
+            layer.create_node(f"{layer_id}_{n}", n, {})
 
     for lid, data in roads.sections.items():
-        cost = {}
-        if mobility_services is not None:
-            for mservice in mobility_services:
-                cost[mservice.id] = {'length': data.length}
-        else:
-            cost["_DEFAULT"] = {'length': data.length}
+        if banned_sections is None or (banned_sections is not None and lid not in banned_sections):
+            cost = {}
+            if mobility_services is not None:
+                for mservice in mobility_services:
+                    cost[mservice.id] = {'length': data.length}
+            else:
+                cost["_DEFAULT"] = {'length': data.length}
 
-        layer.create_link(f"{layer_id}_{lid}",
+            layer.create_link(f"{layer_id}_{lid}",
                           f"{layer_id}_{data.upstream}",
                           f"{layer_id}_{data.downstream}",
                           cost,
