@@ -21,8 +21,6 @@ set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
 # get_logger("mnms.graph.shortest_path").setLevel(LOGLEVEL.WARNING)
 attach_log_file('simulation.log')
 
-#mlgraph2=load_graph('mlgraph.json')
-
 # Graph
 road_db = generate_manhattan_road(3, 1000)
 
@@ -43,8 +41,6 @@ velov.create_station('S2','SOUTH_2',20,0)
 
 # Connect od layer and velov layer
 mlgraph.connect_origindestination_layers(500)
-
-save_graph(mlgraph, 'mlgraph.json')
 
 # Desicion model
 decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
@@ -67,7 +63,7 @@ supervisor = Supervisor(mlgraph,
                          decision_model)
 
 supervisor.run(Time("07:00:00"),
-                Time("08:00:00"),
+                Time("09:00:00"),
                 Dt(minutes=1),
                 10)
 

@@ -159,7 +159,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
     def matching(self, user: User, drop_node: str):
 
-        veh, veh_path = self._cache_request_vehicles[user.id]
+        veh_id, veh_path = self._cache_request_vehicles[user.id]
         upath = list(user.path.nodes)
         upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
         user_path = self.construct_veh_path(upath)
@@ -171,8 +171,9 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
                                    user=user)
         ]
 
-        self.fleet.vehicles[veh].add_activities(activities)
-        self.fleet.vehicles[veh].next_activity()
+        veh=self.fleet.vehicles[veh_id]
+        veh.add_activities(activities)
+        veh.next_activity()
         user.set_state_inside_vehicle()
 
         station = self.stations[self.map_node_station[user._current_node]]
