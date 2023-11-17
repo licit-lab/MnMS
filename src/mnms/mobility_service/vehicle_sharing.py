@@ -31,10 +31,12 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
     def __init__(self,
                  _id: str,
+                 free_floating_possible: bool,
                  dt_matching: int,
                  dt_step_maintenance: int = 0):
         super(OnVehicleSharingMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
 
+        self.free_floating_possible = free_floating_possible
         self.stations = dict()
         self.map_node_station = dict()
 
@@ -66,8 +68,8 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
     def remove_station(self, id_station: str):
 
-        self.stations = [x for x in self.stations if not (id_station == x.get('id'))]
         self.map_node_station.pop(self.stations[id_station].node)
+        del (self.stations[id_station])
 
         # TODO : remove transit links
 
@@ -96,11 +98,9 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         -------
 
         """
-        assert (veh.state == 'STOP')
-
         id_station = 'ff_station_' + self.id + '_' + veh.current_node
 
-        if id_station in self.stations.keys:
+        if id_station in self.stations.keys():
             self.stations[id_station].waiting_vehicles.append(veh)
         else:
             station = self.create_station(id_station, veh.current_node, 1, 0, True)
@@ -182,7 +182,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
         # Delete the station if it is free-floating and empty
         if station.free_floating and len(station.waiting_vehicles) == 0:
-            self.remove_station(station.id)
+            self.remove_station(station._id)
 
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
         pass

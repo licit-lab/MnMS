@@ -308,6 +308,9 @@ class SharedVehicleLayer(AbstractLayer):
         """
         transit_links = []
 
+        if len(self.stations) == 0:
+            return transit_links        # Nothing to do
+
         assert odlayer is not None
 
         _norm = np.linalg.norm
@@ -316,7 +319,7 @@ class SharedVehicleLayer(AbstractLayer):
         odlayer_nodes.update(odlayer.origins.keys())
         odlayer_nodes.update(odlayer.destinations.keys())
 
-        #graph_node_ids = np.array([s['id'] for s in self.stations])
+        # Origins to link to the stations
         graph_node_ids = np.array([s['node'] for s in self.stations])
         graph_node_pos = np.array([s['position'] for s in self.stations])
 
@@ -329,6 +332,12 @@ class SharedVehicleLayer(AbstractLayer):
                     lid = f"{nid}_{layer_nid}"
                     transit_links.append(
                         {'id': lid, 'upstream_node': nid, 'downstream_node': layer_nid, 'dist': dist})
+
+        # Destinations to link to the stations or to all the nodes
+        if list(self.mobility_services.values())[0].free_floating_possible:   # each node must be considered
+            graph_nodes = self.graph.nodes
+            graph_node_ids = np.array([nid for nid in graph_nodes])
+            graph_node_pos = np.array([n.position for n in graph_nodes.values()])
 
         for nid in odlayer.destinations:
             npos = np.array(odlayer.destinations[nid])

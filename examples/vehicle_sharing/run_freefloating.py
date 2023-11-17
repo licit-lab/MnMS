@@ -22,22 +22,22 @@ set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
 attach_log_file('simulation.log')
 
 # Graph
-road_db = generate_manhattan_road(3, 1000)
+road_db = generate_manhattan_road(5, 1000, prefix='I_')
 
 # Vehicle sharing mobility service
-velov = OnVehicleSharingMobilityService("velov", 0, 1)
+ff_velov = OnVehicleSharingMobilityService("ff_velov", 1, 1)
 
-velov_layer = SharedVehicleLayer(road_db, 'velov_layer', Bike, 3, services=[velov], observer=CSVVehicleObserver("velov.csv"))
+velov_layer = SharedVehicleLayer(road_db, 'velov_layer', Bike, 3, services=[ff_velov], observer=CSVVehicleObserver("velov.csv"))
 
 # OD layer
+#odlayer = generate_grid_origin_destination_layer(-1000, -1000, 6000, 6000, 10, 10)
 odlayer = generate_grid_origin_destination_layer(-1000, -1000, 3000, 3000, 5, 5)
 
 # Multilayer graph
 mlgraph = MultiLayerGraph([velov_layer],odlayer)
 
-# Add stations
-velov.create_station('S1','2',20,5)
-velov.create_station('S2','SOUTH_2',20,0)
+# Add free-floating vehicle
+ff_velov.init_free_floating_vehicles('I_2',1)
 
 # Connect od layer and velov layer
 mlgraph.connect_origindestination_layers(500)
