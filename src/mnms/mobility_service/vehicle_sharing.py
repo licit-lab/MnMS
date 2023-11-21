@@ -71,7 +71,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         self.map_node_station.pop(self.stations[id_station].node)
         del (self.stations[id_station])
 
-        # TODO : remove transit links
+        self.layer.disconnect_station(id_station)
 
     def init_free_floating_vehicles(self, id_node: str, nb_veh: int):
         """
@@ -145,7 +145,11 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
                 """
         uid = user.id
 
-        station = self.map_node_station[user.current_node]
+        if user.current_node in self.map_node_station:
+            station = self.map_node_station[user.current_node]
+        else:
+            return Dt(hours=24)
+
         vehs = self.available_vehicles(station)
 
         if len(vehs) > 0:

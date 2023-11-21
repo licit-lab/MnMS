@@ -45,6 +45,8 @@ class AbstractLayer(CostFunctionLayer):
         self._id: str = id
 
         self.graph: OrientedGraph = OrientedGraph()
+        self._parent_graph: OrientedGraph = OrientedGraph()
+
         self.roads: RoadDescriptor = roads
 
         self._default_speed: float = default_speed
@@ -127,6 +129,14 @@ class AbstractLayer(CostFunctionLayer):
     @property
     def vehicle_type(self):
         return self._veh_type.__name__
+
+    @property
+    def parent_graph(self):
+        return self._parent_graph
+
+    @parent_graph.setter
+    def parent_graph(self, value):
+        self._parent_graph = value
 
     @abstractmethod
     def __dump__(self):

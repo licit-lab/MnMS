@@ -32,6 +32,9 @@ class MultiLayerGraph(object):
         """
         self.graph: OrientedGraph = merge_oriented_graph([l.graph for l in layers])
 
+        for l in layers:
+            l.parent_graph = self.graph
+
         self.layers = dict()
 
         self.mapping_layer_services = dict()
@@ -237,4 +240,3 @@ class MultiLayerGraph(object):
         else:
             for mservice in mservices:
                 layer.add_cost_function(mservice, cost_name, cost_function)
-

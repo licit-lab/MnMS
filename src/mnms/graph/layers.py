@@ -402,11 +402,12 @@ class SharedVehicleLayer(AbstractLayer):
         -------
         the node id to disconnet from origin nodes
         """
-        node_id = next((item for item in self.stations if item["id"] == station_id), None)['node_id']
+        for s in self.stations:
+            if s['id'] == station_id:
+                self.parent_graph.delete_all_links_to_node(s['node'])
+                return s['node']
 
-        #self.ml_parent_graph.delete_origin_transit_links(node_id, self)
-
-        return node_id
+        return
 
     def __dump__(self):
         return {'ID': self.id,
