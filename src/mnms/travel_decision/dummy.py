@@ -1,6 +1,6 @@
 from typing import List
 
-from mnms.graph.multilayer_graph import MultiLayerGraph
+from mnms.graph.layers import MultiLayerGraph
 from mnms.demand.user import Path
 from mnms.travel_decision.abstract import AbstractDecisionModel
 

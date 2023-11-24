@@ -2,7 +2,7 @@ from typing import Optional, Type, List
 
 import numpy as np
 
-from mnms.graph.abstract import AbstractLayer
+from mnms.graph.layers import AbstractLayer
 from mnms.graph.layers import OriginDestinationLayer, SimpleLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.abstract import AbstractMobilityService

@@ -9,7 +9,7 @@ import numpy as np
 
 from mnms.demand import User
 from mnms.graph.dynamic_space_sharing import DynamicSpaceSharing
-from mnms.graph.multilayer_graph import MultiLayerGraph
+from mnms.graph.layers import MultiLayerGraph
 from mnms.flow.abstract import AbstractMFDFlowMotor
 from mnms.flow.user_flow import UserFlow
 from mnms.demand.manager import AbstractDemandManager

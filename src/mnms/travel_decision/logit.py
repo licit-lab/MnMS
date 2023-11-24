@@ -7,7 +7,7 @@ from numpy.random import choice as _choice
 from mnms import create_logger
 from mnms.demand.user import Path
 from mnms.travel_decision.abstract import AbstractDecisionModel
-from mnms.graph.multilayer_graph import MultiLayerGraph
+from mnms.graph.layers import MultiLayerGraph
 
 
 log = create_logger(__name__)
