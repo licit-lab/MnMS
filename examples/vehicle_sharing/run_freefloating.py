@@ -41,6 +41,8 @@ ff_velov.init_free_floating_vehicles('I_2',1)
 # Connect od layer and velov layer
 mlgraph.connect_origindestination_layers(500)
 
+save_graph(mlgraph, 'free_floating_example.json')
+
 # Desicion model
 decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
 

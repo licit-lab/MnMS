@@ -4,7 +4,7 @@ from typing import List, Union, Protocol, runtime_checkable, Iterable
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-from mnms.graph.abstract import AbstractLayer
+from mnms.graph.layers import AbstractLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.parking_service.depot import Depot
 from mnms.vehicles.veh_type import Vehicle, VehicleState

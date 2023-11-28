@@ -13,7 +13,7 @@ from mnms.mobility_service.public_transport import PublicTransportMobilityServic
 import os
 import json
 
-param_file_path = "data/param.json"
+param_file_path = "/param.json"
 param_file = open(os.getcwd() + param_file_path, 'r')
 param_json = json.load(param_file)
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     odlayer = generate_matching_origin_destination_layer(mmgraph.roads)
     mmgraph.add_origin_destination_layer(odlayer)
-    mmgraph.connect_origin_destination_layer(1e-3)
+    mmgraph.connect_origindestination_layers(1e-3)
 
     personal_car = PersonalMobilityService()
     personal_car.attach_vehicle_observer(CSVVehicleObserver(outdir+vehicle_file))

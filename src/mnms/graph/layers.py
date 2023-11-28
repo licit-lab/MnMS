@@ -210,6 +210,17 @@ class MultiLayerGraph(object):
             if connection_distance is not None:
                 self.connect_origindestination_layers(connection_distance)
 
+    def add_transit_links(self, transit_links):
+
+        for tl in transit_links:
+            self.graph.add_link(tl['id'], tl['upstream_node'], tl['downstream_node'], tl['dist'],
+                                {"WALK": {'length': tl['dist']}}, "TRANSIT")
+            self.map_linkid_layerid[tl['id']] = "TRANSIT"
+            # Add the transit link into the transit layer
+            up_layer = self.graph.nodes[tl['upstream_node']].label
+            down_layer = self.graph.nodes[tl['downstream_node']].label
+            self.transitlayer.add_link(tl['id'], up_layer, down_layer)
+
     def add_origin_destination_layer(self, odlayer: OriginDestinationLayer):
         self.odlayer = odlayer
 
@@ -227,16 +238,8 @@ class MultiLayerGraph(object):
 
         for l in self.layers:
             transit_links = self.layers[l].connect_origindestination(self.odlayer, connection_distance)
-            for tl in transit_links:
-                self.graph.add_link(tl['id'], tl['upstream_node'], tl['downstream_node'], tl['dist'], {"WALK": {'length': tl['dist']}}, "TRANSIT")
-                self.map_linkid_layerid[tl['id']] = "TRANSIT"
-                # Add the transit link into the transit layer
-                up_layer = self.graph.nodes[tl['upstream_node']].label
-                down_layer = self.graph.nodes[tl['downstream_node']].label
-                self.transitlayer.add_link(tl['id'], up_layer, down_layer)
+            self.add_transit_links(transit_links)
 
-        dictgraph = graph_to_dict(self.graph)
-        print(dictgraph)
     def connect_intra_layer(self, layer_id: str, connection_distance: float):
         """
                 Connects by a transit link each node of a layer to the others within a predefined radius
@@ -392,6 +395,17 @@ class MultiLayerGraph(object):
         else:
             for mservice in mservices:
                 layer.add_cost_function(mservice, cost_name, cost_function)
+
+    def add_transit_links(self, transit_links):
+
+        for tl in transit_links:
+            self.graph.add_link(tl['id'], tl['upstream_node'], tl['downstream_node'], tl['dist'],
+                                {"WALK": {'length': tl['dist']}}, "TRANSIT")
+            self.map_linkid_layerid[tl['id']] = "TRANSIT"
+            # Add the transit link into the transit layer
+            up_layer = self.graph.nodes[tl['upstream_node']].label
+            down_layer = self.graph.nodes[tl['downstream_node']].label
+            self.transitlayer.add_link(tl['id'], up_layer, down_layer)
 
 class TransitLayer(CostFunctionLayer):
     def __init__(self):
@@ -670,8 +684,6 @@ class SharedVehicleLayer(AbstractLayer):
             self.map_reference_links[l]=[]
             self.map_reference_links[l].append(roads.sections[l].id)
 
-        dictgraph = graph_to_dict(self.graph)
-        print(dictgraph)
     def connect_origindestination(self, odlayer: OriginDestinationLayer, connection_distance: float):
         """
         Connects the origin destination layer to a shared vehicle layer (only the stations are linked to the origin
@@ -698,7 +710,7 @@ class SharedVehicleLayer(AbstractLayer):
         odlayer_nodes.update(odlayer.destinations.keys())
 
         # Origins to link to the stations
-        graph_node_ids = np.array([s['node'] for s in self.stations])
+        graph_node_ids = np.array([s['node_id'] for s in self.stations])
         graph_node_pos = np.array([s['position'] for s in self.stations])
 
         for nid in odlayer.origins:
@@ -758,15 +770,16 @@ class SharedVehicleLayer(AbstractLayer):
 
         for nid in odlayer.origins:
             npos = np.array(odlayer.origins[nid])
-            dist_nodes = _norm(pos - npos, axis=1)
-            mask = dist_nodes < connection_distance
-            for layer_nid, dist in zip(node_id[mask], dist_nodes[mask]):
-                if layer_nid not in odlayer_nodes:
-                    lid = f"{nid}_{layer_nid}"
+            dist_node = _norm(pos - npos)
+            if dist_node < connection_distance:
+                if node_id not in odlayer_nodes:
+                    lid = f"{nid}_{node_id}"
                     transit_links.append(
-                        {'id': lid, 'upstream_node': nid, 'downstream_node': layer_nid, 'dist': dist})
+                        {'id': lid, 'upstream_node': nid, 'downstream_node': node_id, 'dist': dist_node})
 
-        return transit_links
+        self._multi_graph.add_transit_links(transit_links)
+
+        return
 
     def disconnect_station(self, station_id: str):
         """
@@ -783,14 +796,15 @@ class SharedVehicleLayer(AbstractLayer):
         for s in self.stations:
             if s['id'] == station_id:
 
-                self.multi_graph.graph.delete_all_links_to_node(s['node'])
+                for layer_id in self.multi_graph.transitlayer.links.keys():
+                    for link_id in self.multi_graph.transitlayer.links[layer_id][self._id]:
+                        if link_id[-len(s['node_id']):] == s['node_id']:
+                            self.multi_graph.graph.delete_link(link_id)
+                            self.multi_graph.transitlayer.links[layer_id][self._id].remove(link_id)
+                            del self.multi_graph.map_linkid_layerid[link_id]
 
-                for l in self.multi_graph.transitlayer.links['ODLAYER'][self._id]:
-                    if l[-len(s['node']):] == s['node']:
-                        self.multi_graph.transitlayer.links['ODLAYER'][self._id].remove(l)
-                        del self.multi_graph.map_linkid_layerid[l]
-
-                return s['node']
+                self.stations.remove(s)
+                return s['node_id']
 
         return
 

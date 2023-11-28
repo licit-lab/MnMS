@@ -59,7 +59,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
         self.stations[id_station] = station
 
-        self.layer.stations.append({'id': id_station, 'node': node, 'position': self.layer.roads.nodes[node].position})
+        self.layer.stations.append({'id': id_station, 'node_id': node, 'position': self.layer.roads.nodes[node].position})
 
         # TO DO: 2 stations may be on the same node (free-floating stations)
         self.map_node_station[node] = id_station
@@ -105,6 +105,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         else:
             station = self.create_station(id_station, veh.current_node, 1, 0, True)
             station.waiting_vehicles.append(veh)
+            self.layer.connect_station(id_station, self.layer._multi_graph.odlayer, 500)
 
     def available_vehicles(self, id_station: str):
 
@@ -208,7 +209,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
     @classmethod
     def __load__(cls, data):
-        new_obj = cls(data['ID'], data["DT_MATCHING"], data["VEH_CAPACITY"])
+        new_obj = cls(data['ID'], data["DT_MATCHING"], data["VEH_CAPACITY"],data['STATIONS'])
 
         # TODO: stations loading (complex...)
 
