@@ -659,7 +659,7 @@ class PublicTransportLayer(AbstractLayer):
         return new_obj
 
 class SharedVehicleLayer(AbstractLayer):
-    def    __init__(self,
+    def __init__(self,
                  roads: RoadDescriptor,
                  _id: str,
                  veh_type: Type[Vehicle],
@@ -670,19 +670,25 @@ class SharedVehicleLayer(AbstractLayer):
 
         self.stations = []
 
-        for n in roads.nodes:
-            nid=roads.nodes[n].id
-            self.graph.add_node(nid, roads.nodes[n].position[0], roads.nodes[n].position[1], self.id)
-            self.map_reference_nodes[n]=roads.nodes[n].id
+    def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
+        assert dbnode in self.roads.nodes
+        node_pos = self.roads.nodes[dbnode].position
 
-        for l in roads.sections:
-            lid=roads.sections[l].id
-            length = roads.sections[l].length
-            upstream = roads.sections[l].upstream
-            downstream = roads.sections[l].downstream
-            self.graph.add_link(lid, upstream, downstream, length, {self.id:{'length':15}}, self.id)
-            self.map_reference_links[l]=[]
-            self.map_reference_links[l].append(roads.sections[l].id)
+        if exclude_movements is not None:
+            exclude_movements = {key: set(val) for key, val in exclude_movements.items()}
+        else:
+            exclude_movements = dict()
+
+        self.graph.add_node(nid, node_pos[0], node_pos[1], self.id, exclude_movements)
+
+        self.map_reference_nodes[nid] = dbnode
+
+    def create_link(self, lid: str, upstream: str, downstream: str, costs: Dict[str, Dict[str, float]], road_links: List[str]):
+
+        length = sum(self.roads.sections[l].length for l in road_links)
+        self.graph.add_link(lid, upstream, downstream, length, costs, self.id)
+
+        self.map_reference_links[lid] = road_links
 
     def connect_origindestination(self, odlayer: OriginDestinationLayer, connection_distance: float):
         """
@@ -818,10 +824,28 @@ class SharedVehicleLayer(AbstractLayer):
 
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescriptor):
+        """
+        Load exogeneous layer data into a new layer
+        Args:
+            data: Dict containing the data of the layer to be created
+            roads: Road descriptor
+
+        Returns:
+            The new layer
+        """
         new_obj = cls(roads,
                       data['ID'],
                       load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
+
+        node_ref = data["MAP_ROADDB"]["NODES"]
+        for ndata in data['NODES']:
+            new_obj.create_node(ndata['ID'], node_ref[ndata["ID"]], ndata['EXCLUDE_MOVEMENTS'])
+
+        link_ref = data["MAP_ROADDB"]["LINKS"]
+        for ldata in data['LINKS']:
+            new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], {},
+                                link_ref[ldata["ID"]])
 
         for sdata in data['SERVICES']:
             serv_type = load_class_by_module_name(sdata['TYPE'])
