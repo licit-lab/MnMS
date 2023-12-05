@@ -1,11 +1,13 @@
 import os
 import argparse
 import math
-
 import pandas as pd
-from matplotlib import pyplot as plt
+import mpl_scatter_density
 
+from matplotlib import pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 from datetime import datetime
+
 
 def extract_file(file):
 
@@ -17,15 +19,21 @@ def validate_demand(df_users, radius):
     invalid_users_count = 0
     warning_users_count = 0
 
+    check_user_id_duplicates(df_users)
+
     for index, user in df_users.iterrows():
         user_valid = True
         user_warning = False
 
         user_valid = validate_user_id(user)
-        user_valid = validate_user_departure_time(user)
-        user_valid = validate_user_origin(user)
-        user_valid = validate_user_destination(user)
-        user_valid, user_warning = validate_user_journey(user, radius)
+        if user_valid:
+            user_valid = validate_user_departure_time(user)
+            if user_valid:
+                user_valid = validate_user_origin(user)
+                if user_valid:
+                    user_valid = validate_user_destination(user)
+                    if user_valid:
+                        user_valid, user_warning = validate_user_journey(user, radius)
 
         if not user_valid:
             print(f"User: {user} invalid")
@@ -44,33 +52,66 @@ def validate_demand(df_users, radius):
 
 
 def analyze_demand(df_users):
+    print(f"First user departure time: {df_users['DEPARTURE'].min()}")
+    print(f"Last user departure time: {df_users['DEPARTURE'].max()}")
 
-    user_ms_defined_count = 0
-    for index, user in df_users.iterrows():
-        user_ms_defined = check_user_ms_defined(user)
+    if "MOBILITY SERVICES" in df_users.columns:
+        user_ms_defined_count = 0
+        for index, user in df_users.iterrows():
+            user_ms_defined = check_user_ms_defined(user)
+            if user_ms_defined:
+                user_ms_defined_count = user_ms_defined_count + 1
 
-        if user_ms_defined:
-            user_ms_defined_count = user_ms_defined_count + 1
+            ms_occurences = count_ms_occurences(df_users)
+            print(f"Number of users with at least one mandatory mobility service : {user_ms_defined_count}")
+            print(f"Mandatory mobility services and occurences: {ms_occurences}")
 
-    print(f"Number of users with at least one mandatory mobility service : {user_ms_defined_count}")
+
+def scatter_density(fig, x, y, title):
+    # "Viridis-like" colormap with white background
+    white_viridis = LinearSegmentedColormap.from_list('white_viridis', [
+        (0, '#ffffff'),
+        (1e-20, '#440053'),
+        (0.2, '#404388'),
+        (0.4, '#2a788e'),
+        (0.6, '#21a784'),
+        (0.8, '#78d151'),
+        (1, '#fde624'),
+    ], N=256)
+
+    ax = fig.add_subplot(1, 1, 1, projection="scatter_density")
+    ax.set_title(title)
+    density = ax.scatter_density(x, y, dpi=18, vmin=0, vmax=50, cmap=white_viridis)
+    fig.colorbar(density, label="Number of points per pixel")
 
 
 def visualize_demand(df_users):
 
     # Origins
+    ox = []
+    oy = []
 
     for index, user in df_users.iterrows():
-        origin = user[2].split(' ')
-        plt.scatter(float(origin[0]), float(origin[1]), color="blue", s=0.1)
+        origin = user["ORIGIN"].split(' ')
+        ox.append(float(origin[0]))
+        oy.append(float(origin[1]))
+
+    fig1 = plt.figure(figsize=(20,12))
+    scatter_density(fig1, ox, oy, "Origin coordinates density")
 
     # Destinations
+    dx = []
+    dy = []
 
     for index, user in df_users.iterrows():
-        destination = user[3].split(' ')
-        plt.scatter(float(destination[0]), float(destination[1]), color="green", s=0.1)
+        destination = user["DESTINATION"].split(' ')
+        dx.append(float(destination[0]))
+        dy.append(float(destination[1]))
+
+    fig2 = plt.figure(figsize=(20,12))
+    scatter_density(fig2, dx, dy, "Destination coordinates density")
 
     plt.show()
-
 
 
 def validate_demand_columns(df_users):
@@ -89,23 +130,23 @@ def validate_demand_columns(df_users):
     valid = True
 
     if "ID" not in df_users.columns:
-        print(f"No column ID found in csv file")
+        print(f"No column named ID found in csv file")
         valid = False
 
     if "DEPARTURE" not in df_users.columns:
-        print(f"No column DEPARTURE found in csv file")
+        print(f"No column named DEPARTURE found in csv file")
         valid = False
 
     if "ORIGIN" not in df_users.columns:
-        print(f"No column ORIGIN found in csv file")
+        print(f"No column named ORIGIN found in csv file")
         valid = False
 
     if "DESTINATION" not in df_users.columns:
-        print(f"No column DESTINATION found in csv file")
+        print(f"No column named DESTINATION found in csv file")
         valid = False
 
-    if "SERVICE" not in df_users.columns:
-        print(f"Warning: No column SERVICE found in csv file")
+    if "MOBILITY SERVICES" not in df_users.columns:
+        print(f"Warning: No column named MOBILITY SERVICES found in csv file")
 
     return valid
 
@@ -153,16 +194,17 @@ def validate_user_departure_time(user):
 
     valid = True
     time_format = "%H:%M:%S"
+    user_id = user["ID"]
 
-    if user[1]:
-        departure_time = user[1]
+    if user["DEPARTURE"]:
+        departure_time = user["DEPARTURE"]
         try:
             datetime.strptime(departure_time, time_format)
         except ValueError:
-            print(f"Invalid departure time for user: {user[0]}")
+            print(f"Invalid departure time for user: {user_id}")
             valid = False
     else:
-        print(f"No departure time found for user: {user[0]}")
+        print(f"No departure time found for user: {user_id}")
         valid = False
 
     return valid
@@ -182,28 +224,29 @@ def validate_user_origin(user):
                     """
 
     valid = True
+    user_id = user["ID"]
 
-    if user[2]:
-        user_origin = user[2].split(' ')
+    if user["ORIGIN"]:
+        user_origin = user["ORIGIN"].split(' ')
 
         if user_origin[0]:
             if not isinstance(float(user_origin[0]), float):
-                print(f"Invalid user origin x coordinate for user: {user[0]}")
+                print(f"Invalid user origin x coordinate for user: {user_id}")
                 valid = False
         else:
-            print(f"No origin x coordinate found for user: {user[0]}")
+            print(f"No origin x coordinate found for user: {user_id}")
             valid = False
 
         if user_origin[1]:
             if not isinstance(float(user_origin[1]), float):
-                print(f"Invalid user origin y coordinate for user: {user[0]}")
+                print(f"Invalid user origin y coordinate for user: {user_id}")
                 valid = False
         else:
-            print(f"No origin y coordinate found for user: {user[0]}")
+            print(f"No origin y coordinate found for user: {user_id}")
             valid = False
 
     else:
-        print(f"No origin found for user: {user[0]}")
+        print(f"No origin found for user: {user_id}")
         valid = False
 
     return valid
@@ -223,28 +266,29 @@ def validate_user_destination(user):
                     """
 
     valid = True
+    user_id = user["ID"]
 
-    if user[3]:
-        user_destination = user[3].split(' ')
+    if user["DESTINATION"]:
+        user_destination = user["DESTINATION"].split(' ')
 
         if user_destination[0]:
             if not isinstance(float(user_destination[0]), float):
-                print(f"Invalid user destination x coordinate for user: {user[0]}")
+                print(f"Invalid user destination x coordinate for user: {user_id}")
                 valid = False
         else:
-            print(f"No destination x coordinate found for user: {user[0]}")
+            print(f"No destination x coordinate found for user: {user_id}")
             valid = False
 
         if user_destination[1]:
             if not isinstance(float(user_destination[1]), float):
-                print(f"Invalid user destination y coordinate for user: {user[0]}")
+                print(f"Invalid user destination y coordinate for user: {user_id}")
                 valid = False
         else:
-            print(f"No destination y coordinate found for user: {user[0]}")
+            print(f"No destination y coordinate found for user: {user_id}")
             valid = False
 
     else:
-        print(f"No destination found for user: {user[0]}")
+        print(f"No destination found for user: {user_id}")
         valid = False
 
     return valid
@@ -266,30 +310,33 @@ def validate_user_journey(user, radius):
     valid = True
     warning = False
 
-    origin = user[2].split(' ')
-    destination = user[3].split(' ')
+    user_id = user["ID"]
+    origin = user["ORIGIN"].split(' ')
+    destination = user["DESTINATION"].split(' ')
     distance = math.dist([float(origin[0]), float(origin[1])], [float(destination[0]), float(destination[1])])
 
-    if user[2] == user[3]:
-        print(f"Warning: origin equals destination for user {user[0]}, origin = destination = {user[2]}")
+    if user["ORIGIN"] == user["DESTINATION"]:
+        print(f"Warning: origin equals destination for user {user_id}, origin = destination = {user['ORIGIN']}")
         warning = True
 
     elif distance < radius:
-        print(f"Warning: origin/destination distance lesser than radius {radius}, for user {user[0]}, distance = {distance}")
+        print(f"Warning: origin/destination distance lesser than radius {radius}, for user {user_id}, distance = {distance}")
         warning = True
 
     return valid, warning
+
 
 def check_user_ms_defined(user):
 
     ms_defined = False
 
-    if user[4]:
+    if user["MOBILITY SERVICES"]:
         ms_defined = True
 
     return ms_defined
 
-def check_user_id_duplicates(users):
+
+def check_user_id_duplicates(df_users):
     """Validate user id
 
                     Parameters
@@ -304,7 +351,31 @@ def check_user_id_duplicates(users):
 
     valid = True
 
+    ids = df_users["ID"]
+    id_duplicates = df_users[ids.isin(ids[ids.duplicated()])].sort_values("ID")
+    count_duplicates = 0
+
+    if not id_duplicates.empty:
+        print(f"Id duplicates : {id_duplicates['ID']}")
+
+        count_duplicates = len(df_users["ID"]) - len(df_users["ID"].drop_duplicates())
+        print(f"Number of duplicates : {count_duplicates}")
+        valid = False
+
     return valid
+
+
+def count_ms_occurences(df_users):
+    ms_occurences = {}
+
+    users_ms = df_users["MOBILITY SERVICES"]
+
+    for user_ms in users_ms:
+        mobility_services = user_ms.split(' ')
+        for mobility_service in mobility_services:
+            ms_occurences[mobility_service] = ms_occurences.get(mobility_service, 0) + 1
+
+    return ms_occurences
 
 
 def _path_file_type(path):
@@ -318,7 +389,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Validate a CSV demand file for MnMS")
     parser.add_argument("demand_file", type=_path_file_type, help="Path to the demand csv file")
     parser.add_argument("--radius", default=0, type=float, help="Tolerance radius in meters")
-    parser.add_argument("--visualize", default=False, type=bool, help="Visualize demand origin/destination, True or False")
+    parser.add_argument("--visualize", default=False, type=bool,
+                        help="Visualize demand origin/destination, True or False")
 
     args = parser.parse_args()
 

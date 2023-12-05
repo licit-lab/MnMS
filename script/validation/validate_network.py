@@ -198,7 +198,11 @@ if __name__ == "__main__":
         print(f"Number of Springs: {len(springs)}")
         print(list(springs))
 
+        isolates = [value for value in deadends if value in springs]
+        print(f"Number of Isolate nodes: {len(isolates)}")
+        print(list(isolates))
+
         if args.visualize:
-            vizualize_nodes(roads)
+            #vizualize_nodes(roads)
             vizualize_stops(roads)
 

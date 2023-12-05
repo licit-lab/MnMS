@@ -15,6 +15,7 @@ from mnms.log import create_logger
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable
 from mnms.vehicles.veh_type import Vehicle, Car, Bus
+from mnms.graph.zone import MLZone
 
 from hipop.graph import OrientedGraph, merge_oriented_graph, graph_to_dict, node_to_dict, link_to_dict
 
@@ -862,6 +863,7 @@ class BusLayer(PublicTransportLayer):
                  services: Optional[List[AbstractMobilityService]] = None,
                  observer: Optional = None):
         super(BusLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
+
 
 if __name__ == "__main__":
     pass

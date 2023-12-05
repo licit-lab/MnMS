@@ -47,7 +47,7 @@ def draw_path(ax, mlgraph, path, color='red', linkwidth=2, alpha=1):
         line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth, alpha=alpha)
         ax.add_collection(line_segment)
 
-def draw_line(ax, mlgraph, line, color='green', linkwidth=6, alpha=0.6, draw_stops=True,
+def draw_line(ax, mlgraph, line, color='green', linkwidth=6, stopmarkeredgewidth=1, alpha=0.6, draw_stops=True,
     nodesize=6, line_label='', label_size=5):
     lines = list()
     starting_stop = mlgraph.roads.stops[line['stops'][0]]
@@ -74,17 +74,17 @@ def draw_line(ax, mlgraph, line, color='green', linkwidth=6, alpha=0.6, draw_sto
     if draw_stops:
         x, y = zip(*[mlgraph.roads.stops[stop].absolute_position.tolist() for stop in line['stops']])
         ax.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='black',
-            fillstyle='full', markersize=nodesize)
+            fillstyle='full', markersize=nodesize, markeredgewidth=stopmarkeredgewidth)
 
 
 def draw_odlayer(ax, mlgraph, color='blue', nodesize=2, node_label=True, label_size=5):
-    ods = list(mlgraph.odlayer.origins.keys()) + list(mlgraph.odlayer.destinations.keys())
-    x, y = zip(*[mlgraph.graph.nodes[od].position for od in ods])
-    ax.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='black',
-        fillstyle='full', markersize=nodesize)
+    ods = list(mlgraph.odlayer.origins.items()) + list(mlgraph.odlayer.destinations.items())
+    for odid, od in ods:
+        ax.plot(od[0], od[1], 'o', markerfacecolor=color, markeredgecolor='black',
+            fillstyle='full', markersize=nodesize)
 
     if node_label:
-        [ax.annotate(od,mlgraph.graph.nodes[od].position, size=label_size) for od in ods]
+        [ax.annotate(od,mlgraph.graph.nodes[od].position, size=label_size) for odid, od in ods]
 
 def draw_veh_activity(ax, veh_result_file: str, veh_id: str):
     c_dict = {'STOP': '#E64646', 'PICKUP': '#E69646', 'SERVING': '#34D05C',

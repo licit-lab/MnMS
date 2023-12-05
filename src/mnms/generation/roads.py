@@ -107,15 +107,17 @@ def generate_square_road(link_length=None, zone_id='RES'):
     return roads
 
 
-def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, prefix=""):
+def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, one_zone=True, prefix=""):
     """
     Generate a square Manhattan RoadDescriptor
 
     Args:
-        n: Number of points in x and y direction
+        n: Number of point in x and y direction
         link_length: the length of the links
         zone_id: the id of the zone
         extended: if True, extend the border
+        one_zone: specifies if one reservoir should be created for the whole network
+                  if False, no reservoir zone is created, it should be created manually
         prefix: the prefix of the nodes and links
 
     Returns:
@@ -177,7 +179,8 @@ def generate_manhattan_road(n, link_length, zone_id='RES', extended=True, prefix
             roads.register_section(f"{up}_{down}", up, down, link_length)
             roads.register_section(f"{down}_{up}", down, up, link_length)
 
-    roads.add_zone(generate_one_zone(roads, zone_id))
+    if one_zone:
+        roads.add_zone(generate_one_zone(roads, zone_id))
 
     return roads
 
@@ -259,7 +262,20 @@ def generate_manhattan_road_rectangle(n, m, link_length_n, link_length_m, zone_i
     return roads
 
 
-def generate_nested_manhattan_road(n_list, link_length_list, zone_id='RES'):
+def generate_nested_manhattan_road(n_list, link_length_list, zone_id='RES', create_one_zone=True):
+    """Function to generate a nested Manhattan road netwrok with different mesh sizes.
+
+     Args:
+        n_list: list of the number of links to generate per mesh size
+        link_length_list: list of mesh sizes
+        zone_id: reservoir zone id, used only when create_one_zone is True
+        create_one_zone: specifies if one reservoir zone should be created for the
+                         whole network, if False, reservoirs should be defined manually
+                         afterwards
+
+    Returns:
+        the nested manhattan RoadDescriptor
+    """
     # Check quality of parameters
     assert len(n_list) == len(link_length_list), 'Same number of square sizes and '\
         'link lengths should be passed'
@@ -343,7 +359,8 @@ def generate_nested_manhattan_road(n_list, link_length_list, zone_id='RES'):
     for sec, rsect in unique_sections.items():
         merged_road.register_section(sec, rsect.upstream, rsect.downstream, rsect.length)
 
-    merged_road.add_zone(generate_one_zone(merged_road, zone_id))
+    if create_one_zone:
+        merged_road.add_zone(generate_one_zone(merged_road, zone_id))
 
     return merged_road
 
