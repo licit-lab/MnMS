@@ -45,9 +45,11 @@ class VehicleActivity(ABC):
 
     node: str
     path: _TYPE_PATH = field(default_factory=list)
-    user: "User" = None
-    is_done: bool = False
     iter_path: Generator[_TYPE_ITEM_PATH, None, None] = field(default=None, init=False)
+
+    user: "User" = None
+
+    is_done: bool = False
 
     def __post_init__(self):
         self.reset_path_iterator()
@@ -283,6 +285,10 @@ class Vehicle(TimeDependentSubject):
         return self._current_link
 
     @property
+    def current_node(self):
+        return self._current_node
+
+    @property
     def remaining_link_length(self):
         return self._remaining_link_length
 
@@ -434,6 +440,16 @@ class Metro(Vehicle):
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
         super(Metro, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+        
+     
+class Bike(Vehicle):
+    def __init__(self,
+                 node: str,
+                 capacity: int,
+                 mobility_service: str,
+                 initial_speed=5.5,
+                 activities: Optional[VehicleActivity] = None):
+        super(Bike, self).__init__(node, capacity, mobility_service, initial_speed, activities)
 
 class Train(Vehicle):
     def __init__(self,

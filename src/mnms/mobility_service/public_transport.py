@@ -176,6 +176,14 @@ class PublicTransportMobilityService(AbstractMobilityService):
         return veh_path
 
     def new_departures(self, time, dt, lid: str, all_departures=None):
+        """
+        Recursive function returning all the departures of a public transport line during the current time step
+
+        Args:
+            time: The current time
+            dt: The time step
+            all_departures:
+        """
         veh_path = self.construct_public_transport_path(lid)
         end_node = self.lines[lid]['nodes'][-1]
         start_node = self.lines[lid]['nodes'][0]
@@ -226,11 +234,14 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 self._next_veh_departure[lid] = (self._next_time_table[lid], new_veh)
                 log.info(f"Next departure {new_veh}")
             except StopIteration:
+                self._next_veh_departure[lid] = None
                 return all_departures
             self.new_departures(time, dt, lid, all_departures)
+
         return all_departures
 
     def add_passenger(self, user: User, drop_node: str, veh: Vehicle, line_nodes: List[str]):
+
         log.info(f"Add passenger {user} -> {veh}")
         user.set_state_waiting_vehicle()
 
@@ -258,7 +269,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 ind_do = ind
                 break # if we found dropoff we necessarily have found pickup before
 
-        # Insert the activities corresponding to pickup and serving in vehciles' activities
+        # Insert the activities corresponding to pickup and serving in vehicles' activities
         _insert_in_activity(user._current_node, ind_pu, drop_node, ind_do, user, veh)
 
     def estimation_pickup_time(self, user: User, veh: Vehicle, line: dict):

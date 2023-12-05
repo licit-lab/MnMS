@@ -1,12 +1,12 @@
 {
   "INPUT": {
-    "indir": "INPUTS",
+    "indir": "./INPUTS",
     "network_file": "/network_lyon6_V3-test.json",
     "demand_file": "/demand_coords.csv",
     "mfd_file": "/MFD_10_201802.csv"
   },
   "OUTPUT": {
-    "outdir": "..",
+    "output_dir": ".",
     "log_file": "/simulation.log",
     "path_file": "/path.csv",
     "user_file": "/user.csv",

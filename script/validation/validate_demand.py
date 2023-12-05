@@ -10,10 +10,10 @@ from datetime import datetime
 
 
 def extract_file(file):
-    df_users = pd.read_csv(file, sep=';')
 
+    dtype_dic = {'ID': str}
+    df_users = pd.read_csv(file, sep=';', dtype = dtype_dic)
     return df_users
-
 
 def validate_demand(df_users, radius):
     invalid_users_count = 0
@@ -166,10 +166,10 @@ def validate_user_id(user):
 
     valid = True
 
-    if user["ID"]:
-        user_id = user["ID"]
-        if not (isinstance(user_id, int) or isinstance(user_id, str)):
-            print(f"Invalid user id for user: {user_id}")
+    if len(user['ID'])>0:
+        user_id = user[0]
+        if not isinstance(user_id, str):
+            print(f"Invalid user id for user: {user[0]}")
             valid = False
             
     else:
@@ -395,8 +395,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     df_users = extract_file(args.demand_file)
-    validate_demand(df_users, args.radius)
-    analyze_demand(df_users)
+
+    if validate_demand_columns(df_users):
+        if validate_demand(df_users, args.radius):
+            analyze_demand(df_users)
 
     if args.visualize:
         visualize_demand(df_users)

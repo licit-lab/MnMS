@@ -4,7 +4,8 @@ from pathlib import Path
 
 from hipop.graph import link_to_dict, dict_to_link
 
-from mnms.graph.layers import MultiLayerGraph, OriginDestinationLayer
+from mnms.graph.layers import OriginDestinationLayer
+from mnms.graph.layers import MultiLayerGraph
 from mnms.graph.road import RoadDescriptor
 from mnms.io.utils import MNMSEncoder, load_class_by_module_name
 

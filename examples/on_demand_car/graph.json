@@ -1,0 +1,1628 @@
+{
+  "ROADS": {
+    "NODES": {
+      "0": {
+        "id": "0",
+        "position": [
+          0,
+          0
+        ]
+      },
+      "1": {
+        "id": "1",
+        "position": [
+          0,
+          100
+        ]
+      },
+      "2": {
+        "id": "2",
+        "position": [
+          0,
+          200
+        ]
+      },
+      "3": {
+        "id": "3",
+        "position": [
+          100,
+          0
+        ]
+      },
+      "4": {
+        "id": "4",
+        "position": [
+          100,
+          100
+        ]
+      },
+      "5": {
+        "id": "5",
+        "position": [
+          100,
+          200
+        ]
+      },
+      "6": {
+        "id": "6",
+        "position": [
+          200,
+          0
+        ]
+      },
+      "7": {
+        "id": "7",
+        "position": [
+          200,
+          100
+        ]
+      },
+      "8": {
+        "id": "8",
+        "position": [
+          200,
+          200
+        ]
+      },
+      "WEST_0": {
+        "id": "WEST_0",
+        "position": [
+          -100,
+          0
+        ]
+      },
+      "WEST_1": {
+        "id": "WEST_1",
+        "position": [
+          -100,
+          100
+        ]
+      },
+      "WEST_2": {
+        "id": "WEST_2",
+        "position": [
+          -100,
+          200
+        ]
+      },
+      "EAST_0": {
+        "id": "EAST_0",
+        "position": [
+          300,
+          0
+        ]
+      },
+      "EAST_1": {
+        "id": "EAST_1",
+        "position": [
+          300,
+          100
+        ]
+      },
+      "EAST_2": {
+        "id": "EAST_2",
+        "position": [
+          300,
+          200
+        ]
+      },
+      "NORTH_0": {
+        "id": "NORTH_0",
+        "position": [
+          0,
+          300
+        ]
+      },
+      "NORTH_1": {
+        "id": "NORTH_1",
+        "position": [
+          100,
+          300
+        ]
+      },
+      "NORTH_2": {
+        "id": "NORTH_2",
+        "position": [
+          200,
+          300
+        ]
+      },
+      "SOUTH_0": {
+        "id": "SOUTH_0",
+        "position": [
+          0,
+          -100
+        ]
+      },
+      "SOUTH_1": {
+        "id": "SOUTH_1",
+        "position": [
+          100,
+          -100
+        ]
+      },
+      "SOUTH_2": {
+        "id": "SOUTH_2",
+        "position": [
+          200,
+          -100
+        ]
+      }
+    },
+    "STOPS": {},
+    "SECTIONS": {
+      "0_1": {
+        "id": "0_1",
+        "upstream": "0",
+        "downstream": "1",
+        "length": 100,
+        "zone": "RES"
+      },
+      "0_3": {
+        "id": "0_3",
+        "upstream": "0",
+        "downstream": "3",
+        "length": 100,
+        "zone": "RES"
+      },
+      "1_2": {
+        "id": "1_2",
+        "upstream": "1",
+        "downstream": "2",
+        "length": 100,
+        "zone": "RES"
+      },
+      "1_0": {
+        "id": "1_0",
+        "upstream": "1",
+        "downstream": "0",
+        "length": 100,
+        "zone": "RES"
+      },
+      "1_4": {
+        "id": "1_4",
+        "upstream": "1",
+        "downstream": "4",
+        "length": 100,
+        "zone": "RES"
+      },
+      "2_1": {
+        "id": "2_1",
+        "upstream": "2",
+        "downstream": "1",
+        "length": 100,
+        "zone": "RES"
+      },
+      "2_5": {
+        "id": "2_5",
+        "upstream": "2",
+        "downstream": "5",
+        "length": 100,
+        "zone": "RES"
+      },
+      "3_4": {
+        "id": "3_4",
+        "upstream": "3",
+        "downstream": "4",
+        "length": 100,
+        "zone": "RES"
+      },
+      "3_6": {
+        "id": "3_6",
+        "upstream": "3",
+        "downstream": "6",
+        "length": 100,
+        "zone": "RES"
+      },
+      "3_0": {
+        "id": "3_0",
+        "upstream": "3",
+        "downstream": "0",
+        "length": 100,
+        "zone": "RES"
+      },
+      "4_5": {
+        "id": "4_5",
+        "upstream": "4",
+        "downstream": "5",
+        "length": 100,
+        "zone": "RES"
+      },
+      "4_3": {
+        "id": "4_3",
+        "upstream": "4",
+        "downstream": "3",
+        "length": 100,
+        "zone": "RES"
+      },
+      "4_7": {
+        "id": "4_7",
+        "upstream": "4",
+        "downstream": "7",
+        "length": 100,
+        "zone": "RES"
+      },
+      "4_1": {
+        "id": "4_1",
+        "upstream": "4",
+        "downstream": "1",
+        "length": 100,
+        "zone": "RES"
+      },
+      "5_4": {
+        "id": "5_4",
+        "upstream": "5",
+        "downstream": "4",
+        "length": 100,
+        "zone": "RES"
+      },
+      "5_8": {
+        "id": "5_8",
+        "upstream": "5",
+        "downstream": "8",
+        "length": 100,
+        "zone": "RES"
+      },
+      "5_2": {
+        "id": "5_2",
+        "upstream": "5",
+        "downstream": "2",
+        "length": 100,
+        "zone": "RES"
+      },
+      "6_7": {
+        "id": "6_7",
+        "upstream": "6",
+        "downstream": "7",
+        "length": 100,
+        "zone": "RES"
+      },
+      "6_3": {
+        "id": "6_3",
+        "upstream": "6",
+        "downstream": "3",
+        "length": 100,
+        "zone": "RES"
+      },
+      "7_8": {
+        "id": "7_8",
+        "upstream": "7",
+        "downstream": "8",
+        "length": 100,
+        "zone": "RES"
+      },
+      "7_6": {
+        "id": "7_6",
+        "upstream": "7",
+        "downstream": "6",
+        "length": 100,
+        "zone": "RES"
+      },
+      "7_4": {
+        "id": "7_4",
+        "upstream": "7",
+        "downstream": "4",
+        "length": 100,
+        "zone": "RES"
+      },
+      "8_7": {
+        "id": "8_7",
+        "upstream": "8",
+        "downstream": "7",
+        "length": 100,
+        "zone": "RES"
+      },
+      "8_5": {
+        "id": "8_5",
+        "upstream": "8",
+        "downstream": "5",
+        "length": 100,
+        "zone": "RES"
+      },
+      "WEST_0_0": {
+        "id": "WEST_0_0",
+        "upstream": "WEST_0",
+        "downstream": "0",
+        "length": 100,
+        "zone": "RES"
+      },
+      "0_WEST_0": {
+        "id": "0_WEST_0",
+        "upstream": "0",
+        "downstream": "WEST_0",
+        "length": 100,
+        "zone": "RES"
+      },
+      "WEST_1_1": {
+        "id": "WEST_1_1",
+        "upstream": "WEST_1",
+        "downstream": "1",
+        "length": 100,
+        "zone": "RES"
+      },
+      "1_WEST_1": {
+        "id": "1_WEST_1",
+        "upstream": "1",
+        "downstream": "WEST_1",
+        "length": 100,
+        "zone": "RES"
+      },
+      "WEST_2_2": {
+        "id": "WEST_2_2",
+        "upstream": "WEST_2",
+        "downstream": "2",
+        "length": 100,
+        "zone": "RES"
+      },
+      "2_WEST_2": {
+        "id": "2_WEST_2",
+        "upstream": "2",
+        "downstream": "WEST_2",
+        "length": 100,
+        "zone": "RES"
+      },
+      "EAST_0_6": {
+        "id": "EAST_0_6",
+        "upstream": "EAST_0",
+        "downstream": "6",
+        "length": 100,
+        "zone": "RES"
+      },
+      "6_EAST_0": {
+        "id": "6_EAST_0",
+        "upstream": "6",
+        "downstream": "EAST_0",
+        "length": 100,
+        "zone": "RES"
+      },
+      "EAST_1_7": {
+        "id": "EAST_1_7",
+        "upstream": "EAST_1",
+        "downstream": "7",
+        "length": 100,
+        "zone": "RES"
+      },
+      "7_EAST_1": {
+        "id": "7_EAST_1",
+        "upstream": "7",
+        "downstream": "EAST_1",
+        "length": 100,
+        "zone": "RES"
+      },
+      "EAST_2_8": {
+        "id": "EAST_2_8",
+        "upstream": "EAST_2",
+        "downstream": "8",
+        "length": 100,
+        "zone": "RES"
+      },
+      "8_EAST_2": {
+        "id": "8_EAST_2",
+        "upstream": "8",
+        "downstream": "EAST_2",
+        "length": 100,
+        "zone": "RES"
+      },
+      "NORTH_0_2": {
+        "id": "NORTH_0_2",
+        "upstream": "NORTH_0",
+        "downstream": "2",
+        "length": 100,
+        "zone": "RES"
+      },
+      "2_NORTH_0": {
+        "id": "2_NORTH_0",
+        "upstream": "2",
+        "downstream": "NORTH_0",
+        "length": 100,
+        "zone": "RES"
+      },
+      "NORTH_1_5": {
+        "id": "NORTH_1_5",
+        "upstream": "NORTH_1",
+        "downstream": "5",
+        "length": 100,
+        "zone": "RES"
+      },
+      "5_NORTH_1": {
+        "id": "5_NORTH_1",
+        "upstream": "5",
+        "downstream": "NORTH_1",
+        "length": 100,
+        "zone": "RES"
+      },
+      "NORTH_2_8": {
+        "id": "NORTH_2_8",
+        "upstream": "NORTH_2",
+        "downstream": "8",
+        "length": 100,
+        "zone": "RES"
+      },
+      "8_NORTH_2": {
+        "id": "8_NORTH_2",
+        "upstream": "8",
+        "downstream": "NORTH_2",
+        "length": 100,
+        "zone": "RES"
+      },
+      "SOUTH_0_0": {
+        "id": "SOUTH_0_0",
+        "upstream": "SOUTH_0",
+        "downstream": "0",
+        "length": 100,
+        "zone": "RES"
+      },
+      "0_SOUTH_0": {
+        "id": "0_SOUTH_0",
+        "upstream": "0",
+        "downstream": "SOUTH_0",
+        "length": 100,
+        "zone": "RES"
+      },
+      "SOUTH_1_3": {
+        "id": "SOUTH_1_3",
+        "upstream": "SOUTH_1",
+        "downstream": "3",
+        "length": 100,
+        "zone": "RES"
+      },
+      "3_SOUTH_1": {
+        "id": "3_SOUTH_1",
+        "upstream": "3",
+        "downstream": "SOUTH_1",
+        "length": 100,
+        "zone": "RES"
+      },
+      "SOUTH_2_6": {
+        "id": "SOUTH_2_6",
+        "upstream": "SOUTH_2",
+        "downstream": "6",
+        "length": 100,
+        "zone": "RES"
+      },
+      "6_SOUTH_2": {
+        "id": "6_SOUTH_2",
+        "upstream": "6",
+        "downstream": "SOUTH_2",
+        "length": 100,
+        "zone": "RES"
+      }
+    },
+    "ZONES": {
+      "RES": {
+        "id": "RES",
+        "sections": [
+          "0_1",
+          "1_4",
+          "8_EAST_2",
+          "NORTH_0_2",
+          "0_SOUTH_0",
+          "NORTH_2_8",
+          "SOUTH_2_6",
+          "8_5",
+          "5_NORTH_1",
+          "EAST_1_7",
+          "WEST_0_0",
+          "0_WEST_0",
+          "EAST_2_8",
+          "3_0",
+          "4_3",
+          "3_4",
+          "WEST_1_1",
+          "2_5",
+          "SOUTH_1_3",
+          "6_7",
+          "8_7",
+          "4_7",
+          "3_6",
+          "5_4",
+          "4_5",
+          "6_3",
+          "1_WEST_1",
+          "7_4",
+          "2_1",
+          "0_3",
+          "3_SOUTH_1",
+          "4_1",
+          "2_WEST_2",
+          "7_EAST_1",
+          "2_NORTH_0",
+          "8_NORTH_2",
+          "5_2",
+          "SOUTH_0_0",
+          "WEST_2_2",
+          "6_EAST_0",
+          "1_0",
+          "EAST_0_6",
+          "7_8",
+          "7_6",
+          "6_SOUTH_2",
+          "1_2",
+          "5_8",
+          "NORTH_1_5"
+        ],
+        "contour": [
+          [
+            -100,
+            -100
+          ],
+          [
+            300,
+            -100
+          ],
+          [
+            300,
+            300
+          ],
+          [
+            -100,
+            300
+          ]
+        ]
+      }
+    }
+  },
+  "LAYERS": [
+    {
+      "ID": "CAR",
+      "TYPE": "mnms.graph.layers.SimpleLayer",
+      "VEH_TYPE": "mnms.vehicles.veh_type.Car",
+      "DEFAULT_SPEED": 14,
+      "SERVICES": [
+        {
+          "TYPE": "mnms.mobility_service.personal_vehicle.PersonalMobilityService",
+          "ID": "perso"
+        },
+        {
+          "TYPE": "mnms.mobility_service.on_demand.OnDemandMobilityService",
+          "DT_MATCHING": 0,
+          "VEH_CAPACITY": 1,
+          "ID": "UBER"
+        }
+      ],
+      "NODES": [
+        {
+          "ID": "CAR_SOUTH_2",
+          "X": 200.0,
+          "Y": -100.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_NORTH_1",
+          "X": 100.0,
+          "Y": 300.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_NORTH_2",
+          "X": 200.0,
+          "Y": 300.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_EAST_2",
+          "X": 300.0,
+          "Y": 200.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_SOUTH_1",
+          "X": 100.0,
+          "Y": -100.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_EAST_0",
+          "X": 300.0,
+          "Y": 0.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_EAST_1",
+          "X": 300.0,
+          "Y": 100.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_WEST_1",
+          "X": -100.0,
+          "Y": 100.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_6",
+          "X": 200.0,
+          "Y": 0.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_NORTH_0",
+          "X": 0.0,
+          "Y": 300.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_8",
+          "X": 200.0,
+          "Y": 200.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_SOUTH_0",
+          "X": 0.0,
+          "Y": -100.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_0",
+          "X": 0.0,
+          "Y": 0.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_4",
+          "X": 100.0,
+          "Y": 100.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_3",
+          "X": 100.0,
+          "Y": 0.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_WEST_2",
+          "X": -100.0,
+          "Y": 200.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_7",
+          "X": 200.0,
+          "Y": 100.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_5",
+          "X": 100.0,
+          "Y": 200.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_2",
+          "X": 0.0,
+          "Y": 200.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_1",
+          "X": 0.0,
+          "Y": 100.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "CAR_WEST_0",
+          "X": -100.0,
+          "Y": 0.0,
+          "LABEL": "CAR",
+          "EXCLUDE_MOVEMENTS": {}
+        }
+      ],
+      "LINKS": [
+        {
+          "ID": "CAR_6_SOUTH_2",
+          "UPSTREAM": "CAR_6",
+          "DOWNSTREAM": "CAR_SOUTH_2",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_7_8",
+          "UPSTREAM": "CAR_7",
+          "DOWNSTREAM": "CAR_8",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_SOUTH_2_6",
+          "UPSTREAM": "CAR_SOUTH_2",
+          "DOWNSTREAM": "CAR_6",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_SOUTH_0_0",
+          "UPSTREAM": "CAR_SOUTH_0",
+          "DOWNSTREAM": "CAR_0",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_2_5",
+          "UPSTREAM": "CAR_2",
+          "DOWNSTREAM": "CAR_5",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_8_NORTH_2",
+          "UPSTREAM": "CAR_8",
+          "DOWNSTREAM": "CAR_NORTH_2",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_5_NORTH_1",
+          "UPSTREAM": "CAR_5",
+          "DOWNSTREAM": "CAR_NORTH_1",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_2_NORTH_0",
+          "UPSTREAM": "CAR_2",
+          "DOWNSTREAM": "CAR_NORTH_0",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_NORTH_0_2",
+          "UPSTREAM": "CAR_NORTH_0",
+          "DOWNSTREAM": "CAR_2",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_8_EAST_2",
+          "UPSTREAM": "CAR_8",
+          "DOWNSTREAM": "CAR_EAST_2",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_7_6",
+          "UPSTREAM": "CAR_7",
+          "DOWNSTREAM": "CAR_6",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_EAST_2_8",
+          "UPSTREAM": "CAR_EAST_2",
+          "DOWNSTREAM": "CAR_8",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_6_EAST_0",
+          "UPSTREAM": "CAR_6",
+          "DOWNSTREAM": "CAR_EAST_0",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_1_WEST_1",
+          "UPSTREAM": "CAR_1",
+          "DOWNSTREAM": "CAR_WEST_1",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_WEST_1_1",
+          "UPSTREAM": "CAR_WEST_1",
+          "DOWNSTREAM": "CAR_1",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_NORTH_2_8",
+          "UPSTREAM": "CAR_NORTH_2",
+          "DOWNSTREAM": "CAR_8",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_7_EAST_1",
+          "UPSTREAM": "CAR_7",
+          "DOWNSTREAM": "CAR_EAST_1",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_WEST_0_0",
+          "UPSTREAM": "CAR_WEST_0",
+          "DOWNSTREAM": "CAR_0",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_8_5",
+          "UPSTREAM": "CAR_8",
+          "DOWNSTREAM": "CAR_5",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_WEST_2_2",
+          "UPSTREAM": "CAR_WEST_2",
+          "DOWNSTREAM": "CAR_2",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_1_2",
+          "UPSTREAM": "CAR_1",
+          "DOWNSTREAM": "CAR_2",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_8_7",
+          "UPSTREAM": "CAR_8",
+          "DOWNSTREAM": "CAR_7",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_0_WEST_0",
+          "UPSTREAM": "CAR_0",
+          "DOWNSTREAM": "CAR_WEST_0",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_6_3",
+          "UPSTREAM": "CAR_6",
+          "DOWNSTREAM": "CAR_3",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_3_SOUTH_1",
+          "UPSTREAM": "CAR_3",
+          "DOWNSTREAM": "CAR_SOUTH_1",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_5_2",
+          "UPSTREAM": "CAR_5",
+          "DOWNSTREAM": "CAR_2",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_0_SOUTH_0",
+          "UPSTREAM": "CAR_0",
+          "DOWNSTREAM": "CAR_SOUTH_0",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_EAST_0_6",
+          "UPSTREAM": "CAR_EAST_0",
+          "DOWNSTREAM": "CAR_6",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_3_6",
+          "UPSTREAM": "CAR_3",
+          "DOWNSTREAM": "CAR_6",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_5_8",
+          "UPSTREAM": "CAR_5",
+          "DOWNSTREAM": "CAR_8",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_4_5",
+          "UPSTREAM": "CAR_4",
+          "DOWNSTREAM": "CAR_5",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_7_4",
+          "UPSTREAM": "CAR_7",
+          "DOWNSTREAM": "CAR_4",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_4_1",
+          "UPSTREAM": "CAR_4",
+          "DOWNSTREAM": "CAR_1",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_1_0",
+          "UPSTREAM": "CAR_1",
+          "DOWNSTREAM": "CAR_0",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_0_3",
+          "UPSTREAM": "CAR_0",
+          "DOWNSTREAM": "CAR_3",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_4_7",
+          "UPSTREAM": "CAR_4",
+          "DOWNSTREAM": "CAR_7",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_4_3",
+          "UPSTREAM": "CAR_4",
+          "DOWNSTREAM": "CAR_3",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_3_0",
+          "UPSTREAM": "CAR_3",
+          "DOWNSTREAM": "CAR_0",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_5_4",
+          "UPSTREAM": "CAR_5",
+          "DOWNSTREAM": "CAR_4",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_NORTH_1_5",
+          "UPSTREAM": "CAR_NORTH_1",
+          "DOWNSTREAM": "CAR_5",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_3_4",
+          "UPSTREAM": "CAR_3",
+          "DOWNSTREAM": "CAR_4",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_2_WEST_2",
+          "UPSTREAM": "CAR_2",
+          "DOWNSTREAM": "CAR_WEST_2",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_2_1",
+          "UPSTREAM": "CAR_2",
+          "DOWNSTREAM": "CAR_1",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_EAST_1_7",
+          "UPSTREAM": "CAR_EAST_1",
+          "DOWNSTREAM": "CAR_7",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_0_1",
+          "UPSTREAM": "CAR_0",
+          "DOWNSTREAM": "CAR_1",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_1_4",
+          "UPSTREAM": "CAR_1",
+          "DOWNSTREAM": "CAR_4",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_SOUTH_1_3",
+          "UPSTREAM": "CAR_SOUTH_1",
+          "DOWNSTREAM": "CAR_3",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        },
+        {
+          "ID": "CAR_6_7",
+          "UPSTREAM": "CAR_6",
+          "DOWNSTREAM": "CAR_7",
+          "LENGTH": 100.0,
+          "COSTS": {
+            "perso": {
+              "length": 100.0
+            },
+            "UBER": {
+              "length": 100.0
+            }
+          },
+          "LABEL": "CAR"
+        }
+      ],
+      "MAP_ROADDB": {
+        "NODES": {
+          "CAR_0": "0",
+          "CAR_1": "1",
+          "CAR_2": "2",
+          "CAR_3": "3",
+          "CAR_4": "4",
+          "CAR_5": "5",
+          "CAR_6": "6",
+          "CAR_7": "7",
+          "CAR_8": "8",
+          "CAR_WEST_0": "WEST_0",
+          "CAR_WEST_1": "WEST_1",
+          "CAR_WEST_2": "WEST_2",
+          "CAR_EAST_0": "EAST_0",
+          "CAR_EAST_1": "EAST_1",
+          "CAR_EAST_2": "EAST_2",
+          "CAR_NORTH_0": "NORTH_0",
+          "CAR_NORTH_1": "NORTH_1",
+          "CAR_NORTH_2": "NORTH_2",
+          "CAR_SOUTH_0": "SOUTH_0",
+          "CAR_SOUTH_1": "SOUTH_1",
+          "CAR_SOUTH_2": "SOUTH_2"
+        },
+        "LINKS": {
+          "CAR_0_1": [
+            "0_1"
+          ],
+          "CAR_0_3": [
+            "0_3"
+          ],
+          "CAR_1_2": [
+            "1_2"
+          ],
+          "CAR_1_0": [
+            "1_0"
+          ],
+          "CAR_1_4": [
+            "1_4"
+          ],
+          "CAR_2_1": [
+            "2_1"
+          ],
+          "CAR_2_5": [
+            "2_5"
+          ],
+          "CAR_3_4": [
+            "3_4"
+          ],
+          "CAR_3_6": [
+            "3_6"
+          ],
+          "CAR_3_0": [
+            "3_0"
+          ],
+          "CAR_4_5": [
+            "4_5"
+          ],
+          "CAR_4_3": [
+            "4_3"
+          ],
+          "CAR_4_7": [
+            "4_7"
+          ],
+          "CAR_4_1": [
+            "4_1"
+          ],
+          "CAR_5_4": [
+            "5_4"
+          ],
+          "CAR_5_8": [
+            "5_8"
+          ],
+          "CAR_5_2": [
+            "5_2"
+          ],
+          "CAR_6_7": [
+            "6_7"
+          ],
+          "CAR_6_3": [
+            "6_3"
+          ],
+          "CAR_7_8": [
+            "7_8"
+          ],
+          "CAR_7_6": [
+            "7_6"
+          ],
+          "CAR_7_4": [
+            "7_4"
+          ],
+          "CAR_8_7": [
+            "8_7"
+          ],
+          "CAR_8_5": [
+            "8_5"
+          ],
+          "CAR_WEST_0_0": [
+            "WEST_0_0"
+          ],
+          "CAR_0_WEST_0": [
+            "0_WEST_0"
+          ],
+          "CAR_WEST_1_1": [
+            "WEST_1_1"
+          ],
+          "CAR_1_WEST_1": [
+            "1_WEST_1"
+          ],
+          "CAR_WEST_2_2": [
+            "WEST_2_2"
+          ],
+          "CAR_2_WEST_2": [
+            "2_WEST_2"
+          ],
+          "CAR_EAST_0_6": [
+            "EAST_0_6"
+          ],
+          "CAR_6_EAST_0": [
+            "6_EAST_0"
+          ],
+          "CAR_EAST_1_7": [
+            "EAST_1_7"
+          ],
+          "CAR_7_EAST_1": [
+            "7_EAST_1"
+          ],
+          "CAR_EAST_2_8": [
+            "EAST_2_8"
+          ],
+          "CAR_8_EAST_2": [
+            "8_EAST_2"
+          ],
+          "CAR_NORTH_0_2": [
+            "NORTH_0_2"
+          ],
+          "CAR_2_NORTH_0": [
+            "2_NORTH_0"
+          ],
+          "CAR_NORTH_1_5": [
+            "NORTH_1_5"
+          ],
+          "CAR_5_NORTH_1": [
+            "5_NORTH_1"
+          ],
+          "CAR_NORTH_2_8": [
+            "NORTH_2_8"
+          ],
+          "CAR_8_NORTH_2": [
+            "8_NORTH_2"
+          ],
+          "CAR_SOUTH_0_0": [
+            "SOUTH_0_0"
+          ],
+          "CAR_0_SOUTH_0": [
+            "0_SOUTH_0"
+          ],
+          "CAR_SOUTH_1_3": [
+            "SOUTH_1_3"
+          ],
+          "CAR_3_SOUTH_1": [
+            "3_SOUTH_1"
+          ],
+          "CAR_SOUTH_2_6": [
+            "SOUTH_2_6"
+          ],
+          "CAR_6_SOUTH_2": [
+            "6_SOUTH_2"
+          ]
+        }
+      }
+    }
+  ],
+  "TRANSIT": []
+}
