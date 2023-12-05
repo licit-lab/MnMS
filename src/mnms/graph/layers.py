@@ -14,6 +14,7 @@ from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable
 from mnms.vehicles.veh_type import Vehicle, Car, Bus
+from mnms.graph.zone import MLZone
 
 log = create_logger(__name__)
 
@@ -362,6 +363,8 @@ class MultiLayerGraph(object):
             if connection_distance is not None:
                 self.connect_origin_destination_layer(connection_distance)
 
+        self.zones = dict()
+
     def add_origin_destination_layer(self, odlayer: OriginDestinationLayer):
         self.odlayer = odlayer
 
@@ -573,6 +576,11 @@ class MultiLayerGraph(object):
         else:
             for mservice in mservices:
                 layer.add_cost_function(mservice, cost_name, cost_function)
+
+    def add_zone(self, zone: MLZone):
+        if zone.id in self.zones.keys():
+            print(f"Already defined zone {zone.id} is overwritten")
+        self.zones[zone.id] = zone
 
 
 if __name__ == "__main__":

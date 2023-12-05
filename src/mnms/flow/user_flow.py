@@ -83,10 +83,17 @@ class UserFlow(object):
                     # user.notify(arrival_time.time)
                     finish_trip.append(user)
                 else:
-                    # self.set_user_position(user)
-                    # log.info(remaining_length)
-                    user.set_state_stop()
-                    finish_walk.append(user)
+                    next_link = graph.nodes[user._current_node].adj[upath[upath.index(user._current_node) + 1]]
+                    if next_link.label == 'TRANSIT':
+                        # User keeps walking
+                        log.info(f"{user} enter connection on {next_link.id}")
+                        user.set_state_walking()
+                        self._walking[user.id] = next_link.length - excess_dist
+                    else:
+                        # self.set_user_position(user)
+                        # log.info(remaining_length)
+                        user.set_state_stop()
+                        finish_walk.append(user)
 
                 user.notify(arrival_time.time)
 

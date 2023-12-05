@@ -15,7 +15,7 @@ from mnms.mobility_service.parking_service.depot import Depot
 from mnms.mobility_service.parking_service.filters import FilterProtocol, IsWaiting, InRadiusFilter
 from mnms.time import Dt, Time
 from mnms.tools.exceptions import PathNotFound
-from mnms.vehicles.veh_type import Vehicle, VehicleActivity, VehicleState, VehicleActivityStop, VehicleActivityPickup, \
+from mnms.vehicles.veh_type import Vehicle, VehicleActivity, ActivityType, VehicleActivityStop, VehicleActivityPickup, \
     VehicleActivityServing
 from mnms.tools.cost import create_service_costs
 
@@ -33,7 +33,7 @@ class UserInfo:
 
 
 def pre_compute_feasibility(vehicle: Vehicle) -> bool:
-    if vehicle.state is VehicleState.PICKUP or vehicle.is_full:
+    if vehicle.activity_type is ActivityType.PICKUP or vehicle.is_full:
         return False
     else:
         return True
@@ -47,7 +47,7 @@ def truncate_plan(user: User, vehicleplan: List[VehicleActivity]) -> List[Vehicl
     truncate = []
     for act in vehicleplan:
         truncate.append(act)
-        if act.state is VehicleState.SERVING and act.user.id == user.id:
+        if act.activity_type is ActivityType.SERVING and act.user.id == user.id:
             return truncate
 
 
@@ -120,7 +120,7 @@ class ParkingService(AbstractOnDemandMobilityService):
         serving_activity = new_activities[1]
         user = pickup_activity.user
 
-        if veh.state is not VehicleState.STOP:
+        if veh.activity_type is not ActivityType.STOP:
             veh_next_node = veh.current_link[1]
             pickup_path, cost_pickup = dijkstra(self.graph,
                                                 veh_next_node,

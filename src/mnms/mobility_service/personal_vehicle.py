@@ -3,7 +3,7 @@ from typing import Tuple, List, Dict
 from mnms.demand import User
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.time import Dt
-from mnms.vehicles.veh_type import VehicleActivityServing, VehicleState, Vehicle, VehicleActivity
+from mnms.vehicles.veh_type import VehicleActivityServing, ActivityType, Vehicle, VehicleActivity
 from mnms.tools.cost import create_service_costs
 
 class PersonalMobilityService(AbstractMobilityService):
@@ -12,7 +12,7 @@ class PersonalMobilityService(AbstractMobilityService):
 
     def step_maintenance(self, dt: Dt):
         for veh in list(self.fleet.vehicles.values()):
-            if veh.state is VehicleState.STOP:
+            if veh.activity_type is ActivityType.STOP:
                 self.fleet.delete_vehicle(veh.id)
 
     def periodic_maintenance(self, dt: Dt):

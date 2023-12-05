@@ -10,7 +10,7 @@ from mnms.time import Dt, Time
 from mnms.tools.cost import create_service_costs
 from mnms.tools.exceptions import VehicleNotFoundError
 from mnms.vehicles.veh_type import VehicleActivityServing, Vehicle, VehicleActivityStop, VehicleActivityRepositioning, \
-    VehicleState, VehicleActivityPickup, VehicleActivity
+    ActivityType, VehicleActivityPickup, VehicleActivity
 
 log = create_logger(__name__)
 
@@ -23,10 +23,10 @@ def _to_nodes(path, veh):
 
 
 def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
-    if veh.activity is not None and veh.activity.state is not VehicleState.STOP:
+    if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
         activities_including_curr = [veh.activity] + [a for a in veh.activities]
         decrement_insert_index = True
-    elif veh.activity is not None and veh.activity.state == VehicleState.STOP:
+    elif veh.activity is not None and veh.activity.activity_type == ActivityType.STOP:
         activities_including_curr = [a for a in veh.activities] + [veh.activity]
         decrement_insert_index = False
     else:
@@ -58,7 +58,7 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
         # Modify activity_to_modify
         activity_to_modify.modify_path(activity_to_modify.path[do_ind_inpath:])
         # Insert the new activities and the modified one
-        if ind == 0 and veh.activity is not None and veh.activity.state is not VehicleState.STOP:
+        if ind == 0 and veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
             # Interrupt current activity and insert the new activities plus the
             # modified one
             veh.activity = None
@@ -108,15 +108,16 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
                                             path=pu_path,
                                             user=user)
         activity_to_modify_pu.modify_path(activity_to_modify_pu.path[pu_ind_inpath:])
-        if ind_pu == 0 and veh.activity is not None and veh.activity.state is not VehicleState.STOP:
+        if ind_pu == 0 and veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
             # Interrupt current activity and insert the pickup activity plus the
             # modified one
             veh.activity = None
             # Modify length to travel on the first link of pu_activity.path with
             # current remaining_link_length to prevent restarting the travel of
             # this link
-            pu_activity.path[0] = (pu_activity.path[0][0], veh._remaining_link_length)
-            pu_activity.reset_path_iterator()
+            if pu_activity.path:
+                pu_activity.path[0] = (pu_activity.path[0][0], veh._remaining_link_length)
+                pu_activity.reset_path_iterator()
             for a in reversed([pu_activity, activity_to_modify_pu]):
                 if decrement_insert_index:
                     veh.activities.insert(max(0, ind_pu-1), a)
@@ -157,7 +158,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
     def clean_arrived_vehicles(self, lid: str):
         if len(self.vehicles[lid]) > 0:
             first_veh = self.vehicles[lid][-1]
-            if first_veh.state is VehicleActivityStop:
+            if first_veh.activity_type is VehicleActivityStop:
                 log.info(f"Deleting arrived veh: {first_veh}")
                 self.vehicles[lid].pop()
                 self.fleet.delete_vehicle(first_veh.id)
@@ -241,9 +242,9 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         # Get the indexes of veh.activities where pickup and serving activities
         # should be inserted
-        if veh.activity is not None and veh.activity.state is not VehicleState.STOP:
+        if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
             activities_including_curr = [veh.activity] + [a for a in veh.activities]
-        elif veh.activity is not None and veh.activity.state == VehicleState.STOP:
+        elif veh.activity is not None and veh.activity.activity_type == ActivityType.STOP:
             activities_including_curr = [a for a in veh.activities] + [veh.activity]
         else:
             activities_including_curr = [a for a in veh.activities]
@@ -262,7 +263,6 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
     def estimation_pickup_time(self, user: User, veh: Vehicle, line: dict):
         user_node = user._current_node
-        veh_node = veh._current_node
         veh_link_borders = veh.current_link
         veh_link_length = self.gnodes[veh_link_borders[0]].adj[veh_link_borders[1]].length
         veh_remaining_length = veh.remaining_link_length
@@ -270,7 +270,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         line_stops = line["nodes"]
         ind_user = line_stops.index(user_node)
-        ind_veh = line_stops.index(veh_node)
+        ind_veh = line_stops.index(veh_link_borders[0])
 
         path = line_stops[ind_veh:ind_user+1]
         dist = 0
@@ -329,11 +329,11 @@ class PublicTransportMobilityService(AbstractMobilityService):
         self.gnodes = self.graph.nodes
         for lid in self.lines:
             for new_veh in self.new_departures(self._tcurrent, dt, lid):
-                # Mark the Stop state to done to start vehicle journey
-                if new_veh.activity.state is VehicleState.STOP:
+                # Mark the Stop activity_type to done to start vehicle journey
+                if new_veh.activity.activity_type is ActivityType.STOP:
                     new_veh.activity.is_done = True
 
-                # If no user are waiting for this bus, switch state to repositioning to end of line
+                # If no user are waiting for this bus, switch activity_type to repositioning to end of line
                 # if not new_veh.activities:
                 #     stop_activity = new_veh.activity
                 #     repo_activity = VehicleActivityRepositioning(stop_activity.node,
