@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 
 import numpy as np
 
@@ -9,8 +9,9 @@ from mnms.demand import User
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.time import Dt
 from mnms.tools.exceptions import PathNotFound
-from mnms.vehicles.veh_type import VehicleState, VehicleActivityServing, VehicleActivityStop, \
-    VehicleActivityPickup, VehicleActivityRepositioning
+from mnms.vehicles.veh_type import ActivityType, VehicleActivityServing, VehicleActivityStop, \
+    VehicleActivityPickup, VehicleActivityRepositioning, Vehicle, VehicleActivity
+from mnms.tools.cost import create_service_costs
 
 log = create_logger(__name__)
 
@@ -36,6 +37,9 @@ class OnDemandMobilityService(AbstractMobilityService):
 
     def step_maintenance(self, dt: Dt):
         self.gnodes = self.graph.nodes
+
+    def periodic_maintenance(self, dt: Dt):
+        pass
 
     def request(self, user: User, drop_node: str) -> Dt:
         """
@@ -68,7 +72,7 @@ class OnDemandMobilityService(AbstractMobilityService):
 #            if not choosen_veh.is_full:
             if choosen_veh.is_empty:
                 # Vehicle available if either stopped or repositioning, and has no activity planned afterwards
-                available = True if ((choosen_veh.state in [VehicleState.STOP, VehicleState.REPOSITIONING]) and (not choosen_veh.activities)) else False
+                available = True if ((choosen_veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) and (not choosen_veh.activities)) else False
                 if available:
                     # Compute pick-up path and cost from end of current activity
                     veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
@@ -109,8 +113,17 @@ class OnDemandMobilityService(AbstractMobilityService):
         veh.add_activities(activities)
         user.set_state_waiting_vehicle()
 
-        if veh.state is VehicleState.STOP:
+        if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
+
+    def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
+        pass
+
+    def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
+        pass
+
+    def service_level_costs(self, nodes: List[str]) -> dict:
+        return create_service_costs()
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
@@ -124,7 +137,7 @@ class OnDemandMobilityService(AbstractMobilityService):
         return new_obj
 
 
-class OnDemandDepotMobilityService(AbstractMobilityService):
+class OnDemandDepotMobilityService(OnDemandMobilityService):
     def __init__(self,
                  _id: str,
                  dt_matching: int,
@@ -135,7 +148,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
         Args:
             depot: the list of depot (defined by location -a node-, the waiting vehicles and the capacity)
         """
-        super(OnDemandDepotMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
+        super(OnDemandDepotMobilityService, self).__init__(_id, dt_matching, dt_step_maintenance)
         self.gnodes = None
         self.depots = dict()
 
@@ -169,7 +182,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
         depot_pos = np.array([self.gnodes[d].position for d in self.depots.keys()])
 
         for veh in self.fleet.vehicles.values():
-            if veh.state is VehicleState.STOP:
+            if veh.activity_type is ActivityType.STOP:
                 if veh._current_node not in self.depots:
                     veh_position = veh.position
                     dist_vector = np.linalg.norm(depot_pos - veh_position, axis=1)
@@ -227,7 +240,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
             #if not choosen_veh.is_full:
             if choosen_veh.is_empty:
                 # Vehicle available if either stopped or repositioning, and has no activity planned afterwards
-                available = True if ((choosen_veh.state in [VehicleState.STOP, VehicleState.REPOSITIONING]) and (not choosen_veh.activities)) else False
+                available = True if ((choosen_veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) and (not choosen_veh.activities)) else False
                 if available:
                     # Compute pick-up path and cost from end of current activity
                     veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
@@ -282,7 +295,7 @@ class OnDemandDepotMobilityService(AbstractMobilityService):
         veh.add_activities(activities)
         user.set_state_waiting_vehicle()
 
-        if veh.state is VehicleState.STOP:
+        if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
             if veh._current_node in self.depots:
                 self.depots[veh._current_node]["vehicles"].remove(veh.id)

@@ -21,7 +21,7 @@ def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=Tru
 
     if draw_stops and roads.stops:
         x, y = zip(*[stop.absolute_position.tolist() for stop in roads.stops.values()])
-        ax.plot(x, y, 'o', markerfacecolor='red', markeredgecolor=color, fillstyle='full', markersize=nodesize)
+        ax.plot(x, y, 'o', markerfacecolor='red', markeredgecolor='red', fillstyle='full', markersize=5)
 
     if node_label:
         [ax.annotate(n, rn.position, size=label_size) for n, rn in roads.nodes.items()]
