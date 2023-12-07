@@ -192,6 +192,8 @@ class MultiLayerGraph(object):
 
         self.map_linkid_layerid=dict()  # Link and layer mapping
 
+        self.zones = dict()
+
         self.dynamic_space_sharing = DynamicSpaceSharing(self)
 
         for l in layers:
@@ -408,6 +410,11 @@ class MultiLayerGraph(object):
             down_layer = self.graph.nodes[tl['downstream_node']].label
             self.transitlayer.add_link(tl['id'], up_layer, down_layer)
 
+    def add_zone(self, zone: MLZone):
+        if zone.id in self.zones.keys():
+            print(f"Already defined zone {zone.id} is overwritten")
+        self.zones[zone.id] = zone
+
 class TransitLayer(CostFunctionLayer):
     def __init__(self):
         super(TransitLayer, self).__init__()
@@ -459,7 +466,6 @@ class TransitLayer(CostFunctionLayer):
                 new_obj.add_link(lid, olayer, dlayer)
 
         return new_obj
-
 
 class SimpleLayer(AbstractLayer):
     def create_node(self, nid: str, dbnode: str, exclude_movements: Optional[Dict[str, Set[str]]] = None):
@@ -717,7 +723,7 @@ class SharedVehicleLayer(AbstractLayer):
         odlayer_nodes.update(odlayer.destinations.keys())
 
         # Origins to link to the stations
-        graph_node_ids = np.array([s['node_id'] for s in self.stations])
+        graph_node_ids = np.array([s['node'] for s in self.stations])
         graph_node_pos = np.array([s['position'] for s in self.stations])
 
         for nid in odlayer.origins:
@@ -763,7 +769,7 @@ class SharedVehicleLayer(AbstractLayer):
         transit_links: list of created transit links
 
         """
-        node_id = next((item for item in self.stations if item["id"] == station_id), None)['node_id']
+        node_id = next((item for item in self.stations if item["id"] == station_id), None)['node']
         pos = next((item for item in self.stations if item["id"] == station_id), None)['position']
 
         transit_links = []
@@ -805,13 +811,13 @@ class SharedVehicleLayer(AbstractLayer):
 
                 for layer_id in self.multi_graph.transitlayer.links.keys():
                     for link_id in self.multi_graph.transitlayer.links[layer_id][self._id]:
-                        if link_id[-len(s['node_id']):] == s['node_id']:
+                        if link_id[-len(s['node']):] == s['node']:
                             self.multi_graph.graph.delete_link(link_id)
                             self.multi_graph.transitlayer.links[layer_id][self._id].remove(link_id)
                             del self.multi_graph.map_linkid_layerid[link_id]
 
                 self.stations.remove(s)
-                return s['node_id']
+                return s['node']
 
         return
 
@@ -821,7 +827,10 @@ class SharedVehicleLayer(AbstractLayer):
                 'VEH_TYPE': ".".join([self._veh_type.__module__, self._veh_type.__name__]),
                 'DEFAULT_SPEED': self.default_speed,
                 'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
-                }
+                'NODES': [node_to_dict(n) for n in self.graph.nodes.values()],
+                'LINKS': [link_to_dict(l) for l in self.graph.links.values()],
+                'MAP_ROADDB': {"NODES": self.map_reference_nodes,
+                               "LINKS": self.map_reference_links}}
 
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescriptor):

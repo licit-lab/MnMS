@@ -22,11 +22,12 @@ attach_log_file('simulation.log')
 
 # Graph
 road_db = generate_manhattan_road(5, 1000, prefix='I_')
+#road_db = generate_manhattan_road(5, 1000)
 
 # Vehicle sharing mobility service
 ff_velov = OnVehicleSharingMobilityService("ff_velov", 1, 1)
-
-velov_layer = SharedVehicleLayer(road_db, 'velov_layer', Bike, 3, services=[ff_velov], observer=CSVVehicleObserver("velov.csv"))
+ff_velov.attach_vehicle_observer(CSVVehicleObserver("velov.csv"))
+velov_layer = generate_layer_from_roads(road_db, 'velov_layer', SharedVehicleLayer, Bike, 3, [ff_velov])
 
 # OD layer
 #odlayer = generate_grid_origin_destination_layer(-1000, -1000, 6000, 6000, 10, 10)
@@ -35,13 +36,13 @@ odlayer = generate_grid_origin_destination_layer(-1000, -1000, 3000, 3000, 5, 5)
 # Multilayer graph
 mlgraph = MultiLayerGraph([velov_layer],odlayer)
 
+save_graph(mlgraph, 'free_floating_example.json')
+
 # Add free-floating vehicle
 ff_velov.init_free_floating_vehicles('I_2',1)
 
 # Connect od layer and velov layer
 mlgraph.connect_origindestination_layers(500)
-
-save_graph(mlgraph, 'free_floating_example.json')
 
 # Desicion model
 decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")

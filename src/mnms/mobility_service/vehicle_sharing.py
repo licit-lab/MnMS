@@ -7,7 +7,7 @@ from mnms.vehicles.veh_type import Vehicle, VehicleActivity
 from mnms.demand.user import User
 from mnms.tools.observer import TimeDependentSubject
 from mnms.tools.cost import create_service_costs
-from mnms.vehicles.veh_type import VehicleState, VehicleActivityStop, VehicleActivityPickup, VehicleActivityServing
+from mnms.vehicles.veh_type import VehicleActivityStop, VehicleActivityPickup, VehicleActivityServing, ActivityType
 
 log = create_logger(__name__)
 
@@ -40,18 +40,24 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         self.stations = dict()
         self.map_node_station = dict()
 
-    def create_station(self, id_station: str, node: str, capacity: int, nb_initial_veh: int = 0, free_floating=False) \
+    def create_station(self, id_station: str, dbroads_node: str, layer_node:str, capacity: int, nb_initial_veh: int = 0, free_floating=False) \
             -> Station:
 
-        # assert node in self.graph.nodes
+        if len(dbroads_node)>0:
+            layer_node = self.layer.id + '_' + dbroads_node
+        else:
+            roaddb_node = self.layer.map_reference_nodes[layer_node]
 
-        station = Station(id_station, node, capacity, free_floating)
+
+        assert layer_node in self.graph.nodes
+
+        station = Station(id_station, layer_node, capacity, free_floating)
 
         for v in range(nb_initial_veh):
-            v = self.fleet.create_vehicle(node,
+            v = self.fleet.create_vehicle(layer_node,
                                           capacity=self._veh_capacity,
-                                          activities=[VehicleActivityStop(node=node)])
-            v.set_position(self.graph.nodes[node].position)
+                                          activities=[VehicleActivityStop(node=layer_node)])
+            v.set_position(self.graph.nodes[layer_node].position)
             station.waiting_vehicles.append(v)
 
             if self._observer is not None:
@@ -59,11 +65,11 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
         self.stations[id_station] = station
 
-        roaddb_node = self.layer.map_reference_nodes[node]
-        self.layer.stations.append({'id': id_station, 'node': node, 'position': self.layer.roads.nodes[roaddb_node].position})
+        roaddb_node = self.layer.map_reference_nodes[layer_node]
+        self.layer.stations.append({'id': id_station, 'node': layer_node, 'position': self.layer.roads.nodes[roaddb_node].position})
 
         # TO DO: 2 stations may be on the same node (free-floating stations)
-        self.map_node_station[node] = id_station
+        self.map_node_station[layer_node] = id_station
 
         return station
 
@@ -85,7 +91,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
         """
         id_station = 'ff_station_' + self.id + '_' + id_node
-        self.create_station(id_station, id_node, nb_veh, nb_veh, True)
+        self.create_station(id_station, id_node, '', nb_veh, nb_veh, True)
 
     def create_free_floating_station(self, veh: Vehicle):
         """
@@ -104,7 +110,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
         if id_station in self.stations.keys():
             self.stations[id_station].waiting_vehicles.append(veh)
         else:
-            station = self.create_station(id_station, veh.current_node, 1, 0, True)
+            station = self.create_station(id_station, '', veh.current_node, 1, 0, True)
             station.waiting_vehicles.append(veh)
             self.layer.connect_station(id_station, self.layer._multi_graph.odlayer, 500)
 
@@ -114,13 +120,13 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
         node = self.stations[id_station].node
 
-        return [v.id for v in self.fleet.vehicles.values() if (node == v.current_node and v.state == VehicleState.STOP)]
+        return [v.id for v in self.fleet.vehicles.values() if (node == v.current_node and v.activity_type==ActivityType.STOP)]
 
     def step_maintenance(self, dt: Dt):
 
         # TO DO: optimisation (not manage all the vehicle)
         for veh in self.fleet.vehicles.values():
-            if veh.state is VehicleState.STOP:
+            if veh.activity_type is ActivityType.STOP:
                 _current_node = veh.current_node
 
                 if self.map_node_station.get(_current_node):

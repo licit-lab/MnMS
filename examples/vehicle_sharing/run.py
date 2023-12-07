@@ -1,11 +1,11 @@
 import pathlib
 from mnms.generation.roads import generate_manhattan_road
+from mnms.generation.layers import generate_layer_from_roads
 from mnms.mobility_service.vehicle_sharing import OnVehicleSharingMobilityService
 from mnms.tools.observer import CSVVehicleObserver, CSVUserObserver
 from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer
 from mnms.graph.layers import SharedVehicleLayer, MultiLayerGraph
 from mnms.vehicles.veh_type import Bike
-from mnms.generation.demand import generate_random_demand
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
@@ -14,7 +14,7 @@ from mnms.time import TimeTable, Time, Dt
 from mnms.log import set_mnms_logger_level, LOGLEVEL, attach_log_file
 from mnms.io.graph import save_graph, load_graph
 
-b_from_json=True
+b_from_json=False
 
 # set_all_mnms_logger_level(LOGLEVEL.WARNING)
 set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
@@ -37,13 +37,15 @@ else:
 
     # Vehicle sharing mobility service
     velov = OnVehicleSharingMobilityService("velov", 0, 1)
-    velov_layer = SharedVehicleLayer(road_db, 'velov_layer', Bike, 3, services=[velov],
-                                     observer=CSVVehicleObserver("velov.csv"))
+    velov.attach_vehicle_observer(CSVVehicleObserver("velov.csv"))
+
+    velov_layer = generate_layer_from_roads(road_db, 'velov_layer', SharedVehicleLayer, Bike, 3, [velov])
 
     # Multilayer graph
     mlgraph = MultiLayerGraph([velov_layer], odlayer)
 
-    save_graph(mlgraph, 'free_floating_example.json')
+    if not b_from_json:
+        save_graph(mlgraph, 'free_floating_example.json')
 
 # Add stations
 mlgraph.layers['velov_layer'].mobility_services['velov'].create_station('S1', '2', 20, 5)

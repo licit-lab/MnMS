@@ -12,9 +12,9 @@ from mnms.vehicles.veh_type import Vehicle, Car
 Point = Annotated[List[float], 2]
 PointList = List[Point]
 
-
 def generate_layer_from_roads(roads: RoadDescriptor,
                               layer_id: str,
+                              class_layer = SimpleLayer,
                               veh_type:Type[Vehicle] = Car,
                               default_speed: float = 14,
                               mobility_services: Optional[List[AbstractMobilityService]] = None,
@@ -36,10 +36,9 @@ def generate_layer_from_roads(roads: RoadDescriptor,
 
     Returns:
         The generated Layer
-
     """
 
-    layer = SimpleLayer(roads, layer_id, veh_type, default_speed, mobility_services)
+    layer = class_layer(roads, layer_id, veh_type, default_speed, mobility_services)
 
     for n in roads.nodes:
         if banned_nodes is None or (banned_nodes is not None and n not in banned_nodes):

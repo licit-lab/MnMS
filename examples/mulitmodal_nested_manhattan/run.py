@@ -123,7 +123,7 @@ affectation_factor = 10
 #################
 ### Functions ###
 #################
-def create_supervisor(observers=True, generate_ridehailing_vehicles_init_pos=False, generate_zones=False, generate_demand=False):
+def create_supervisor(observers=True, ridehailing_vehicles_init_pos=False, generate_zones=False, generate_demand=False):
     """Creates a supervisor.
 
     Args:
@@ -187,7 +187,7 @@ def create_supervisor(observers=True, generate_ridehailing_vehicles_init_pos=Fal
     # As RH vehicles cannot run on the sections and nodes associated with the railways, provide banned nodes and sections
     ridehailing_layer = generate_layer_from_roads(roads, 'RIDEHAILING', veh_type=Car, mobility_services=[ridehailing_service], default_speed=traditional_vehs_default_speed,
         banned_nodes=banned_nodes, banned_sections=banned_sections)
-    if generate_ridehailing_vehicles_init_pos:
+    if ridehailing_vehicles_init_pos:
         generate_ridehailing_vehicles_init_pos(ridehailing_service, nb_ridehailing_vehs, ridehailing_vehicles_init_positions_file)
     create_on_demand_vehicles(ridehailing_service, ridehailing_vehicles_init_positions_file)
 
@@ -380,7 +380,7 @@ def generate_demand_scenario(mlgraph, dep_rates, tstart, tend, proba, available_
 ### Main ###
 ############
 if __name__ == '__main__':
-    supervisor = create_supervisor() # Do not forget to create inputs and outputs dir and
+    supervisor = create_supervisor(True,True,True,True) # Do not forget to create inputs and outputs dir and
                                      # generate the inputs first time you lanch this script !
     st = time.time()
     supervisor.run(tstart, tend, flow_dt, affectation_factor)
