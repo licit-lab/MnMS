@@ -190,8 +190,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             except StopIteration:
                 veh._current_node = veh.current_link[1]
                 veh.next_activity()
-                #if veh.is_moving:
-                elapsed_time = dt
+                if not veh.is_moving:
+                    elapsed_time = dt
             return elapsed_time
         else:
             veh._remaining_link_length -= dist_travelled
