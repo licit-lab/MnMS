@@ -1,6 +1,6 @@
 import pathlib
 from mnms.generation.roads import generate_manhattan_road
-from mnms.mobility_service.vehicle_sharing import OnVehicleSharingMobilityService
+from mnms.mobility_service.vehicle_sharing import VehicleSharingMobilityService
 from mnms.tools.observer import CSVVehicleObserver, CSVUserObserver
 from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer
 from mnms.graph.layers import SharedVehicleLayer, MultiLayerGraph
@@ -25,7 +25,7 @@ road_db = generate_manhattan_road(5, 1000, prefix='I_')
 #road_db = generate_manhattan_road(5, 1000)
 
 # Vehicle sharing mobility service
-ff_velov = OnVehicleSharingMobilityService("ff_velov", 1, 1)
+ff_velov = VehicleSharingMobilityService("ff_velov", 1, 1)
 ff_velov.attach_vehicle_observer(CSVVehicleObserver("velov.csv"))
 velov_layer = generate_layer_from_roads(road_db, 'velov_layer', SharedVehicleLayer, Bike, 3, [ff_velov])
 

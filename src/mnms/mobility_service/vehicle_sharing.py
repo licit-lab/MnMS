@@ -27,20 +27,20 @@ class Station(TimeDependentSubject):
         self.waiting_vehicles = []
 
 
-class OnVehicleSharingMobilityService(AbstractMobilityService):
+class VehicleSharingMobilityService(AbstractMobilityService):
 
     def __init__(self,
                  _id: str,
                  free_floating_possible: bool,
                  dt_matching: int,
                  dt_step_maintenance: int = 0):
-        super(OnVehicleSharingMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
+        super(VehicleSharingMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
 
         self.free_floating_possible = free_floating_possible
         self.stations = dict()
         self.map_node_station = dict()
 
-    def create_station(self, id_station: str, dbroads_node: str, layer_node:str, capacity: int, nb_initial_veh: int = 0, free_floating=False) \
+    def create_station(self, id_station: str, dbroads_node: str, layer_node:str='', capacity: int=30, nb_initial_veh: int = 0, free_floating=False) \
             -> Station:
 
         if len(dbroads_node)>0:
@@ -207,7 +207,7 @@ class OnVehicleSharingMobilityService(AbstractMobilityService):
 
     def __dump__(self):
         return {
-            "TYPE": ".".join([OnVehicleSharingMobilityService.__module__, OnVehicleSharingMobilityService.__name__]),
+            "TYPE": ".".join([VehicleSharingMobilityService.__module__, VehicleSharingMobilityService.__name__]),
             "DT_MATCHING": self._dt_matching,
             "VEH_CAPACITY": self._veh_capacity,
             "ID": self.id,

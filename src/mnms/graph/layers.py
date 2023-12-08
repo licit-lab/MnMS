@@ -126,6 +126,17 @@ class AbstractLayer(CostFunctionLayer):
 
         return transit_links
 
+    def get_connection_nodes(self, from_layer:bool=True, to_layer:bool=True):
+        """
+        Get the list of nodes that can be connected to another layer
+
+        Args:
+
+        Return:
+            the list of nodes
+        """
+        return graph_to_dict(self.graph)['NODES']
+
     @property
     def default_speed(self):
         return self._default_speed
@@ -303,11 +314,16 @@ class MultiLayerGraph(object):
         odlayer_nodes.update(self.odlayer.origins.keys())
         odlayer_nodes.update(self.odlayer.destinations.keys())
 
-        nodes=graph_to_dict(self.graph)['NODES']
+        graph_node_ids = []
+        graph_node_label=[]
+        graph_node_pos=np.empty((0,2))
 
-        graph_node_ids = np.array([n['ID'] for n in nodes if n['LABEL'] in layer_id_list])
-        graph_node_label = np.array([n['LABEL'] for n in nodes if n['LABEL'] in layer_id_list])
-        graph_node_pos = np.array([np.array([n['X'],n['Y']]) for n in nodes if n['LABEL'] in layer_id_list])
+        for layer_id in layer_id_list:
+            nodes = self.layers[layer_id].get_connection_nodes()
+
+            graph_node_ids = np.append(graph_node_ids,np.array([n['ID'] for n in nodes]))
+            graph_node_label = np.append(graph_node_label,np.array([layer_id for n in nodes]))
+            graph_node_pos = np.append(graph_node_pos,np.array([np.array([n['X'], n['Y']]) for n in nodes]),axis=0)
 
         for nid in graph_node_ids:
             if nid not in odlayer_nodes:
@@ -753,6 +769,22 @@ class SharedVehicleLayer(AbstractLayer):
                         {'id': lid, 'upstream_node': layer_nid, 'downstream_node': nid, 'dist': dist})
 
         return transit_links
+
+    def get_connection_nodes(self, from_layer:bool=True, to_layer:bool=True):
+        """
+        Get the list of nodes that can be connected to another layer
+        In the case of vehicle sharing layer, it is only the station nodes
+        TO DO: free floating case
+        Args:
+
+        Return:
+            the list of nodes
+        """
+        nodes=[]
+        for s in self.stations:
+            nodes.append(node_to_dict(self.graph.nodes[s['node']]))
+
+        return nodes
 
     def connect_station(self, station_id:str,odlayer: OriginDestinationLayer, connection_distance: float):
         """

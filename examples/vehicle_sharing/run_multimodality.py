@@ -2,6 +2,7 @@ import pathlib
 from mnms.generation.roads import generate_manhattan_road
 from mnms.generation.layers import generate_layer_from_roads
 from mnms.mobility_service.vehicle_sharing import VehicleSharingMobilityService
+from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.tools.observer import CSVVehicleObserver, CSVUserObserver
 from mnms.generation.layers import generate_layer_from_roads, generate_grid_origin_destination_layer
 from mnms.graph.layers import SharedVehicleLayer, MultiLayerGraph
@@ -23,7 +24,7 @@ set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
 attach_log_file('simulation.log')
 
 if b_from_json:
-    mlgraph=load_graph('free_floating_example.json')
+    mlgraph=load_graph('multimodality_example.json')
 
     # OD layer
     odlayer = generate_grid_origin_destination_layer(-1000, -1000, 3000, 3000, 5, 5)
@@ -35,6 +36,13 @@ else:
     # OD layer
     odlayer = generate_grid_origin_destination_layer(-1000, -1000, 3000, 3000, 5, 5)
 
+    # Personnal car mobility service
+    personal_car = PersonalMobilityService()
+    personal_car.attach_vehicle_observer(CSVVehicleObserver("PV.csv"))
+    car_layer = generate_layer_from_roads(road_db,
+                                          'car_layer',
+                                          mobility_services=[personal_car])
+
     # Vehicle sharing mobility service
     velov = VehicleSharingMobilityService("velov", 0, 1)
     velov.attach_vehicle_observer(CSVVehicleObserver("velov.csv"))
@@ -42,7 +50,7 @@ else:
     velov_layer = generate_layer_from_roads(road_db, 'velov_layer', SharedVehicleLayer, Bike, 3, [velov])
 
     # Multilayer graph
-    mlgraph = MultiLayerGraph([velov_layer], odlayer)
+    mlgraph = MultiLayerGraph([car_layer,velov_layer], odlayer)
 
     if not b_from_json:
         save_graph(mlgraph, 'free_floating_example.json')
@@ -54,12 +62,15 @@ mlgraph.layers['velov_layer'].mobility_services['velov'].create_station('S2', 'S
 # Connect od layer and velov layer
 mlgraph.connect_origindestination_layers(500)
 
+# Connect personnal car layer and velov layer
+mlgraph.connect_inter_layers(['car_layer','velov_layer'],300)
+
 # Desicion model
 decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
 
 # Flow Motor
 def mfdspeed(dacc):
-    dspeed = {'BIKE': 3}
+    dspeed = {'CAR':12, 'BIKE': 3}
     return dspeed
 
 flow_motor = MFDFlowMotor(outfile="flow.csv")
