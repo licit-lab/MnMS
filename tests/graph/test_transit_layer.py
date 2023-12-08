@@ -59,10 +59,14 @@ class TestTransitLayer(unittest.TestCase):
     def test_existence(self):
         transit_layer = self.mlgraph.transitlayer
 
+        print(transit_layer.links)
         self.assertEqual(len(transit_layer.links), 3)
-        self.assertEqual(len(transit_layer.links["ODLAYER"]), 2)
-        self.assertEqual(len(transit_layer.links["BUS"]), 1)
-        self.assertEqual(len(transit_layer.links["CAR"]), 2)
+        self.assertEqual(len(transit_layer.links["ODLAYER"]["CAR"]), 3)
+        self.assertEqual(len(transit_layer.links["ODLAYER"]["BUS"]), 2)
+        self.assertEqual(len(transit_layer.links["BUS"]["ODLAYER"]), 2)
+        self.assertEqual(len(transit_layer.links["BUS"]["CAR"]), 0)
+        self.assertEqual(len(transit_layer.links["CAR"]["ODLAYER"]), 3)
+        self.assertEqual(len(transit_layer.links["CAR"]["BUS"]), 1)
 
     def test_iter(self):
         transit_layer = self.mlgraph.transitlayer

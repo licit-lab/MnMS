@@ -56,3 +56,4 @@ class TestLayers(unittest.TestCase):
         self.assertListEqual(list(data_dict["NODES"].keys()), list(new_roads.nodes.keys()))
         self.assertListEqual(list(data_dict["SECTIONS"].keys()), list(new_roads.sections.keys()))
         self.assertListEqual(list(data_dict["STOPS"].keys()), list(new_roads.stops.keys()))
+        self.assertListEqual(list(data_dict["ZONES"].keys()), list(new_roads.zones.keys()))

@@ -118,8 +118,15 @@ def test_congested_mfd_congestion():
     personal_car.add_request(user2, 'C2')
     personal_car.matching(user2, "CarLayer_2")
     flow.step(Dt(seconds=1))
-    flow.step(Dt(seconds=0))
+    flow.step(Dt(seconds=1))
+
+    veh1 = list(personal_car.fleet.vehicles.values())[0]
+    veh2 = list(personal_car.fleet.vehicles.values())[1]
 
     assert 1 == flow.reservoirs["LEFT"].car_in_outgoing_queues
+    approx_dist1 = 15
+    assert approx_dist1 == pytest.approx(veh1.distance)
+    approx_dist2 = 10
+    assert approx_dist2 == pytest.approx(veh2.distance)
 
     VehicleManager.empty()

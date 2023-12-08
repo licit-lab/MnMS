@@ -103,15 +103,29 @@ class TestMFDFlow(unittest.TestCase):
         self.personal_car.matching(user, "C2")
         self.flow.step(Dt(seconds=1))
         self.assertDictEqual({'CAR': 1, 'BUS': 0}, self.flow.dict_accumulations['res1'])
+        self.assertDictEqual({'CAR': 0, 'BUS': 0}, self.flow.dict_accumulations['res2'])
         self.assertDictEqual({'BUS': 42, 'CAR': 42}, self.flow.dict_speeds['res1'])
+        self.assertDictEqual({'BUS': 0.23, 'CAR': 0.23}, self.flow.dict_speeds['res2'])
         self.assertAlmostEqual(1158.0, self.personal_car.fleet.vehicles['0']._remaining_link_length)
 
     def test_ghost_accumulation(self):
         self.flow.reservoirs['res1'].set_ghost_accumulation(lambda x: {"CAR": 21})
+        self.flow.reservoirs['res2'].set_ghost_accumulation(lambda x: {"CAR": 40, "BUS": 3})
+
+        user = User('U0', '0', '4', Time('00:01:00'))
+        user.set_path(Path(0,
+                           3400,
+                           ['C0', 'C2', 'B2', 'B3', 'B4']))
+        self.personal_car.add_request(user, 'C2')
+        self.personal_car.matching(user, "C2")
         self.flow.step(Dt(seconds=1))
-        self.assertEqual(self.flow.dict_accumulations["res1"]["CAR"], 21)
-        self.assertEqual(self.flow.reservoirs["res1"].dict_accumulations["CAR"], 21)
+        self.flow.step(Dt(seconds=1))
+
+        self.assertEqual(self.flow.dict_accumulations["res1"]["CAR"], 22)
+        self.assertEqual(self.flow.dict_accumulations["res2"]["CAR"], 40)
+        self.assertEqual(self.flow.reservoirs["res1"].dict_accumulations["CAR"], 22)
         self.assertEqual(self.flow.dict_accumulations["res1"]["BUS"], 0)
+        self.assertEqual(self.flow.dict_accumulations["res2"]["BUS"], 3)
 
 
 def test_move_veh_activity_change():
@@ -144,7 +158,7 @@ def test_move_veh_activity_change():
 
     flow.initialize(1.42)
 
-    user = User('U0', 'CarLayer_1', 'CarLayer_2', Time('00:01:00'))
+    user = User('U0', 'CarLayer_1', 'CarLayer_2', Time('09:00:00'))
     user._position = np.array([0, 10])
     user.set_path(Path(0,
                        3400,
@@ -152,14 +166,14 @@ def test_move_veh_activity_change():
     on_demand.step_maintenance(Dt(seconds=1))
     on_demand.request(user, "CarLayer_2")
     on_demand.matching(user, "CarLayer_2")
+    veh = on_demand.fleet.vehicles["0"]
+    print(veh.activities)
 
     flow.step(Dt(seconds=1))
 
-    veh = on_demand.fleet.vehicles["0"]
     assert 1 == pytest.approx(user.distance)
     assert 11 == pytest.approx(veh.distance)
 
-    print('test')
     VehicleManager.empty()
     Vehicle._counter = 0
 
@@ -194,7 +208,7 @@ def test_move_veh_res_change():
 
     flow.initialize(1.42)
 
-    user = User('U0', '0', '4', Time('00:01:00'))
+    user = User('U0', '0', '4', Time('09:00:00'))
     user.set_path(Path(0,
                        3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))

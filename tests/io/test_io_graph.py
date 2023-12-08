@@ -65,7 +65,7 @@ class TestIOGraph(unittest.TestCase):
 
         odlayer = generate_matching_origin_destination_layer(self.roads)
         new_graph.add_origin_destination_layer(odlayer)
-        new_graph.connect_origin_destination_layer(1e-3)
+        new_graph.connect_origindestination_layers(1e-3)
 
         self.assertEqual(set(self.mlgraph.graph.nodes.keys()), set(new_graph.graph.nodes.keys()))
         self.assertEqual(set(self.mlgraph.graph.links.keys()), set(new_graph.graph.links.keys()))

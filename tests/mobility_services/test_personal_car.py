@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
+import pandas as pd
 
 from mnms.demand import BaseDemandManager, User
 from mnms.generation.roads import generate_manhattan_road
@@ -66,9 +67,10 @@ class TestPersonalCar(unittest.TestCase):
                                 flow_motor,
                                 decision_model)
 
+        self.flow_dt = Dt(seconds=10)
         supervisor.run(Time("07:00:00"),
                        Time("07:03:00"),
-                       Dt(seconds=10),
+                       self.flow_dt,
                        10)
 
     def tearDown(self):
@@ -78,4 +80,9 @@ class TestPersonalCar(unittest.TestCase):
         VehicleManager.empty()
 
     def test_run_and_results(self):
-        pass
+        with open(self.dir_results / "user.csv") as f:
+            df = pd.read_csv(f, sep=';')
+        self.assertEqual(df['STATE'].iloc[-1], 'ARRIVED')
+        arrival_time = Time(df['TIME'].iloc[-1])
+        self.assertGreater(arrival_time, Time('07:02:13').remove_time(self.flow_dt))
+        self.assertLess(arrival_time, Time('07:02:13').add_time(self.flow_dt))

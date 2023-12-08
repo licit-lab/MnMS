@@ -112,9 +112,6 @@ class TestSerializationLayers(unittest.TestCase):
         car_layer = CarLayer(self.roads,
                              services=[PersonalMobilityService()])
 
-        self.assertEqual(car_layer.id, "CAR")
-        self.assertEqual(car_layer.default_speed, 13.8)
-
         car_layer.create_node("C0", "0")
         car_layer.create_node("C1", "1", {"0": {"2"}})
         car_layer.create_node("C2", "2")

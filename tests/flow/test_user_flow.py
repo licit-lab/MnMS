@@ -37,7 +37,7 @@ class TestUserFlow(unittest.TestCase):
         roads.register_stop("B4", "3_4", 1)
 
         roads.add_zone(construct_zone_from_sections(roads, "res1", ["0_1", "0_2", "2_3"]))
-        roads.add_zone(construct_zone_from_sections(roads, "res1", ["3_4"]))
+        roads.add_zone(construct_zone_from_sections(roads, "res2", ["3_4"]))
 
         car_layer = CarLayer(roads, services=[PersonalMobilityService()])
         car_layer.create_node('C0', '0')
