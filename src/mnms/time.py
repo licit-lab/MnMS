@@ -140,6 +140,8 @@ class Time(object):
         time._seconds = s
         time._minutes = int(m)
         time._hours = int(h)
+        if time._hours > 24 or time._hours == 24 and (time._minutes > 0 or time._seconds > 0):
+            log.warning(f'Return a time with more than 24 hours')
 
         return time
 
