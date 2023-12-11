@@ -431,6 +431,15 @@ class MultiLayerGraph(object):
             print(f"Already defined zone {zone.id} is overwritten")
         self.zones[zone.id] = zone
 
+    def get_all_mobility_services(self):
+        all_mob_services = [list(v.mobility_services.values()) for v in self.layers.values()]
+        all_mob_services = [item for sublist in all_mob_services for item in sublist]
+        return all_mob_services
+
+    def get_all_mobility_services_of_type(self, mstype):
+        all_ms = self.get_all_mobility_services()
+        return set([ms.id for ms in all_ms if isinstance(ms,mstype)])
+
 class TransitLayer(CostFunctionLayer):
     def __init__(self):
         super(TransitLayer, self).__init__()
