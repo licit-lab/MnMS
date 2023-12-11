@@ -63,9 +63,8 @@ class UserFlow(object):
             upath = user.path.nodes
             if remaining_length <= dist_travelled:
                 user.update_distance(remaining_length)
-                excess_dist = abs(remaining_length - dist_travelled)
                 user._remaining_link_length = 0
-                arrival_time = self._tcurrent.add_time(Dt(seconds=dt.to_seconds() - excess_dist / self._walk_speed))
+                arrival_time = self._tcurrent.add_time(Dt(seconds=remaining_length / self._walk_speed))
                 next_node = upath[upath.index(user._current_node) + 1]
                 user._current_node = next_node
                 self.set_user_position(user)
@@ -86,9 +85,12 @@ class UserFlow(object):
                     next_link = graph.nodes[user._current_node].adj[upath[upath.index(user._current_node) + 1]]
                     if next_link.label == 'TRANSIT':
                         # User keeps walking
-                        log.info(f"{user} enter connection on {next_link.id}")
+                        log.info(f"User {user.id} enters connection on {next_link.id}")
                         user.set_state_walking()
-                        self._walking[user.id] = next_link.length - excess_dist
+                        excess_dist = dist_travelled - remaining_length
+                        self._walking[user.id] = max(0, next_link.length - excess_dist)
+                        if excess_dist > next_link.length:
+                            log.warning(f'User {user.id} cannot walk through more than two links in one time step !')
                     else:
                         # self.set_user_position(user)
                         # log.info(remaining_length)
@@ -114,7 +116,7 @@ class UserFlow(object):
             # self._transiting[user.id] = user
 
         for u in finish_walk:
-            log.info(f'{u.id} is about to request a vehicle because he has finished walking')
+            log.info(f'User {u.id} is about to request a vehicle because he has finished walking')
             u.set_state_waiting_answer()
             requested_mservice = self._request_user_vehicles(u)
             self._waiting_answer.setdefault(u.id, (u.response_dt.copy(),requested_mservice))
@@ -217,13 +219,13 @@ class UserFlow(object):
                     self._walking.pop(u.id, None)
                     to_del.append(u.id)
                 elif next_link.label == "TRANSIT":
-                    log.info(f"{u} enter connection on {next_link.id}")
+                    log.info(f"User {u.id} enters connection on {next_link.id}")
                     u.set_state_walking()
                     self._walking[u.id] = next_link.length
                 else:
                     self._walking.pop(u.id, None)
                     u.set_state_waiting_answer()
-                    log.info(f'{u.id} is about to request a vehicle because he is stopped')
+                    log.info(f'User {u.id} is about to request a vehicle because he is stopped')
                     requested_mservice = self._request_user_vehicles(u)
                     self._waiting_answer.setdefault(u.id, (u.response_dt.copy(),requested_mservice))
 
@@ -240,7 +242,7 @@ class UserFlow(object):
             if self.users[uid].state is UserState.WAITING_ANSWER:
                 new_time = time.to_seconds() - dt.to_seconds()
                 if new_time < 0:
-                    log.info(f"{uid} waited answer too long, cancels his request for {requested_mservice._id}")
+                    log.info(f"User {uid} waited answer too long, cancels request for {requested_mservice._id}")
                     requested_mservice.cancel_request(uid)
                     refused_users.append(self.users[uid])
                     self.users[uid].set_state_stop()
