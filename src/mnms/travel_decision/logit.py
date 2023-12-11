@@ -2,7 +2,7 @@ import logging
 from math import exp, fsum
 from typing import List, Tuple
 
-from numpy.random import choice as _choice
+import numpy as np
 
 from mnms import create_logger
 from mnms.demand.user import Path
@@ -26,6 +26,19 @@ class LogitDecisionModel(AbstractDecisionModel):
         super(LogitDecisionModel, self).__init__(mmgraph, n_shortest_path=n_shortest_path, outfile=outfile,
                                                  verbose_file=verbose_file, cost=cost)
         self._theta = theta
+        self._seed = None
+        self._rng = None
+
+    def set_random_seed(self, seed):
+        """Method that sets the random seed for this decision model.
+
+        Args:
+            -seed: seed as an integer
+        """
+        if seed is not None:
+            self._seed = seed
+            rng = np.random.default_rng(self._seed)
+            self._rng = rng
 
     def path_choice(self, paths:List[Path]) -> Path:
         sum_cost_exp = fsum(exp(-self._theta*p.path_cost) for p in paths)
@@ -37,5 +50,9 @@ class LogitDecisionModel(AbstractDecisionModel):
         costs=[p.path_cost for p in paths]
         proba_path = [exp(-self._theta*c)/sum_cost_exp for c in costs]
 
-        selected_ind = _choice(range(len(proba_path)), 1,  p=proba_path)[0]
-        return paths[selected_ind]
+        if self._seed is not None:
+            selected_ind = self._rng.choice(range(len(proba_path)), 1,  p=proba_path)[0]
+        else:
+            selected_ind = np.random.choice(range(len(proba_path)), 1,  p=proba_path)[0]
+        path_selected = paths[selected_ind]
+        return path_selected

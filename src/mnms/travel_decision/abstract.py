@@ -153,6 +153,9 @@ class AbstractDecisionModel(ABC):
     def path_choice(self, paths: List[Path]) -> Path:
         pass
 
+    def set_random_seed(self, seed):
+        pass
+
     def set_mandatory_mobility_services(self, services:List[str]):
         self._mandatory_mobility_services = services
 

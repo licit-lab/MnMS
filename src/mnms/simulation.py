@@ -69,8 +69,14 @@ class Supervisor(object):
             attach_log_file(logfile, loglevel)
 
     def set_random_seed(self, seed):
-        random.seed(seed)
-        np.random.seed(seed)
+        """Method that sets the seed for all modules that can be stochastic.
+
+        Args:
+            -seed: seed as an integer
+        """
+        if seed is not None:
+            # NB: For now, only the decision model can be stochastic
+            self._decision_model.set_random_seed(seed)
 
     def add_graph(self, mmgraph: MultiLayerGraph):
         self._mlgraph = mmgraph
@@ -226,9 +232,10 @@ class Supervisor(object):
                 self.tcurrent = next_time
                 flow_step += 1
 
-    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int):
+    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor:int, seed: int=None):
         log.info(f'Start run from {tstart} to {tend}')
 
+        self.set_random_seed(seed)
         self.initialize(tstart)
 
         affectation_step = 0
