@@ -18,10 +18,10 @@ class LogitDecisionModel(AbstractDecisionModel):
         """Logit decision model for the path of a user
 
         Args:
-        mmgraph: The graph on which the model compute the path
-        theta: Parameter of the logit
-        n_shortest_path: Number of shortest path top compute
-        outfile: Path to result CSV file, nothing is written if None
+            -mmgraph: The graph on which the model compute the path
+            -theta: Parameter of the logit
+            -n_shortest_path: Number of shortest path to compute
+            -outfile: Path to result CSV file, nothing is written if None
         """
         super(LogitDecisionModel, self).__init__(mmgraph, n_shortest_path=n_shortest_path, outfile=outfile,
                                                  verbose_file=verbose_file, cost=cost)
@@ -41,14 +41,22 @@ class LogitDecisionModel(AbstractDecisionModel):
             self._rng = rng
 
     def path_choice(self, paths:List[Path]) -> Path:
-        sum_cost_exp = fsum(exp(-self._theta*p.path_cost) for p in paths)
+        """Method that proceeds to the selection of the path.
 
-        if sum_cost_exp == 0:
-            log.warning(f"Costs are too high for logit, choosing first path")
-            return paths[0]
+        Args:
+            -paths: list of paths to consider for the choice
+
+        Returns:
+            -selected_path: path chosen
+        """
+        sum_cost_exp = 0
+        theta = self._theta
+        while sum_cost_exp == 0:
+            sum_cost_exp = fsum(exp(-theta*p.path_cost) for p in paths)
+            theta /= 10
 
         costs=[p.path_cost for p in paths]
-        proba_path = [exp(-self._theta*c)/sum_cost_exp for c in costs]
+        proba_path = [exp(-10*theta*c)/sum_cost_exp for c in costs]
 
         if self._seed is not None:
             selected_ind = self._rng.choice(range(len(proba_path)), 1,  p=proba_path)[0]
