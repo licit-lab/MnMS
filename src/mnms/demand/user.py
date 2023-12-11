@@ -45,7 +45,7 @@ class User(TimeDependentSubject):
         available_mobility_services: The available mobility services
         path: The path of the User
         response_dt: The maximum dt a User is ok to wait from a mobility service
-        pickup_dt: The maximu dt a User is ok to wait for a pick up
+        pickup_dt: The maximum dt a User is ok to wait for a pick up
         continuous_journey: If not None, the User restarted its journey
         """
         super(User, self).__init__()
@@ -55,13 +55,13 @@ class User(TimeDependentSubject):
         self.departure_time = departure_time
         self.arrival_time = None
         self.available_mobility_service = available_mobility_services if available_mobility_services is None else set(available_mobility_services)
-        self.scale_factor = 1
 
         self._current_link = None
         self._remaining_link_length = None
         self._position = None
 
         self._vehicle = None
+        self._parked_personal_vehicles = dict()
         self._waiting_vehicle = False
         self._current_node = None
         self._distance = 0
@@ -143,6 +143,16 @@ class User(TimeDependentSubject):
 
     def set_state_deadend(self):
         self._state = UserState.DEADEND
+
+    def park_personal_vehicle(self, ms, node):
+        """Method that register the mobility service and the parking location of user's
+        personal vehicle.
+
+        Args:
+            -ms: name of the mobility service with which is associated the parked vehicle
+            -node: location where the personal vehicle is parked
+        """
+        self._parked_personal_vehicles[ms] = node
 
 
 class Path(object):

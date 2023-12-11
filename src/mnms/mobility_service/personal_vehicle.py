@@ -10,6 +10,9 @@ class PersonalMobilityService(AbstractMobilityService):
     def __init__(self, _id: str = 'PersonalVehicle'):
         super(PersonalMobilityService, self).__init__(_id, veh_capacity=1,dt_matching=0,dt_periodic_maintenance=0)
 
+    def is_personal(self):
+        return True
+
     def step_maintenance(self, dt: Dt):
         for veh in list(self.fleet.vehicles.values()):
             if veh.activity_type is ActivityType.STOP:
@@ -23,7 +26,7 @@ class PersonalMobilityService(AbstractMobilityService):
 
     def matching(self, user: User, drop_node: str):
         upath = list(user.path.nodes)
-        upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]       # why +1 ?
+        upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
         veh_path = self.construct_veh_path(upath)
         new_veh = self.fleet.create_vehicle(upath[0],
                                             capacity=self._veh_capacity,
