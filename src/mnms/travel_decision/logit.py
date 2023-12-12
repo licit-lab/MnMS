@@ -14,17 +14,29 @@ log = create_logger(__name__)
 
 
 class LogitDecisionModel(AbstractDecisionModel):
-    def __init__(self, mmgraph: MultiLayerGraph, theta=0.01, n_shortest_path=3, cost='travel_time', outfile:str=None, verbose_file=False):
-        """Logit decision model for the path of a user
+    def __init__(self, mmgraph: MultiLayerGraph, theta=0.01, considered_modes=None, n_shortest_path=3, cost='travel_time', outfile:str=None, verbose_file=False, personal_mob_service_park_radius:float=100):
+        """Logit decision model for the path of a user.
+        All routes computed are considered on an equal footing for the choice.
 
         Args:
             -mmgraph: The graph on which the model compute the path
             -theta: Parameter of the logit
-            -n_shortest_path: Number of shortest path to compute
+            -considered_modes: List of guidelines for the guided paths discovery,
+                           if None, the default paths discovery is applied
+            -n_shortest_path: Number of shortest paths to compute per mob services combination
+                              It is only used in the default paths discovery
+            -cost: name of the cost to consider
             -outfile: Path to result CSV file, nothing is written if None
+            -verbose_file: If True write all the computed shortest path, not only the one that is selected
+            -personal_mob_service_park_radius: radius around user's personal veh parking location in which
+                                               she can still have access to her vehicle
         """
-        super(LogitDecisionModel, self).__init__(mmgraph, n_shortest_path=n_shortest_path, outfile=outfile,
-                                                 verbose_file=verbose_file, cost=cost)
+        super(LogitDecisionModel, self).__init__(mmgraph,
+                                                 considered_modes=considered_modes,
+                                                 n_shortest_path=n_shortest_path,
+                                                 outfile=outfile,
+                                                 verbose_file=verbose_file,
+                                                 cost=cost)
         self._theta = theta
         self._seed = None
         self._rng = None

@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 
 import numpy as np
+import sys
 
 
 from mnms.graph.layers import MultiLayerGraph
@@ -78,7 +79,6 @@ class UserFlow(object):
 
                     # self.set_user_position(user)
                     user.finish_trip(arrival_time)
-                    user.set_state_arrived()
                     # user.notify(arrival_time.time)
                     finish_trip.append(user)
                 else:
@@ -165,7 +165,7 @@ class UserFlow(object):
             # Finding the mobility service associated and request vehicle
             ind_node_start = upath.index(user._current_node)
             for ilayer, (layer, slice_nodes) in enumerate(user.path.layers):
-                if slice_nodes.start <= ind_node_start < slice_nodes.stop:
+                if slice_nodes.start == ind_node_start:
                     mservice_id = user.path.mobility_services[ilayer]
                     mservice = self._graph.layers[layer].mobility_services[mservice_id]
                     log.info(f"{user} request {mservice._id}")
@@ -205,19 +205,16 @@ class UserFlow(object):
     def determine_user_states(self):
         to_del = list()
         for u in self.users.values():
-            if u.state is UserState.STOP:
+            if u.state is UserState.STOP and u.path is not None:
                 upath = u.path.nodes
                 cnode = u._current_node
                 cnode_ind = upath.index(cnode)
                 next_link = self._gnodes[cnode].adj[upath[cnode_ind + 1]]
                 u._position = self._gnodes[cnode].position
                 if u._current_node == upath[-1]:
-                    log.info(f"{u} arrived to its destination")
                     u.finish_trip(self._tcurrent)
                     to_del.append(u.id)
-                    u.set_state_arrived()
                     self._walking.pop(u.id, None)
-                    to_del.append(u.id)
                 elif next_link.label == "TRANSIT":
                     log.info(f"User {u.id} enters connection on {next_link.id}")
                     u.set_state_walking()
@@ -241,13 +238,12 @@ class UserFlow(object):
         for uid, (time, requested_mservice) in self._waiting_answer.items():
             if self.users[uid].state is UserState.WAITING_ANSWER:
                 new_time = time.to_seconds() - dt.to_seconds()
-                if new_time < 0:
+                if new_time <= 0:
                     log.info(f"User {uid} waited answer too long, cancels request for {requested_mservice._id}")
                     requested_mservice.cancel_request(uid)
                     refused_users.append(self.users[uid])
-                    self.users[uid].set_state_stop()
-                    self.users[uid].notify(self._tcurrent)
-                    del self.users[uid]
+                    # Interrupt user's path but keep user in the list of user_flow
+                    self.users[uid].interrupt_path(self._tcurrent)
                     to_del.append(uid)
                 else:
                     self._waiting_answer[uid] = (Time.from_seconds(new_time), requested_mservice)
