@@ -126,9 +126,17 @@ class CSVDemandManager(AbstractDemandManager):
         self._file = open(self._filename, 'r')
         self._reader = csv.reader(self._file, delimiter=self._delimiter, quotechar='|')
         self._demand_type = None
+        self._optional_columns = None
 
         try:
-            next(self._reader)
+            headers = next(self._reader)
+            optional_columns = [h for h in headers if h not in ['ID', 'DEPARTURE', 'ORIGIN', 'DESTINATION']]
+            self._optional_columns = {c: headers.index(c) for c in optional_columns}
+            # Small check on consistency of optional columns
+            noms = 'MOBILITY SERVICES' not in self._optional_columns.keys()
+            nomsg = 'MOBILITY SERVICES GRAPH' not in self._optional_columns.keys()
+            assert (noms and nomsg) or (noms and not nomsg) or (not noms and nomsg), \
+                'Only one of MOBILITY SERVICES and MOBILITY SERVICES GRAPH should be defined'
         except StopIteration:
             log.error(f'{self._filename} is empty')
             sys.exit(-1)
@@ -188,7 +196,8 @@ class CSVDemandManager(AbstractDemandManager):
         else:
             raise TypeError(f"demand_type must be either 'node' or 'coordinate'")
         return User(row[0], origin, destination, Time(row[1]),
-                    available_mobility_services=None if len(row) == 4 else row[4].split(' '))
+                    available_mobility_services=None if 'MOBILITY SERVICES' not in self._optional_columns.keys() else row[self._optional_columns['MOBILITY SERVICES']].split(' '),
+                    mobility_services_graph=None if 'MOBILITY SERVICES GRAPH' not in self._optional_columns.keys() else row[self._optional_columns['MOBILITY SERVICES GRAPH']])
 
     def __del__(self):
         self._file.close()

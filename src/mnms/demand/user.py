@@ -29,6 +29,7 @@ class User(TimeDependentSubject):
                  destination: Union[str, Union[np.ndarray, List]],
                  departure_time: Time,
                  available_mobility_services=None,
+                 mobility_services_graph: str=None,
                  path: Optional["Path"] = None,
                  response_dt: Optional[Dt] = None,
                  pickup_dt: Optional[Dt] = None,
@@ -43,6 +44,8 @@ class User(TimeDependentSubject):
         destination: the destination of the User
         departure_time: The departure time
         available_mobility_services: The available mobility services
+        mobility_services_graph: Id of the mobility services graph
+                                        to use for this traveler
         path: The path of the User
         response_dt: The maximum dt a User is ok to wait from a mobility service
         pickup_dt: The maximum dt a User is ok to wait for a pick up
@@ -55,6 +58,7 @@ class User(TimeDependentSubject):
         self.departure_time = departure_time
         self.arrival_time = None
         self.available_mobility_service = available_mobility_services if available_mobility_services is None else set(available_mobility_services)
+        self.mobility_services_graph = mobility_services_graph
 
         self._current_link = None
         self._remaining_link_length = None
