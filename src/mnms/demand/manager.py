@@ -127,16 +127,21 @@ class CSVDemandManager(AbstractDemandManager):
         self._reader = csv.reader(self._file, delimiter=self._delimiter, quotechar='|')
         self._demand_type = None
         self._optional_columns = None
+        mandatory_columns = ['ID', 'DEPARTURE', 'ORIGIN', 'DESTINATION']
 
         try:
             headers = next(self._reader)
-            optional_columns = [h for h in headers if h not in ['ID', 'DEPARTURE', 'ORIGIN', 'DESTINATION']]
+            if headers[:4] != mandatory_columns:
+                 raise CSVDemandParseError(csvfile)
+            optional_columns = [h for h in headers if h not in mandatory_columns]
             self._optional_columns = {c: headers.index(c) for c in optional_columns}
             # Small check on consistency of optional columns
             noms = 'MOBILITY SERVICES' not in self._optional_columns.keys()
             nomsg = 'MOBILITY SERVICES GRAPH' not in self._optional_columns.keys()
-            assert (noms and nomsg) or (noms and not nomsg) or (not noms and nomsg), \
-                'Only one of MOBILITY SERVICES and MOBILITY SERVICES GRAPH should be defined'
+            if (noms and nomsg) or (noms and not nomsg) or (not noms and nomsg):
+                pass
+            else:
+                raise CSVDemandParseError(csvfile)
         except StopIteration:
             log.error(f'{self._filename} is empty')
             sys.exit(-1)

@@ -17,6 +17,10 @@ class TestCSVDemand(unittest.TestCase):
         self.file_coordinate = self.cwd.joinpath("data_demand/test_demand_coordinate.csv")
         self.file_bad_type1 = self.cwd.joinpath("data_demand/test_demand_bad_type1.csv")
         self.file_bad_type2 = self.cwd.joinpath("data_demand/test_demand_bad_type2.csv")
+        self.file_mobility_services = self.cwd.joinpath("data_demand/test_demand_mobility_services.csv")
+        self.file_mobility_services_graph = self.cwd.joinpath("data_demand/test_demand_mobility_services_graph.csv")
+        self.file_bad_optional_columns1 = self.cwd.joinpath("data_demand/test_bad_optional_column1.csv")
+        self.file_bad_optional_columns2 = self.cwd.joinpath("data_demand/test_bad_optional_column2.csv")
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -58,3 +62,31 @@ class TestCSVDemand(unittest.TestCase):
 
         with self.assertRaises(CSVDemandParseError):
             CSVDemandManager(self.file_bad_type2)
+
+    def test_optional_columns(self):
+        """Check the definition of users in a CSV file with the list of available mobility services
+        or the mobility services graph.
+        """
+        demand = CSVDemandManager(self.file_mobility_services)
+        users = demand.get_next_departures(Time("07:00:00"), Time("08:00:00"))
+        self.assertEqual(users[0].available_mobility_services, {'CAR', 'RIDEHAILING'})
+        self.assertEqual(users[0].mobility_services_graph, None)
+        self.assertEqual(users[1].available_mobility_services, {'CAR'})
+        self.assertEqual(users[1].mobility_services_graph, None)
+
+        demand = CSVDemandManager(self.file_mobility_services_graph)
+        users = demand.get_next_departures(Time("07:00:00"), Time("08:00:00"))
+        self.assertEqual(users[0].available_mobility_services, None)
+        self.assertEqual(users[0].mobility_services_graph, 'G1')
+        self.assertEqual(users[1].available_mobility_services, None)
+        self.assertEqual(users[1].mobility_services_graph, 'G2')
+
+
+    def test_optional_columns_error(self):
+        """Check that bad definition of optional columns in the CSV file triggers an error.
+        """
+        with self.assertRaises(CSVDemandParseError):
+            CSVDemandManager(self.file_bad_optional_columns1)
+
+        with self.assertRaises(CSVDemandParseError):
+            CSVDemandManager(self.file_bad_optional_columns2)
