@@ -10,6 +10,7 @@ import time
 from stepfunction import stepfunction as sf # install with pip install -i https://test.pypi.org/simple/ stepfunction-kit4a
 
 ## MnMS & HiPOP
+from mnms.log import set_all_mnms_logger_level, LOGLEVEL
 from mnms.generation.roads import generate_nested_manhattan_road
 from transit_network_generation import generate_daganzo_hybrid_transit_network_stops, generate_daganzo_hybrid_transit_network_lines
 from mnms.generation.zones import generate_grid_zones
@@ -25,7 +26,7 @@ from layers_connection import connect_layers
 from mnms.demand.manager import CSVDemandManager
 from mnms.graph.zone import MLZone
 from mnms.travel_decision.dummy import DummyDecisionModel
-from mnms.travel_decision import LogitDecisionModel
+from mnms.travel_decision.logit import LogitDecisionModel, ModeCentricLogitDecisionModel
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.log import LOGLEVEL
@@ -37,9 +38,16 @@ from mnms.log import LOGLEVEL
 current_dir = os.path.dirname(os.path.abspath(__file__))
 outdir = str(current_dir) + '/outputs/'
 demand_file = str(current_dir) + '/inputs/demand.csv'
-ridehailing_vehicles_init_positions_file = str(current_dir) + '/inputs/ridehailing_vehicles_initial_positions.csv'
+ridehailing_vehicles_init_positions_file1 = str(current_dir) + '/inputs/ridehailing_vehicles_initial_positions1.csv'
+ridehailing_vehicles_init_positions_file2 = str(current_dir) + '/inputs/ridehailing_vehicles_initial_positions2.csv'
 zones_file = str(current_dir) + '/inputs/mlzones.csv'
-log_file = outdir+"sim.log"
+mobility_services_events_graphs_file = str(current_dir) + '/inputs/mobility_services_events_graphs.json'
+log_file = outdir + 'sim.log'
+paths_file = outdir + 'paths.csv'
+ptveh_file = outdir+ 'pt_veh.csv'
+carveh_file = outdir+ 'car_veh.csv'
+rhveh_file = outdir+ 'ridehailing_veh.csv'
+user_file = outdir + 'user.csv'
 
 # PT network frequencies
 metro_freq = 6 # min
@@ -49,7 +57,8 @@ train_freq = 20 # min
 
 # Ride-hailing parameters
 ridehailing_dt_matching = 3 # min
-nb_ridehailing_vehs = 400
+nb_ridehailing_vehs1 = 200
+nb_ridehailing_vehs2 = 200
 
 # Reservoirs
 nb_res_x = 3
@@ -94,11 +103,18 @@ max_access_egress_dist = 500 # m, distance used to connect ODLayer to other laye
 max_transfer_dist = 200 # m, max transfer distance (from one pt line to another,
                         #    from parking to a transit stop, from dropoff spot to a pt station
                         #    from a pt station to a pickup spot)
-banned_nodes = ['Rail_1', 'Rail_2', 'Rail_3', 'Rail_4', 'Rail_5', 'Rail_6', 'Rail_7', 'Rail_8', 'Rail_9', 'Rail_10', 'Rail_11', 'Rail_12', 'Rail_13']
-banned_sections = ['Rail_1_Rail_2', 'Rail_2_Rail_3', 'Rail_3_Rail_4', 'Rail_4_Rail_5', 'Rail_5_Rail_6', 'Rail_6_Rail_7', 'Rail_7_Rail_6', 'Rail_6_Rail_5', 'Rail_5_Rail_4', 'Rail_4_Rail_3', 'Rail_3_Rail_2', 'Rail_2_Rail_1', 'Rail_8_Rail_9', 'Rail_9_Rail_10', 'Rail_10_Rail_4', 'Rail_4_Rail_11', 'Rail_11_Rail_12', 'Rail_12_Rail_13', 'Rail_13_Rail_12', 'Rail_12_Rail_11', 'Rail_11_Rail_4', 'Rail_4_Rail_10', 'Rail_10_Rail_9', 'Rail_9_Rail_8']
+personal_mob_service_park_radius = 100 # m, radius around user's personal veh parking location in which
+                                       # she can still have access to her vehicle
+banned_nodes = ['Rail_1', 'Rail_2', 'Rail_3', 'Rail_4', 'Rail_5', 'Rail_6', 'Rail_7',
+    'Rail_8', 'Rail_9', 'Rail_10', 'Rail_11', 'Rail_12', 'Rail_13'] # we don't want cars, buses, metros to run there
+banned_sections = ['Rail_1_Rail_2', 'Rail_2_Rail_3', 'Rail_3_Rail_4', 'Rail_4_Rail_5',
+    'Rail_5_Rail_6', 'Rail_6_Rail_7', 'Rail_7_Rail_6', 'Rail_6_Rail_5', 'Rail_5_Rail_4',
+    'Rail_4_Rail_3', 'Rail_3_Rail_2', 'Rail_2_Rail_1', 'Rail_8_Rail_9', 'Rail_9_Rail_10',
+    'Rail_10_Rail_4', 'Rail_4_Rail_11', 'Rail_11_Rail_12', 'Rail_12_Rail_13', 'Rail_13_Rail_12',
+    'Rail_12_Rail_11', 'Rail_11_Rail_4', 'Rail_4_Rail_10', 'Rail_10_Rail_9', 'Rail_9_Rail_8'] # we don't want cars, buses, metros to run there
 
 # Demand
-dep_rates = [[0, 3600, 7200],[0.9,1.4,0.5]] # s and dep/s
+dep_rates = [[0, 1800, 3600],[0.9,1.4,0.5]] # s and dep/s
 probas = {'#0-0': {'origin': 0.0875, 'destination': 0.0625},
           '#0-1': {'origin': 0.0875, 'destination': 0.0625},
           '#0-2': {'origin': 0.0875, 'destination': 0.0625},
@@ -109,21 +125,29 @@ probas = {'#0-0': {'origin': 0.0875, 'destination': 0.0625},
           '#2-1': {'origin': 0.0875, 'destination': 0.0625},
           '#2-2': {'origin': 0.0875, 'destination': 0.0625}} # should be consistent with zoning parameters !
 available_ms_stats = {'CAR METRO BUS RIDEHAILING TRAIN': 0.88, 'METRO BUS RIDEHAILING TRAIN': 0.12} # define proportion of users having a car
+msevents_graph_stats = {'G1': 0.88, 'G2': 0.12} # define proportion of users using graphs G1 and G2
 first_dep_time = Time('07:00:00')
-last_dep_time = Time('10:00:00')
+last_dep_time = Time('08:00:00')
 decision_model_type = 'dummy'
+logit_theta = 0.75
+considered_modes = [({'CAR', 'RIDEHAILING', 'BUS', 'METRO', 'TRAIN'}, None, 2),
+                    ({'CAR'},None,2),
+                    ({'BUS', 'METRO', 'TRAIN'}, None, 2),
+                    ({'RIDEHAILING'}, None, 2),
+                    ({'BUS', 'METRO', 'TRAIN', 'RIDEHAILING'}, ({'RIDEHAILING'}, {'BUS', 'METRO', 'TRAIN'}), 1)]
 
 # Scenario
 tstart = Time('06:55:00') # start flow_dt * affectation_factor before first departure to let the graph be updated before first travel choice
-tend = Time('10:05:00')
+tend = Time('08:05:00')
 flow_dt = Dt(seconds=30)
 affectation_factor = 10
+seed = 123
 
 
 #################
 ### Functions ###
 #################
-def create_supervisor(observers=True, ridehailing_vehicles_init_pos=False, generate_zones=False, generate_demand=False):
+def create_supervisor(observers=True, generate_ridehailing_vehicles_init_pos=False, generate_zones=False, generate_demand=False, generate_demand_graph=False):
     """Creates a supervisor.
 
     Args:
@@ -131,7 +155,8 @@ def create_supervisor(observers=True, ridehailing_vehicles_init_pos=False, gener
         - generate_ridehailing_vehicles_init_pos: specifies if a new initial positioning for
                                                  ride-hailing vehicles should be generated
         - generate_zones: specifies if a new zoning of the MultiLayerGraph should be generated
-        - generate_demand: specifies if a new demand scenario should be generated
+        - generate_demand: specifies if a new demand scenario should be generated using available_ms_stats
+        - generate_demand_graph: specifies if a new demand scenario should be generated using msevents_graph_stats
 
     Returns:
         -supervisor
@@ -153,9 +178,9 @@ def create_supervisor(observers=True, ridehailing_vehicles_init_pos=False, gener
     #### MlGraph ####
     #################
     ## Observers
-    pt_veh_observer = CSVVehicleObserver(outdir+"pt_veh.csv") if observers else None
-    car_veh_observer = CSVVehicleObserver(outdir+"car_veh.csv") if observers else None
-    ridehailing_veh_observer = CSVVehicleObserver(outdir+"ridehailing_veh.csv") if observers else None
+    pt_veh_observer = CSVVehicleObserver(ptveh_file) if observers else None
+    car_veh_observer = CSVVehicleObserver(carveh_file) if observers else None
+    ridehailing_veh_observer = CSVVehicleObserver(rhveh_file) if observers else None
 
     ## Public Transportation
     # Bus
@@ -182,14 +207,20 @@ def create_supervisor(observers=True, ridehailing_vehicles_init_pos=False, gener
         banned_nodes=banned_nodes, banned_sections=banned_sections)
 
     ## Ride-hailing
-    ridehailing_service = OnDemandMobilityService('RIDEHAILING', ridehailing_dt_matching)
-    ridehailing_service.attach_vehicle_observer(ridehailing_veh_observer)
+    ridehailing_service1 = OnDemandMobilityService('RIDEHAILING1', ridehailing_dt_matching) # company 1
+    ridehailing_service2 = OnDemandMobilityService('RIDEHAILING2', ridehailing_dt_matching) # company 2
+    ridehailing_service1.attach_vehicle_observer(ridehailing_veh_observer)
+    ridehailing_service2.attach_vehicle_observer(ridehailing_veh_observer)
     # As RH vehicles cannot run on the sections and nodes associated with the railways, provide banned nodes and sections
-    ridehailing_layer = generate_layer_from_roads(roads, 'RIDEHAILING', veh_type=Car, mobility_services=[ridehailing_service], default_speed=traditional_vehs_default_speed,
+    ridehailing_layer = generate_layer_from_roads(roads, 'RIDEHAILING', veh_type=Car,
+        mobility_services=[ridehailing_service1, ridehailing_service2],
+        default_speed=traditional_vehs_default_speed,
         banned_nodes=banned_nodes, banned_sections=banned_sections)
-    if ridehailing_vehicles_init_pos:
-        generate_ridehailing_vehicles_init_pos(ridehailing_service, nb_ridehailing_vehs, ridehailing_vehicles_init_positions_file)
-    create_on_demand_vehicles(ridehailing_service, ridehailing_vehicles_init_positions_file)
+    if generate_ridehailing_vehicles_init_pos:
+        generate_ridehailing_vehicles_init_pos_f(ridehailing_service1, nb_ridehailing_vehs1, ridehailing_vehicles_init_positions_file1)
+        generate_ridehailing_vehicles_init_pos_f(ridehailing_service2, nb_ridehailing_vehs2, ridehailing_vehicles_init_positions_file2)
+    create_on_demand_vehicles(ridehailing_service1, ridehailing_vehicles_init_positions_file1)
+    create_on_demand_vehicles(ridehailing_service2, ridehailing_vehicles_init_positions_file2)
 
     # OD
     od_layer = generate_matching_origin_destination_layer(roads, with_stops=False)
@@ -197,8 +228,8 @@ def create_supervisor(observers=True, ridehailing_vehicles_init_pos=False, gener
     # ML graph
     mlgraph = MultiLayerGraph([car_layer, bus_layer, metro_layer, train_layer, ridehailing_layer], od_layer, max_access_egress_dist)
 
-    # Add other transit links
-    connect_layers(mlgraph, max_transfer_dist)
+    # Add other transit links to enable intemrodality
+    connect_layers(mlgraph, max_transfer_dist, personal_mob_service_park_radius)
 
     # Zoning
     if generate_zones:
@@ -209,20 +240,29 @@ def create_supervisor(observers=True, ridehailing_vehicles_init_pos=False, gener
     #### Demand ####
     ################
     if generate_demand:
-        generate_demand_scenario(mlgraph, dep_rates, first_dep_time, last_dep_time, probas, available_ms_stats, demand_file)
+        generate_demand_scenario(mlgraph, dep_rates, first_dep_time, last_dep_time, probas, available_ms_stats, demand_file, 'MOBILITY SERVICES')
+    elif generate_demand_graph:
+        generate_demand_scenario(mlgraph, dep_rates, first_dep_time, last_dep_time, probas, msevents_graph_stats, demand_file, 'MOBILITY SERVICES GRAPH')
     demand = CSVDemandManager(demand_file)
     if observers:
-        demand.add_user_observer(CSVUserObserver(outdir+'user.csv'))
+        demand.add_user_observer(CSVUserObserver(user_file))
 
 
     #### Decison Model ####
     #######################
     if decision_model_type == 'dummy':
-        decision_model = DummyDecisionModel(mlgraph)
+        decision_model = DummyDecisionModel(mlgraph, outfile=paths_file, verbose_file=True,
+            considered_modes=considered_modes, personal_mob_service_park_radius=personal_mob_service_park_radius)
     elif decision_model_type == 'logit':
-        decision_model = LogitDecisionModel(mlgraph, theta=0.75)
+        decision_model = LogitDecisionModel(mlgraph, theta=logit_theta, outfile=paths_file, verbose_file=True,
+            considered_modes=considered_modes, personal_mob_service_park_radius=personal_mob_service_park_radius)
+    elif decision_model_type == 'modecentriclogit':
+        decision_model = ModeCentricLogitDecisionModel(mlgraph, considered_modes, theta=logit_theta, outfile=paths_file, verbose_file=True,
+            personal_mob_service_park_radius=personal_mob_service_park_radius)
     else:
         raise ValueError(f'Unknown decision model: {decision_model_type}')
+    decision_model.load_mobility_services_graphs_from_file(mobility_services_events_graphs_file)
+
 
     #### Flow motor ####
     ####################
@@ -257,7 +297,7 @@ def create_on_demand_vehicles(on_demand_mob_service, vehicles_positions_file):
         [on_demand_mob_service.create_waiting_vehicle(n) for n in df.NODE]
 
 
-def generate_ridehailing_vehicles_init_pos(rh, nb_vehs, file, banned_nodes=[]):
+def generate_ridehailing_vehicles_init_pos_f(rh, nb_vehs, file, banned_nodes=[]):
     """Randomly generates a set of initial positions for ride-hailing vehciles.
 
     Args:
@@ -277,7 +317,7 @@ def generate_ridehailing_vehicles_init_pos(rh, nb_vehs, file, banned_nodes=[]):
     if not os.path.isfile(file):
         rh_supply.to_csv(file, sep=';', index=False)
     else:
-        print(f"An ridehailing initial positions file already exist. Nothing is generated to prevent overwriting.")
+        print(f"A ridehailing initial positions file already exist. Nothing is generated to prevent overwriting.")
 
 def generate_mlzones(zid_prefix, mlgraph, Nx, Ny, zones_file):
     """Generates a grid zoning on the MultiLayerGraph.
@@ -306,7 +346,7 @@ def create_mlzones(mlgraph, file):
             links = row[1]['LINKS'].split(' ')
             mlgraph.add_zone(MLZone(id, links, None))
 
-def generate_demand_scenario(mlgraph, dep_rates, tstart, tend, proba, available_ms_stats, demand_file):
+def generate_demand_scenario(mlgraph, dep_rates, tstart, tend, proba, stats, demand_file, optional_column):
     """Generates a demand scenario based on the MultiLayerGraph zoning and write it down in a file.
 
     Args:
@@ -318,8 +358,11 @@ def generate_demand_scenario(mlgraph, dep_rates, tstart, tend, proba, available_
         - tend: time at which departures stop
         - proba: {'zone_name': {'origin': a, 'destination': b}, ...} where a/b designate the
                  probability of drawing an origin/destination in the zone named zone_name
-        - available_ms_stats: {'available mob services': percentage of travelers having access to this set of mob services}
+        - stats: {'available mob services': percentage of travelers having access to this set of mob services}
+                 or {'graph_name': percentage of travelers using this mobility services events graph}
         - demand_file: file where to write the demand
+        - optional_column: name of the optional columnsn, can be either 'MOBILITY SERVICES' or
+                           'MOBILITY SERVICES GRAPH'
     """
     t = 0
     dep_rates = sf.PiecewiseConstantFunction(dep_rates[0], dep_rates[1])
@@ -356,17 +399,17 @@ def generate_demand_scenario(mlgraph, dep_rates, tstart, tend, proba, available_
                     str(dpos[0])+' '+str(dpos[1]), None])
                 uid += 1
                 break
-    df = pd.DataFrame(travelers, columns=['ID', 'DEPARTURE', 'ORIGIN', 'DESTINATION', 'MOBILITY SERVICES'])
-    ## Set the available mobility services
+    df = pd.DataFrame(travelers, columns=['ID', 'DEPARTURE', 'ORIGIN', 'DESTINATION', optional_column])
+    ## Set the available mobility services / ms events graphs
     # Randomly draw the specified percentage of users for each mobility service group
     unassigned_users = list(df['ID'])
-    for i,(ms_group,percentage) in enumerate(available_ms_stats.items()):
-        if i == len(available_ms_stats)-1:
+    for i,(ms_group,percentage) in enumerate(stats.items()):
+        if i == len(stats)-1:
             nb_users = len(unassigned_users)
         else:
             nb_users = min(int(percentage * len(df)), len(unassigned_users))
         selected_users = random.sample(unassigned_users, nb_users)
-        df.loc[df['ID'].isin(selected_users), 'MOBILITY SERVICES'] = ms_group
+        df.loc[df['ID'].isin(selected_users), optional_column] = ms_group
         unassigned_users = [u for u in unassigned_users if u not in selected_users]
     assert len(unassigned_users) == 0, f'Forgot to define available mobility service of users {unassigned_users}'
 
@@ -380,8 +423,10 @@ def generate_demand_scenario(mlgraph, dep_rates, tstart, tend, proba, available_
 ### Main ###
 ############
 if __name__ == '__main__':
-    supervisor = create_supervisor(True,True,True,True) # Do not forget to create inputs and outputs dir and
+    set_all_mnms_logger_level(LOGLEVEL.INFO)
+
+    supervisor = create_supervisor() # Do not forget to create inputs and outputs dir and
                                      # generate the inputs first time you lanch this script !
     st = time.time()
-    supervisor.run(tstart, tend, flow_dt, affectation_factor)
+    supervisor.run(tstart, tend, flow_dt, affectation_factor, seed=seed)
     print(f'Run time = {time.time() - st}')
