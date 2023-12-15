@@ -65,6 +65,8 @@ class UserFlow(object):
                 user.update_distance(remaining_length)
                 excess_dist = abs(remaining_length - dist_travelled)
                 user._remaining_link_length = 0
+                if (dt.to_seconds() - excess_dist / self._walk_speed)<0:
+                    print('TST')
                 arrival_time = self._tcurrent.add_time(Dt(seconds=dt.to_seconds() - excess_dist / self._walk_speed))
                 next_node = upath[upath.index(user._current_node) + 1]
                 user._current_node = next_node
@@ -88,7 +90,7 @@ class UserFlow(object):
                         # User keeps walking
                         log.info(f"{user} enter connection on {next_link.id}")
                         user.set_state_walking()
-                        self._walking[user.id] = next_link.length - excess_dist
+                        self._walking[user.id] = max(0, next_link.length - excess_dist)
                     else:
                         # self.set_user_position(user)
                         # log.info(remaining_length)
