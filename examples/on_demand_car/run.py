@@ -87,5 +87,5 @@ supervisor = Supervisor(mlgraph,
 
 supervisor.run(Time("07:00:00"),
                Time("08:00:00"),
-               Dt(seconds=1),
-               10)
+               Dt(minutes=10),
+               1)
