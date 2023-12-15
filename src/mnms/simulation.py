@@ -34,14 +34,17 @@ class Supervisor(object):
                  logfile: Optional[str] = None,
                  loglevel: LOGLEVEL = LOGLEVEL.WARNING):
         """
-        Main class to launch a simulation
+        Main class to launch a simulation.
 
         Args:
-            graph: The multi layer graph
-            demand: The demand manager
-            flow_motor: The flow motor
-            decision_model: The decision model
-            outfile: If not None write in the outfile at each time step the cost of each link in the multi layer graph
+            -graph: The multi layer graph
+            -demand: The demand manager
+            -flow_motor: The flow motor
+            -decision_model: The decision model
+            -outfile: If not None write in the outfile at each time step the cost
+                      of each link in the multi layer graph
+            -logfile: file where simulation log should be printed
+            -loglevel: level of log to print
         """
 
         self._mlgraph: MultiLayerGraph = None
@@ -68,7 +71,7 @@ class Supervisor(object):
         if logfile is not None:
             attach_log_file(logfile, loglevel)
 
-    def set_random_seed(self, seed):
+    def set_random_seed(self, seed: int):
         """Method that sets the seed for all modules that can be stochastic.
 
         Args:
@@ -78,23 +81,52 @@ class Supervisor(object):
             # NB: For now, only the decision model can be stochastic
             self._decision_model.set_random_seed(seed)
 
-    def add_graph(self, mmgraph: MultiLayerGraph):
-        self._mlgraph = mmgraph
+    def add_graph(self, mlgraph: MultiLayerGraph):
+        """Method to add a multilayer graph to the supervisor.
+        A map associating each mobility service of the graph to the corresponding
+        layer is build. Timetables of the PublicTransportLayer objects of the graph
+        are initialized.
+
+        Args:
+            -mlgraph: the MultiLayerGraph object to add
+        """
+        self._mlgraph = mlgraph
         self._mlgraph.construct_layer_service_mapping()
-        for layer in mmgraph.layers.values():
+        for layer in mlgraph.layers.values():
             layer.initialize()
 
     def add_flow_motor(self, flow: AbstractMFDFlowMotor):
+        """Method to add a flow motor to the supervisor.
+
+        Args:
+            -flow: the AbstractMFDFlowMotor object to add
+        """
         self._flow_motor = flow
         flow.set_graph(self._mlgraph)
 
     def add_demand(self, demand: AbstractDemandManager):
+        """Method to add a demand manager to the supervisor.
+
+        Args:
+            -demand: the AbstractDemandManager object to add
+        """
         self._demand = demand
 
     def add_decision_model(self, model: AbstractDecisionModel):
+        """Method to add a decision model to the supervisor.
+
+        Args:
+            -model: the AbstractDecisionModel object to add
+        """
         self._decision_model = model
 
     def initialize(self, tstart:Time):
+        """Method that initializes the simulation by setting the time of the different
+        modules  and initializing the costs on the multilayer graph of the simulation.
+
+        Args:
+            -tstart: start time of the simulation
+        """
         for layer in self._mlgraph.layers.values():
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
@@ -107,6 +139,9 @@ class Supervisor(object):
         self._mlgraph.dynamic_space_sharing.cost = self._decision_model._cost
 
     def finalize(self):
+        """Method that finalizes the simulation by closing open files, and cleaning
+        class attributes.
+        """
         self._flow_motor.finalize()
 
         if self._decision_model._write:
@@ -195,7 +230,7 @@ class Supervisor(object):
         """Calls the flow motor step and measures execution time.
 
         Args:
-            - flow_dt: the fow time step
+            -flow_dt: the fow time step
         """
         log.info(' Launch flow motor step...')
         start = time()
@@ -302,20 +337,24 @@ class Supervisor(object):
             progress.show()
             log.info(f'Current time: {self.tcurrent}, affectation step: {affectation_step}')
 
-            ## Get all departures during the next principal_dt and add them in the
-            ## list of users about to (re)plan their journey
+            ## Get all departures during the next principal_dt and add the ones
+            ## with no forced path in the list of users about to plan their journey
             new_users = self.get_new_users(principal_dt)
-            self._decision_model.add_users_for_planning(new_users, [Event.DEPARTURE]*len(new_users))
+            new_users_for_planning = []
+            for u in new_users:
+                if u.path is None:
+                    new_users_for_planning.append(u)
+                else:
+                    self._decision_model.manage_forced_initial_path(u)
+            self._decision_model.add_users_for_planning(new_users_for_planning, [Event.DEPARTURE]*len(new_users_for_planning))
 
             ## Set pickup_dt to infinite for all PT mobility services
-            ## TOTODO: check if we want to remove this
             pt_mob_services_names = self._mlgraph.get_all_mobility_services_of_type(PublicTransportMobilityService)
             for user in new_users:
                 for pt_ms in pt_mob_services_names:
                     user.set_pickup_dt(pt_ms, Dt(hours=24))
 
             ## Call affectation_factor simulation flow steps
-            # TOTODO: Check order in which the modules are called in a simulation flow step
             for _ in range(affectation_factor):
 
                 # Call the planning module
@@ -340,7 +379,6 @@ class Supervisor(object):
 
                 # Call flow motor step
                 self.call_flow_motor_step(flow_dt)
-                # TOTODO: check if this is still required...
                 if self._flow_motor._write:
                     self._flow_motor.write_result(affectation_step, flow_step)
 
@@ -351,7 +389,6 @@ class Supervisor(object):
             ## Call the update graph
             self.call_update_graph()
 
-            ## TOTODO: check if this is still required...
             if self._write:
                 log.info('Writing travel time of each link in graph ...')
                 start = time()

@@ -1,0 +1,56 @@
+{
+    "G1": {
+        "None": {
+            "DEPARTURE": [
+                "CAR",
+                "RIDEHAILING1",
+                "RIDEHAILING2"
+            ]
+        },
+        "RIDEHAILING1 RIDEHAILING2 CAR": {
+            "RIDEHAILING1": [
+                "CAR"
+            ],
+            "RIDEHAILING2": [
+                "CAR",
+                "RIDEHAILING1"
+            ]
+        },
+        "RIDEHAILING1 CAR": {
+            "RIDEHAILING1": [
+                "CAR"
+            ]
+        }
+    },
+    "G2": {
+        "None": {
+            "DEPARTURE": [
+                "RIDEHAILING1",
+                "RIDEHAILING2"
+            ]
+        },
+        "RIDEHAILING2 RIDEHAILING1": {
+            "RIDEHAILING1": [
+              "RIDEHAILING2"
+            ],
+            "RIDEHAILING2": [
+                "RIDEHAILING1"
+            ]
+        },
+        "RIDEHAILING1": {
+            "RIDEHAILING1": [
+            ]
+        },
+        "RIDEHAILING2": {
+            "RIDEHAILING2": [
+            ]
+        }
+    },
+    "G3": {
+        "None": {
+            "DEPARTURE": [
+                "CAR"
+            ]
+        }
+    }
+}

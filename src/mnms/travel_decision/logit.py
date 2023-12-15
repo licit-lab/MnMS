@@ -36,7 +36,8 @@ class LogitDecisionModel(AbstractDecisionModel):
                                                  n_shortest_path=n_shortest_path,
                                                  outfile=outfile,
                                                  verbose_file=verbose_file,
-                                                 cost=cost)
+                                                 cost=cost,
+                                                 personal_mob_service_park_radius=personal_mob_service_park_radius)
         self._theta = theta
         self._seed = None
         self._rng = None
@@ -97,7 +98,8 @@ class ModeCentricLogitDecisionModel(AbstractDecisionModel):
                                                             considered_modes=considered_modes,
                                                             outfile=outfile,
                                                             verbose_file=verbose_file,
-                                                            cost=cost)
+                                                            cost=cost,
+                                                            personal_mob_service_park_radius=personal_mob_service_park_radius)
         self._theta = theta
         self._seed = None
         self._rng = None

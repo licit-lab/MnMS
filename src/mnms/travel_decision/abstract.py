@@ -149,6 +149,20 @@ class AbstractDecisionModel(ABC):
                     users_events.append((u,e))
             self._users_for_planning.extend(users_events)
 
+    def manage_forced_initial_path(self, user):
+        """Method that build the forced initial path of a user.
+
+        Args:
+            -user: the user who has a forced initial path
+        """
+        if user.path.layers == []:
+            user.path.construct_layers_from_links(self._mlgraph.graph.nodes)
+        if user.path.mobility_services == []:
+            if 'TRANSIT' not in user.forced_path_chosen_mobility_services.keys():
+                user.forced_path_chosen_mobility_services['TRANSIT'] = 'WALK'
+            user.path.set_mobility_services([user.forced_path_chosen_mobility_services[l] for l,_ in user.path.layers])
+        log.info(f'User {user.id} do not plan at departure, use forced path {user.path}')
+
     def review_availability_of_personal_mob_services(self, u: User, e: Event, gnodes):
         """Method that eventually remove the personal mobility services from user's available services and
         save the planning origin
@@ -199,13 +213,14 @@ class AbstractDecisionModel(ABC):
         return new_planning_origins
 
 
-    def _manage_users_after_event(self, users_paths):
+    def _manage_users_after_event(self, users_paths, tcurrent):
         """Method that update the list of available mobility services of each user who
         require (re)planning.
 
         Args:
             -users_paths: dict with user id as key, and a dict as values
              {'user': user object, 'paths': list of paths the user considers}
+            -tcurrent: current time
 
         Return:
             -personal_ms_planning_origins: dict with first level keys corresponding
@@ -226,7 +241,7 @@ class AbstractDecisionModel(ABC):
                 if e == Event.DEPARTURE:
                     # Initialize available mobility services if needed
                     if u.available_mobility_services is None:
-                        u.set_available_mobility_services(all_mob_services_ids)
+                        u.set_available_mobility_services(all_mob_services_ids.copy())
                 elif e == Event.MATCH_FAILURE:
                     # Find back the mob service for which there was a match failure
                     failed_mservice = u.get_failed_mobility_service()
@@ -271,7 +286,7 @@ class AbstractDecisionModel(ABC):
             ## If user has no more available mob service, set state to deadend
             if len(u.available_mobility_services) == 0:
                 log.warning(f'{u.id} has no more available mobility service to continue her path')
-                u.set_state_deadend()
+                u.set_state_deadend(tcurrent)
                 deadend_users.append((u,e))
 
         ### Remove deadend users from the list for (re)planning
@@ -377,12 +392,12 @@ class AbstractDecisionModel(ABC):
             ## For each mob services combination, compute k shortest paths
             #log.info(f'User {u.id} will compute {len(all_ams_combinations)}x{k} shortest paths')
             for ams_combination in all_ams_combinations:
+                ams_combination_set = set(ams_combination)
+                ams_combination_set.add('WALK')
                 # Check if user has already found the proper nb of paths for this mob services combination
                 if saved_paths is not None:
                     if u.id in saved_paths.keys():
                         u_saved_paths = saved_paths[u.id]['paths']
-                        ams_combination_set = set(ams_combination)
-                        ams_combination_set.add('WALK')
                         if intermodality is None:
                             u_saved_paths_of_this_ms_combination = [set(sp.mobility_services).issubset(ams_combination_set) for sp in u_saved_paths]
                         else:
@@ -447,23 +462,26 @@ class AbstractDecisionModel(ABC):
                 log.info(f"User {user.id} chose path {chosen_path} after {event} among {len(user_paths)} shorest paths for this round of (re)planning.")
 
                 if self._write:
-                    # Write down chosen path
-                    self._csvhandler.writerow([user.id, event._name_, tcurrent,
-                                               str(chosen_path.path_cost),
-                                               ' '.join(chosen_path.nodes),
-                                               compute_path_length(self._mlgraph.graph, chosen_path.nodes),
-                                               ' '.join(chosen_path.mobility_services),
-                                               '1'])
-                    if self._verbose_file:
+                    # Write down the chosen path only
+                    if not self._verbose_file:
+                        self._csvhandler.writerow([user.id, event._name_, tcurrent,
+                                                  str(chosen_path.path_cost),
+                                                  ' '.join(chosen_path.nodes),
+                                                  compute_path_length(self._mlgraph.graph, chosen_path.nodes),
+                                                  ' '.join(chosen_path.mobility_services),
+                                                  '1'])
+                    else:
                         # Write down all paths considered by the user during this (re)planning round
                         for p in user_paths:
-                            if p != chosen_path:
-                                self._csvhandler.writerow([user.id, event._name_, tcurrent,
-                                                           str(p.path_cost),
-                                                           ' '.join(p.nodes),
-                                                           compute_path_length(self._mlgraph.graph, p.nodes),
-                                                           ' '.join(p.mobility_services),
-                                                           '0'])
+                            chosen = 0 if p != chosen_path else 1 # NB: we may have found the same path several times,
+                                                                  # then it appears several times in the csv to let the user
+                                                                  # know the path discovery may be improved
+                            self._csvhandler.writerow([user.id, event._name_, tcurrent,
+                                                       str(p.path_cost),
+                                                       ' '.join(p.nodes),
+                                                       compute_path_length(self._mlgraph.graph, p.nodes),
+                                                       ' '.join(p.mobility_services),
+                                                       chosen])
 
                 if user.state == UserState.STOP:
                     # User starts the chosen path right now, eventually teleport
@@ -512,7 +530,7 @@ class AbstractDecisionModel(ABC):
                 if event in [Event.DEPARTURE, Event.MATCH_FAILURE]:
                     # User is now DEADEND
                     log.warning(f'User {uid} has found no path during the (re)planning, turns to DEADEND.')
-                    user.set_state_deadend()
+                    user.set_state_deadend(tcurrent)
                 else:
                     # TOTODO: Define what user should do then, for now continue current path
                     pass
@@ -555,10 +573,8 @@ class AbstractDecisionModel(ABC):
                         p.set_mobility_services(path_mobservices)
                         service_costs = sum_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services) if service != 'WALK'))
                         p.service_costs = service_costs
-                        # Save this path if different from the ones already saved
-                        already_saved = sum([p == p_ for p_ in user_paths]) > 0
-                        if not already_saved:
-                            user_paths.append(p)
+                        # NB: we save this path even if equal to an already saved path, it is useful for testing purposes
+                        user_paths.append(p)
                     else:
                         log.warning(f'One shortest path computed for user {user_id} is not valid because contains several occurences of the same node: {p}')
                 else:
@@ -578,7 +594,7 @@ class AbstractDecisionModel(ABC):
         users_paths = {u.id: {'user': u, 'event': e, 'paths': []} for u,e in self._users_for_planning}
 
         ### Manage users after event
-        personal_ms_planning_origins = self._manage_users_after_event(users_paths)
+        personal_ms_planning_origins = self._manage_users_after_event(users_paths, tcurrent)
 
         ### If self.considered_modes is not defined, proceed to the default paths discovery
         if self._considered_modes is None:

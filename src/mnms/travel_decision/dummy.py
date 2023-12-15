@@ -23,7 +23,7 @@ class DummyDecisionModel(AbstractDecisionModel):
         super(DummyDecisionModel, self).__init__(mmgraph, considered_modes=considered_modes,
                                                  n_shortest_path=1, outfile=outfile,
                                                  verbose_file=verbose_file,
-                                                 cost=cost)
+                                                 cost=cost, personal_mob_service_park_radius=personal_mob_service_park_radius)
 
     def path_choice(self, paths:List[Path]) -> Path:
         """Method that proceeds to the selection of the path.

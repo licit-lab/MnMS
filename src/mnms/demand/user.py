@@ -37,7 +37,8 @@ class User(TimeDependentSubject):
                  path: Optional["Path"] = None,
                  response_dt: Optional[Dt] = None,
                  pickup_dt: Optional[Dt] = None,
-                 continuous_journey: Optional[str] = None):
+                 continuous_journey: Optional[str] = None,
+                 forced_path_chosen_mobility_services: Optional[Dict[str,str]] = None):
         """
         Class representing a User in the simulation.
 
@@ -54,6 +55,9 @@ class User(TimeDependentSubject):
         response_dt: The maximum dt a User is ok to wait from a mobility service
         pickup_dt: The maximum dt a User is ok to wait for a pick up
         continuous_journey: If not None, the User restarted its journey
+        forced_path_chosen_mobility_services: Dict with layers ids as keys and chosen
+            mobility services id on each layer as values, it is used when one want to
+            force the initial path of a user with the CSVDemandManager
         """
         super(User, self).__init__()
         self.id = _id
@@ -85,8 +89,10 @@ class User(TimeDependentSubject):
 
         if path is None:
             self.path: Optional[Path] = None
+            self.forced_path_chosen_mobility_services = None
         else:
             self.set_path(path)
+            self.forced_path_chosen_mobility_services = forced_path_chosen_mobility_services
 
     def __repr__(self):
         return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"
@@ -118,7 +124,7 @@ class User(TimeDependentSubject):
     def finish_trip(self, arrival_time:Time):
         self.arrival_time = arrival_time
         self.set_state_arrived()
-        log.info(f"User {self.id} arrived at destination")
+        log.info(f"User {self.id} arrived at destination at {arrival_time}")
         # self.notify()
 
     def set_pickup_dt(self, ms, dt):
@@ -208,10 +214,11 @@ class User(TimeDependentSubject):
     def set_state_stop(self):
         self._state = UserState.STOP
 
-    def set_state_deadend(self):
+    def set_state_deadend(self, tcurrent: Time):
         self._state = UserState.DEADEND
         self._waiting_vehicle = False
         self.path = None
+        self.notify(tcurrent)
 
     def get_failed_mobility_service(self):
         assert ((self._interrupted_path is not None) and (self._current_node is not None)), \
