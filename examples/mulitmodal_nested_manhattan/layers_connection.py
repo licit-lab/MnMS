@@ -1,7 +1,7 @@
 import numpy as np
 from mnms.graph.layers import PublicTransportLayer
 
-def connect_layers(mlgraph, max_transfer_dist):
+def connect_layers(mlgraph, max_transfer_dist, personal_mob_service_park_radius):
     _norm = np.linalg.norm
 
     # Transit between two pt lines (alight, walk, wait and board)
@@ -51,7 +51,7 @@ def connect_layers(mlgraph, max_transfer_dist):
             lid = f"{ptn.id}_{node.id}"
             mlgraph.connect_layers(lid, ptn.id, node.id, dist, {'length': dist})
 
-    # Transit from amodrh to pt layer (be dropped off, walk, wait and board)
+    # Transit from ridehailing to pt layer (be dropped off, walk, wait and board)
     for rhn in rh_nodes:
         rhn_pos = np.array(rhn.position)
         dist_nodes = _norm(pt_nodes_pos-rhn_pos, axis=1)
@@ -59,6 +59,14 @@ def connect_layers(mlgraph, max_transfer_dist):
         for node, dist in zip(pt_nodes[mask], dist_nodes[mask]):
             lid = f"{rhn.id}_{node.id}"
             mlgraph.connect_layers(lid, rhn.id, node.id, dist, {'length': dist})
+        # If a ride hailing node is connected to no pt node, select the closest pt stations
+        # and connect the rh node with them to prevent having a user stuck on a rh node
+        if len(pt_nodes[mask]) == 0:
+            min_dist = min(dist_nodes)
+            mask = dist_nodes <= min_dist
+            for node, dist in zip(pt_nodes[mask], dist_nodes[mask]):
+                lid = f"{rhn.id}_{node.id}"
+                mlgraph.connect_layers(lid, rhn.id, node.id, dist, {'length': dist})
 
     # Transit from ridehailing to origin (be refused, go back to home to be able to take car)
     #origin_nodes = np.array([n for n in mlgraph.graph.nodes.values() if n.label == 'ODLAYER' and n.radj == {}])

@@ -1,0 +1,103 @@
+{
+    "G1": {
+        "None": {
+            "DEPARTURE": [
+                "CAR",
+                "BUS",
+                "METRO",
+                "TRAIN",
+                "RIDEHAILING1",
+                "RIDEHAILING2"
+            ]
+        },
+        "CAR BUS METRO TRAIN RIDEHAILING1 RIDEHAILING2": {
+            "RIDEHAILING1": [
+                "CAR",
+                "BUS",
+                "METRO",
+                "TRAIN"
+            ],
+            "RIDEHAILING2": [
+                "CAR",
+                "BUS",
+                "METRO",
+                "TRAIN",
+                "RIDEHAILING1"
+            ]
+        },
+        "CAR BUS METRO TRAIN RIDEHAILING1": {
+            "RIDEHAILING1": [
+                "CAR",
+                "BUS",
+                "METRO",
+                "TRAIN"
+            ]
+        },
+        "BUS METRO TRAIN RIDEHAILING1": {
+          "RIDEHAILING1": [
+              "BUS",
+              "METRO",
+              "TRAIN"
+          ]
+        },
+        "BUS METRO TRAIN RIDEHAILING2": {
+          "RIDEHAILING2": [
+              "BUS",
+              "METRO",
+              "TRAIN"
+          ]
+        },
+        "BUS METRO TRAIN RIDEHAILING1 RIDEHAILING2": {
+          "RIDEHAILING1": [
+              "BUS",
+              "METRO",
+              "TRAIN"
+          ],
+          "RIDEHAILING2": [
+              "BUS",
+              "METRO",
+              "TRAIN",
+              "RIDEHAILING1"
+          ]
+        }
+    },
+    "G2": {
+        "None": {
+            "DEPARTURE": [
+                "BUS",
+                "METRO",
+                "TRAIN",
+                "RIDEHAILING1",
+                "RIDEHAILING2"
+            ]
+        },
+        "BUS METRO TRAIN RIDEHAILING1 RIDEHAILING2": {
+            "RIDEHAILING1": [
+                "BUS",
+                "METRO",
+                "TRAIN",
+                "RIDEHAILING2"
+            ],
+            "RIDEHAILING2": [
+                "BUS",
+                "METRO",
+                "TRAIN",
+                "RIDEHAILING1"
+            ]
+        },
+        "BUS METRO TRAIN RIDEHAILING2": {
+            "RIDEHAILING2": [
+                "BUS",
+                "METRO",
+                "TRAIN"
+            ]
+        },
+        "BUS METRO TRAIN RIDEHAILING1": {
+            "RIDEHAILING1": [
+                "BUS",
+                "METRO",
+                "TRAIN"
+            ]
+        }
+    }
+}

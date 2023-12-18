@@ -34,6 +34,6 @@ class TestRenderPath(unittest.TestCase):
         pass
 
     def test_draw_path(self):
-        path = Path(0, cost=0, nodes=["CAR_NORTH_0", "CAR_3", "CAR_2", "CAR_1", "CAR_0"])
+        path = Path(cost=0, nodes=["CAR_NORTH_0", "CAR_3", "CAR_2", "CAR_1", "CAR_0"])
         fig, ax = plt.subplots()
         draw_path(ax, self.mlgraph, path)

@@ -31,10 +31,10 @@ param_file.close()
 # inputs
 indir = input_params['indir'] # name of input folder, ex: "INPUTS"
 network_file = input_params['network_file'] # path to json network file, ex: "/Lyon_symuviainput.json"
-demand_file = input_params['demand_file'] # path to csv demand file 
+demand_file = input_params['demand_file'] # path to csv demand file
 mfd_file = input_params['mfd_file'] # path to csv MFD file
 # outputs
-outdir = output_params['outdir'] # name of output folder, ex: "OUTPUTS"
+outdir = output_params['output_dir'] # name of output folder, ex: "OUTPUTS"
 log_file = output_params['log_file'] # path to log file, ex: "/simulation.log"
 path_file = output_params['path_file'] # path to csv path file
 user_file = output_params['user_file'] # path to csv user file
@@ -56,7 +56,7 @@ n_shortest_path = travel_decision_params['n_shortest_path'] # number of shortest
 radius_sp = travel_decision_params['radius_sp'] # first radius for node search in shortest path calculation
 radius_growth_sp = travel_decision_params['radius_growth_sp'] # radius step for node search in sp calculation
 walk_speed = travel_decision_params['walk_speed'] # walking speed, ex: 1.4 (meter per second?)
-scale_factor_sp = travel_decision_params['scale_factor_sp'] # 
+scale_factor_sp = travel_decision_params['scale_factor_sp'] #
 algorithm = travel_decision_params['algorithm'] # algorithm used for shortest path calculation, ex: "astar" or "djikstra"
 decision_model = travel_decision_params['decision_model'] # decision model used, ex: "LogitDecisionModel"
 available_mobility_services = travel_decision_params['available_mobility_services'] # list with available mobility services ex: ["WALK", "PersonalCar"]
@@ -109,5 +109,3 @@ if __name__ == '__main__':
                             outfile=outdir+travel_time_file)
 
     supervisor.run(Time(start_time), Time(end_time), Dt(minutes=flow_dt), affectation_factor)
-
-

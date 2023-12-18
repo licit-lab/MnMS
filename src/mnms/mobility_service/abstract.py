@@ -63,6 +63,9 @@ class AbstractMobilityService(ABC):
     def attach_vehicle_observer(self, observer):
         self._observer = observer
 
+    def is_personal(self):
+        return False
+
     def construct_veh_path(self, upath: List[str]):
         veh_path = list()
         for i in range(len(upath)-1):
@@ -140,9 +143,7 @@ class AbstractMobilityService(ABC):
 
     def launch_matching(self):
         """
-        Method that launch (user / vehicle) requesting then matching
-        Returns: empty list # TODO - should be cleaned
-
+        Method that launches the matching phase.
         """
         # refuse_user = list()
 
@@ -174,8 +175,6 @@ class AbstractMobilityService(ABC):
             #     except if user request the service again
         else:
             self._counter_matching += 1
-
-        return list()  # refuse_user
 
     @abstractmethod
     def periodic_maintenance(self, dt: Dt):

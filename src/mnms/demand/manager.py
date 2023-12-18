@@ -2,12 +2,12 @@ import csv
 import re
 import sys
 from abc import ABC, abstractmethod
-from pathlib import Path
+from pathlib import Path as Pathl
 from typing import List, Literal, Union, Dict, Callable
 
 import numpy as np
 
-from mnms.demand.user import User
+from mnms.demand.user import User, Path
 from mnms.log import create_logger
 from mnms.time import Time
 from mnms.tools.exceptions import CSVDemandParseError
@@ -97,7 +97,7 @@ class BaseDemandManager(AbstractDemandManager):
         for u in self._users:
             print(u)
 
-    def to_csv(self, file: Union[Path, str], delimiter=";"):
+    def to_csv(self, file: Union[Pathl, str], delimiter=";"):
         with open(file, 'w') as f:
             writer = csv.writer(f, delimiter=delimiter)
             writer.writerow(["ID", "DEPARTURE", "ORIGIN", "DESTINATION"])
@@ -119,16 +119,35 @@ class CSVDemandManager(AbstractDemandManager):
         Delimiter for the CSV file
     """
 
-    def __init__(self, csvfile: Union[Path, str], delimiter=';', user_parameters: Callable[[User], Dict] = lambda x: {}):
+    def __init__(self, csvfile: Union[Pathl, str], delimiter=';', user_parameters: Callable[[User], Dict] = lambda x: {}):
         super(CSVDemandManager, self).__init__(user_parameters)
         self._filename = csvfile
         self._delimiter = delimiter
         self._file = open(self._filename, 'r')
         self._reader = csv.reader(self._file, delimiter=self._delimiter, quotechar='|')
         self._demand_type = None
+        self._optional_columns = None
+        mandatory_columns = ['ID', 'DEPARTURE', 'ORIGIN', 'DESTINATION']
 
         try:
-            next(self._reader)
+            headers = next(self._reader)
+            if headers[:4] != mandatory_columns:
+                 raise CSVDemandParseError(csvfile)
+            optional_columns = [h for h in headers if h not in mandatory_columns]
+            self._optional_columns = {c: headers.index(c) for c in optional_columns}
+            # Small checks on consistency of optional columns
+            noms = 'MOBILITY SERVICES' not in self._optional_columns.keys()
+            nomsg = 'MOBILITY SERVICES GRAPH' not in self._optional_columns.keys()
+            if (noms and nomsg) or (noms and not nomsg) or (not noms and nomsg):
+                pass
+            else:
+                raise CSVDemandParseError(csvfile)
+            nop = 'PATH' not in self._optional_columns.keys()
+            nocms = 'CHOSEN SERVICES' not in self._optional_columns.keys()
+            if (nop and nocms) or (not nop and not nocms):
+                pass
+            else:
+                raise CSVDemandParseError(csvfile)
         except StopIteration:
             log.error(f'{self._filename} is empty')
             sys.exit(-1)
@@ -187,8 +206,16 @@ class CSVDemandManager(AbstractDemandManager):
             destination = np.fromstring(row[3], sep=' ')
         else:
             raise TypeError(f"demand_type must be either 'node' or 'coordinate'")
+        forced_path = None
+        chosen_ms = None
+        if 'PATH' in self._optional_columns.keys() and row[self._optional_columns['PATH']] != '':
+            forced_path = Path(None, row[self._optional_columns['PATH']].split(' '))
+            chosen_ms = row[self._optional_columns['CHOSEN SERVICES']].split(' ')
+            chosen_ms = {cms.split(':')[0]:cms.split(':')[1] for cms in chosen_ms}
         return User(row[0], origin, destination, Time(row[1]),
-                    available_mobility_services=None if len(row) == 4 else row[4].split(' '))
+                    available_mobility_services=None if 'MOBILITY SERVICES' not in self._optional_columns.keys() else row[self._optional_columns['MOBILITY SERVICES']].split(' '),
+                    mobility_services_graph=None if 'MOBILITY SERVICES GRAPH' not in self._optional_columns.keys() else row[self._optional_columns['MOBILITY SERVICES GRAPH']],
+                    path=forced_path, forced_path_chosen_mobility_services=chosen_ms)
 
     def __del__(self):
         self._file.close()

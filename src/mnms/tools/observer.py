@@ -93,7 +93,7 @@ class CSVUserObserver(TimeDependentObserver):
             filename: The name of the file
             prec: The precision for floating point number
         """
-        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "STATE", "VEHICLE", "CONTINUOUS_JOURNEY"]
+        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "STATE", "VEHICLE"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -110,8 +110,7 @@ class CSVUserObserver(TimeDependentObserver):
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
                f"{subject.distance:.{self._prec}f}",
                subject.state.name,
-               str(subject._vehicle.id) if subject._vehicle is not None else None,
-               subject._continuous_journey]
+               str(subject._vehicle.id) if subject._vehicle is not None else None]
         # log.info(f"OBS {time}: {row}")
 
         self._csvhandler.writerow(row)

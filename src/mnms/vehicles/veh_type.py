@@ -207,6 +207,10 @@ class VehicleActivityServing(VehicleActivity):
         # self.user._vehicle = None
         # self.user.notify(tcurrent)
         self.user.set_state_stop()
+        # If this is user's personal vehicle, register location of parking and vehicle's mobility service
+        if veh._is_personal:
+            self.user.park_personal_vehicle(veh.mobility_service, unode)
+
 
 
 class Vehicle(TimeDependentSubject):
@@ -217,6 +221,7 @@ class Vehicle(TimeDependentSubject):
                  node: str,
                  capacity: int,
                  mobility_service: str,
+                 is_personal: bool,
                  initial_speed: float = 13.8,
                  activities: Optional[List[VehicleActivity]] = None):
         """
@@ -228,6 +233,7 @@ class Vehicle(TimeDependentSubject):
             mobility_service: The associated mobility service
             initial_speed: the initial speed of the Vehicle
             activities: The initial activities of the Vehicle
+            is_personal: Boolean specifying if the vehicle is personal or not
         """
 
         super(Vehicle, self).__init__()
@@ -237,6 +243,7 @@ class Vehicle(TimeDependentSubject):
 
         self._capacity = capacity
         self.mobility_service = mobility_service
+        self._is_personal = is_personal
 
         self.passengers = dict()                     # id_user, user
 
@@ -407,9 +414,10 @@ class Car(Vehicle):
                  node: str,
                  capacity: int,
                  mobility_service: str,
+                 is_personal: bool,
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Car, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+        super(Car, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
 
 
 class Bus(Vehicle):
@@ -417,9 +425,10 @@ class Bus(Vehicle):
                  node: str,
                  capacity: int,
                  mobility_service: str,
+                 is_personal: bool = False,
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Bus, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+        super(Bus, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
 
 
 class Tram(Vehicle):
@@ -427,9 +436,10 @@ class Tram(Vehicle):
                  node: str,
                  capacity: int,
                  mobility_service: str,
+                 is_personal: bool = False,
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Tram, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+        super(Tram, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
 
 
 class Metro(Vehicle):
@@ -437,9 +447,10 @@ class Metro(Vehicle):
                  node: str,
                  capacity: int,
                  mobility_service: str,
+                 is_personal: bool = False,
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Metro, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+        super(Metro, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
         
      
 class Bike(Vehicle):
@@ -447,15 +458,17 @@ class Bike(Vehicle):
                  node: str,
                  capacity: int,
                  mobility_service: str,
+                 is_personal: bool,
                  initial_speed=5.5,
                  activities: Optional[VehicleActivity] = None):
-        super(Bike, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+        super(Bike, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
 
 class Train(Vehicle):
     def __init__(self,
                  node: str,
                  capacity: int,
                  mobility_service: str,
+                 is_personal: bool = False,
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Train, self).__init__(node, capacity, mobility_service, initial_speed, activities)
+        super(Train, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)

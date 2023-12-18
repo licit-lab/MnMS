@@ -96,8 +96,7 @@ class TestMFDFlow(unittest.TestCase):
 
     def test_accumulation_speed(self):
         user = User('U0', '0', '4', Time('00:01:00'))
-        user.set_path(Path(0,
-                           3400,
+        user.set_path(Path(3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
         self.personal_car.add_request(user, 'C2')
         self.personal_car.matching(user, "C2")
@@ -113,8 +112,7 @@ class TestMFDFlow(unittest.TestCase):
         self.flow.reservoirs['res2'].set_ghost_accumulation(lambda x: {"CAR": 40, "BUS": 3})
 
         user = User('U0', '0', '4', Time('00:01:00'))
-        user.set_path(Path(0,
-                           3400,
+        user.set_path(Path(3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
         self.personal_car.add_request(user, 'C2')
         self.personal_car.matching(user, "C2")
@@ -160,8 +158,7 @@ def test_move_veh_activity_change():
 
     user = User('U0', 'CarLayer_1', 'CarLayer_2', Time('09:00:00'))
     user._position = np.array([0, 10])
-    user.set_path(Path(0,
-                       3400,
+    user.set_path(Path(3400,
                        ['CarLayer_1', 'CarLayer_2']))
     on_demand.step_maintenance(Dt(seconds=1))
     on_demand.request(user, "CarLayer_2")
@@ -209,8 +206,7 @@ def test_move_veh_res_change():
     flow.initialize(1.42)
 
     user = User('U0', '0', '4', Time('09:00:00'))
-    user.set_path(Path(0,
-                       3400,
+    user.set_path(Path(3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
     personal_car.add_request(user, 'C2')
     personal_car.matching(user, "CarLayer_2")
