@@ -125,7 +125,7 @@ class User(TimeDependentSubject):
         self.arrival_time = arrival_time
         self.set_state_arrived()
         log.info(f"User {self.id} arrived at destination at {arrival_time}")
-        # self.notify()
+        self.notify(arrival_time)
 
     def set_pickup_dt(self, ms, dt):
         self.pickup_dt[ms] = dt
@@ -192,6 +192,18 @@ class User(TimeDependentSubject):
         self._current_link = current_link
         self._remaining_link_length = remaining_length
         self._position = position
+
+    def set_position_only(self, position:np.ndarray):
+        self._position = position
+
+    def set_remaining_link_length(self, l):
+        self._remaining_link_length = l
+
+    def set_current_link(self, l):
+        self._current_link = l
+
+    def set_current_node(self, n):
+        self._current_node = n
 
     def update_distance(self, dist: float):
         self._distance += dist
