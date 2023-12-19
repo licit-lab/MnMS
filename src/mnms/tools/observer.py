@@ -106,7 +106,7 @@ class CSVUserObserver(TimeDependentObserver):
     def update(self, subject: 'User', time: Time):
         row = [str(time),
                subject.id,
-               f"{subject._current_link[0]} {subject._current_link[1]}",
+               f"{subject._current_link[0]} {subject._current_link[1]}" if subject._current_link is not None else None,
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
                f"{subject.distance:.{self._prec}f}",
                subject.state.name,
