@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from mnms.graph.road import RoadDescriptor
-from mnms.graph.abstract import MultiLayerGraph, CarLayer, PublicTransportLayer
+from mnms.graph.layers import MultiLayerGraph, CarLayer, PublicTransportLayer
 from mnms.graph.zone import construct_zone_from_contour
 from mnms.generation.layers import get_bounding_box
 from mnms.io.graph import save_graph
@@ -52,8 +52,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, List[str]]=N
 
     roads = RoadDescriptor()
 
-
-
+    # Load links and nodes
     for tr_elem in tron.iterchildren():
         lid = tr_elem.attrib['id']
         up_nid = tr_elem.attrib["id_eltamont"]
@@ -123,6 +122,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, List[str]]=N
 
     stop_elem = root.xpath('/ROOT_SYMUBRUIT/RESEAUX/RESEAU/PARAMETRAGE_VEHICULES_GUIDES/ARRETS')
     map_tr_stops = dict()
+    stops= dict()
     if stop_elem:
         stop_elem = stop_elem[0]
         for selem in stop_elem.iterchildren():
@@ -132,10 +132,25 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, List[str]]=N
             link_length = np.linalg.norm(troncons[tr]['length'])
 
             rel_dist = stop_dist/link_length
-            roads.register_stop(selem.attrib['id'], tr, rel_dist)
-            map_tr_stops[tr] = {'lines': set(selem.attrib['lignes'].split(' ')),
-                                'stop': selem.attrib['id']}
 
+            roads.register_stop(selem.attrib['id'], tr, rel_dist)
+
+            if tr not in map_tr_stops:
+                map_tr_stops[tr]=[]
+
+            map_tr_stops[tr].append( (selem.attrib['id'], rel_dist))
+
+            stops[selem.attrib['id']] = { 'lines': set(selem.attrib['lignes'].split(' ')),
+                                          'section': tr,
+                                          'relative_position': rel_dist,
+                                          'absolute_position':roads.stops[selem.attrib['id']].absolute_position
+                                         }
+
+    map_tr_stops_tmp=dict()
+    for k, val in map_tr_stops.items():
+        map_tr_stops_tmp[k]=sorted(val, key=lambda e: e[1])
+
+    map_tr_stops=map_tr_stops_tmp
     # mlgraph.roads = roads
 
     caf = root.xpath("/ROOT_SYMUBRUIT/RESEAUX/RESEAU/CONNEXIONS/CARREFOURSAFEUX")[0]
@@ -241,19 +256,31 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, List[str]]=N
 
                     sec_buffer = []
 
+                    bBeforeFirstStop = True
                     for i in range(len(line_tr)):
-                        tr = line_tr[i]
-                        if tr in map_tr_stops and line_id in map_tr_stops[tr]['lines']:
-                            sec_buffer.append(tr)
-                            line_stops.append(map_tr_stops[tr]['stop'])
-                            break
 
-                    for tr in line_tr[i:]:
-                        sec_buffer.append(tr)
-                        if tr in map_tr_stops and line_id in map_tr_stops[tr]['lines']:
-                            sections.append(sec_buffer)
-                            line_stops.append(map_tr_stops[tr]['stop'])
-                            sec_buffer = []
+                        tr = line_tr[i]
+                        if not bBeforeFirstStop:
+                            sec_buffer.append(tr)
+
+                        if tr in map_tr_stops:
+                            for stop in map_tr_stops[tr]:
+                                if line_id in stops[stop[0]]['lines']:
+                                    line_stops.append(stop[0])
+                                    if bBeforeFirstStop:
+                                        sec_buffer = [tr]
+                                        bBeforeFirstStop=False
+                                    else:
+                                        sections.append(sec_buffer)
+                                        sec_buffer=[tr]
+
+
+                    #for tr in line_tr[i:]:
+                    #    sec_buffer.append(tr)
+                    #    if tr in map_tr_stops and line_id in map_tr_stops[tr]['lines']:
+                    #        sections.append(sec_buffer)
+                     #       line_stops.append(map_tr_stops[tr]['stop'])
+                    #        sec_buffer = []
 
                     public_transport.create_line(line_id, line_stops, sections, line_timetable, bidirectional=False)
 
