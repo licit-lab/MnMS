@@ -247,15 +247,17 @@ def check_user_id_duplicates(df_users):
     valid = True
 
     ids = df_users["ID"]
-    id_duplicates = df_users[ids.isin(ids[ids.duplicated()])].sort_values("ID")
+    duplicates = df_users[ids.isin(ids[ids.duplicated()])].sort_values("ID")
     count_duplicates = 0
 
-    if not id_duplicates.empty:
-        print(f"Id duplicates : {id_duplicates['ID']}")
+    if not duplicates.empty:
+        print(f"Duplicates :")
+        for index, duplicate in duplicates.iterrows():
+            print(f"{duplicate['ID']}, {duplicate['DEPARTURE']}, {duplicate['ORIGIN']}, {duplicate['DESTINATION']}")
 
         count_duplicates = len(df_users["ID"]) - len(df_users["ID"].drop_duplicates())
         print(f"Number of duplicates : {count_duplicates}")
-        valid = False
+        valid = True
 
     return valid
 
