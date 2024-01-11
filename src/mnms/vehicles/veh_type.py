@@ -58,8 +58,24 @@ class VehicleActivity(ABC):
         self.iter_path = iter(self.path)
 
     def modify_path(self, new_path: _TYPE_PATH):
+        """Method to update this activity path.
+
+        Args:
+            -new_path: the new path
+        """
         self.path = new_path
+        if new_path:
+            self.node = new_path[-1][0][1]
         self.reset_path_iterator()
+
+    def modify_path_and_next(self, new_path: _TYPE_PATH):
+        """Method to update this activity path and set the iterator on path to the next node.
+
+        Args:
+            -new_path: the new path
+        """
+        self.modify_path(new_path)
+        next(self.iter_path)
 
     @abstractmethod
     def done(self, veh: "Vehicle"):
@@ -200,9 +216,8 @@ class VehicleActivityServing(VehicleActivity):
         self.user._remaining_link_length = 0
         upath = self.user.path.nodes
         unode = veh._current_link[1] if veh._current_link is not None else veh._current_node
-        self.user._current_node = unode
-        next_node_ind = upath.index(unode)+1
-        self.user.set_position((unode, upath[next_node_ind]), 0, veh.position)
+        next_node_ind = self.user.get_node_index_in_path(unode) + 1
+        self.user.set_position((unode, upath[next_node_ind]), unode, 0, veh.position)
         self.user._vehicle = None
         # self.user._vehicle = None
         # self.user.notify(tcurrent)
@@ -368,9 +383,8 @@ class Vehicle(TimeDependentSubject):
         user._remaining_link_length = 0
         upath = user.path.nodes
         unode = self._current_link[0]
-        user._current_node = unode
-        next_node_ind = upath.index(unode)+1
-        user.set_position((unode, upath[next_node_ind]), 0, drop_pos)
+        next_node_ind = user.get_node_index_in_path(unode)+1
+        user.set_position((unode, upath[next_node_ind]), unode, 0, drop_pos)
         user._vehicle = None
         user.notify(tcurrent)
 
@@ -403,6 +417,21 @@ class Vehicle(TimeDependentSubject):
     def notify_passengers(self, tcurrent: Time):
         for user in self.passengers.values():
             user.notify(tcurrent)
+
+    def path_to_nodes(self, path):
+        """Method that converts a VehicleActivity path into a list of nodes.
+
+        Args:
+            -path: path to convert
+
+        Returns:
+            -path_nodes: the converted path
+        """
+        if len(path) > 0:
+            path_nodes = [l[0][0] for l in path] + [path[-1][0][1]]
+        else:
+            path_nodes = [self._current_node]
+        return path_nodes
 
     @classmethod
     def reset_counter(cls):
@@ -451,8 +480,8 @@ class Metro(Vehicle):
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
         super(Metro, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
-        
-     
+
+
 class Bike(Vehicle):
     def __init__(self,
                  node: str,

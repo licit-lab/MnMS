@@ -34,8 +34,8 @@ class Dt(object):
         minutes = new_minutes%60
         seconds = new_seconds%60
 
-        self._hours = hours
-        self._minutes = minutes
+        self._hours = int(hours)
+        self._minutes = int(minutes)
         self._seconds = Decimal(seconds)
 
     def __mul__(self, other:int):

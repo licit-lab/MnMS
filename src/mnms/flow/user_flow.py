@@ -96,7 +96,7 @@ class UserFlow(object):
                     user.update_distance(remaining_length)
                     user.set_remaining_link_length(0)
                     arrival_time = arrival_time.add_time(Dt(seconds=remaining_length / self._walk_speed))
-                    next_node = upath[upath.index(user._current_node) + 1]
+                    next_node = upath[user.get_current_node_index()+1]
                     user.set_current_node(next_node)
                     self.set_user_position(user)
                     user.notify(arrival_time.time)
@@ -107,7 +107,8 @@ class UserFlow(object):
                         dist_travelled = 0
                     else:
                         # User still has way to go
-                        next_next_node = upath[upath.index(user._current_node) + 1]
+                        cnode_ind = user.get_current_node_index()
+                        next_next_node = upath[cnode_ind + 1]
                         next_link = graph.nodes[user._current_node].adj[next_next_node]
                         if next_link.label == 'TRANSIT':
                             # User keeps walking
@@ -157,7 +158,7 @@ class UserFlow(object):
             user.set_position_only(start_node_pos)
 
             # Finding the mobility service associated and request vehicle
-            ind_node_start = upath.index(user._current_node)
+            ind_node_start = user.get_current_node_index()
             for ilayer, (layer, slice_nodes) in enumerate(user.path.layers):
                 if slice_nodes.start == ind_node_start:
                     mservice_id = user.path.mobility_services[ilayer]
@@ -206,7 +207,7 @@ class UserFlow(object):
             if u.state is UserState.STOP and u.path is not None:
                 upath = u.path.nodes
                 cnode = u._current_node
-                cnode_ind = upath.index(cnode)
+                cnode_ind = u.get_current_node_index()
                 next_link = self._gnodes[cnode].adj[upath[cnode_ind + 1]]
                 u.set_position_only(self._gnodes[cnode].position)
                 if u._current_node == upath[-1]:

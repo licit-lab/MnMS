@@ -26,7 +26,7 @@ class PersonalMobilityService(AbstractMobilityService):
 
     def matching(self, user: User, drop_node: str):
         upath = list(user.path.nodes)
-        upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
+        upath = upath[user.get_current_node_index():user.get_node_index_in_path(drop_node) + 1]
         veh_path = self.construct_veh_path(upath)
         new_veh = self.fleet.create_vehicle(upath[0],
                                             capacity=self._veh_capacity,

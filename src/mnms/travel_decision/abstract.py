@@ -25,6 +25,7 @@ log = create_logger(__name__)
 class Event(Enum):
     DEPARTURE = 0
     MATCH_FAILURE = 1
+    INTERRUPTION = 2
 
 class AbstractDecisionModel(ABC):
 
@@ -459,7 +460,7 @@ class AbstractDecisionModel(ABC):
             event = d['event']
             if user_paths:
                 chosen_path = self.path_choice(user_paths)
-                log.info(f"User {user.id} chose path {chosen_path} after {event} among {len(user_paths)} shorest paths for this round of (re)planning.")
+                log.info(f"User {user.id} chose path {chosen_path} after {event} among {len(user_paths)} shortest paths for this round of (re)planning (state={user.state}).")
 
                 if self._write:
                     # Write down the chosen path only
@@ -500,7 +501,7 @@ class AbstractDecisionModel(ABC):
                         # User finishes to walk on current link and then starts the chosen path without teleporting
                         assert chosen_path.nodes[0] == user._current_link[1], f'User {user.id} replanned while WALKING on {user._current_link} '\
                             f'and chose a path with an erroneous first node (path={chosen_path})'
-                        user.update_path(chosen_path, gnodes, self._mlgraph, self._cost)
+                        _ = user.update_path(chosen_path, gnodes, self._mlgraph, self._cost)
                 elif user.state == UserState.WAITING_ANSWER:
                     # TOTODO: user starts the chosen path right now, eventually teleport, clean/update user's ongoing request
                     log.error(f'Not yet developed replaning behavior in WAITING_ANSWER state')
@@ -510,9 +511,10 @@ class AbstractDecisionModel(ABC):
                     log.error(f'Not yet developed replaning behavior in WAITING_VEHICLE state')
                     sys.exit(-1)
                 elif user.state == UserState.INSIDE_VEHICLE:
-                    # TOTODO: user's finished on the current link and then starts the chosen path without teleporting, update vehicle plan consequently
-                    log.error(f'Not yet developed replaning behavior in INSIDE_VEHICLE state')
-                    sys.exit(-1)
+                    # User finishes on the current link and then starts the chosen path without teleporting, update vehicle plan consequently
+                    assert chosen_path.nodes[0] == user._current_link[1], f'User {user.id} replanned while INSIDE_VEHICLE on {user._current_link} '\
+                        f'and chose a path with an erroneous first node (path={chosen_path})'
+                    user.update_path_and_current_vehicle_plan(chosen_path, gnodes, self._mlgraph, self._cost)
                 else:
                     log.error(f'User {user.id} undefined replanning behavior in {user.state} state...')
                     sys.exit(-1)

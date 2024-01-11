@@ -841,26 +841,35 @@ class SharedVehicleLayer(AbstractLayer):
 
         Parameters
         ----------
-        station_id
+        station_id: if of the station to disconnect
 
         Returns
         -------
-        the node id to disconnet from origin nodes
+        the list of links that have been deleted
         """
         for s in self.stations:
             if s['id'] == station_id:
-
+                # Gather all transit links arriving at this station's node and delete them
+                # NB: for now, we cannot define free-floating and station-based
+                #     vehicle sharing services on the same layer because this
+                #     disconnection would impact the station-based service
+                to_delete = []
                 for layer_id in self.multi_graph.transitlayer.links.keys():
                     for link_id in self.multi_graph.transitlayer.links[layer_id][self._id]:
-                        if link_id[-len(s['node']):] == s['node']:
-                            self.multi_graph.graph.delete_link(link_id)
-                            self.multi_graph.transitlayer.links[layer_id][self._id].remove(link_id)
-                            del self.multi_graph.map_linkid_layerid[link_id]
-
+                        link_obj = self.multi_graph.graph.links[link_id]
+                        if link_obj.downstream == s['node']:
+                            link = self.multi_graph.graph.links[link_id]
+                            to_delete.append((layer_id,link_id, link.upstream, link.downstream))
+                # Delete the links
+                for layer_id,link_id,_,_ in to_delete:
+                    self.multi_graph.graph.delete_link(link_id)
+                    self.multi_graph.transitlayer.links[layer_id][self._id].remove(link_id)
+                    del self.multi_graph.map_linkid_layerid[link_id]
+                # Remove the station
                 self.stations.remove(s)
-                return s['node']
-
-        return
+                # Return the list of links that have been deleted
+                return [(onid,dnid) for _,_,onid,dnid in to_delete]
+        return []
 
     def __dump__(self):
         return {'ID': self.id,

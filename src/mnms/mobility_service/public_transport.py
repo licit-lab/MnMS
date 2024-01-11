@@ -14,13 +14,6 @@ from mnms.vehicles.veh_type import VehicleActivityServing, Vehicle, VehicleActiv
 
 log = create_logger(__name__)
 
-def _to_nodes(path, veh):
-    if len(path) > 0:
-        nodes = [l[0][0] for l in path] + [path[-1][0][1]]
-    else:
-        nodes = [veh._current_node]
-    return nodes
-
 
 def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
     if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
@@ -36,12 +29,12 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
         # Insertion modifies only one activity in vehicles' activities
         ind = ind_pu
         activity_to_modify = activities_including_curr[ind]
-        pu_ind_inpath = _to_nodes(activity_to_modify.path, veh).index(pu_node)
-        do_ind_inpath = _to_nodes(activity_to_modify.path, veh).index(do_node)
+        pu_ind_inpath = veh.path_to_nodes(activity_to_modify.path).index(pu_node)
+        do_ind_inpath = veh.path_to_nodes(activity_to_modify.path).index(do_node)
         if ind == 0:
             # activity_to_modify have begun, pickup activity path should start
             # at vehicle current node
-            start_ind_inpath =_to_nodes(activity_to_modify.path, veh).index(veh._current_node)
+            start_ind_inpath = veh.path_to_nodes(activity_to_modify.path).index(veh._current_node)
         else:
             # activity_to_modify has not begun, pickup activity path should start
             # at the beginning of activity_to_modify path
@@ -86,7 +79,7 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
             "to be inserted: this is not consistent."
         # Start by inserting serving activity since it is located after pickup
         activity_to_modify_do = activities_including_curr[ind_do]
-        do_ind_inpath = _to_nodes(activity_to_modify_do.path, veh).index(do_node)
+        do_ind_inpath = veh.path_to_nodes(activity_to_modify_do.path).index(do_node)
         do_path = activity_to_modify_do.path[:do_ind_inpath]
         do_activity = VehicleActivityServing(node=do_node,
                                             path=do_path,
@@ -98,9 +91,9 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
             veh.activities.insert(ind_do, do_activity)
         # Then insert pickup activity
         activity_to_modify_pu = activities_including_curr[ind_pu]
-        pu_ind_inpath = _to_nodes(activity_to_modify_pu.path, veh).index(pu_node)
+        pu_ind_inpath = veh.path_to_nodes(activity_to_modify_pu.path).index(pu_node)
         if ind_pu == 0:
-            start_ind_inpath =_to_nodes(activity_to_modify_pu.path, veh).index(veh._current_node)
+            start_ind_inpath = veh.path_to_nodes(activity_to_modify_pu.path).index(veh._current_node)
         else:
             start_ind_inpath = 0
         pu_path = activity_to_modify_pu.path[start_ind_inpath:pu_ind_inpath]
@@ -334,6 +327,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
     def matching(self, user: User, drop_node: str):
         veh, line = self._cache_request_vehicles[user.id]
+        log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self._id}')
         self.add_passenger(user, drop_node, veh, line["nodes"])
 
     def step_maintenance(self, dt: Dt):
@@ -376,6 +370,81 @@ class PublicTransportMobilityService(AbstractMobilityService):
                     nodes: path (list of nodes)
         """
         return create_service_costs()
+
+    def modify_passenger_drop_node(self, passenger, new_drop_node, former_drop_node):
+        """Method that modifies the drop node of a user which is already in a
+        PublicTransportMobilityService vehicle by updating the vehicle's plan consequently.
+        The order in which the line stops are visited is kept untouched while the order
+        of activities of the oublic transport vehicle plan can be modified.
+
+        Args:
+            -passenger: user in a public transport vehicle who wants to change her drop node
+            -new_drop_node: the new drop node of the passenger
+            -former_drop_node: the former drop node of the passenger
+        """
+        veh = passenger._vehicle
+        all_activities = [veh.activity] + list(veh.activities)
+        passenger_serving_act_ind = [i for i in range(len(all_activities)) if all_activities[i].user == passenger][0] # pickup activity already done because passenger is in the veh
+
+        if new_drop_node != former_drop_node:
+            # Step 1 = Remove the former serving activity for user
+            assert len(all_activities) > passenger_serving_act_ind + 1, f'There should be an activity in public transportation vehicle plan after a serving activity...'
+            if passenger_serving_act_ind == 0:
+                # Interrupt current activity and modify next activity consequently
+                ind_curr_node_in_curr_act = veh.path_to_nodes(all_activities[0].path).index(veh._current_node)
+                ongoing_leg = all_activities[0].path[ind_curr_node_in_curr_act:]
+                ongoing_leg[0] = (ongoing_leg[0][0], veh._remaining_link_length)
+                all_activities[1].modify_path(ongoing_leg + all_activities[1].path)
+                veh.activity = None
+            else:
+                # User serving activity has not begun, remove it from planning and update next activity consequently
+                next_activity_new_path = all_activities[passenger_serving_act_ind].path + all_activities[passenger_serving_act_ind+1].path
+                all_activities[passenger_serving_act_ind+1].modify_path(next_activity_new_path)
+                del veh.activities[passenger_serving_act_ind-1]
+            all_activities = [veh.activity] + list(veh.activities)
+
+            # Step 2 = Insert the new serving activity for user
+            # Find the new drop node in the PT vehicle's activities
+            found = False
+            for ind, a in enumerate(all_activities):
+                if a is not None:
+                    try:
+                        ind_new_drop_node = veh.path_to_nodes(a.path).index(new_drop_node)
+                        found = True
+                        break
+                    except ValueError:
+                        pass
+            if not found:
+                log.error(f'Could not find new drop node {new_drop_node} in vehicle {veh.id} plan')
+                sys.exit(-1)
+            # Deduce the activity to modify
+            modified_act = all_activities[ind]
+            if ind == 0:
+                # Interrupt current activity, modify next activity consequently and insert user serving activity then modified activity
+                ind_curr_node_in_curr_act = veh.path_to_nodes(modified_act.path).index(veh._current_node)
+                assert ind_curr_node_in_curr_act <= ind_new_drop_node, f'New drop node {new_drop_node} of user {passenger.id} has already been passed...'
+                serving_act_path = modified_act.path[ind_curr_node_in_curr_act:ind_new_drop_node]
+                modified_act_path = modified_act.path[ind_new_drop_node:]
+                serving_act_path[0] = (serving_act_path[0][0], veh._remaining_link_length)
+                serving_act = VehicleActivityServing(node=new_drop_node,
+                                                    path=serving_act_path,
+                                                    user=passenger)
+                modified_act.modify_path(modified_act_path)
+                veh.activity = None
+                veh.activities.insert(0, serving_act)
+                veh.activities.insert(1, modified_act)
+            else:
+                # Modify the activity and insert user serving activty before it in plan
+                serving_act_path = modified_act.path[:ind_new_drop_node]
+                modified_act_path = modified_act.path[ind_new_drop_node:]
+                serving_act = VehicleActivityServing(node=new_drop_node,
+                                                    path=serving_act_path,
+                                                    user=passenger)
+                modified_act.modify_path(modified_act_path)
+                veh.activities.insert(ind-1, serving_act)
+        else:
+            # Former and new drop nodes are equal: there is nothing to do
+            pass
 
     def __dump__(self):
         return {"TYPE": ".".join([PublicTransportMobilityService.__module__, PublicTransportMobilityService.__name__]),

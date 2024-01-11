@@ -179,9 +179,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             veh.update_distance(dist_travelled)
             veh._remaining_link_length = 0
             self.set_vehicle_position(veh)
-            for passenger_id, passenger in veh.passengers.items():
-                passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
-
             try:
                 current_link, remaining_link_length = next(veh.activity.iter_path)
                 veh._current_link = current_link
@@ -192,13 +189,15 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 veh.next_activity()
                 if not veh.is_moving:
                     elapsed_time = dt
+            for passenger_id, passenger in veh.passengers.items():
+                passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position)
             return elapsed_time
         else:
             veh._remaining_link_length -= dist_travelled
             veh.update_distance(dist_travelled)
             self.set_vehicle_position(veh)
             for passenger_id, passenger in veh.passengers.items():
-                passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
+                passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position)
             return dt
 
     def get_vehicle_zone(self, veh):
