@@ -17,6 +17,8 @@ class TestCSVDemand(unittest.TestCase):
         self.file_coordinate = self.cwd.joinpath("data_demand/test_demand_coordinate.csv")
         self.file_bad_type1 = self.cwd.joinpath("data_demand/test_demand_bad_type1.csv")
         self.file_bad_type2 = self.cwd.joinpath("data_demand/test_demand_bad_type2.csv")
+        self.file_bad_departure_format1 = self.cwd.joinpath("data_demand/test_demand_bad_departure_format1.csv")
+        self.file_bad_departure_format2 = self.cwd.joinpath("data_demand/test_demand_bad_departure_format2.csv")
         self.file_mobility_services = self.cwd.joinpath("data_demand/test_demand_mobility_services.csv")
         self.file_mobility_services_graph = self.cwd.joinpath("data_demand/test_demand_mobility_services_graph.csv")
         self.file_bad_optional_columns1 = self.cwd.joinpath("data_demand/test_bad_optional_column1.csv")
@@ -62,6 +64,13 @@ class TestCSVDemand(unittest.TestCase):
 
         with self.assertRaises(CSVDemandParseError):
             CSVDemandManager(self.file_bad_type2)
+
+    def test_demand_departure_format_error(self):
+        with self.assertRaises(CSVDemandParseError):
+            CSVDemandManager(self.file_bad_departure_format1)
+
+        with self.assertRaises(CSVDemandParseError):
+            CSVDemandManager(self.file_bad_departure_format2)
 
     def test_optional_columns(self):
         """Check the definition of users in a CSV file with the list of available mobility services
