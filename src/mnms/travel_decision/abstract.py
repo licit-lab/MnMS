@@ -181,13 +181,13 @@ class AbstractDecisionModel(ABC):
         new_planning_origins = {}
 
         if u.state in [UserState.STOP, UserState.WAITING_ANSWER, UserState.WAITING_VEHICLE, UserState.WALKING]:
-            planning_origin = u.position if u.state == UserState.WALKING else gnodes[u._current_node].position
+            planning_origin = u.position if u.state == UserState.WALKING else gnodes[u.current_node].position
             # Check user's planning origin with regard to each currently available personal mobility service
             for personal_mob_service in personal_mob_services:
                 if (u.available_mobility_services) and (personal_mob_service in u.available_mobility_services):
-                    if personal_mob_service in u._parked_personal_vehicles.keys():
+                    if personal_mob_service in u.parked_personal_vehicles.keys():
                         # User has already used and parked her personal vehicle, check if the parking location is nearby
-                        parking_node = u._parked_personal_vehicles[personal_mob_service]
+                        parking_node = u.parked_personal_vehicles[personal_mob_service]
                         parking_pos = gnodes[parking_node].position
                         user_far_from_personal_veh = _norm(np.array(parking_pos) - np.array(planning_origin)) > self.personal_mob_service_park_radius
                     else:
@@ -203,7 +203,7 @@ class AbstractDecisionModel(ABC):
             # Check if user is riding a vehicle of each currently available personal mobility service
             for personal_mob_service in personal_mob_services:
                 if (u.available_mobility_services) and (personal_mob_service in u.available_mobility_services):
-                    if u._vehicle and u._vehicle.mobility_service == personal_mob_service:
+                    if u.vehicle and u.vehicle.mobility_service == personal_mob_service:
                         continue
                     else:
                         u.remove_available_mobility_service(personal_mob_service)
@@ -342,7 +342,7 @@ class AbstractDecisionModel(ABC):
 
             ## Get origin of the (re)planning depending on users' state
             if u.state in [UserState.STOP, UserState.WAITING_ANSWER, UserState.WAITING_VEHICLE]:
-                if u._current_node is None:
+                if u.current_node is None:
                     # User has just departed from her origin, get the name of origin node
                     if isinstance(u.origin, np.ndarray):
                         u_origin = origins_id[np.argmin(_norm(origins_pos - u.origin, axis=1))]
@@ -350,7 +350,7 @@ class AbstractDecisionModel(ABC):
                         u_origin = u.origin
                 else:
                     # User (re)plan from current node
-                    u_origin = u._current_node
+                    u_origin = u.current_node
             elif u.state == UserState.INSIDE_VEHICLE:
                 # User (re)plan from next node
                 u_origin = u.current_link[1]
@@ -360,7 +360,7 @@ class AbstractDecisionModel(ABC):
                     u_origin = u.current_link[1]
                 else:
                     # User (re)plans from current node if current transit link does not exist
-                    u_origin = u._current_node
+                    u_origin = u.current_node
                     log.warning(f'User {u.id} was walking on link {u.current_link} when this link got deleted, '\
                         f'user will look for an alternative path from upstream node of this link...')
             else:
@@ -496,7 +496,7 @@ class AbstractDecisionModel(ABC):
 
                 if user.state == UserState.STOP:
                     # User starts the chosen path right now, eventually teleport
-                    teleport_origin = None if user._current_node is None else gnodes[user._current_node].position
+                    teleport_origin = None if user.current_node is None else gnodes[user.current_node].position
                     user.set_path(chosen_path, gnodes=gnodes, max_teleport_dist=self.personal_mob_service_park_radius,
                         teleport_origin=teleport_origin)
                     user.start_path(gnodes)
@@ -556,7 +556,7 @@ class AbstractDecisionModel(ABC):
             # Write down the fact that user could not find any shortest path
             self._csvhandler.writerow([user.id, event._name_, tcurrent,
                                        'INF',
-                                       user._current_node,
+                                       user.current_node,
                                        'INF',
                                        '',
                                        ''])
@@ -584,7 +584,7 @@ class AbstractDecisionModel(ABC):
                     # User finishes to walk through current link and turns DEADEND
                     log.warning(f'User {uid} has found no path during the (re)planning, '\
                         f'will finish to walk the current TRANSIT link and turn DEADEND.')
-                    user.set_state_deadend_at_next_node()
+                    user.deadend_at_next_node = True
             elif user.state == UserState.WAITING_ANSWER:
                 # User cancels her request and turns DEADEND
                 user.requested_service.cancel_request(uid)
@@ -602,8 +602,8 @@ class AbstractDecisionModel(ABC):
                 # vehicle's plan is updated consequently
                 user.modify_current_ride_drop_node(user.current_link[1], gnodes, self._mlgraph, self._cost)
                 log.warning(f'User {uid} has found no path during the (re)planning, '\
-                    f'will alight vehicle {user._vehicle} at next node and turn DEADEND.')
-                user.set_state_deadend_at_next_node()
+                    f'will alight vehicle {user.vehicle} at next node and turn DEADEND.')
+                user.deadend_at_next_node = True
 
         else:
             # TODO: Define what user should do when path not found following other events

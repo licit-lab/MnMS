@@ -110,7 +110,7 @@ class CSVUserObserver(TimeDependentObserver):
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
                f"{subject.distance:.{self._prec}f}",
                subject.state.name,
-               str(subject._vehicle.id) if subject._vehicle is not None else None]
+               str(subject.vehicle.id) if subject.vehicle is not None else None]
         # log.info(f"OBS {time}: {row}")
 
         self._csvhandler.writerow(row)

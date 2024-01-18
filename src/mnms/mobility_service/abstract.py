@@ -410,7 +410,7 @@ class AbstractMobilityService(ABC):
             -mlgraph: multilayergraph where vehicle evolves
             -cost: name of the cost user considers to make her mode-route decision
         """
-        veh = passenger._vehicle
+        veh = passenger.vehicle
         self.modify_user_drop_node(passenger, veh, new_drop_node, former_drop_node, gnodes, mlgraph, cost)
 
     @abstractmethod

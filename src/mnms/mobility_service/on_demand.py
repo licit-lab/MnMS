@@ -195,7 +195,7 @@ class OnDemandMobilityService(AbstractMobilityService):
         user_path = self.construct_veh_path(upath)
         veh_path = self.construct_veh_path(veh_path)
         activities = [
-            VehicleActivityPickup(node=user._current_node,
+            VehicleActivityPickup(node=user.current_node,
                                   path=veh_path,
                                   user=user),
             VehicleActivityServing(node=drop_node,
@@ -370,11 +370,11 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
         veh_path = self.construct_veh_path(veh_path)
 
         if veh_path:
-            pickup = VehicleActivityPickup(node=user._current_node,
+            pickup = VehicleActivityPickup(node=user.current_node,
                                            path=veh_path,
                                            user=user)
         else:
-            pickup = VehicleActivityPickup(node=user._current_node,
+            pickup = VehicleActivityPickup(node=user.current_node,
                                            path=veh_path,
                                            user=user,
                                            is_done=True)

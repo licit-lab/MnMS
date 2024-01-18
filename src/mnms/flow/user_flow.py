@@ -63,7 +63,7 @@ class UserFlow(object):
             -user: user to move
         """
         unode, dnode = user.current_link
-        remaining_length = user._remaining_link_length
+        remaining_length = user.remaining_link_length
 
         unode_pos = np.array(self._gnodes[unode].position)
         dnode_pos = np.array(self._gnodes[dnode].position)
@@ -73,7 +73,7 @@ class UserFlow(object):
         if norm_direction > 0:
             normalized_direction = direction / norm_direction
             travelled = norm_direction - remaining_length
-            user.set_position_only(unode_pos+normalized_direction*travelled)
+            user.position = unode_pos+normalized_direction*travelled
 
     def _user_walking(self, dt:Dt):
         """Method to manage users who are currently walking.
@@ -96,10 +96,10 @@ class UserFlow(object):
                     if remaining_length <= dist_travelled:
                         # User arrived at the end of her current transit link
                         user.update_distance(remaining_length)
-                        user.set_remaining_link_length(0)
+                        user.remaining_link_length = 0
                         arrival_time = arrival_time.add_time(Dt(seconds=remaining_length / self._walk_speed))
                         next_node = upath[user.get_current_node_index()+1]
-                        user.set_current_node(next_node)
+                        user.current_node = next_node
                         self.set_user_position(user)
                         user.notify(arrival_time.time)
                         if next_node == upath[-1]:
@@ -117,13 +117,13 @@ class UserFlow(object):
                             else:
                                 cnode_ind = user.get_current_node_index()
                                 next_next_node = upath[cnode_ind + 1]
-                                next_link = graph.nodes[user._current_node].adj[next_next_node]
+                                next_link = graph.nodes[user.current_node].adj[next_next_node]
                                 if next_link.label == 'TRANSIT':
                                     # User keeps walking
                                     log.info(f"User {uid} enters connection on {next_link.id}")
                                     dist_travelled = dist_travelled - remaining_length
                                     self._walking[uid] = next_link.length
-                                    user.set_current_link((user._current_node, next_next_node))
+                                    user.current_link = (user.current_node, next_next_node)
                                 else:
                                     # User stops walking
                                     user.set_state_stop()
@@ -132,7 +132,7 @@ class UserFlow(object):
                     else:
                         # User did not arrived at the end of current link
                         self._walking[uid] = remaining_length - dist_travelled
-                        user.set_remaining_link_length(remaining_length - dist_travelled)
+                        user.remaining_link_length = remaining_length - dist_travelled
                         self.set_user_position(user)
                         user.update_distance(dist_travelled)
                         dist_travelled = 0
@@ -167,9 +167,9 @@ class UserFlow(object):
         if user.path is not None:
             upath = user.path.nodes
 
-            start_node = self._gnodes[user._current_node]
+            start_node = self._gnodes[user.current_node]
             start_node_pos = start_node.position
-            user.set_position_only(start_node_pos)
+            user.position = start_node_pos
 
             # Finding the mobility service associated and request vehicle
             ind_node_start = user.get_current_node_index()
@@ -179,7 +179,7 @@ class UserFlow(object):
                     mservice = self._graph.layers[layer].mobility_services[mservice_id]
                     log.info(f"User {user.id} requests mobility service {mservice._id}")
                     mservice.add_request(user, upath[slice_nodes][-1])
-                    user.set_requested_service(mservice)
+                    user.requested_service = mservice
                     return mservice
             else:
                 log.warning(f"No mobility service found for user {user.id}")
@@ -221,11 +221,11 @@ class UserFlow(object):
         for u in self.users.values():
             if u.state is UserState.STOP and u.path is not None:
                 upath = u.path.nodes
-                cnode = u._current_node
+                cnode = u.current_node
                 cnode_ind = u.get_current_node_index()
                 next_link = self._gnodes[cnode].adj[upath[cnode_ind + 1]]
-                u.set_position_only(self._gnodes[cnode].position)
-                if u._current_node == upath[-1]:
+                u.position = self._gnodes[cnode].position
+                if cnode == upath[-1]:
                     # User finished her planned trip, arrived at destination
                     u.finish_trip(self._tcurrent)
                     to_del.append(u.id)

@@ -128,7 +128,7 @@ class VehicleActivityStop(VehicleActivity):
         """
 
         if self.user is not None:
-            self.user._vehicle = veh
+            self.user.vehicle = veh
 
 
 @dataclass(slots=True)
@@ -179,7 +179,7 @@ class VehicleActivityPickup(VehicleActivity):
                 veh (Vehicle): The vehicle performing the activities
         """
 
-        self.user._vehicle = veh
+        self.user.vehicle = veh
         veh.passengers[self.user.id] = self.user
         self.user.set_state_inside_vehicle()
 
@@ -196,7 +196,7 @@ class VehicleActivityServing(VehicleActivity):
             Parameters:
                 veh (Vehicle): The vehicle performing the activities
         """
-        self.user._vehicle = veh
+        self.user.vehicle = veh
         veh.passengers[self.user.id] = self.user
         self.user.set_state_inside_vehicle()
 
@@ -206,15 +206,15 @@ class VehicleActivityServing(VehicleActivity):
              Parameters:
                  veh (Vehicle): The vehicle performing the activities
          """
-        self.user._vehicle = None
+        self.user.vehicle = None
         veh.passengers.pop(self.user.id)
 
-        self.user._remaining_link_length = 0
+        self.user.remaining_link_length = 0
         upath = self.user.path.nodes
         unode = veh._current_link[1] if veh._current_link is not None else veh._current_node
         next_node_ind = self.user.get_node_index_in_path(unode) + 1
         self.user.set_position((unode, upath[next_node_ind]), unode, 0, veh.position, tcurrent)
-        self.user._vehicle = None
+        self.user.vehicle = None
         # self.user.notify(tcurrent)
         self.user.set_state_stop()
         # If this is user's personal vehicle, register location of parking and vehicle's mobility service
@@ -375,12 +375,12 @@ class Vehicle(TimeDependentSubject):
 
     def drop_user(self, tcurrent:Time, user:'User', drop_pos:np.ndarray):
         log.info(f"{user} is dropped at {self._current_link[0]}")
-        user._remaining_link_length = 0
+        user.remaining_link_length = 0
         upath = user.path.nodes
         unode = self._current_link[0]
         next_node_ind = user.get_node_index_in_path(unode)+1
         user.set_position((unode, upath[next_node_ind]), unode, 0, drop_pos, tcurrent)
-        user._vehicle = None
+        user.vehicle = None
         user.notify(tcurrent)
 
         del self.passengers[user.id]
@@ -389,18 +389,18 @@ class Vehicle(TimeDependentSubject):
         for _, user in self.passengers.values():
             log.info(f"{user} is dropped at {self._current_link[1]}")
             unode = self._current_link[1]
-            user._current_node = unode
-            user._remaining_link_length = 0
-            user._position = self._position
+            user.current_node = unode
+            user.remaining_link_length = 0
+            user.position = self._position
             user.notify(tcurrent)
-            user._vehicle = None
+            user.vehicle = None
 
         self.passengers = dict()
 
     def start_user_trip(self, userid, take_node):
         log.info(f'Passenger {userid} has been taken by {self} at {take_node}')
         take_time, user = self._next_passenger.pop(userid)
-        user._vehicle = self.id
+        user.vehicle = self.id
         self.passengers[userid] = (take_time, user)
 
     def default_activity(self):

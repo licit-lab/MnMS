@@ -238,7 +238,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         log.info(f"Add passenger {user} -> {veh}")
         user.set_state_waiting_vehicle(veh)
 
-        pu_node_ind = line_nodes.index(user._current_node)
+        pu_node_ind = line_nodes.index(user.current_node)
         do_node_ind = line_nodes.index(drop_node)
 
         assert pu_node_ind <= do_node_ind, f'Pickup index {pu_node_ind} should necessarily take place '\
@@ -263,10 +263,10 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 break # if we found dropoff we necessarily have found pickup before
 
         # Insert the activities corresponding to pickup and serving in vehicles' activities
-        _insert_in_activity(user._current_node, ind_pu, drop_node, ind_do, user, veh)
+        _insert_in_activity(user.current_node, ind_pu, drop_node, ind_do, user, veh)
 
     def estimation_pickup_time(self, user: User, veh: Vehicle, line: dict):
-        user_node = user._current_node
+        user_node = user.current_node
         veh_link_borders = veh.current_link
         veh_link_length = self.gnodes[veh_link_borders[0]].adj[veh_link_borders[1]].length
         veh_remaining_length = veh.remaining_link_length
@@ -292,7 +292,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
     def request(self, user: User, drop_node: str) -> Dt:
         # for user, drop_node in users.values():
-        start = user._current_node
+        start = user.current_node
 
         chosen_veh = None
         chosen_line = None
@@ -495,7 +495,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
             -new_drop_node: the new drop node of the passenger
             -former_drop_node: the former drop node of the passenger
         """
-        veh = passenger._vehicle
+        veh = passenger.vehicle
         self.modify_user_drop_node(passenger, veh, new_drop_node, former_drop_node)
 
     def __dump__(self):

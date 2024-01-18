@@ -70,19 +70,17 @@ class User(TimeDependentSubject):
 
         self.parameters: Dict = dict()
 
+        self._current_node = None
         self._current_link = None
         self._remaining_link_length = None
         self._position = None
         self._achieved_path = list()
-
         self._vehicle = None
         self._waited_vehicle = None
         self._requested_service = None
         self._parked_personal_vehicles = dict()
-        self._current_node = None
         self._distance = 0
         self._interrupted_path = None
-
         self._state = UserState.STOP
         self._deadend_at_next_node = False
 
@@ -97,51 +95,104 @@ class User(TimeDependentSubject):
         return f"User('{self.id}', {self.origin}->{self.destination}, {self.departure_time})"
 
     @property
-    def state(self):
-        return self._state
+    def current_node(self):
+        return self._current_node
+
+    @current_node.setter
+    def current_node(self, n):
+        self._current_node = n
+
+    @property
+    def current_link(self):
+        return self._current_link
+
+    @current_link.setter
+    def current_link(self, l : Tuple[str,str]):
+        self._current_link = l
+
+    @property
+    def remaining_link_length(self):
+        return self._remaining_link_length
+
+    @remaining_link_length.setter
+    def remaining_link_length(self, l: float):
+        self._remaining_link_length = l
+
+    @property
+    def position(self):
+        return self._position
+
+    @position.setter
+    def position(self, pos):
+        self._position = pos
+
+    @property
+    def achieved_path(self):
+        return self._achieved_path
+
+    @achieved_path.setter
+    def achieved_path(self, ap: List[str]):
+        self._achieved_path = ap
+
+    @property
+    def vehicle(self):
+        return self._vehicle
+
+    @vehicle.setter
+    def vehicle(self, veh: "Vehicle"):
+        self._vehicle = veh
+
+    @property
+    def waited_vehicle(self):
+        return self._waited_vehicle
+
+    @waited_vehicle.setter
+    def waited_vehicle(self, veh: "Vehicle"):
+        self._waited_vehicle = veh
+
+    @property
+    def requested_service(self):
+        return self._requested_service
+
+    @requested_service.setter
+    def requested_service(self, s: "AbstractMobilityService"):
+        self._requested_service = s
+
+    @property
+    def parked_personal_vehicles(self):
+        return self._parked_personal_vehicles
 
     @property
     def distance(self):
         return self._distance
 
     @property
-    def position(self):
-        return self._position
+    def interrupted_path(self):
+        return self._interrupted_path
+
+    @interrupted_path.setter
+    def interrupted_path(self, p: "Path"):
+        self._interrupted_path = p
 
     @property
-    def vehicle(self):
-        return self._vehicle
+    def state(self):
+        return self._state
 
-    @property
-    def current_node(self):
-        return self._current_node
-
-    @property
-    def is_in_vehicle(self):
-        return self._vehicle is not None
-
-    @property
-    def achieved_path(self):
-        return self._achieved_path
-
-    @property
-    def requested_service(self):
-        return self._requested_service
+    @state.setter
+    def state(self, s: "UserState"):
+        self._state = s
 
     @property
     def deadend_at_next_node(self):
         return self._deadend_at_next_node
 
-    @property
-    def waited_vehicle(self):
-        return self._waited_vehicle
+    @deadend_at_next_node.setter
+    def deadend_at_next_node(self, b):
+        self._deadend_at_next_node = b
 
     @property
-    def current_link(self):
-        return self._current_link
-
-    def set_requested_service(self, service):
-        self._requested_service = service
+    def is_in_vehicle(self):
+        return self.vehicle is not None
 
     def get_current_node_index(self, path_nodes=None):
         """Method that returns the index of user's current node within a path.
@@ -155,13 +206,13 @@ class User(TimeDependentSubject):
                    it is searched in user's current path
         """
         path_nodes = path_nodes if path_nodes is not None else self.path.nodes
-        cnode_ind = list(np.where(np.array(path_nodes) == self._current_node)[0])
+        cnode_ind = list(np.where(np.array(path_nodes) == self.current_node)[0])
         if len(cnode_ind) == 0:
             return -1
         if len(cnode_ind) == 1:
             cnode_ind = cnode_ind[0]
         else:
-            c = self._achieved_path.count(self._current_node)
+            c = self.achieved_path.count(self.current_node)
             if c == 0:
                 cnode_ind = cnode_ind[0]
             else:
@@ -184,7 +235,7 @@ class User(TimeDependentSubject):
         if len(node_inds) == 1:
             ind = node_inds[0]
         else:
-            c = self._achieved_path.count(node)
+            c = self.achieved_path.count(node)
             if c == 0:
                 ind = node_inds[0]
             else:
@@ -225,7 +276,7 @@ class User(TimeDependentSubject):
 
         """
         # Remove user pickup and serving activity from waited vehicle's plan
-        veh = self._waited_vehicle
+        veh = self.waited_vehicle
         assert veh is not None and self.state == UserState.WAITING_VEHICLE, f'Wrong call of cancel_match method...'
         veh_ms = veh.mobility_service
         veh_ms_obj = [ms for ms in mlgraph.get_all_mobility_services() if ms.id == veh_ms][0]
@@ -293,23 +344,23 @@ class User(TimeDependentSubject):
                     new_mobservices.extend(path.mobility_services[1:])
                 else:
                     new_mobservices.extend(path.mobility_services)
-                if self._waited_vehicle.mobility_service == path.mobility_services[0]:
+                if self.waited_vehicle.mobility_service == path.mobility_services[0]:
                     # User maintains her match
                     new_drop_node = path.nodes[path.layers[0][1].stop-1]
                 else:
                     # User wont ride the waited vehicle
-                    new_drop_node = self._current_node
+                    new_drop_node = self.current_node
             elif self.state == UserState.WAITING_ANSWER:
                 if new_mobservices[-1] == path.mobility_services[0]:
                     new_mobservices.extend(path.mobility_services[1:])
                 else:
                     new_mobservices.extend(path.mobility_services)
-                if self._requested_service.id == path.mobility_services[0]:
+                if self.requested_service.id == path.mobility_services[0]:
                     # User maintains her request, eventually update requested drop node
                     new_drop_node = path.nodes[path.layers[0][1].stop-1]
                 else:
                     # User wont ride the waited vehicle
-                    new_drop_node = self._current_node
+                    new_drop_node = self.current_node
             elif self.state == UserState.WALKING:
                 if new_mobservices[-1] == path.mobility_services[0]:
                     new_mobservices.extend(path.mobility_services[1:])
@@ -347,19 +398,19 @@ class User(TimeDependentSubject):
         ### Update path
         new_drop_node = self.update_path(path, gnodes, mlgraph, cost, max_teleport_dist=max_teleport_dist)
 
-        if new_drop_node == self._current_node or new_drop_node is None:
+        if new_drop_node == self.current_node or new_drop_node is None:
             # User will not take the service she is waiting answer from, remove user request from service's buffer
-            self._requested_service.cancel_request(self.id)
+            self.requested_service.cancel_request(self.id)
             self.set_state_stop()
             current_node_ind = self.get_current_node_index()
-            self.set_current_link((self.path.nodes[current_node_ind],self.path.nodes[current_node_ind+1]))
-            self._remaining_link_length = gnodes[self.path.nodes[current_node_ind]].adj[self.path.nodes[current_node_ind+1]].length
+            self.current_link = (self.path.nodes[current_node_ind],self.path.nodes[current_node_ind+1])
+            self.remaining_link_length = gnodes[self.path.nodes[current_node_ind]].adj[self.path.nodes[current_node_ind+1]].length
         else:
             # Find user former requested drop node
-            former_drop_node = self._requested_service.user_buffer[self.id][1]
+            former_drop_node = self.requested_service.user_buffer[self.id][1]
             if new_drop_node != former_drop_node:
                 # User maintains her request but changes the requested drop node
-                self._requested_service.update_request(self, new_drop_node)
+                self.requested_service.update_request(self, new_drop_node)
             else:
                 # User will maintain her request with the same drop node, there is nothing to do
                 pass
@@ -381,21 +432,21 @@ class User(TimeDependentSubject):
         new_drop_node = self.update_path(path, gnodes, mlgraph, cost, max_teleport_dist=max_teleport_dist)
 
         ### Update vehicle's plan consequently
-        veh = self._waited_vehicle
+        veh = self.waited_vehicle
         veh_ms = veh.mobility_service
         veh_ms_obj = [ms for ms in mlgraph.get_all_mobility_services() if ms.id == veh_ms][0]
 
-        if new_drop_node == self._current_node or new_drop_node is None:
+        if new_drop_node == self.current_node or new_drop_node is None:
             # User will not take the vehicle she was waiting for, remove user pickup and
             # serving activity from vehicle's plan
             self.cancel_match(mlgraph, cost)
             self.set_state_stop()
             current_node_ind = self.get_current_node_index()
-            self.set_current_link((self.path.nodes[current_node_ind],self.path.nodes[current_node_ind+1]))
-            self._remaining_link_length = gnodes[self.path.nodes[current_node_ind]].adj[self.path.nodes[current_node_ind+1]].length
+            self.current_link = (self.path.nodes[current_node_ind],self.path.nodes[current_node_ind+1])
+            self.remaining_link_length = gnodes[self.path.nodes[current_node_ind]].adj[self.path.nodes[current_node_ind+1]].length
         else:
             # Find user serving activity in the waited vehicle's plan and former drop node
-            all_activities = [self._waited_vehicle.activity] + list(self._waited_vehicle.activities)
+            all_activities = [self.waited_vehicle.activity] + list(self.waited_vehicle.activities)
             u_serving_act_ind = [i for i in range(len(all_activities)) if all_activities[i].user == self and type(all_activities[i]).__name__=='VehicleActivityServing'][0]
             former_drop_node = all_activities[u_serving_act_ind].node
             if new_drop_node != former_drop_node:
@@ -438,17 +489,17 @@ class User(TimeDependentSubject):
             -mlgraph: multilayergraph
             -cost: name of the cost user considers
         """
-        assert self._vehicle is not None, 'Wrong call of modify_current_ride_drop_node method; user should be inside a vehicle...'
+        assert self.vehicle is not None, 'Wrong call of modify_current_ride_drop_node method; user should be inside a vehicle...'
 
         # Find user serving activity in current vehicle's plan and former drop node
-        all_activities = [self._vehicle.activity] + list(self._vehicle.activities)
+        all_activities = [self.vehicle.activity] + list(self.vehicle.activities)
         u_serving_act_ind = [i for i in range(len(all_activities)) if all_activities[i].user == self][0] # pickup activity already done because user is in the veh
         former_drop_node = all_activities[u_serving_act_ind].node
 
         # Update vehicle's plan if required
         if new_drop_node != former_drop_node:
             # Differentiate update plan of public transport and non public transport vehicles
-            veh_ms = self._vehicle.mobility_service
+            veh_ms = self.vehicle.mobility_service
             veh_ms_obj = [ms for ms in mlgraph.get_all_mobility_services() if ms.id == veh_ms][0]
             # 1. For public transportation vehicles, we keep the order in which stops are visited,
             #    not necessarily the order in which activities are ordered
@@ -472,11 +523,11 @@ class User(TimeDependentSubject):
             if teleported:
                 self.set_state_stop()
         self.path: Path = path
-        self.set_current_node(path.nodes[0])
-        self.set_current_link((path.nodes[0], path.nodes[1]))
+        self.current_node = path.nodes[0]
+        self.current_link = (path.nodes[0], path.nodes[1])
 
     def start_path(self, gnodes):
-        self._remaining_link_length = gnodes[self.path.nodes[0]].adj[self.path.nodes[1]].length
+        self.remaining_link_length = gnodes[self.path.nodes[0]].adj[self.path.nodes[1]].length
 
     def interrupt_path(self, tcurrent: Time):
         """Method that interrupts user's current path.
@@ -485,7 +536,7 @@ class User(TimeDependentSubject):
             -tcurrent: time at which user stopped to follow her path
         """
         self.set_state_stop()
-        self._interrupted_path = copy(self.path)
+        self.interrupted_path = copy(self.path)
         self.path = None
         self.notify(tcurrent)
 
@@ -504,17 +555,17 @@ class User(TimeDependentSubject):
         """
         teleported = False
         dist = _norm(np.array(teleport_origin) - np.array(dnode.position))
-        if dist <= max_teleport_dist and (dist > 0 or self._current_node != dnode.id or self.position != dnode.position):
-            log.warning(f'User {self.id} teleport from {self._current_node} ({teleport_origin}) to {dnode.id} ({dnode.position}) for {dist} meters')
+        if dist <= max_teleport_dist and (dist > 0 or self.current_node != dnode.id or self.position != dnode.position):
+            log.warning(f'User {self.id} teleport from {self.current_node} ({teleport_origin}) to {dnode.id} ({dnode.position}) for {dist} meters')
             teleported = True
         elif dist > max_teleport_dist and dist > 0:
-            log.error(f'User {self.id} tried to teleport from {self._current_node} to {dnode.id} for {dist} meters: it is prohibited ! ')
+            log.error(f'User {self.id} tried to teleport from {self.current_node} to {dnode.id} for {dist} meters: it is prohibited ! ')
             sys.exit(-1)
 
         if teleported:
-            self.set_current_node(dnode.id)
-            self._position = dnode.position
-            self.set_achieved_path([dnode.id]) # after teleportation, achieved_path is
+            self.current_node = dnode.id
+            self.position = dnode.position
+            self.achieved_path = [dnode.id] # after teleportation, achieved_path is
                                             # reset and path does not contain the route
                                             # user has already passed through
         return teleported
@@ -530,28 +581,13 @@ class User(TimeDependentSubject):
             -position: coordinates of user's new position
             -tcurrent: current time
         """
-        self._current_node = current_node
-        self.set_current_link(current_link)
-        self._remaining_link_length = remaining_length
-        self._position = position
+        self.current_node = current_node
+        self.current_link = current_link
+        self.remaining_link_length = remaining_length
+        self.position = position
         self.update_achieved_path(current_node)
-        if self._deadend_at_next_node:
+        if self.deadend_at_next_node:
             self.set_state_deadend(tcurrent)
-
-    def set_position_only(self, position:np.ndarray):
-        self._position = position
-
-    def set_remaining_link_length(self, l):
-        self._remaining_link_length = l
-
-    def set_current_link(self, l):
-        self._current_link = l
-
-    def set_current_node(self, n):
-        self._current_node = n
-
-    def set_achieved_path(self, ap):
-        self._achieved_path = ap
 
     def update_achieved_path(self, reached_node):
         """Method that update user's achieved path with the new reached node.
@@ -559,8 +595,8 @@ class User(TimeDependentSubject):
         Args:
             -reached_node: node user has just reached
         """
-        if len(self._achieved_path) == 0 or reached_node != self._achieved_path[-1]:
-            self._achieved_path.append(reached_node)
+        if len(self.achieved_path) == 0 or reached_node != self.achieved_path[-1]:
+            self.achieved_path.append(reached_node)
 
 
     def update_distance(self, dist: float):
@@ -572,13 +608,13 @@ class User(TimeDependentSubject):
         self._distance += dist
 
     def set_state_arrived(self):
-        self._state = UserState.ARRIVED
+        self.state = UserState.ARRIVED
 
     def set_state_walking(self):
-        self._state = UserState.WALKING
+        self.state = UserState.WALKING
 
     def set_state_inside_vehicle(self):
-        self._state = UserState.INSIDE_VEHICLE
+        self.state = UserState.INSIDE_VEHICLE
 
     def set_state_waiting_vehicle(self, veh):
         """Method that updates the user state into WAITING_VEHICLE and identifies
@@ -587,28 +623,22 @@ class User(TimeDependentSubject):
         Args:
             -veh: the vehicle user is waiting for
         """
-        self._state = UserState.WAITING_VEHICLE
-        self._waited_vehicle = veh
+        self.state = UserState.WAITING_VEHICLE
+        self.waited_vehicle = veh
 
     def set_state_waiting_answer(self):
-        self._state = UserState.WAITING_ANSWER
+        self.state = UserState.WAITING_ANSWER
 
     def set_state_stop(self):
-        self._state = UserState.STOP
+        self.state = UserState.STOP
 
     def set_state_deadend(self, tcurrent: Time):
-        self._state = UserState.DEADEND
-        self._vehicle = None
-        self._waited_vehicle = None
-        self._requested_service = None
+        self.state = UserState.DEADEND
+        self.vehicle = None
+        self.waited_vehicle = None
+        self.requested_service = None
         self.path = None
         self.notify(tcurrent)
-
-    def set_state_deadend_at_next_node(self):
-        """Method that flags the fact that user should be turned to DEADEND when
-        she arrives at next node.
-        """
-        self._deadend_at_next_node = True
 
     def get_failed_mobility_service(self):
         """Method that finds the mobility service for which user undergone a match
@@ -620,13 +650,13 @@ class User(TimeDependentSubject):
         Returns:
             -failed_mservice: the mobility service that refused used
         """
-        assert ((self._interrupted_path is not None) and (self._current_node is not None)), \
+        assert ((self.interrupted_path is not None) and (self.current_node is not None)), \
             f'Cannot find back the mobility service for which user {self.id} undergone a match failure'
-        upath = self._interrupted_path.nodes
+        upath = self.interrupted_path.nodes
         ind_current_node = self.get_current_node_index(upath)
-        for ilayer, (layer, slice_nodes) in enumerate(self._interrupted_path.layers):
+        for ilayer, (layer, slice_nodes) in enumerate(self.interrupted_path.layers):
             if slice_nodes.start == ind_current_node:
-                failed_mservice = self._interrupted_path.mobility_services[ilayer]
+                failed_mservice = self.interrupted_path.mobility_services[ilayer]
                 return failed_mservice
         log.error(f'Could not find back the mobility service for which user {self.id} undergone a match failure')
         sys.exit(-1)
