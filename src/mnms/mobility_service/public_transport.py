@@ -210,7 +210,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
                                                          stop_activity.path,
                                                          stop_activity.user)
             start_veh.add_activities([repo_activity])
-            start_veh.next_activity()
+            start_veh.next_activity(time)
 
             all_departures.append(start_veh)
             self.vehicles[lid].appendleft(self._next_veh_departure[lid][1])
@@ -236,7 +236,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
     def add_passenger(self, user: User, drop_node: str, veh: Vehicle, line_nodes: List[str]):
 
         log.info(f"Add passenger {user} -> {veh}")
-        user.set_state_waiting_vehicle()
+        user.set_state_waiting_vehicle(veh)
 
         pu_node_ind = line_nodes.index(user._current_node)
         do_node_ind = line_nodes.index(drop_node)
@@ -371,43 +371,82 @@ class PublicTransportMobilityService(AbstractMobilityService):
         """
         return create_service_costs()
 
-    def modify_passenger_drop_node(self, passenger, new_drop_node, former_drop_node):
-        """Method that modifies the drop node of a user which is already in a
-        PublicTransportMobilityService vehicle by updating the vehicle's plan consequently.
+    def remove_activity_by_index(self, veh, index):
+        """Method that removes an activity in a public transport vehicle plan by index and
+        adapt the following activity path consequently.
+
+        Args:
+            -veh: public transport vehicle from which the activity should be removed from plan
+            -index: index of the activity to remove in the list of vehicle's all activities
+        """
+        all_activities = [veh.activity] + list(veh.activities)
+        assert len(all_activities) > index + 1, f'There should be an activity in '\
+            'public transportation vehicle plan after a pickup/serving activity...'
+        if index == 0:
+            # Interrupt current activity and modify next activity consequently
+            ind_curr_node_in_curr_act = veh.path_to_nodes(all_activities[0].path).index(veh._current_node)
+            ongoing_leg = all_activities[0].path[ind_curr_node_in_curr_act:]
+            ongoing_leg[0] = (ongoing_leg[0][0], veh._remaining_link_length)
+            all_activities[1].modify_path(ongoing_leg + all_activities[1].path)
+            veh.activity = None
+        else:
+            # Activity to remove has not begun, remove it from planning and update next activity consequently
+            next_activity_new_path = all_activities[index].path + all_activities[index+1].path
+            all_activities[index+1].modify_path(next_activity_new_path)
+            del veh.activities[index-1]
+
+    def remove_user_activities(self, user):
+        """Method that removes the pick-up and serving activties related to a certain
+        user in the plan of the vehicle this user is waiting for.
+
+        Args:
+            -user: user currently waiting a public transport vehicle but who finally
+                   wont ride this vehicle
+        """
+        veh = user.waited_vehicle
+        assert veh.mobility_service == self.id, f'User {user.id} is not waiting a public transport'\
+            ' vehicle, wrong call of remove_user_activities method.'
+
+        ## Remove user pickup activity
+        all_activities = [veh.activity] + list(veh.activities)
+        user_pu_act_ind = [i for i in range(len(all_activities)) if all_activities[i].user == user][0] # pickup is necessarily before serving
+        self.remove_activity_by_index(veh, user_pu_act_ind)
+
+        ## Remove user serving activity
+        all_activities = [veh.activity] + list(veh.activities)
+        user_serving_act_ind = [i for i in range(len(all_activities)) if all_activities[i].user == user][0]
+        self.remove_activity_by_index(veh, user_serving_act_ind)
+
+    def modify_user_drop_node(self, user, veh, new_drop_node, former_drop_node):
+        """Method that modifies the drop node of a user who already appears in a
+        PublicTransportMobilityService vehicle's plan (i.e. who has already been matched
+        with the vehicle or already been picked up by it) by updating the vehicle's plan consequently.
         The order in which the line stops are visited is kept untouched while the order
         of activities of the oublic transport vehicle plan can be modified.
 
         Args:
-            -passenger: user in a public transport vehicle who wants to change her drop node
-            -new_drop_node: the new drop node of the passenger
-            -former_drop_node: the former drop node of the passenger
+            -user: user who wants to change her drop node
+            -new_drop_node: the new drop node of the user
+            -former_drop_node: the former drop node of the user
         """
-        veh = passenger._vehicle
-        all_activities = [veh.activity] + list(veh.activities)
-        passenger_serving_act_ind = [i for i in range(len(all_activities)) if all_activities[i].user == passenger][0] # pickup activity already done because passenger is in the veh
-
+        assert veh.mobility_service == self.id, f'Wrong call of modify_user_drop_node method: '\
+            f'vehicle {veh.id} does not belong to {self.id} mobility service'
         if new_drop_node != former_drop_node:
+            all_activities = [veh.activity] + list(veh.activities)
+            user_serving_act_ind = [i for i in range(len(all_activities)) \
+                if all_activities[i].user == user and type(all_activities[i]).__name__=='VehicleActivityServing']
+            assert user_serving_act_ind, f'User {user.id} serving activity should appear'\
+                f' in vehicle {veh} plan to be able to modify user drop node'
+            user_serving_act_ind = user_serving_act_ind[0]
             # Step 1 = Remove the former serving activity for user
-            assert len(all_activities) > passenger_serving_act_ind + 1, f'There should be an activity in public transportation vehicle plan after a serving activity...'
-            if passenger_serving_act_ind == 0:
-                # Interrupt current activity and modify next activity consequently
-                ind_curr_node_in_curr_act = veh.path_to_nodes(all_activities[0].path).index(veh._current_node)
-                ongoing_leg = all_activities[0].path[ind_curr_node_in_curr_act:]
-                ongoing_leg[0] = (ongoing_leg[0][0], veh._remaining_link_length)
-                all_activities[1].modify_path(ongoing_leg + all_activities[1].path)
-                veh.activity = None
-            else:
-                # User serving activity has not begun, remove it from planning and update next activity consequently
-                next_activity_new_path = all_activities[passenger_serving_act_ind].path + all_activities[passenger_serving_act_ind+1].path
-                all_activities[passenger_serving_act_ind+1].modify_path(next_activity_new_path)
-                del veh.activities[passenger_serving_act_ind-1]
+            self.remove_activity_by_index(veh, user_serving_act_ind)
             all_activities = [veh.activity] + list(veh.activities)
 
             # Step 2 = Insert the new serving activity for user
             # Find the new drop node in the PT vehicle's activities
             found = False
             for ind, a in enumerate(all_activities):
-                if a is not None:
+                if a is not None and type(a).__name__ != 'VehicleActivityStop':
                     try:
                         ind_new_drop_node = veh.path_to_nodes(a.path).index(new_drop_node)
                         found = True
@@ -420,15 +459,16 @@ class PublicTransportMobilityService(AbstractMobilityService):
             # Deduce the activity to modify
             modified_act = all_activities[ind]
             if ind == 0:
-                # Interrupt current activity, modify next activity consequently and insert user serving activity then modified activity
+                # Interrupt current activity, modify next activity consequently and insert user serving activity
                 ind_curr_node_in_curr_act = veh.path_to_nodes(modified_act.path).index(veh._current_node)
-                assert ind_curr_node_in_curr_act <= ind_new_drop_node, f'New drop node {new_drop_node} of user {passenger.id} has already been passed...'
+                assert ind_curr_node_in_curr_act <= ind_new_drop_node, \
+                    f'New drop node {new_drop_node} of user {user.id} has already been passed...'
                 serving_act_path = modified_act.path[ind_curr_node_in_curr_act:ind_new_drop_node]
                 modified_act_path = modified_act.path[ind_new_drop_node:]
                 serving_act_path[0] = (serving_act_path[0][0], veh._remaining_link_length)
                 serving_act = VehicleActivityServing(node=new_drop_node,
                                                     path=serving_act_path,
-                                                    user=passenger)
+                                                    user=user)
                 modified_act.modify_path(modified_act_path)
                 veh.activity = None
                 veh.activities.insert(0, serving_act)
@@ -439,12 +479,24 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 modified_act_path = modified_act.path[ind_new_drop_node:]
                 serving_act = VehicleActivityServing(node=new_drop_node,
                                                     path=serving_act_path,
-                                                    user=passenger)
+                                                    user=user)
                 modified_act.modify_path(modified_act_path)
                 veh.activities.insert(ind-1, serving_act)
         else:
             # Former and new drop nodes are equal: there is nothing to do
             pass
+
+    def modify_passenger_drop_node(self, passenger, new_drop_node, former_drop_node):
+        """Method that modifies the drop node of a user which is already in a
+        PublicTransportMobilityService vehicle by updating the vehicle's plan consequently.
+
+        Args:
+            -passenger: user in a public transport vehicle who wants to change her drop node
+            -new_drop_node: the new drop node of the passenger
+            -former_drop_node: the former drop node of the passenger
+        """
+        veh = passenger._vehicle
+        self.modify_user_drop_node(passenger, veh, new_drop_node, former_drop_node)
 
     def __dump__(self):
         return {"TYPE": ".".join([PublicTransportMobilityService.__module__, PublicTransportMobilityService.__name__]),

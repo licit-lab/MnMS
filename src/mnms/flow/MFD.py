@@ -186,18 +186,18 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 veh._remaining_link_length = remaining_link_length
             except StopIteration:
                 veh._current_node = veh.current_link[1]
-                veh.next_activity()
+                veh.next_activity(tcurrent)
                 if not veh.is_moving:
                     elapsed_time = dt
             for passenger_id, passenger in veh.passengers.items():
-                passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position)
+                passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position, tcurrent)
             return elapsed_time
         else:
             veh._remaining_link_length -= dist_travelled
             veh.update_distance(dist_travelled)
             self.set_vehicle_position(veh)
             for passenger_id, passenger in veh.passengers.items():
-                passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position)
+                passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position, tcurrent)
             return dt
 
     def get_vehicle_zone(self, veh):
@@ -235,9 +235,9 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         current_vehicles = dict()
         for veh_id, veh in self.veh_manager._vehicles.items():
             if veh.activity is None:
-                veh.next_activity()
+                veh.next_activity(self._tcurrent)
             while veh.activity.is_done:
-                veh.next_activity()
+                veh.next_activity(self._tcurrent)
             if veh.is_moving:
                 self.count_moving_vehicle(veh, current_vehicles)
 
@@ -279,8 +279,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         veh._remaining_link_length = 0
         veh._current_node = veh._current_link[1]
         self.set_vehicle_position(veh)
-        veh.next_activity()
         new_time = self._tcurrent.add_time(elapsed_time)
+        veh.next_activity(new_time)
         veh.notify(new_time)
         veh.notify_passengers(new_time)
 

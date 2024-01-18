@@ -220,7 +220,7 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
         veh=self.fleet.vehicles[veh_id]
         veh.add_activities(activities)
-        veh.next_activity()
+        veh.next_activity(self._tcurrent)
         user.set_state_inside_vehicle()
 
         station = self.stations[self.map_node_station[user._current_node]]

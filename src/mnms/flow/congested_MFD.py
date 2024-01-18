@@ -135,7 +135,7 @@ class CongestedMFDFlowMotor(MFDFlowMotor):
                     veh.speed = 0
                     self.set_vehicle_position(veh)
                     for passenger_id, passenger in veh.passengers.items():
-                        passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position)
+                        passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position, tcurrent)
                     return dt
         else:
             elapsed_time = super(CongestedMFDFlowMotor, self).move_veh(veh, tcurrent, dt, speed)

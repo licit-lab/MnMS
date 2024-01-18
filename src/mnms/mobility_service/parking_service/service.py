@@ -210,7 +210,7 @@ class ParkingService(AbstractOnDemandMobilityService):
         veh, new_plan = self._cache_request_vehicles[user.id]
         veh.activities = deque(new_plan)
         veh.override_current_activity()
-        user.set_state_waiting_vehicle()
+        user.set_state_waiting_vehicle(veh)
 
         parking_service_index = user.path.mobility_services.index(self.id)
         parking_service_slice = user.path.layers[parking_service_index][1]

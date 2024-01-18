@@ -125,8 +125,11 @@ class OnDemandMobilityService(AbstractMobilityService):
             candidates.append((veh, service_dt, veh_path))
 
         # Select the veh with the smallest service time
-        candidates.sort(key=lambda x:x[1])
-        self._cache_request_vehicles[uid] = candidates[0][0], candidates[0][2]
+        if candidates:
+            candidates.sort(key=lambda x:x[1])
+            self._cache_request_vehicles[uid] = candidates[0][0], candidates[0][2]
+        else:
+            return Dt(hours=24)
 
         return candidates[0][1]
 
@@ -201,7 +204,7 @@ class OnDemandMobilityService(AbstractMobilityService):
         ]
 
         veh.add_activities(activities)
-        user.set_state_waiting_vehicle()
+        user.set_state_waiting_vehicle(veh)
 
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
@@ -384,7 +387,7 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
         ]
 
         veh.add_activities(activities)
-        user.set_state_waiting_vehicle()
+        user.set_state_waiting_vehicle(veh)
 
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True

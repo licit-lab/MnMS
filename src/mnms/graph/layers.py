@@ -251,8 +251,9 @@ class MultiLayerGraph(object):
         """
 
         for l in self.layers:
-            transit_links = self.layers[l].connect_origindestination(self.odlayer, connection_distance)
-            self.add_transit_links(transit_links)
+            if self.layers[l].graph.nodes:
+                transit_links = self.layers[l].connect_origindestination(self.odlayer, connection_distance)
+                self.add_transit_links(transit_links)
 
     def connect_intra_layer(self, layer_id: str, connection_distance: float):
         """

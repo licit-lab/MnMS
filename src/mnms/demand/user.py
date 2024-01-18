@@ -29,7 +29,7 @@ class User(TimeDependentSubject):
     default_pickup_dt = Dt(minutes=5)
 
     def __init__(self,
-                 _id: str,
+                 id: str,
                  origin: Union[str, Union[np.ndarray, List]],
                  destination: Union[str, Union[np.ndarray, List]],
                  departure_time: Time,
@@ -38,36 +38,37 @@ class User(TimeDependentSubject):
                  path: Optional["Path"] = None,
                  response_dt: Optional[Dt] = None,
                  pickup_dt: Optional[Dt] = None,
-                 continuous_journey: Optional[str] = None,
                  forced_path_chosen_mobility_services: Optional[Dict[str,str]] = None):
         """
         Class representing a User in the simulation.
 
-        Parameters
-        ----------
-        _id: The unique id of the User
-        origin: The origin of the User
-        destination: the destination of the User
-        departure_time: The departure time
-        available_mobility_services: The available mobility services
-        mobility_services_graph: Id of the mobility services graph
+        Args:
+            -id: The unique id of the User
+            -origin: The origin of the User
+            -destination: the destination of the User
+            -departure_time: The departure time
+            -available_mobility_services: The available mobility services
+            -mobility_services_graph: Id of the mobility services graph
                                         to use for this traveler
-        path: The path of the User
-        response_dt: The maximum dt a User is ok to wait from a mobility service
-        pickup_dt: The maximum dt a User is ok to wait for a pick up
-        continuous_journey: If not None, the User restarted its journey
-        forced_path_chosen_mobility_services: Dict with layers ids as keys and chosen
-            mobility services id on each layer as values, it is used when one want to
-            force the initial path of a user with the CSVDemandManager
+            -path: The path of the User
+            -response_dt: The maximum dt a User is ok to wait from a mobility service
+            -pickup_dt: The maximum dt a User is ok to wait for a pick up
+            -forced_path_chosen_mobility_services: Dict with layers ids as keys and chosen
+             mobility services id on each layer as values, it is used when one want to
+             force the initial path of a user with the CSVDemandManager
         """
         super(User, self).__init__()
-        self.id = _id
+        self.id = id
         self.origin = origin if not isinstance(origin, list) else np.array(origin)
         self.destination = destination if not isinstance(destination, list) else np.array(destination)
         self.departure_time = departure_time
         self.arrival_time = None
         self.available_mobility_services = available_mobility_services if available_mobility_services is None else set(available_mobility_services)
         self.mobility_services_graph = mobility_services_graph
+        self.response_dt = User.default_response_dt.copy() if response_dt is None else response_dt
+        self.pickup_dt = defaultdict(lambda: User.default_pickup_dt.copy()) if pickup_dt is None else defaultdict(lambda: pickup_dt)
+
+        self.parameters: Dict = dict()
 
         self._current_link = None
         self._remaining_link_length = None
@@ -75,19 +76,15 @@ class User(TimeDependentSubject):
         self._achieved_path = list()
 
         self._vehicle = None
+        self._waited_vehicle = None
+        self._requested_service = None
         self._parked_personal_vehicles = dict()
-        self._waiting_vehicle = False
         self._current_node = None
         self._distance = 0
         self._interrupted_path = None
 
         self._state = UserState.STOP
-
-        self.response_dt = User.default_response_dt.copy() if response_dt is None else response_dt
-        self.pickup_dt = defaultdict(lambda: User.default_pickup_dt.copy() if pickup_dt is None else lambda: pickup_dt)
-
-        self._continuous_journey = continuous_journey
-        self.parameters: Dict = dict()
+        self._deadend_at_next_node = False
 
         if path is None:
             self.path: Optional[Path] = None
@@ -126,6 +123,25 @@ class User(TimeDependentSubject):
     @property
     def achieved_path(self):
         return self._achieved_path
+
+    @property
+    def requested_service(self):
+        return self._requested_service
+
+    @property
+    def deadend_at_next_node(self):
+        return self._deadend_at_next_node
+
+    @property
+    def waited_vehicle(self):
+        return self._waited_vehicle
+
+    @property
+    def current_link(self):
+        return self._current_link
+
+    def set_requested_service(self, service):
+        self._requested_service = service
 
     def get_current_node_index(self, path_nodes=None):
         """Method that returns the index of user's current node within a path.
@@ -197,7 +213,28 @@ class User(TimeDependentSubject):
         self.available_mobility_services.remove(ms)
         log.info(f'User {self.id} updated list of available mobility services to {self.available_mobility_services}')
 
-    def update_path(self, path: "Path", gnodes, mlgraph, cost: str):
+    def cancel_match(self, mlgraph, cost):
+        """Method that cancels user's current match by removing user's pickup and
+        serving activites from waited vehicle's plan.
+
+        Args:
+            -mlgraph: multilayergraph
+            -cost: name of the cost user considers
+
+        Returns:
+
+        """
+        # Remove user pickup and serving activity from waited vehicle's plan
+        veh = self._waited_vehicle
+        assert veh is not None and self.state == UserState.WAITING_VEHICLE, f'Wrong call of cancel_match method...'
+        veh_ms = veh.mobility_service
+        veh_ms_obj = [ms for ms in mlgraph.get_all_mobility_services() if ms.id == veh_ms][0]
+        if type(veh_ms_obj).__name__ == 'PublicTransportMobilityService':
+            veh_ms_obj.remove_user_activities(self)
+        else:
+            veh_ms_obj.remove_user_activities(self, mlgraph, cost)
+
+    def update_path(self, path: "Path", gnodes, mlgraph, cost: str, max_teleport_dist: float = None):
         """Method that updates the path of user.
 
         Args:
@@ -207,30 +244,86 @@ class User(TimeDependentSubject):
             -gnodes: multilayergraph nodes
             -mlgraph: multilayergraph
             -cost: name of the cost user considers
+            -max_teleport_dist: maximal distance on which teleportation is authorized, if
+                                None, it means that teleportation is not authorized
+
+        Returns:
+            -new_drop_node: if user is inside a vehicle, designates the new node where
+                            this vehicle should drop off user
+                            if user is waiting a vehicle, designates the new node the
+                            waited vehicle should drop off user, current node if user
+                            does not plan to ride this vehicle anymore
         """
         # Small check on new path consistency
         current_node_ind = self.get_current_node_index()
         path_first_node_ind = self.get_node_index_in_path(path.nodes[0])
-        assert path_first_node_ind >= current_node_ind, f'User {self.id} tried to update path at an index already achieved'
+        teleported = False
+        if path_first_node_ind == -1 or path_first_node_ind < current_node_ind:
+            if max_teleport_dist is None:
+                log.error(f'User {self.id} tried to update path with current node index = {current_node_ind} '\
+                    f'and new path first node index = {path_first_node_ind} without the possibility to teleport.')
+                sys.exit(-1)
+            else:
+                # Teleport if required
+                path_first_node = gnodes[path.nodes[0]]
+                teleported = self.teleport(self.position, path_first_node, max_teleport_dist, gnodes)
 
-        # Build user's new path
-        new_path_nodes = self.path.nodes[:path_first_node_ind] + path.nodes
-        new_path = Path(None, new_path_nodes)
-        new_path.construct_layers_from_links(gnodes)
-        new_mobservices = [self.path.mobility_services[i] for i,(lid,sl) in enumerate(self.path.layers) if \
-            path_first_node_ind >= sl.stop or (path_first_node_ind > sl.start and path_first_node_ind < sl.stop)]
-        if new_mobservices[-1] == path.mobility_services[0]:
-            new_mobservices.extend(path.mobility_services[1:])
-            current_layer = [(lid,sl) for lid,sl in new_path.layers if current_node_ind >= sl.start and path_first_node_ind < sl.stop][0]
-            new_drop_node = new_path_nodes[current_layer[1].stop-1]
+        if teleported:
+            # Replace path and launch user on this new path
+            new_path = path
+            new_drop_node = None
         else:
-            new_mobservices.extend(path.mobility_services)
-            new_drop_node = path.nodes[0]
-        new_path.set_mobility_services(new_mobservices)
-        new_path.update_path_cost(mlgraph, cost)
-        service_costs = sum_dict(*(mlgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) \
-            for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services) if service != 'WALK'))
-        new_path.service_costs = service_costs
+            # Build user's new path
+            new_path_nodes = self.path.nodes[:path_first_node_ind] + path.nodes
+            new_path = Path(None, new_path_nodes)
+            new_path.construct_layers_from_links(gnodes)
+            new_mobservices_indices = [i for i,(lid,sl) in enumerate(self.path.layers) if \
+                path_first_node_ind >= sl.stop or (path_first_node_ind > sl.start and path_first_node_ind < sl.stop)]
+            new_mobservices = [self.path.mobility_services[i] for i in new_mobservices_indices]
+            if self.state == UserState.INSIDE_VEHICLE:
+                if new_mobservices[-1] == path.mobility_services[0]:
+                    new_mobservices.extend(path.mobility_services[1:])
+                    current_layer = [(lid,sl) for lid,sl in new_path.layers if current_node_ind >= sl.start and path_first_node_ind < sl.stop][0]
+                    new_drop_node = new_path_nodes[current_layer[1].stop-1]
+                else:
+                    new_mobservices.extend(path.mobility_services)
+                    new_drop_node = path.nodes[0]
+            elif self.state == UserState.WAITING_VEHICLE:
+                if new_mobservices[-1] == path.mobility_services[0]:
+                    new_mobservices.extend(path.mobility_services[1:])
+                else:
+                    new_mobservices.extend(path.mobility_services)
+                if self._waited_vehicle.mobility_service == path.mobility_services[0]:
+                    # User maintains her match
+                    new_drop_node = path.nodes[path.layers[0][1].stop-1]
+                else:
+                    # User wont ride the waited vehicle
+                    new_drop_node = self._current_node
+            elif self.state == UserState.WAITING_ANSWER:
+                if new_mobservices[-1] == path.mobility_services[0]:
+                    new_mobservices.extend(path.mobility_services[1:])
+                else:
+                    new_mobservices.extend(path.mobility_services)
+                if self._requested_service.id == path.mobility_services[0]:
+                    # User maintains her request, eventually update requested drop node
+                    new_drop_node = path.nodes[path.layers[0][1].stop-1]
+                else:
+                    # User wont ride the waited vehicle
+                    new_drop_node = self._current_node
+            elif self.state == UserState.WALKING:
+                if new_mobservices[-1] == path.mobility_services[0]:
+                    new_mobservices.extend(path.mobility_services[1:])
+                else:
+                    new_mobservices.extend(path.mobility_services)
+                new_drop_node = None
+            else:
+                log.error(f'Case not yet developped update_path with {self.state} user')
+                sys.exit(-1)
+            new_path.set_mobility_services(new_mobservices)
+            new_path.update_path_cost(mlgraph, cost)
+            service_costs = sum_dict(*(mlgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) \
+                for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services) if service != 'WALK'))
+            new_path.service_costs = service_costs
 
         # Set user's new path
         self.path = new_path
@@ -238,8 +331,89 @@ class User(TimeDependentSubject):
         # Return the new drop node of user for the vehicle she currently is inside
         return new_drop_node
 
+    def update_path_and_requested_service_buffer(self, path: "Path", gnodes, mlgraph, cost: str, max_teleport_dist: float):
+        """Method that updates the path of a user who is currently waiting an answer from
+        a mobility service and updates the corresponding request consequently.
+
+        Args:
+            -path: new path, it should starts with a node belonging to user's current path
+                   that has not already been passed by the user. This path will replace
+                   all the nodes located after this common node in user's current path.
+            -gnodes: multilayergraph nodes
+            -mlgraph: multilayergraph
+            -cost: name of the cost user considers
+            -max_teleport_dist: maximal distance on which teleportation is authorized
+        """
+        ### Update path
+        new_drop_node = self.update_path(path, gnodes, mlgraph, cost, max_teleport_dist=max_teleport_dist)
+
+        if new_drop_node == self._current_node or new_drop_node is None:
+            # User will not take the service she is waiting answer from, remove user request from service's buffer
+            self._requested_service.cancel_request(self.id)
+            self.set_state_stop()
+            current_node_ind = self.get_current_node_index()
+            self.set_current_link((self.path.nodes[current_node_ind],self.path.nodes[current_node_ind+1]))
+            self._remaining_link_length = gnodes[self.path.nodes[current_node_ind]].adj[self.path.nodes[current_node_ind+1]].length
+        else:
+            # Find user former requested drop node
+            former_drop_node = self._requested_service.user_buffer[self.id][1]
+            if new_drop_node != former_drop_node:
+                # User maintains her request but changes the requested drop node
+                self._requested_service.update_request(self, new_drop_node)
+            else:
+                # User will maintain her request with the same drop node, there is nothing to do
+                pass
+
+    def update_path_and_waited_vehicle_plan(self, path: "Path", gnodes, mlgraph, cost: str, max_teleport_dist: float):
+        """Method that updates the path of a user who is currently waiting a vehicle and
+        the waited vehicle plan consequently.
+
+        Args:
+            -path: new path, it should starts with a node belonging to user's current path
+                   that has not already been passed by the user. This path will replace
+                   all the nodes located after this common node in user's current path.
+            -gnodes: multilayergraph nodes
+            -mlgraph: multilayergraph
+            -cost: name of the cost user considers
+            -max_teleport_dist: maximal distance on which teleportation is authorized
+        """
+        ### Update path
+        new_drop_node = self.update_path(path, gnodes, mlgraph, cost, max_teleport_dist=max_teleport_dist)
+
+        ### Update vehicle's plan consequently
+        veh = self._waited_vehicle
+        veh_ms = veh.mobility_service
+        veh_ms_obj = [ms for ms in mlgraph.get_all_mobility_services() if ms.id == veh_ms][0]
+
+        if new_drop_node == self._current_node or new_drop_node is None:
+            # User will not take the vehicle she was waiting for, remove user pickup and
+            # serving activity from vehicle's plan
+            self.cancel_match(mlgraph, cost)
+            self.set_state_stop()
+            current_node_ind = self.get_current_node_index()
+            self.set_current_link((self.path.nodes[current_node_ind],self.path.nodes[current_node_ind+1]))
+            self._remaining_link_length = gnodes[self.path.nodes[current_node_ind]].adj[self.path.nodes[current_node_ind+1]].length
+        else:
+            # Find user serving activity in the waited vehicle's plan and former drop node
+            all_activities = [self._waited_vehicle.activity] + list(self._waited_vehicle.activities)
+            u_serving_act_ind = [i for i in range(len(all_activities)) if all_activities[i].user == self and type(all_activities[i]).__name__=='VehicleActivityServing'][0]
+            former_drop_node = all_activities[u_serving_act_ind].node
+            if new_drop_node != former_drop_node:
+                # User will ride the vehicle she is waiting for but changes drop node
+                # For public transportation vehicles, we keep the order in which stops are visited,
+                # not necessarily the order in which activities are ordered
+                if type(veh_ms_obj).__name__ == 'PublicTransportMobilityService':
+                    veh_ms_obj.modify_user_drop_node(self, veh, new_drop_node, former_drop_node)
+                # For other types of vehicles, we keep the order in which activities are ordered
+                else:
+                    veh_ms_obj.modify_user_drop_node(self, veh, new_drop_node, former_drop_node, gnodes, mlgraph, cost)
+            else:
+                # User will use the vehicle she is waiting for and do not change drop node,
+                # there is nothing to do
+                pass
+
     def update_path_and_current_vehicle_plan(self, path: "Path", gnodes, mlgraph, cost: str):
-        """Method that updates the path of a user who is current inside a vehicle.
+        """Method that updates the path of a user who is currently inside a vehicle.
 
         Args:
             -path: new path, it should starts with a node belonging to user's current path
@@ -253,26 +427,36 @@ class User(TimeDependentSubject):
         new_drop_node = self.update_path(path, gnodes, mlgraph, cost)
 
         ### Update vehicle's plan consequently
-        # Small check on method call consistency
-        assert self._vehicle is not None, 'Wrong call of update_path_and_current_vehicle_plan method; user should be inside a vehicle...'
+        self.modify_current_ride_drop_node(new_drop_node, gnodes, mlgraph, cost)
 
-        # Find user serving activity in vehicle's plan and former drop node
+    def modify_current_ride_drop_node(self, new_drop_node, gnodes, mlgraph, cost):
+        """Method that update the drop node of user in current vehicle's plan.
+
+        Args:
+            -new_drop_node: new drop node for the current ride
+            -gnodes: multilayergraph nodes
+            -mlgraph: multilayergraph
+            -cost: name of the cost user considers
+        """
+        assert self._vehicle is not None, 'Wrong call of modify_current_ride_drop_node method; user should be inside a vehicle...'
+
+        # Find user serving activity in current vehicle's plan and former drop node
         all_activities = [self._vehicle.activity] + list(self._vehicle.activities)
         u_serving_act_ind = [i for i in range(len(all_activities)) if all_activities[i].user == self][0] # pickup activity already done because user is in the veh
         former_drop_node = all_activities[u_serving_act_ind].node
 
-        # Differentiate update plan of public transport and non public transport vehicles
-        veh_ms = self._vehicle.mobility_service
-        veh_ms_obj = [ms for ms in mlgraph.get_all_mobility_services() if ms.id == veh_ms][0]
-
-        # 1. For public transportation vehicles, we keep the order in which stops are visited,
-        #    not necessarily the order in which activities are ordered
-        if type(veh_ms_obj).__name__ == 'PublicTransportMobilityService':
-            veh_ms_obj.modify_passenger_drop_node(self, new_drop_node, former_drop_node)
-
-        # 2. For other types of vehicles, we keep the order in which activities are ordered
-        else:
-            veh_ms_obj.modify_passenger_drop_node(self, new_drop_node, former_drop_node, gnodes, mlgraph, cost)
+        # Update vehicle's plan if required
+        if new_drop_node != former_drop_node:
+            # Differentiate update plan of public transport and non public transport vehicles
+            veh_ms = self._vehicle.mobility_service
+            veh_ms_obj = [ms for ms in mlgraph.get_all_mobility_services() if ms.id == veh_ms][0]
+            # 1. For public transportation vehicles, we keep the order in which stops are visited,
+            #    not necessarily the order in which activities are ordered
+            if type(veh_ms_obj).__name__ == 'PublicTransportMobilityService':
+                veh_ms_obj.modify_passenger_drop_node(self, new_drop_node, former_drop_node)
+            # 2. For other types of vehicles, we keep the order in which activities are ordered
+            else:
+                veh_ms_obj.modify_passenger_drop_node(self, new_drop_node, former_drop_node, gnodes, mlgraph, cost)
 
     def set_path(self, path: "Path", gnodes = None, max_teleport_dist: float = 0., teleport_origin = None):
         """Method that set user's path and checks the conditions of eventual teleporting.
@@ -284,16 +468,12 @@ class User(TimeDependentSubject):
             -teleport_origin: the origin of eventual teleporting
         """
         if gnodes is not None and teleport_origin is not None:
-            path_first_node_pos = gnodes[path.nodes[0]].position
-            dist = _norm(np.array(teleport_origin) - np.array(path_first_node_pos))
-            if dist <= max_teleport_dist and dist > 0:
-                log.warning(f'User {self.id} teleport from {self._current_node} to {path.nodes[0]} for {dist} meters')
-            elif dist > max_teleport_dist and dist > 0:
-                log.error(f'User {self.id} tried to teleport from {self._current_node} to {path.nodes[0]} for {dist} meters: it is prohibited ! ')
-                sys.exit(-1)
+            teleported = self.teleport(teleport_origin, gnodes[path.nodes[0]], max_teleport_dist, gnodes)
+            if teleported:
+                self.set_state_stop()
         self.path: Path = path
-        self._current_node = path.nodes[0]
-        self._current_link = (path.nodes[0], path.nodes[1])
+        self.set_current_node(path.nodes[0])
+        self.set_current_link((path.nodes[0], path.nodes[1]))
 
     def start_path(self, gnodes):
         self._remaining_link_length = gnodes[self.path.nodes[0]].adj[self.path.nodes[1]].length
@@ -309,7 +489,37 @@ class User(TimeDependentSubject):
         self.path = None
         self.notify(tcurrent)
 
-    def set_position(self, current_link:Tuple[str, str], current_node:str, remaining_length:float, position:np.ndarray):
+    def teleport(self, teleport_origin, dnode, max_teleport_dist, gnodes):
+        """Method that checks the conditions for user teleportation and proceeds
+        to the teleportation if they are met.
+
+        Args:
+            -teleport_origin: position from where user teleports
+            -dnode: destination node of the teleportation
+            -max_teleport_dist: maximal distance authorized for a teleportation
+            -gnodes: multilayer graph nodes
+
+        Returns:
+            -teleported: bool specifying if user got teleported or not
+        """
+        teleported = False
+        dist = _norm(np.array(teleport_origin) - np.array(dnode.position))
+        if dist <= max_teleport_dist and (dist > 0 or self._current_node != dnode.id or self.position != dnode.position):
+            log.warning(f'User {self.id} teleport from {self._current_node} ({teleport_origin}) to {dnode.id} ({dnode.position}) for {dist} meters')
+            teleported = True
+        elif dist > max_teleport_dist and dist > 0:
+            log.error(f'User {self.id} tried to teleport from {self._current_node} to {dnode.id} for {dist} meters: it is prohibited ! ')
+            sys.exit(-1)
+
+        if teleported:
+            self.set_current_node(dnode.id)
+            self._position = dnode.position
+            self.set_achieved_path([dnode.id]) # after teleportation, achieved_path is
+                                            # reset and path does not contain the route
+                                            # user has already passed through
+        return teleported
+
+    def set_position(self, current_link:Tuple[str, str], current_node:str, remaining_length:float, position:np.ndarray, tcurrent: Time):
         """Method that updates user's position (including current node, link,
         remaining link length, position and achieved path).
 
@@ -318,12 +528,15 @@ class User(TimeDependentSubject):
             -current_node: user's new current node
             -remaining_length: remaining length to travel on current link
             -position: coordinates of user's new position
+            -tcurrent: current time
         """
         self._current_node = current_node
-        self._current_link = current_link
+        self.set_current_link(current_link)
         self._remaining_link_length = remaining_length
         self._position = position
         self.update_achieved_path(current_node)
+        if self._deadend_at_next_node:
+            self.set_state_deadend(tcurrent)
 
     def set_position_only(self, position:np.ndarray):
         self._position = position
@@ -336,6 +549,9 @@ class User(TimeDependentSubject):
 
     def set_current_node(self, n):
         self._current_node = n
+
+    def set_achieved_path(self, ap):
+        self._achieved_path = ap
 
     def update_achieved_path(self, reached_node):
         """Method that update user's achieved path with the new reached node.
@@ -364,8 +580,15 @@ class User(TimeDependentSubject):
     def set_state_inside_vehicle(self):
         self._state = UserState.INSIDE_VEHICLE
 
-    def set_state_waiting_vehicle(self):
+    def set_state_waiting_vehicle(self, veh):
+        """Method that updates the user state into WAITING_VEHICLE and identifies
+        the vehicle user is waiting for.
+
+        Args:
+            -veh: the vehicle user is waiting for
+        """
         self._state = UserState.WAITING_VEHICLE
+        self._waited_vehicle = veh
 
     def set_state_waiting_answer(self):
         self._state = UserState.WAITING_ANSWER
@@ -375,9 +598,17 @@ class User(TimeDependentSubject):
 
     def set_state_deadend(self, tcurrent: Time):
         self._state = UserState.DEADEND
-        self._waiting_vehicle = False
+        self._vehicle = None
+        self._waited_vehicle = None
+        self._requested_service = None
         self.path = None
         self.notify(tcurrent)
+
+    def set_state_deadend_at_next_node(self):
+        """Method that flags the fact that user should be turned to DEADEND when
+        she arrives at next node.
+        """
+        self._deadend_at_next_node = True
 
     def get_failed_mobility_service(self):
         """Method that finds the mobility service for which user undergone a match

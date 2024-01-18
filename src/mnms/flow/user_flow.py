@@ -62,7 +62,7 @@ class UserFlow(object):
         Args:
             -user: user to move
         """
-        unode, dnode = user._current_link
+        unode, dnode = user.current_link
         remaining_length = user._remaining_link_length
 
         unode_pos = np.array(self._gnodes[unode].position)
@@ -81,64 +81,78 @@ class UserFlow(object):
         Args:
             -dt: duration for which users walk (usually corresponds to the flow time step)
         """
+        finish_walk_and_request = list()
         finish_walk = list()
         finish_trip = list()
         graph = self._graph.graph
         for uid in self._walking.keys():
             user = self.users[uid]
-            upath = user.path.nodes
-            dist_travelled = dt.to_seconds() * self._walk_speed
-            arrival_time = self._tcurrent.copy()
-            while dist_travelled > 0:
-                remaining_length = self._walking[uid]
-                if remaining_length <= dist_travelled:
-                    # User arrived at the end of her current transit link
-                    user.update_distance(remaining_length)
-                    user.set_remaining_link_length(0)
-                    arrival_time = arrival_time.add_time(Dt(seconds=remaining_length / self._walk_speed))
-                    next_node = upath[user.get_current_node_index()+1]
-                    user.set_current_node(next_node)
-                    self.set_user_position(user)
-                    user.notify(arrival_time.time)
-                    if next_node == upath[-1]:
-                        # User arrived at last node of her planned path
-                        user.finish_trip(arrival_time)
-                        finish_trip.append(user)
-                        dist_travelled = 0
-                    else:
-                        # User still has way to go
-                        cnode_ind = user.get_current_node_index()
-                        next_next_node = upath[cnode_ind + 1]
-                        next_link = graph.nodes[user._current_node].adj[next_next_node]
-                        if next_link.label == 'TRANSIT':
-                            # User keeps walking
-                            log.info(f"User {uid} enters connection on {next_link.id}")
-                            dist_travelled = dist_travelled - remaining_length
-                            self._walking[uid] = next_link.length
-                            user.set_current_link((user._current_node, next_next_node))
-                        else:
-                            # User stops walking
-                            user.set_state_stop()
-                            finish_walk.append(user)
+            if user.state == UserState.WALKING:
+                upath = user.path.nodes
+                dist_travelled = dt.to_seconds() * self._walk_speed
+                arrival_time = self._tcurrent.copy()
+                while dist_travelled > 0:
+                    remaining_length = self._walking[uid]
+                    if remaining_length <= dist_travelled:
+                        # User arrived at the end of her current transit link
+                        user.update_distance(remaining_length)
+                        user.set_remaining_link_length(0)
+                        arrival_time = arrival_time.add_time(Dt(seconds=remaining_length / self._walk_speed))
+                        next_node = upath[user.get_current_node_index()+1]
+                        user.set_current_node(next_node)
+                        self.set_user_position(user)
+                        user.notify(arrival_time.time)
+                        if next_node == upath[-1]:
+                            # User arrived at last node of her planned path
+                            user.finish_trip(arrival_time)
+                            finish_trip.append(user)
                             dist_travelled = 0
-                else:
-                    # User did not arrived at the end of current link
-                    self._walking[uid] = remaining_length - dist_travelled
-                    user.set_remaining_link_length(remaining_length - dist_travelled)
-                    self.set_user_position(user)
-                    user.update_distance(dist_travelled)
-                    dist_travelled = 0
+                        else:
+                            # User still has way to go
+                            if user.deadend_at_next_node:
+                                # User stops walking
+                                user.set_state_deadend(arrival_time)
+                                finish_walk.append(user)
+                                dist_travelled = 0
+                            else:
+                                cnode_ind = user.get_current_node_index()
+                                next_next_node = upath[cnode_ind + 1]
+                                next_link = graph.nodes[user._current_node].adj[next_next_node]
+                                if next_link.label == 'TRANSIT':
+                                    # User keeps walking
+                                    log.info(f"User {uid} enters connection on {next_link.id}")
+                                    dist_travelled = dist_travelled - remaining_length
+                                    self._walking[uid] = next_link.length
+                                    user.set_current_link((user._current_node, next_next_node))
+                                else:
+                                    # User stops walking
+                                    user.set_state_stop()
+                                    finish_walk_and_request.append(user)
+                                    dist_travelled = 0
+                    else:
+                        # User did not arrived at the end of current link
+                        self._walking[uid] = remaining_length - dist_travelled
+                        user.set_remaining_link_length(remaining_length - dist_travelled)
+                        self.set_user_position(user)
+                        user.update_distance(dist_travelled)
+                        dist_travelled = 0
+            else:
+                # User is not walking anymore for an external reason, e.g. DEADEND
+                finish_walk.append(user)
 
         for user in finish_walk:
+            del self._walking[user.id]
+
+        for user in finish_walk_and_request:
             del self._walking[user.id]
             log.info(f'User {user.id} is about to request a vehicle because he has finished walking')
             user.set_state_waiting_answer()
             requested_mservice = self._request_user_vehicles(user)
             self._waiting_answer.setdefault(user.id, (user.response_dt.copy(),requested_mservice))
 
-        for u in finish_trip:
-            del self.users[u.id]
-            del self._walking[u.id]
+        for user in finish_trip:
+            del self.users[user.id]
+            del self._walking[user.id]
 
     def _request_user_vehicles(self, user):
         """Method that formulates user's request to the proper mobility service.
@@ -165,6 +179,7 @@ class UserFlow(object):
                     mservice = self._graph.layers[layer].mobility_services[mservice_id]
                     log.info(f"User {user.id} requests mobility service {mservice._id}")
                     mservice.add_request(user, upath[slice_nodes][-1])
+                    user.set_requested_service(mservice)
                     return mservice
             else:
                 log.warning(f"No mobility service found for user {user.id}")
