@@ -58,8 +58,10 @@ class Dt(object):
             seconds = 60 + seconds
             minutes -= 1
         if minutes < 0:
-            minutes = 60 + seconds
+            minutes = 60 + minutes
             hours -= 1
+        if hours < 0:
+            hours = 24 + hours
 
         return Dt(hours, minutes, seconds)
 
