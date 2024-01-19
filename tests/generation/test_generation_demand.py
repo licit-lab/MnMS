@@ -12,7 +12,9 @@ class TestDemandGeneration(unittest.TestCase):
         """Concludes and closes the test.
         """
 
+    # TODO : Depth testing with multiple cases
     def test_random_demand(self):
         mlgraph = generate_manhattan_passenger_car(10, 1)
 
-        demand = generate_random_demand(mlgraph, 10)
+        demand1 = generate_random_demand(mlgraph, 10)
+        demand2 = generate_random_demand(mlgraph, 10, seed=42)

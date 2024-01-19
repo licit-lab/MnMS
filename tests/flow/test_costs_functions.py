@@ -167,3 +167,11 @@ class TestCostsFunctions(unittest.TestCase):
 
         #self.assertAlmostEqual(self.demand._users[0].path.path_cost, total_cost)
         #self.assertAlmostEqual(self.demand._users[0].arrival_time.to_seconds(), predicted_arrival_time.to_seconds())
+
+
+    def test_serialization(self):
+        data_dict = self.mlgraph.odlayer.__dump__()
+        new_odlayer = OriginDestinationLayer.__load__(data_dict)
+
+        self.assertListEqual(list(data_dict["ORIGINS"].keys()), list(new_odlayer.origins.keys()))
+        self.assertListEqual(list(data_dict["DESTINATIONS"].keys()), list(new_odlayer.destinations.keys()))

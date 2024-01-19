@@ -3,9 +3,9 @@ import unittest
 import matplotlib.pyplot as plt
 
 from mnms.demand.user import Path
-from mnms.generation.mlgraph import generate_manhattan_passenger_car
+from mnms.generation.mlgraph import generate_manhattan_passenger_car, generate_manhattan_road
 from mnms.generation.roads import generate_line_road
-from mnms.tools.render import draw_roads, draw_path
+from mnms.tools.render import draw_roads, draw_path, draw_line
 
 
 class TestRenderRoads(unittest.TestCase):
@@ -37,3 +37,16 @@ class TestRenderPath(unittest.TestCase):
         path = Path(cost=0, nodes=["CAR_NORTH_0", "CAR_3", "CAR_2", "CAR_1", "CAR_0"])
         fig, ax = plt.subplots()
         draw_path(ax, self.mlgraph, path)
+
+
+# class TestRenderLine(unittest.TestCase):
+#     def setUp(self) -> None:
+#         mlgraph = generate_manhattan_road(3, 100)
+#         self.mlgraph = mlgraph
+#
+#     def tearDown(self) -> None:
+#         pass
+#
+#     def test_draw_line(self):
+#         fig, ax = plt.subplots()
+#         draw_line(ax, self.mlgraph, '0_1')
