@@ -292,12 +292,15 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         banned_cost = self._graph.dynamic_space_sharing.cost
 
         link_layers = list()
-        for lid, layer in self._graph.layers.items():
+        for _, layer in self._graph.layers.items():
             link_layers.append(layer.graph.links)
 
         linkcosts = defaultdict(dict)
 
-        for lid, link_info in self._layer_link_length_mapping.items():
+        for lid, link in graph.links.items():
+            if link.label == 'TRANSIT':
+                continue
+            link_info = self._layer_link_length_mapping[lid]
             total_len = 0
             new_speed = 0
             for section, length in link_info.sections:
@@ -308,15 +311,10 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 if speed is not None:
                     new_speed += length * speed
                 else:
-                    new_speed += length * graph.links[lid].cost["speed"]
+                    new_speed += length * link.cost["speed"]
             new_speed = new_speed / total_len if total_len != 0 else new_speed
             if new_speed != 0:  # TODO: check if this condition is still useful
-                # costs = {'travel_time': total_len / new_speed,
-                #          'speed': new_speed,
-                #          'length': total_len}
                 costs = defaultdict(dict)
-
-                link = link_info.link
 
                 # Update critical costs first
                 for mservice in link.costs.keys():
@@ -325,11 +323,11 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                                        'length': total_len}
 
                 # The update the generalized one
-                layer=self._graph.layers[self._graph.map_linkid_layerid[lid]]
+                layer=self._graph.layers[link.label]
                 costs_functions = layer._costs_functions
                 for mservice, cost_funcs in costs_functions.items():
                     for cost_name, cost_f in cost_funcs.items():
-                        costs[mservice][cost_name] = cost_f(self._graph, graph.links[lid], costs)
+                        costs[mservice][cost_name] = cost_f(self._graph, link, costs)
 
                 # Test if link is banned, if yes do not update the cost for the banned mobility service
                 if lid in banned_links:

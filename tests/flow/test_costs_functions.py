@@ -13,6 +13,7 @@ from mnms.time import Dt, TimeTable, Time
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.vehicles.veh_type import Vehicle
+from mnms.log import set_all_mnms_logger_level, LOGLEVEL
 
 
 class TestCostsFunctions(unittest.TestCase):
@@ -54,7 +55,7 @@ class TestCostsFunctions(unittest.TestCase):
         bus_layer.create_line("L1",
                         ["B1", "B2", "B3"],
                         [["2_3"], ["2_3"]],
-                        TimeTable.create_table_freq('00:00:00', '23:00:00', Dt(minutes=6)))
+                        TimeTable.create_table_freq('07:00:00', '23:00:00', Dt(minutes=1)))
 
         odlayer = OriginDestinationLayer()
         odlayer.create_origin_node(f"ORIGIN", [-50,0])
@@ -62,7 +63,7 @@ class TestCostsFunctions(unittest.TestCase):
 
         mlgraph = MultiLayerGraph([car_layer, bus_layer], odlayer, 51)
 
-        mlgraph.connect_layers('CAR_BUS', 'C1', 'L1_B1', 20, {'length': 20})
+        mlgraph.connect_layers('CAR_BUS', 'C1', 'L1_B1', 50, {'length': 50})
 
         ## Add cost functions
         # CAR links
@@ -102,13 +103,16 @@ class TestCostsFunctions(unittest.TestCase):
 
         ## MFDFlowMotor
         self.flow = MFDFlowMotor()
-        res = Reservoir(roads.zones['res'], ["CAR", "BUS"], lambda x: {k: 7 for k in x})
+        res = Reservoir(roads.zones['res'], ["CAR", "BUS"], lambda x: {k: 10 if acc == 0 else 9 for k,acc in x.items()})
         self.flow.add_reservoir(res)
 
         self.supervisor = Supervisor(self.mlgraph,
                                 self.demand,
                                 self.flow,
-                                self.decision_model)
+                                self.decision_model,
+                                logfile=self.pathdir+'log.txt',
+                                loglevel=LOGLEVEL.INFO)
+        set_all_mnms_logger_level(LOGLEVEL.INFO)
         self.flow.initialize(1.42)
 
     def tearDown(self):
@@ -125,13 +129,19 @@ class TestCostsFunctions(unittest.TestCase):
                 self.assertIn('generalized_cost', costs.keys())
                 self.assertEqual(link.costs[mservice]['travel_time'], link.length / link.costs[mservice]['speed'])
             if lid == 'CAR_BUS':
-                self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 20 / 1.42 + 3 + 2 + 1.44)
+                self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 50 / 1.42 + 3 + 2 + 1.44)
             elif lid in ['ORIGIN_C0', 'L1_B3_DESTINATION']:
                 self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 50 / 1.42)
             elif lid == 'C0_C1':
                 self.assertAlmostEqual(link.costs["PersonalVehicle"]['generalized_cost'], 0.003 * 2000 / 8.33 + 0.0005 * 2000)
             elif lid in ['L1_B2_B3', 'L1_B1_B2']:
                 self.assertAlmostEqual(link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 7)
+        for layer_id, layer in self.mlgraph.layers.items():
+            for layer_link_id, layer_link in layer.graph.links.items():
+                if layer_link_id == 'C0_C1':
+                    self.assertAlmostEqual(layer_link.costs["PersonalVehicle"]['generalized_cost'], 0.003 * 2000 / 8.33 + 0.0005 * 2000)
+                elif layer_link_id in ['L1_B2_B3', 'L1_B1_B2']:
+                    self.assertAlmostEqual(layer_link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 7)
 
     def test_cost_update(self):
         self.supervisor.run(Time("07:00:00"),
@@ -139,18 +149,26 @@ class TestCostsFunctions(unittest.TestCase):
                        Dt(seconds=1),
                        10)
         self.assertIn("generalized_cost", self.mlgraph.transitlayer._costs_functions["WALK"])
+        print(self.supervisor._flow_motor.reservoirs['res'].dict_accumulations)
         for lid, link in self.mlgraph.graph.links.items():
             for mservice, costs in link.costs.items():
                 self.assertIn('generalized_cost', costs.keys())
                 self.assertEqual(link.costs[mservice]['travel_time'], link.length / link.costs[mservice]['speed'])
             if lid == 'CAR_BUS':
-                self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 20 / 1.42 + 3 + 2 + 1.44)
+                self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 50 / 1.42 + 3 + 2 + 1.44)
             elif lid in ['ORIGIN_C0', 'L1_B3_DESTINATION']:
                 self.assertAlmostEqual(link.costs["WALK"]['generalized_cost'], 0.003 * 50 / 1.42)
             elif lid == 'C0_C1':
-                self.assertAlmostEqual(link.costs["PersonalVehicle"]['generalized_cost'], 0.003 * 2000 / 7 + 0.0005 * 2000)
+                self.assertAlmostEqual(link.costs["PersonalVehicle"]['generalized_cost'], 0.003 * 2000 / 10 + 0.0005 * 2000)
             elif lid in ['L1_B2_B3', 'L1_B1_B2']:
-                self.assertAlmostEqual(link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 7)
+                self.assertAlmostEqual(link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 9)
+            for layer_id, layer in self.mlgraph.layers.items():
+                for layer_link_id, layer_link in layer.graph.links.items():
+                    if layer_link_id == 'C0_C1':
+                        self.assertAlmostEqual(layer_link.costs["PersonalVehicle"]['generalized_cost'], 0.003 * 2000 / 10 + 0.0005 * 2000)
+                    elif layer_link_id in ['L1_B2_B3', 'L1_B1_B2']:
+                        self.assertAlmostEqual(layer_link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 9)
+
         # TODO: for now, estimated travel time and realized travel time are different,
         #       so as estimated travel cost and realized travel cost because the
         #       waiting time for a vehicle (PT, MoD, etc.) is not included in the
