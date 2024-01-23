@@ -4,10 +4,12 @@ from mnms.time import Time, Dt
 from mnms.mobility_service.abstract import AbstractMobilityService
 from mnms.log import create_logger
 from mnms.vehicles.veh_type import Vehicle, VehicleActivity
-from mnms.demand.user import User
+from mnms.demand.user import User, UserState
 from mnms.tools.observer import TimeDependentSubject
 from mnms.tools.cost import create_service_costs
 from mnms.vehicles.veh_type import VehicleActivityStop, VehicleActivityPickup, VehicleActivityServing, ActivityType
+from mnms.travel_decision.abstract import Event, AbstractDecisionModel
+from mnms.flow.user_flow import UserFlow
 
 log = create_logger(__name__)
 
@@ -73,12 +75,29 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
         return station
 
-    def remove_station(self, id_station: str):
+    def remove_station(self, id_station: str, matched_user_id: str, new_users: List[User], user_flow: UserFlow, decision_model: AbstractDecisionModel):
+        """Method that disconnects and deletes a (free-floating) station from the
+        rest of the multi layer graph.
 
+        Args:
+            -id_station: id of the station to remove
+            -matched_user_id: user who have just been matched
+            -new_users: users who are about to depart but not yet taken into account
+             by the user_low
+            -user_flow: the UserFlow object of the simulation
+            -decision_model: the AbstractDecisionModel object of the simulation
+        """
+        log.info(f'{self._id} vehicle sharing service: Station {id_station} is diconnected and removed')
         self.map_node_station.pop(self.stations[id_station].node)
         del (self.stations[id_station])
 
-        self.layer.disconnect_station(id_station)
+        deleted_links = self.layer.disconnect_station(id_station)
+
+        # Manage users who were supposed to use one of the deleted links
+        users_canceling = user_flow.manage_links_removal_after_match(deleted_links, new_users, matched_user_id, self, decision_model)
+        
+        return users_canceling
+
 
     def init_free_floating_vehicles(self, id_node: str, nb_veh: int):
         """
@@ -169,11 +188,11 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
         return service_dt
 
-    def matching(self, user: User, drop_node: str):
-
+    def matching(self, user: User, drop_node: str, new_users: List[User], user_flow: UserFlow, decision_model: AbstractDecisionModel):
         veh_id, veh_path = self._cache_request_vehicles[user.id]
+        log.info(f'User {user.id} matched with vehicle {veh_id} of mobility service {self._id}')
         upath = list(user.path.nodes)
-        upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
+        upath = upath[user.get_current_node_index():user.get_node_index_in_path(drop_node) + 1]
         user_path = self.construct_veh_path(upath)
         veh_path = user_path
 
@@ -185,16 +204,19 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
         veh=self.fleet.vehicles[veh_id]
         veh.add_activities(activities)
-        veh.next_activity()
+        veh.next_activity(self._tcurrent)
         user.set_state_inside_vehicle()
 
-        station = self.stations[self.map_node_station[user._current_node]]
+        station = self.stations[self.map_node_station[user.current_node]]
         # Delete the vehicle from the waiting vehicle list
         station.waiting_vehicles.remove(veh)
 
         # Delete the station if it is free-floating and empty
         if station.free_floating and len(station.waiting_vehicles) == 0:
-            self.remove_station(station._id)
+            users_canceling = self.remove_station(station._id, user.id, new_users, user_flow, decision_model)
+            return users_canceling
+
+        return []
 
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
         pass

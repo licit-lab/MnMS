@@ -25,6 +25,7 @@ log = create_logger(__name__)
 class Event(Enum):
     DEPARTURE = 0
     MATCH_FAILURE = 1
+    INTERRUPTION = 2
 
 class AbstractDecisionModel(ABC):
 
@@ -180,13 +181,13 @@ class AbstractDecisionModel(ABC):
         new_planning_origins = {}
 
         if u.state in [UserState.STOP, UserState.WAITING_ANSWER, UserState.WAITING_VEHICLE, UserState.WALKING]:
-            planning_origin = u.position if u.state == UserState.WALKING else gnodes[u._current_node].position
+            planning_origin = u.position if u.state == UserState.WALKING else gnodes[u.current_node].position
             # Check user's planning origin with regard to each currently available personal mobility service
             for personal_mob_service in personal_mob_services:
                 if (u.available_mobility_services) and (personal_mob_service in u.available_mobility_services):
-                    if personal_mob_service in u._parked_personal_vehicles.keys():
+                    if personal_mob_service in u.parked_personal_vehicles.keys():
                         # User has already used and parked her personal vehicle, check if the parking location is nearby
-                        parking_node = u._parked_personal_vehicles[personal_mob_service]
+                        parking_node = u.parked_personal_vehicles[personal_mob_service]
                         parking_pos = gnodes[parking_node].position
                         user_far_from_personal_veh = _norm(np.array(parking_pos) - np.array(planning_origin)) > self.personal_mob_service_park_radius
                     else:
@@ -202,7 +203,7 @@ class AbstractDecisionModel(ABC):
             # Check if user is riding a vehicle of each currently available personal mobility service
             for personal_mob_service in personal_mob_services:
                 if (u.available_mobility_services) and (personal_mob_service in u.available_mobility_services):
-                    if u._vehicle and u._vehicle.mobility_service == personal_mob_service:
+                    if u.vehicle and u.vehicle.mobility_service == personal_mob_service:
                         continue
                     else:
                         u.remove_available_mobility_service(personal_mob_service)
@@ -341,7 +342,7 @@ class AbstractDecisionModel(ABC):
 
             ## Get origin of the (re)planning depending on users' state
             if u.state in [UserState.STOP, UserState.WAITING_ANSWER, UserState.WAITING_VEHICLE]:
-                if u._current_node is None:
+                if u.current_node is None:
                     # User has just departed from her origin, get the name of origin node
                     if isinstance(u.origin, np.ndarray):
                         u_origin = origins_id[np.argmin(_norm(origins_pos - u.origin, axis=1))]
@@ -349,10 +350,19 @@ class AbstractDecisionModel(ABC):
                         u_origin = u.origin
                 else:
                     # User (re)plan from current node
-                    u_origin = u._current_node
-            elif u.state in [UserState.WALKING, UserState.INSIDE_VEHICLE]:
+                    u_origin = u.current_node
+            elif u.state == UserState.INSIDE_VEHICLE:
                 # User (re)plan from next node
-                u_origin = u._current_link[1]
+                u_origin = u.current_link[1]
+            elif u.state == UserState.WALKING:
+                if u.current_link[1] in self._mlgraph.graph.nodes[u.current_link[0]].adj.keys():
+                    # User (re)plan from next node if current transit link still exists
+                    u_origin = u.current_link[1]
+                else:
+                    # User (re)plans from current node if current transit link does not exist
+                    u_origin = u.current_node
+                    log.warning(f'User {u.id} was walking on link {u.current_link} when this link got deleted, '\
+                        f'user will look for an alternative path from upstream node of this link...')
             else:
                 log.error(f'In AbstractDecisionModel: {u.id} tries to replan while she is in {u.state} state.')
                 sys.exit(-1)
@@ -413,7 +423,7 @@ class AbstractDecisionModel(ABC):
                             #log.info(f'User {u.id} already found the proper nb of paths for modes combination {ams_combination}')
                             continue
                         # NB: even if we have found some paths for this mode combination, we still look for k cause we may find the same as the one already saved...
-                        # TOTODO: how to improve this?
+                        # TODO: how to improve this?
 
                 # Check if a specific planning origin should be used for this mobility services
                 # combination to be able to use a personal mobility service
@@ -458,8 +468,9 @@ class AbstractDecisionModel(ABC):
             user_paths = d['paths']
             event = d['event']
             if user_paths:
+                ## Some paths have been found
                 chosen_path = self.path_choice(user_paths)
-                log.info(f"User {user.id} chose path {chosen_path} after {event} among {len(user_paths)} shorest paths for this round of (re)planning.")
+                log.info(f"User {user.id} chose path {chosen_path} after {event} among {len(user_paths)} shortest paths for this round of (re)planning (state={user.state}).")
 
                 if self._write:
                     # Write down the chosen path only
@@ -485,58 +496,119 @@ class AbstractDecisionModel(ABC):
 
                 if user.state == UserState.STOP:
                     # User starts the chosen path right now, eventually teleport
-                    teleport_origin = None if user._current_node is None else gnodes[user._current_node].position
+                    teleport_origin = None if user.current_node is None else gnodes[user.current_node].position
                     user.set_path(chosen_path, gnodes=gnodes, max_teleport_dist=self.personal_mob_service_park_radius,
                         teleport_origin=teleport_origin)
                     user.start_path(gnodes)
                 elif user.state == UserState.WALKING:
-                    dist = _norm(user.position - chosen_path.nodes[0])
+                    dist = _norm(user.position - gnodes[chosen_path.nodes[0]].position)
+                    current_transit_link_exists = user.current_link[1] in gnodes[user.current_link[0]].adj.keys()
                     if dist <= self.personal_mob_service_park_radius:
                         # User starts the chosen path right now, eventually teleport
                         user.set_path(chosen_path, gnodes=gnodes, max_teleport_dist=self.personal_mob_service_park_radius,
                             teleport_origin=user.position)
                         user.start_path(gnodes)
+                    elif not current_transit_link_exists:
+                        # User teleports whatever the distance and starts the chosen path right now
+                        user.set_path(chosen_path, gnodes=gnodes, max_teleport_dist=10e8,
+                            teleport_origin=user.position)
+                        user.start_path(gnodes)
                     else:
                         # User finishes to walk on current link and then starts the chosen path without teleporting
-                        assert chosen_path.nodes[0] == user._current_link[1], f'User {user.id} replanned while WALKING on {user._current_link} '\
+                        assert chosen_path.nodes[0] == user.current_link[1], f'User {user.id} replanned while WALKING on {user.current_link} '\
                             f'and chose a path with an erroneous first node (path={chosen_path})'
-                        user.update_path(chosen_path, gnodes, self._mlgraph, self._cost)
+                        _ = user.update_path(chosen_path, gnodes, self._mlgraph, self._cost)
                 elif user.state == UserState.WAITING_ANSWER:
-                    # TOTODO: user starts the chosen path right now, eventually teleport, clean/update user's ongoing request
-                    log.error(f'Not yet developed replaning behavior in WAITING_ANSWER state')
-                    sys.exit(-1)
+                    # User starts the chosen path right now, eventually teleport, clean/update user's ongoing request
+                    user.update_path_and_requested_service_buffer(chosen_path, gnodes, self._mlgraph, self._cost, self.personal_mob_service_park_radius)
                 elif user.state == UserState.WAITING_VEHICLE:
-                    # TOTODO: user starts the chosen path right now, eventually teleport, update vehicle plan consequently
-                    log.error(f'Not yet developed replaning behavior in WAITING_VEHICLE state')
-                    sys.exit(-1)
+                    # User starts the chosen path right now, eventually teleport, update vehicle plan consequently
+                    user.update_path_and_waited_vehicle_plan(chosen_path, gnodes, self._mlgraph, self._cost, self.personal_mob_service_park_radius)
                 elif user.state == UserState.INSIDE_VEHICLE:
-                    # TOTODO: user's finished on the current link and then starts the chosen path without teleporting, update vehicle plan consequently
-                    log.error(f'Not yet developed replaning behavior in INSIDE_VEHICLE state')
-                    sys.exit(-1)
+                    # User finishes on the current link and then starts the chosen path without teleporting, update vehicle plan consequently
+                    assert chosen_path.nodes[0] == user.current_link[1], f'User {user.id} replanned while INSIDE_VEHICLE on {user.current_link} '\
+                        f'and chose a path with an erroneous first node (path={chosen_path})'
+                    user.update_path_and_current_vehicle_plan(chosen_path, gnodes, self._mlgraph, self._cost)
                 else:
                     log.error(f'User {user.id} undefined replanning behavior in {user.state} state...')
                     sys.exit(-1)
 
             else:
-                if self._write:
-                    # Write down the fact that user could not find any shortest path
-                    self._csvhandler.writerow([user.id, event._name_, tcurrent,
-                                               'INF',
-                                               user._current_node,
-                                               'INF',
-                                               '',
-                                               ''])
-
-                if event in [Event.DEPARTURE, Event.MATCH_FAILURE]:
-                    # User is now DEADEND
-                    log.warning(f'User {uid} has found no path during the (re)planning, turns to DEADEND.')
-                    user.set_state_deadend(tcurrent)
-                else:
-                    # TOTODO: Define what user should do then, for now continue current path
-                    pass
+                ## No path found
+                self.manage_no_path_found(user, event, tcurrent)
 
             # Remove user from the list of users who need (re)planning
             self._users_for_planning.remove((user,event))
+
+    def manage_no_path_found(self, user, event, tcurrent):
+        """Method that manages the case when no path was found for a user during
+        the (re)planning.
+
+        Args:
+            -user: user who found no path
+            -event: event that led user the (re)plan
+            -tcurrent: current time
+        """
+        gnodes = self._mlgraph.graph.nodes
+        uid = user.id
+
+        if self._write:
+            # Write down the fact that user could not find any shortest path
+            self._csvhandler.writerow([user.id, event._name_, tcurrent,
+                                       'INF',
+                                       user.current_node,
+                                       'INF',
+                                       '',
+                                       ''])
+
+        if event in [Event.DEPARTURE, Event.MATCH_FAILURE]:
+            # User turns DEADEND
+            log.warning(f'User {uid} has found no path during the (re)planning, '\
+                f'turns to DEADEND.')
+            user.set_state_deadend(tcurrent)
+
+        elif event == Event.INTERRUPTION:
+            if user.state == UserState.STOP:
+                # User turns DEADEND
+                log.warning(f'User {uid} has found no path during the (re)planning, '\
+                    f'turns to DEADEND.')
+                user.set_state_deadend(tcurrent)
+            elif user.state == UserState.WALKING:
+                current_transit_link_exists = user.current_link[1] in gnodes[user.current_link[0]].adj.keys()
+                if not current_transit_link_exists:
+                    # User turns immediatly DEADEND
+                    log.warning(f'User {uid} has found no path during the (re)planning, '\
+                        f'her current TRANSIT link has been no longer exist, turns DEADEND immediatly.')
+                    user.set_state_deadend(tcurrent)
+                else:
+                    # User finishes to walk through current link and turns DEADEND
+                    log.warning(f'User {uid} has found no path during the (re)planning, '\
+                        f'will finish to walk the current TRANSIT link and turn DEADEND.')
+                    user.deadend_at_next_node = True
+            elif user.state == UserState.WAITING_ANSWER:
+                # User cancels her request and turns DEADEND
+                user.requested_service.cancel_request(uid)
+                log.warning(f'User {uid} has found no path during the (re)planning, '\
+                    'cancels ongoing request and turns to DEADEND.')
+                user.set_state_deadend(tcurrent)
+            elif user.state == UserState.WAITING_VEHICLE:
+                # User won't user the waited vehicle update its plan and set user state to DEADEND
+                user.cancel_match(self._mlgraph, self._cost)
+                log.warning(f'User {uid} has found no path during the (re)planning, '\
+                    'cancels ongoing match and turns to DEADEND.')
+                user.set_state_deadend(tcurrent)
+            elif user.state == UserState.INSIDE_VEHICLE:
+                # User finishes to ride vehicle on current link, and then turns DEADEND,
+                # vehicle's plan is updated consequently
+                user.modify_current_ride_drop_node(user.current_link[1], gnodes, self._mlgraph, self._cost)
+                log.warning(f'User {uid} has found no path during the (re)planning, '\
+                    f'will alight vehicle {user.vehicle} at next node and turn DEADEND.')
+                user.deadend_at_next_node = True
+
+        else:
+            # TODO: Define what user should do when path not found following other events
+            log.error(f'Case not yet developped')
+            sys.exit(-1)
 
     def parse_paths(self, paths, uids, chosen_mservices, nb_paths, users_paths):
         """Method that parsed HiPOP outputs.

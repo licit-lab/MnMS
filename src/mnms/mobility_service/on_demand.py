@@ -15,15 +15,25 @@ from mnms.tools.cost import create_service_costs
 
 log = create_logger(__name__)
 
+
+def compute_path_travel_time(path, graph, ms_id):
+    tt = 0
+    for leg in path:
+        leg_link = graph.nodes[leg[0][0]].adj[leg[0][1]]
+        tt += leg_link.costs[ms_id]['travel_time']
+    return tt
+
 class OnDemandMobilityService(AbstractMobilityService):
 
     def __init__(self,
                  _id: str,
                  dt_matching: int,
-                 dt_step_maintenance: int = 0):
+                 dt_step_maintenance: int = 0,
+                 matching_strategy: str='nearest_idle_vehicle'):
         super(OnDemandMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
 
         self.gnodes = dict()
+        self._matching_strategy = matching_strategy
 
     def create_waiting_vehicle(self, node: str):
         assert node in self.graph.nodes
@@ -42,14 +52,96 @@ class OnDemandMobilityService(AbstractMobilityService):
         pass
 
     def request(self, user: User, drop_node: str) -> Dt:
-        """
+        """Method that associates a vehicle of this mobility service to the requesting
+        user. It calls the proper matching strategy.
 
         Args:
-            user: User requesting a ride
-            drop_node:
+            -user: user requesting a ride
+            -drop_node: node where user would like to be dropped off
 
-        Returns: waiting time before pick-up
+        Returns:
+            -service_dt: waiting time before pick-up
+        """
+        if self._matching_strategy == 'nearest_idle_vehicle':
+            service_dt = self.request_nearest_idle_vehicle(user, drop_node)
+        elif self._matching_strategy == 'nearest_vehicle_in_radius':
+            service_dt = self.request_nearest_vehicle_in_radius(user, drop_node)
+        else:
+            log.error(f'Unknown matching strategy {self._matching_strategy} for {self.id} mobility service')
+            sys.exit(-1)
+        return service_dt
 
+
+    def request_nearest_vehicle_in_radius(self, user: User, drop_node: str, radius: float = 5000) -> Dt:
+        """Assigns the vehicle with the smallest pick up time among vehicles located within
+        a certain radius around the user pick-up node. Vehicles are considered even if they
+        already have activities in their plan (the activities related to the new user are considered
+        inserted at the end of the vehicle plan).
+
+        Args:
+            -user: user requesting a ride
+            -drop_node: node where user would like to be dropped off
+            -radius: radius wihtin which vehicles are considered for the match
+
+        Returns:
+            -service_dt: waiting time before pick-up
+
+        """
+        upos = user.position
+        uid = user.id
+        vehs = np.array(list(self.fleet.vehicles.values()))
+        if len(vehs) == 0:
+            return Dt(hours=24)
+        vehs_pos = np.array([v.position for v in vehs])
+
+        # Search for the vehicles close to the user
+        dist_vector = np.linalg.norm(vehs_pos - upos, axis=1)
+        nearest_vehs_indices = dist_vector <= radius # radius in meters
+        nearest_vehs = vehs[nearest_vehs_indices]
+
+        # If no vehicle surrounds the user, return inf service time
+        if len(nearest_vehs) == 0:
+            return Dt(hours=24)
+
+        # Compute service time for these vehs
+        candidates = []
+        for veh in nearest_vehs:
+            veh_last_node = veh.activity.node if not veh.activities else \
+                    veh.activities[-1].node
+            veh_path, tt = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+            # If vehicle cannot reach user, skip and consider next vehicle
+            if tt == float('inf'):
+                continue
+
+            service_dt = Dt(seconds=tt)
+            if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
+                veh_curr_act_path_nodes = veh.path_to_nodes(veh.activity.path)
+                veh_curr_node_ind_in_path = veh_curr_act_path_nodes.index(veh.current_node) # NB: works only when an acticity path does not contain several times the same node
+                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.graph, self.id))
+                current_link = self.graph.nodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
+                service_dt += Dt(seconds=veh.remaining_link_length / current_link.costs[self.id]['speed'])
+            for a in veh.activities:
+                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
+            candidates.append((veh, service_dt, veh_path))
+
+        # Select the veh with the smallest service time
+        if candidates:
+            candidates.sort(key=lambda x:x[1])
+            self._cache_request_vehicles[uid] = candidates[0][0], candidates[0][2]
+        else:
+            return Dt(hours=24)
+
+        return candidates[0][1]
+
+    def request_nearest_idle_vehicle(self, user: User, drop_node: str) -> Dt:
+        """Assigns the nearest idle vehicle to the requesting user.
+
+        Args:
+            -user: User requesting a ride
+            -drop_node: node where user would like to be dropped off
+
+        Returns:
+            -service_dt: waiting time before pick-up
         """
 
         upos = user.position
@@ -97,12 +189,13 @@ class OnDemandMobilityService(AbstractMobilityService):
     def matching(self, user: User, drop_node: str):
 
         veh, veh_path = self._cache_request_vehicles[user.id]
+        log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self._id}')
         upath = list(user.path.nodes)
-        upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
+        upath = upath[user.get_current_node_index():user.get_node_index_in_path(drop_node) + 1]
         user_path = self.construct_veh_path(upath)
         veh_path = self.construct_veh_path(veh_path)
         activities = [
-            VehicleActivityPickup(node=user._current_node,
+            VehicleActivityPickup(node=user.current_node,
                                   path=veh_path,
                                   user=user),
             VehicleActivityServing(node=drop_node,
@@ -111,7 +204,7 @@ class OnDemandMobilityService(AbstractMobilityService):
         ]
 
         veh.add_activities(activities)
-        user.set_state_waiting_vehicle()
+        user.set_state_waiting_vehicle(veh)
 
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
@@ -269,18 +362,19 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
 
     def matching(self, user: User, drop_node: str):
         veh, veh_path = self._cache_request_vehicles[user.id]
+        log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self._id}')
         upath = list(user.path.nodes)
-        upath = upath[upath.index(user._current_node):upath.index(drop_node) + 1]
+        upath = upath[user.get_current_node_index():user.get_node_index_in_path(drop_node) + 1]
 
         user_path = self.construct_veh_path(upath)
         veh_path = self.construct_veh_path(veh_path)
 
         if veh_path:
-            pickup = VehicleActivityPickup(node=user._current_node,
+            pickup = VehicleActivityPickup(node=user.current_node,
                                            path=veh_path,
                                            user=user)
         else:
-            pickup = VehicleActivityPickup(node=user._current_node,
+            pickup = VehicleActivityPickup(node=user.current_node,
                                            path=veh_path,
                                            user=user,
                                            is_done=True)
@@ -293,7 +387,7 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
         ]
 
         veh.add_activities(activities)
-        user.set_state_waiting_vehicle()
+        user.set_state_waiting_vehicle(veh)
 
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True

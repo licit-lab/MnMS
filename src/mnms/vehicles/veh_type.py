@@ -58,11 +58,27 @@ class VehicleActivity(ABC):
         self.iter_path = iter(self.path)
 
     def modify_path(self, new_path: _TYPE_PATH):
+        """Method to update this activity path.
+
+        Args:
+            -new_path: the new path
+        """
         self.path = new_path
+        if new_path:
+            self.node = new_path[-1][0][1]
         self.reset_path_iterator()
 
+    def modify_path_and_next(self, new_path: _TYPE_PATH):
+        """Method to update this activity path and set the iterator on path to the next node.
+
+        Args:
+            -new_path: the new path
+        """
+        self.modify_path(new_path)
+        next(self.iter_path)
+
     @abstractmethod
-    def done(self, veh: "Vehicle"):
+    def done(self, veh: "Vehicle", tcurrent: Time):
         """Update when the activity is done (abstract method)
 
             Parameters:
@@ -104,7 +120,7 @@ class VehicleActivityStop(VehicleActivity):
 
         return
 
-    def done(self, veh: "Vehicle"):
+    def done(self, veh: "Vehicle", tcurrent: Time):
         """Update when the activity is done
 
             Parameters:
@@ -112,7 +128,7 @@ class VehicleActivityStop(VehicleActivity):
         """
 
         if self.user is not None:
-            self.user._vehicle = veh
+            self.user.vehicle = veh
 
 
 @dataclass(slots=True)
@@ -131,7 +147,7 @@ class VehicleActivityRepositioning(VehicleActivity):
 
         return
 
-    def done(self, veh: "Vehicle"):
+    def done(self, veh: "Vehicle", tcurrent: Time):
         """Update when the activity is done
 
             Parameters:
@@ -154,18 +170,16 @@ class VehicleActivityPickup(VehicleActivity):
                 veh (Vehicle): The vehicle performing the activities
         """
 
-        self.user._waiting_vehicle = True
-        self.user.set_state_waiting_vehicle()
+        self.user.set_state_waiting_vehicle(veh)
 
-    def done(self, veh: "Vehicle"):
+    def done(self, veh: "Vehicle", tcurrent: Time):
         """Update when the activity is done
 
             Parameters:
                 veh (Vehicle): The vehicle performing the activities
         """
 
-        self.user._waiting_vehicle = False
-        self.user._vehicle = veh
+        self.user.vehicle = veh
         veh.passengers[self.user.id] = self.user
         self.user.set_state_inside_vehicle()
 
@@ -182,29 +196,25 @@ class VehicleActivityServing(VehicleActivity):
             Parameters:
                 veh (Vehicle): The vehicle performing the activities
         """
-        self.user._waiting_vehicle = False
-        self.user._vehicle = veh
+        self.user.vehicle = veh
         veh.passengers[self.user.id] = self.user
         self.user.set_state_inside_vehicle()
 
-    def done(self, veh: "Vehicle"):
+    def done(self, veh: "Vehicle", tcurrent: Time):
         """Update when the activity is done
 
              Parameters:
                  veh (Vehicle): The vehicle performing the activities
          """
-        self.user._waiting_vehicle = False
-        self.user._vehicle = None
+        self.user.vehicle = None
         veh.passengers.pop(self.user.id)
 
-        self.user._remaining_link_length = 0
+        self.user.remaining_link_length = 0
         upath = self.user.path.nodes
         unode = veh._current_link[1] if veh._current_link is not None else veh._current_node
-        self.user._current_node = unode
-        next_node_ind = upath.index(unode)+1
-        self.user.set_position((unode, upath[next_node_ind]), 0, veh.position)
-        self.user._vehicle = None
-        # self.user._vehicle = None
+        next_node_ind = self.user.get_node_index_in_path(unode) + 1
+        self.user.set_position((unode, upath[next_node_ind]), unode, 0, veh.position, tcurrent)
+        self.user.vehicle = None
         # self.user.notify(tcurrent)
         self.user.set_state_stop()
         # If this is user's personal vehicle, register location of parking and vehicle's mobility service
@@ -260,7 +270,7 @@ class Vehicle(TimeDependentSubject):
 
         if activities is not None:
             self.add_activities(activities)
-            self.next_activity()
+            self.next_activity(None)
         else:
             self.activity: VehicleActivity = self.default_activity()
 
@@ -315,9 +325,9 @@ class Vehicle(TimeDependentSubject):
         for a in activities:
             self.activities.append(a)
 
-    def next_activity(self):
+    def next_activity(self, tcurrent: Time):
         if self.activity is not None:
-            self.activity.done(self)
+            self.activity.done(self, tcurrent)
 
         try:
             activity = self.activities.popleft()
@@ -365,13 +375,12 @@ class Vehicle(TimeDependentSubject):
 
     def drop_user(self, tcurrent:Time, user:'User', drop_pos:np.ndarray):
         log.info(f"{user} is dropped at {self._current_link[0]}")
-        user._remaining_link_length = 0
+        user.remaining_link_length = 0
         upath = user.path.nodes
         unode = self._current_link[0]
-        user._current_node = unode
-        next_node_ind = upath.index(unode)+1
-        user.set_position((unode, upath[next_node_ind]), 0, drop_pos)
-        user._vehicle = None
+        next_node_ind = user.get_node_index_in_path(unode)+1
+        user.set_position((unode, upath[next_node_ind]), unode, 0, drop_pos, tcurrent)
+        user.vehicle = None
         user.notify(tcurrent)
 
         del self.passengers[user.id]
@@ -380,19 +389,18 @@ class Vehicle(TimeDependentSubject):
         for _, user in self.passengers.values():
             log.info(f"{user} is dropped at {self._current_link[1]}")
             unode = self._current_link[1]
-            user._current_node = unode
-            user._remaining_link_length = 0
-            user._position = self._position
+            user.current_node = unode
+            user.remaining_link_length = 0
+            user.position = self._position
             user.notify(tcurrent)
-            user._vehicle = None
+            user.vehicle = None
 
         self.passengers = dict()
 
     def start_user_trip(self, userid, take_node):
         log.info(f'Passenger {userid} has been taken by {self} at {take_node}')
         take_time, user = self._next_passenger.pop(userid)
-        user._vehicle = self.id
-        user._waiting_vehicle = False
+        user.vehicle = self.id
         self.passengers[userid] = (take_time, user)
 
     def default_activity(self):
@@ -403,6 +411,21 @@ class Vehicle(TimeDependentSubject):
     def notify_passengers(self, tcurrent: Time):
         for user in self.passengers.values():
             user.notify(tcurrent)
+
+    def path_to_nodes(self, path):
+        """Method that converts a VehicleActivity path into a list of nodes.
+
+        Args:
+            -path: path to convert
+
+        Returns:
+            -path_nodes: the converted path
+        """
+        if len(path) > 0:
+            path_nodes = [l[0][0] for l in path] + [path[-1][0][1]]
+        else:
+            path_nodes = [self._current_node]
+        return path_nodes
 
     @classmethod
     def reset_counter(cls):
@@ -451,8 +474,8 @@ class Metro(Vehicle):
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
         super(Metro, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
-        
-     
+
+
 class Bike(Vehicle):
     def __init__(self,
                  node: str,
