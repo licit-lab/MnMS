@@ -93,7 +93,7 @@ class AbstractMFDFlowMotor(ABC):
         pass
 
     @abstractmethod
-    def update_graph(self):
+    def update_graph(self, threshold):
         pass
 
     def write_result(self, step_affectation:int, step_flow:int):
@@ -108,4 +108,3 @@ class AbstractMFDFlowMotor(ABC):
     def finalize(self):
         if self._write:
             self._outfile.close()
-

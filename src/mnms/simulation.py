@@ -66,7 +66,7 @@ class Supervisor(object):
             self._write = True
             self._outfile = open(outfile, "w")
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
-            self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'MOBILITY_SERVICE', 'TRAVEL_TIME'])
+            self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'MOBILITY_SERVICE', 'COSTS'])
 
         if logfile is not None:
             attach_log_file(logfile, loglevel)
@@ -172,12 +172,12 @@ class Supervisor(object):
         end = time()
         log.info(f'(Re)planning done in [{end - start:.5} s]')
 
-    def call_update_graph(self):
+    def call_update_graph(self, threshold):
         """Calls the graph update and measures execution time.
         """
         log.info(' Updating graph...')
         start = time()
-        self._flow_motor.update_graph()
+        self._flow_motor.update_graph(threshold)
         end = time()
         log.info(f' Update graph done in [{end-start:.5} s]')
 
@@ -311,7 +311,7 @@ class Supervisor(object):
             pass
         return users_step, remaining_new_users
 
-    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor: int, seed: int=None):
+    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor: int, update_graph_threshold: float = 0., seed: int=None):
         """Launch a full simulation.
 
         Args:
@@ -319,6 +319,8 @@ class Supervisor(object):
             -tend: simulation end time
             -flow_dt: the simulation flow time step
             -affectation_factor: the number of simulation flow time step representing one affectation time step
+            -update_graph_threshold: threshold on the speed variation below which costs on the graph links are not updated
+            -seed: seed of the simulation
         """
         log.info(f'Start run from {tstart} to {tend}')
 
@@ -387,15 +389,15 @@ class Supervisor(object):
                 flow_step += 1
 
             ## Call the update graph
-            self.call_update_graph()
+            self.call_update_graph(update_graph_threshold)
 
             if self._write:
-                log.info('Writing travel time of each link in graph ...')
+                log.info('Writing costs of each link in graph ...')
                 start = time()
                 t_str = self._flow_motor.time
                 for link in self._mlgraph.graph.links.values():
                     for mservice, costs in link.costs.items():
-                        self._csvhandler.writerow([str(affectation_step), t_str, link.id, mservice, costs['travel_time']])
+                        self._csvhandler.writerow([str(affectation_step), t_str, link.id, mservice, costs])
                 end = time()
                 log.info(f'Done [{end - start:.5} s]')
 
