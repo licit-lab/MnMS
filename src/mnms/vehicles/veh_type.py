@@ -218,9 +218,11 @@ class VehicleActivityServing(VehicleActivity):
         # self.user.notify(tcurrent)
         self.user.set_state_stop()
         # If this is user's personal vehicle, register location of parking and vehicle's mobility service
+        # on user's side and last dropped off user on vehicle's side to prevent deletion of personal vehicle
+        # before user's arrival at destination
         if veh._is_personal:
             self.user.park_personal_vehicle(veh.mobility_service, unode)
-
+            veh.last_dropped_off_user = self.user
 
 
 class Vehicle(TimeDependentSubject):
@@ -441,7 +443,15 @@ class Car(Vehicle):
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
         super(Car, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
+        self._last_dropped_off_user = None
 
+    @property
+    def last_dropped_off_user(self):
+        return self._last_dropped_off_user
+
+    @last_dropped_off_user.setter
+    def last_dropped_off_user(self, user):
+        self._last_dropped_off_user = user
 
 class Bus(Vehicle):
     def __init__(self,
