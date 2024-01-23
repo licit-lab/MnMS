@@ -360,7 +360,7 @@ class MultiLayerGraph(object):
 
     def initialize_costs(self,walk_speed):
 
-        # initialize costs on links
+        # Initialize costs on links
         link_layers = list()
 
         for lid, layer in self.layers.items():
@@ -381,9 +381,7 @@ class MultiLayerGraph(object):
             else:
                 layer = self.layers[link.label]
                 speed = layer.default_speed
-
-                link_layer_id = link.label
-                for mservice in self.layers[link_layer_id].mobility_services.keys():
+                for mservice in layer.mobility_services.keys():
                     costs[mservice] = {"speed": speed,
                                        "travel_time": link.length / speed,
                                        "distance": link.length}
