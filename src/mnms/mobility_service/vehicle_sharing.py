@@ -82,6 +82,8 @@ class VehicleSharingMobilityService(AbstractMobilityService):
         Args:
             -id_station: id of the station to remove
             -matched_user_id: user who have just been matched
+            -new_users: users who are about to depart but not yet taken into account
+             by the user_low
             -user_flow: the UserFlow object of the simulation
             -decision_model: the AbstractDecisionModel object of the simulation
         """
@@ -91,27 +93,9 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
         deleted_links = self.layer.disconnect_station(id_station)
 
-        # Gathers users who were supposed to use one of the deleted links
-        interrupted_users = []
-        users_canceling = []
-        for u in list(user_flow.users.values()) + new_users:
-            if u.id != matched_user_id and u.path is not None:
-                unodes = u.path.nodes
-                path_links = [(unodes[i],unodes[i+1]) for i in range(len(unodes)-1)]
-                intersect = set(deleted_links).intersection(set(path_links))
-                if len(intersect) > 0:
-                    log.info(f"User {u.id} was supposed to pass through links {intersect} which were deleted, trigger an INTERRUPTION event (current node = {u.current_node}, state = {u.state})")
-                    interrupted_users.append(u)
-                    # Clean eventual request already formulated by user to this service
-                    if u.id in self._user_buffer.keys():
-                        if u.state == UserState.WAITING_ANSWER:
-                            # This user is waiting to be matched with a vehicle of the station we have just removed,
-                            # turn her to STOP state, and save the fact that she should cancel her request
-                            u.set_state_stop()
-                        users_canceling.append(u.id)
-        if interrupted_users:
-            decision_model.add_users_for_planning(interrupted_users, [Event.INTERRUPTION]*len(interrupted_users))
-            # NB: the planning will be called before the next user flow step so no need to interrupt user path now
+        # Manage users who were supposed to use one of the deleted links
+        users_canceling = user_flow.manage_links_removal_after_match(deleted_links, new_users, matched_user_id, self, decision_model)
+        
         return users_canceling
 
 

@@ -10,6 +10,7 @@ from mnms.demand.user import User, UserState
 from mnms.time import Dt, Time
 from mnms.log import create_logger
 from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.travel_decision.abstract import Event
 
 log = create_logger(__name__)
 
@@ -279,3 +280,44 @@ class UserFlow(object):
             self._waiting_answer.pop(uid)
 
         return refused_users
+
+    def manage_links_removal_after_match(self, deleted_links, new_users, matched_user_id, service, decision_model):
+        """Method that manages the interruption of users who were supposed to pass
+        through a link that was deleted following a match.
+        NB: For now only a match with a free-floating vehicle sharing service can
+        lead to link deletion.
+
+        Args:
+            -deleted_links: the list of links that have been deleted
+            -new_users: user who are about to depart but not yet taken into account
+             by the user flow
+            -matched_user_id: the id of the user who was matched
+            -service: the mobility service with which user was matched
+            -decision_model: the decision model for all users
+
+        Returns:
+            -users_canceling: users who should cancel their current request because
+             they get interrupted
+        """
+        interrupted_users = []
+        users_canceling = []
+        for u in list(self.users.values()) + new_users:
+            if u.id != matched_user_id and u.path is not None:
+                unodes = u.path.nodes
+                path_links = [(unodes[i],unodes[i+1]) for i in range(len(unodes)-1)]
+                intersect = set(deleted_links).intersection(set(path_links))
+                if len(intersect) > 0:
+                    log.info(f"User {u.id} was supposed to pass through links {intersect} which were deleted, '\
+                        f'trigger an INTERRUPTION event (current node = {u.current_node}, state = {u.state})")
+                    interrupted_users.append(u)
+                    # Clean eventual request already formulated by user to this service
+                    if u.id in service._user_buffer.keys():
+                        if u.state == UserState.WAITING_ANSWER:
+                            # This user is waiting to be matched with a vehicle of the station we have just removed,
+                            # turn her to STOP state, and save the fact that she should cancel her request
+                            u.set_state_stop()
+                        users_canceling.append(u.id)
+        if interrupted_users:
+            decision_model.add_users_for_planning(interrupted_users, [Event.INTERRUPTION]*len(interrupted_users))
+            # NB: the planning will be called before the next user flow step so no need to interrupt user path now
+        return users_canceling
