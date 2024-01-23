@@ -285,7 +285,13 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         veh.notify(new_time)
         veh.notify_passengers(new_time)
 
-    def update_graph(self):
+    def update_graph(self, threshold):
+        """Method that updates the costs on links of the transportation graph.
+
+        Args:
+            -threshold: threshold on the speed variation below which costs are not
+             updated on a certain link
+        """
 
         graph = self._graph.graph
         banned_links = self._graph.dynamic_space_sharing.banned_links
@@ -295,7 +301,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         for _, layer in self._graph.layers.items():
             link_layers.append(layer.graph.links)
 
-        linkcosts = defaultdict(dict)
+        linkcosts = {}
 
         for lid, link in graph.links.items():
             if link.label == 'TRANSIT':
@@ -303,6 +309,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             link_info = self._layer_link_length_mapping[lid]
             total_len = 0
             new_speed = 0
+            old_speed = link.costs[list(link.costs.keys())[0]]["speed"]
             for section, length in link_info.sections:
                 res_id = self._section_to_reservoir[section]
                 res = self.reservoirs[res_id]
@@ -311,9 +318,9 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 if speed is not None:
                     new_speed += length * speed
                 else:
-                    new_speed += length * link.cost["speed"]
+                    new_speed += length * old_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
-            if new_speed != 0:  # TODO: check if this condition is still useful
+            if new_speed != 0 and abs(new_speed - old_speed) > threshold:
                 costs = defaultdict(dict)
 
                 # Update critical costs first
@@ -341,8 +348,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     if lid in links:
                         links[lid].update_costs(costs)
                         break
-
-        graph.update_costs(linkcosts)
+        if len(linkcosts) > 0:
+            graph.update_costs(linkcosts)
 
     def write_result(self, step_affectation: int, step_flow:int):
         tcurrent = self._tcurrent.time
