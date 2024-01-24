@@ -33,7 +33,7 @@ class TestRenderPath(unittest.TestCase):
     def tearDown(self) -> None:
         pass
 
-    def test_draw_roads(self):
-        path = Path(nodes=["CAR_NORTH_0", "CAR_3", "CAR_2", "CAR_1", "CAR_0"])
+    def test_draw_path(self):
+        path = Path(cost=0, nodes=["CAR_NORTH_0", "CAR_3", "CAR_2", "CAR_1", "CAR_0"])
         fig, ax = plt.subplots()
         draw_path(ax, self.mlgraph, path)

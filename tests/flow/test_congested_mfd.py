@@ -3,7 +3,7 @@ import pytest
 from mnms.demand import User
 from mnms.demand.user import Path
 from mnms.flow.congested_MFD import CongestedMFDFlowMotor, CongestedReservoir
-from mnms.generation.layers import generate_layer_from_roads, _generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_layer_from_roads, generate_matching_origin_destination_layer
 from mnms.generation.roads import generate_line_road
 from mnms.graph.layers import MultiLayerGraph
 from mnms.graph.zone import construct_zone_from_sections
@@ -23,7 +23,7 @@ def test_congested_mfd_no_congestion():
                                           "CarLayer",
                                           mobility_services=[personal_car])
 
-    odlayer = _generate_matching_origin_destination_layer(roads)
+    odlayer = generate_matching_origin_destination_layer(roads)
 
     mlgraph = MultiLayerGraph([car_layer],
                               odlayer,
@@ -50,10 +50,9 @@ def test_congested_mfd_no_congestion():
     flow.initialize(1.42)
 
     user = User('U0', '0', '4', Time('00:01:00'))
-    user.set_path(Path(0,
-                       3400,
+    user.set_path(Path(3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
-    personal_car.request_vehicle(user, 'C2')
+    personal_car.add_request(user, 'C2')
     personal_car.matching(user, "CarLayer_2")
     flow.step(Dt(seconds=1))
 
@@ -77,7 +76,7 @@ def test_congested_mfd_congestion():
                                           "CarLayer",
                                           mobility_services=[personal_car])
 
-    odlayer = _generate_matching_origin_destination_layer(roads)
+    odlayer = generate_matching_origin_destination_layer(roads)
 
     mlgraph = MultiLayerGraph([car_layer],
                               odlayer,
@@ -104,22 +103,27 @@ def test_congested_mfd_congestion():
     flow.initialize(1.42)
 
     user = User('U0', '0', '4', Time('00:01:00'))
-    user.set_path(Path(0,
-                       3400,
+    user.set_path(Path(3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
-    personal_car.request_vehicle(user, 'C2')
+    personal_car.add_request(user, 'C2')
     personal_car.matching(user, "CarLayer_2")
     flow.step(Dt(seconds=1))
 
     user2 = User('U1', '0', '4', Time('00:01:00'))
-    user2.set_path(Path(0,
-                       3400,
+    user2.set_path(Path(3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
-    personal_car.request_vehicle(user2, 'C2')
+    personal_car.add_request(user2, 'C2')
     personal_car.matching(user2, "CarLayer_2")
     flow.step(Dt(seconds=1))
-    flow.step(Dt(seconds=0))
+    flow.step(Dt(seconds=1))
+
+    veh1 = list(personal_car.fleet.vehicles.values())[0]
+    veh2 = list(personal_car.fleet.vehicles.values())[1]
 
     assert 1 == flow.reservoirs["LEFT"].car_in_outgoing_queues
+    approx_dist1 = 15
+    assert approx_dist1 == pytest.approx(veh1.distance)
+    approx_dist2 = 10
+    assert approx_dist2 == pytest.approx(veh2.distance)
 
     VehicleManager.empty()

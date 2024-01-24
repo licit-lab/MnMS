@@ -60,6 +60,11 @@ class RoadDescriptor(object):
 
         self.stops[sid] = RoadStop(sid, lid, relative_position, abs_pos)
 
+    def register_stop_abs(self, sid: str, lid: str, relative_position: float, abs_pos):
+        assert 0 <= relative_position <= 1, f"relative_position must be between 0 and 1"
+
+        self.stops[sid] = RoadStop(sid, lid, relative_position, abs_pos)
+
     def register_section(self, lid: str, upstream: str, downstream: str, length: Optional[float] = None):
         assert upstream in self.nodes, f"{upstream} node is not registered"
         assert downstream in self.nodes, f"{downstream} node is not registered "
@@ -87,7 +92,11 @@ class RoadDescriptor(object):
                 if rsect.upstream == nid or rsect.downstream == nid:
                     links_to_remove.append(lid)
             for lid in links_to_remove:
-                 del self.sections[lid]
+                 self.delete_section(lid)
+
+    def delete_section(self, lid: str):
+        assert lid in self.sections.keys(), f'In delete_section: section id {lid} not found in roads sections'
+        del self.sections[lid]
 
     def translate(self, v: List[float]):
         for n in self.nodes.keys():

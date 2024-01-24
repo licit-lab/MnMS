@@ -6,14 +6,14 @@ from mnms.time import Time, Dt
 from mnms.io.graph import load_graph
 from mnms.travel_decision.logit import LogitDecisionModel
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
-from mnms.generation.layers import _generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_matching_origin_destination_layer
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 
 import os
 import json
 
-param_file_path = "data/param.json"
+param_file_path = "/param.json"
 param_file = open(os.getcwd() + param_file_path, 'r')
 param_json = json.load(param_file)
 
@@ -31,7 +31,7 @@ param_file.close()
 # inputs
 indir = input_params['indir'] # name of input folder, ex: "INPUTS"
 network_file = input_params['network_file'] # path to json network file, ex: "/Lyon_symuviainput.json"
-demand_file = input_params['demand_file'] # path to csv demand file 
+demand_file = input_params['demand_file'] # path to csv demand file
 mfd_file = input_params['mfd_file'] # path to csv MFD file
 # outputs
 outdir = output_params['output_dir'] # name of output folder, ex: "OUTPUTS"
@@ -56,7 +56,7 @@ n_shortest_path = travel_decision_params['n_shortest_path'] # number of shortest
 radius_sp = travel_decision_params['radius_sp'] # first radius for node search in shortest path calculation
 radius_growth_sp = travel_decision_params['radius_growth_sp'] # radius step for node search in sp calculation
 walk_speed = travel_decision_params['walk_speed'] # walking speed, ex: 1.4 (meter per second?)
-scale_factor_sp = travel_decision_params['scale_factor_sp'] # 
+scale_factor_sp = travel_decision_params['scale_factor_sp'] #
 algorithm = travel_decision_params['algorithm'] # algorithm used for shortest path calculation, ex: "astar" or "djikstra"
 decision_model = travel_decision_params['decision_model'] # decision model used, ex: "LogitDecisionModel"
 available_mobility_services = travel_decision_params['available_mobility_services'] # list with available mobility services ex: ["WALK", "PersonalCar"]
@@ -85,8 +85,9 @@ def calculate_V_MFD(acc):
 if __name__ == '__main__':
     mmgraph = load_graph(indir+network_file)
 
-    odlayer = _generate_matching_origin_destination_layer(mmgraph.roads)
-    mmgraph.connect_origin_destination_layer(odlayer, 1e-3)
+    odlayer = generate_matching_origin_destination_layer(mmgraph.roads)
+    mmgraph.add_origin_destination_layer(odlayer)
+    mmgraph.connect_origindestination_layers(1e-3)
 
     personal_car = PersonalMobilityService()
     personal_car.attach_vehicle_observer(CSVVehicleObserver(outdir+vehicle_file))
@@ -108,5 +109,3 @@ if __name__ == '__main__':
                             outfile=outdir+travel_time_file)
 
     supervisor.run(Time(start_time), Time(end_time), Dt(minutes=flow_dt), affectation_factor)
-
-

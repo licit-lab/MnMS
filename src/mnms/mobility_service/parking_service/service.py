@@ -15,8 +15,9 @@ from mnms.mobility_service.parking_service.depot import Depot
 from mnms.mobility_service.parking_service.filters import FilterProtocol, IsWaiting, InRadiusFilter
 from mnms.time import Dt, Time
 from mnms.tools.exceptions import PathNotFound
-from mnms.vehicles.veh_type import Vehicle, VehicleActivity, VehicleState, VehicleActivityStop, VehicleActivityPickup, \
+from mnms.vehicles.veh_type import Vehicle, VehicleActivity, ActivityType, VehicleActivityStop, VehicleActivityPickup, \
     VehicleActivityServing
+from mnms.tools.cost import create_service_costs
 
 log = create_logger(__name__)
 
@@ -32,7 +33,7 @@ class UserInfo:
 
 
 def pre_compute_feasibility(vehicle: Vehicle) -> bool:
-    if vehicle.state is VehicleState.PICKUP or vehicle.is_full:
+    if vehicle.activity_type is ActivityType.PICKUP or vehicle.is_full:
         return False
     else:
         return True
@@ -46,7 +47,7 @@ def truncate_plan(user: User, vehicleplan: List[VehicleActivity]) -> List[Vehicl
     truncate = []
     for act in vehicleplan:
         truncate.append(act)
-        if act.state is VehicleState.SERVING and act.user.id == user.id:
+        if act.activity_type is ActivityType.SERVING and act.user.id == user.id:
             return truncate
 
 
@@ -119,7 +120,7 @@ class ParkingService(AbstractOnDemandMobilityService):
         serving_activity = new_activities[1]
         user = pickup_activity.user
 
-        if veh.state is not VehicleState.STOP:
+        if veh.activity_type is not ActivityType.STOP:
             veh_next_node = veh.current_link[1]
             pickup_path, cost_pickup = dijkstra(self.graph,
                                                 veh_next_node,
@@ -209,7 +210,7 @@ class ParkingService(AbstractOnDemandMobilityService):
         veh, new_plan = self._cache_request_vehicles[user.id]
         veh.activities = deque(new_plan)
         veh.override_current_activity()
-        user.set_state_waiting_vehicle()
+        user.set_state_waiting_vehicle(veh)
 
         parking_service_index = user.path.mobility_services.index(self.id)
         parking_service_slice = user.path.layers[parking_service_index][1]
@@ -252,10 +253,16 @@ class ParkingService(AbstractOnDemandMobilityService):
         for uid in self.users:
             self.users[uid].update_distance()
 
+    def periodic_maintenance(self, dt: Dt):
+        pass
+
+    def service_level_costs(self, nodes: List[str]) -> dict:
+        return create_service_costs()
+
     def quality_disutility(self, vehicle: Vehicle, new_plan: List[VehicleActivity], new_user: Optional[User]):
         total_disutility = 0
 
-        users = list(vehicle.passenger.values())
+        users = list(vehicle.passengers.values())
         if new_user is not None:
             users.append(new_user)
 

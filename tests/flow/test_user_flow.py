@@ -37,7 +37,7 @@ class TestUserFlow(unittest.TestCase):
         roads.register_stop("B4", "3_4", 1)
 
         roads.add_zone(construct_zone_from_sections(roads, "res1", ["0_1", "0_2", "2_3"]))
-        roads.add_zone(construct_zone_from_sections(roads, "res1", ["3_4"]))
+        roads.add_zone(construct_zone_from_sections(roads, "res2", ["3_4"]))
 
         car_layer = CarLayer(roads, services=[PersonalMobilityService()])
         car_layer.create_node('C0', '0')
@@ -79,8 +79,7 @@ class TestUserFlow(unittest.TestCase):
     def test_request_veh(self):
         user = User('U0', '0', '4', Time('00:01:00'))
         user._current_node = 'C0'
-        user.set_path(Path(0,
-                           cost=3400,
+        user.set_path(Path(cost=3400,
                            nodes=['C0', 'C1', 'C2', 'B2', 'B3', 'B4']))
         self.user_flow.step(Dt(minutes=1), [user])
 

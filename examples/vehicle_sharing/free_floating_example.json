@@ -1,0 +1,2391 @@
+{
+  "ROADS": {
+    "NODES": {
+      "0": {
+        "id": "0",
+        "position": [
+          0,
+          0
+        ]
+      },
+      "1": {
+        "id": "1",
+        "position": [
+          0,
+          1000
+        ]
+      },
+      "2": {
+        "id": "2",
+        "position": [
+          0,
+          2000
+        ]
+      },
+      "3": {
+        "id": "3",
+        "position": [
+          1000,
+          0
+        ]
+      },
+      "4": {
+        "id": "4",
+        "position": [
+          1000,
+          1000
+        ]
+      },
+      "5": {
+        "id": "5",
+        "position": [
+          1000,
+          2000
+        ]
+      },
+      "6": {
+        "id": "6",
+        "position": [
+          2000,
+          0
+        ]
+      },
+      "7": {
+        "id": "7",
+        "position": [
+          2000,
+          1000
+        ]
+      },
+      "8": {
+        "id": "8",
+        "position": [
+          2000,
+          2000
+        ]
+      },
+      "WEST_0": {
+        "id": "WEST_0",
+        "position": [
+          -1000,
+          0
+        ]
+      },
+      "WEST_1": {
+        "id": "WEST_1",
+        "position": [
+          -1000,
+          1000
+        ]
+      },
+      "WEST_2": {
+        "id": "WEST_2",
+        "position": [
+          -1000,
+          2000
+        ]
+      },
+      "EAST_0": {
+        "id": "EAST_0",
+        "position": [
+          3000,
+          0
+        ]
+      },
+      "EAST_1": {
+        "id": "EAST_1",
+        "position": [
+          3000,
+          1000
+        ]
+      },
+      "EAST_2": {
+        "id": "EAST_2",
+        "position": [
+          3000,
+          2000
+        ]
+      },
+      "NORTH_0": {
+        "id": "NORTH_0",
+        "position": [
+          0,
+          3000
+        ]
+      },
+      "NORTH_1": {
+        "id": "NORTH_1",
+        "position": [
+          1000,
+          3000
+        ]
+      },
+      "NORTH_2": {
+        "id": "NORTH_2",
+        "position": [
+          2000,
+          3000
+        ]
+      },
+      "SOUTH_0": {
+        "id": "SOUTH_0",
+        "position": [
+          0,
+          -1000
+        ]
+      },
+      "SOUTH_1": {
+        "id": "SOUTH_1",
+        "position": [
+          1000,
+          -1000
+        ]
+      },
+      "SOUTH_2": {
+        "id": "SOUTH_2",
+        "position": [
+          2000,
+          -1000
+        ]
+      }
+    },
+    "STOPS": {},
+    "SECTIONS": {
+      "0_1": {
+        "id": "0_1",
+        "upstream": "0",
+        "downstream": "1",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "0_3": {
+        "id": "0_3",
+        "upstream": "0",
+        "downstream": "3",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "1_2": {
+        "id": "1_2",
+        "upstream": "1",
+        "downstream": "2",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "1_0": {
+        "id": "1_0",
+        "upstream": "1",
+        "downstream": "0",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "1_4": {
+        "id": "1_4",
+        "upstream": "1",
+        "downstream": "4",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "2_1": {
+        "id": "2_1",
+        "upstream": "2",
+        "downstream": "1",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "2_5": {
+        "id": "2_5",
+        "upstream": "2",
+        "downstream": "5",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "3_4": {
+        "id": "3_4",
+        "upstream": "3",
+        "downstream": "4",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "3_6": {
+        "id": "3_6",
+        "upstream": "3",
+        "downstream": "6",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "3_0": {
+        "id": "3_0",
+        "upstream": "3",
+        "downstream": "0",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "4_5": {
+        "id": "4_5",
+        "upstream": "4",
+        "downstream": "5",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "4_3": {
+        "id": "4_3",
+        "upstream": "4",
+        "downstream": "3",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "4_7": {
+        "id": "4_7",
+        "upstream": "4",
+        "downstream": "7",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "4_1": {
+        "id": "4_1",
+        "upstream": "4",
+        "downstream": "1",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "5_4": {
+        "id": "5_4",
+        "upstream": "5",
+        "downstream": "4",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "5_8": {
+        "id": "5_8",
+        "upstream": "5",
+        "downstream": "8",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "5_2": {
+        "id": "5_2",
+        "upstream": "5",
+        "downstream": "2",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "6_7": {
+        "id": "6_7",
+        "upstream": "6",
+        "downstream": "7",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "6_3": {
+        "id": "6_3",
+        "upstream": "6",
+        "downstream": "3",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "7_8": {
+        "id": "7_8",
+        "upstream": "7",
+        "downstream": "8",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "7_6": {
+        "id": "7_6",
+        "upstream": "7",
+        "downstream": "6",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "7_4": {
+        "id": "7_4",
+        "upstream": "7",
+        "downstream": "4",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "8_7": {
+        "id": "8_7",
+        "upstream": "8",
+        "downstream": "7",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "8_5": {
+        "id": "8_5",
+        "upstream": "8",
+        "downstream": "5",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "WEST_0_0": {
+        "id": "WEST_0_0",
+        "upstream": "WEST_0",
+        "downstream": "0",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "0_WEST_0": {
+        "id": "0_WEST_0",
+        "upstream": "0",
+        "downstream": "WEST_0",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "WEST_1_1": {
+        "id": "WEST_1_1",
+        "upstream": "WEST_1",
+        "downstream": "1",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "1_WEST_1": {
+        "id": "1_WEST_1",
+        "upstream": "1",
+        "downstream": "WEST_1",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "WEST_2_2": {
+        "id": "WEST_2_2",
+        "upstream": "WEST_2",
+        "downstream": "2",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "2_WEST_2": {
+        "id": "2_WEST_2",
+        "upstream": "2",
+        "downstream": "WEST_2",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "EAST_0_6": {
+        "id": "EAST_0_6",
+        "upstream": "EAST_0",
+        "downstream": "6",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "6_EAST_0": {
+        "id": "6_EAST_0",
+        "upstream": "6",
+        "downstream": "EAST_0",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "EAST_1_7": {
+        "id": "EAST_1_7",
+        "upstream": "EAST_1",
+        "downstream": "7",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "7_EAST_1": {
+        "id": "7_EAST_1",
+        "upstream": "7",
+        "downstream": "EAST_1",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "EAST_2_8": {
+        "id": "EAST_2_8",
+        "upstream": "EAST_2",
+        "downstream": "8",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "8_EAST_2": {
+        "id": "8_EAST_2",
+        "upstream": "8",
+        "downstream": "EAST_2",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "NORTH_0_2": {
+        "id": "NORTH_0_2",
+        "upstream": "NORTH_0",
+        "downstream": "2",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "2_NORTH_0": {
+        "id": "2_NORTH_0",
+        "upstream": "2",
+        "downstream": "NORTH_0",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "NORTH_1_5": {
+        "id": "NORTH_1_5",
+        "upstream": "NORTH_1",
+        "downstream": "5",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "5_NORTH_1": {
+        "id": "5_NORTH_1",
+        "upstream": "5",
+        "downstream": "NORTH_1",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "NORTH_2_8": {
+        "id": "NORTH_2_8",
+        "upstream": "NORTH_2",
+        "downstream": "8",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "8_NORTH_2": {
+        "id": "8_NORTH_2",
+        "upstream": "8",
+        "downstream": "NORTH_2",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "SOUTH_0_0": {
+        "id": "SOUTH_0_0",
+        "upstream": "SOUTH_0",
+        "downstream": "0",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "0_SOUTH_0": {
+        "id": "0_SOUTH_0",
+        "upstream": "0",
+        "downstream": "SOUTH_0",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "SOUTH_1_3": {
+        "id": "SOUTH_1_3",
+        "upstream": "SOUTH_1",
+        "downstream": "3",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "3_SOUTH_1": {
+        "id": "3_SOUTH_1",
+        "upstream": "3",
+        "downstream": "SOUTH_1",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "SOUTH_2_6": {
+        "id": "SOUTH_2_6",
+        "upstream": "SOUTH_2",
+        "downstream": "6",
+        "length": 1000,
+        "zone": "RES"
+      },
+      "6_SOUTH_2": {
+        "id": "6_SOUTH_2",
+        "upstream": "6",
+        "downstream": "SOUTH_2",
+        "length": 1000,
+        "zone": "RES"
+      }
+    },
+    "ZONES": {
+      "RES": {
+        "id": "RES",
+        "sections": [
+          "5_4",
+          "4_5",
+          "3_6",
+          "2_WEST_2",
+          "3_0",
+          "1_0",
+          "7_6",
+          "6_EAST_0",
+          "5_2",
+          "1_WEST_1",
+          "5_NORTH_1",
+          "5_8",
+          "4_1",
+          "EAST_0_6",
+          "0_1",
+          "EAST_2_8",
+          "8_EAST_2",
+          "4_7",
+          "NORTH_1_5",
+          "SOUTH_1_3",
+          "7_8",
+          "8_7",
+          "1_4",
+          "7_4",
+          "WEST_1_1",
+          "8_NORTH_2",
+          "0_SOUTH_0",
+          "0_WEST_0",
+          "SOUTH_2_6",
+          "EAST_1_7",
+          "3_SOUTH_1",
+          "WEST_2_2",
+          "SOUTH_0_0",
+          "6_3",
+          "6_7",
+          "1_2",
+          "3_4",
+          "8_5",
+          "NORTH_2_8",
+          "0_3",
+          "2_1",
+          "6_SOUTH_2",
+          "4_3",
+          "7_EAST_1",
+          "2_NORTH_0",
+          "WEST_0_0",
+          "2_5",
+          "NORTH_0_2"
+        ],
+        "contour": [
+          [
+            -1000,
+            -1000
+          ],
+          [
+            3000,
+            -1000
+          ],
+          [
+            3000,
+            3000
+          ],
+          [
+            -1000,
+            3000
+          ]
+        ]
+      }
+    }
+  },
+  "LAYERS": [
+    {
+      "ID": "car_layer",
+      "TYPE": "mnms.graph.layers.SimpleLayer",
+      "VEH_TYPE": "mnms.vehicles.veh_type.Car",
+      "DEFAULT_SPEED": 14,
+      "SERVICES": [
+        {
+          "TYPE": "mnms.mobility_service.personal_vehicle.PersonalMobilityService",
+          "ID": "PersonalVehicle"
+        }
+      ],
+      "NODES": [
+        {
+          "ID": "car_layer_SOUTH_2",
+          "X": 2000.0,
+          "Y": -1000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_SOUTH_0",
+          "X": 0.0,
+          "Y": -1000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_NORTH_2",
+          "X": 2000.0,
+          "Y": 3000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_NORTH_0",
+          "X": 0.0,
+          "Y": 3000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_EAST_2",
+          "X": 3000.0,
+          "Y": 2000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_EAST_1",
+          "X": 3000.0,
+          "Y": 1000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_EAST_0",
+          "X": 3000.0,
+          "Y": 0.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_WEST_2",
+          "X": -1000.0,
+          "Y": 2000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_2",
+          "X": 0.0,
+          "Y": 2000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_WEST_1",
+          "X": -1000.0,
+          "Y": 1000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_0",
+          "X": 0.0,
+          "Y": 0.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_4",
+          "X": 1000.0,
+          "Y": 1000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_8",
+          "X": 2000.0,
+          "Y": 2000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_SOUTH_1",
+          "X": 1000.0,
+          "Y": -1000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_6",
+          "X": 2000.0,
+          "Y": 0.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_7",
+          "X": 2000.0,
+          "Y": 1000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_5",
+          "X": 1000.0,
+          "Y": 2000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_WEST_0",
+          "X": -1000.0,
+          "Y": 0.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_NORTH_1",
+          "X": 1000.0,
+          "Y": 3000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_3",
+          "X": 1000.0,
+          "Y": 0.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "car_layer_1",
+          "X": 0.0,
+          "Y": 1000.0,
+          "LABEL": "car_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        }
+      ],
+      "LINKS": [
+        {
+          "ID": "car_layer_SOUTH_1_3",
+          "UPSTREAM": "car_layer_SOUTH_1",
+          "DOWNSTREAM": "car_layer_3",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_8_NORTH_2",
+          "UPSTREAM": "car_layer_8",
+          "DOWNSTREAM": "car_layer_NORTH_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_SOUTH_2_6",
+          "UPSTREAM": "car_layer_SOUTH_2",
+          "DOWNSTREAM": "car_layer_6",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_0_SOUTH_0",
+          "UPSTREAM": "car_layer_0",
+          "DOWNSTREAM": "car_layer_SOUTH_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_EAST_2_8",
+          "UPSTREAM": "car_layer_EAST_2",
+          "DOWNSTREAM": "car_layer_8",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_EAST_1_7",
+          "UPSTREAM": "car_layer_EAST_1",
+          "DOWNSTREAM": "car_layer_7",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_2_WEST_2",
+          "UPSTREAM": "car_layer_2",
+          "DOWNSTREAM": "car_layer_WEST_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_2_NORTH_0",
+          "UPSTREAM": "car_layer_2",
+          "DOWNSTREAM": "car_layer_NORTH_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_WEST_2_2",
+          "UPSTREAM": "car_layer_WEST_2",
+          "DOWNSTREAM": "car_layer_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_1_WEST_1",
+          "UPSTREAM": "car_layer_1",
+          "DOWNSTREAM": "car_layer_WEST_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_8_EAST_2",
+          "UPSTREAM": "car_layer_8",
+          "DOWNSTREAM": "car_layer_EAST_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_WEST_1_1",
+          "UPSTREAM": "car_layer_WEST_1",
+          "DOWNSTREAM": "car_layer_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_0_WEST_0",
+          "UPSTREAM": "car_layer_0",
+          "DOWNSTREAM": "car_layer_WEST_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_6_SOUTH_2",
+          "UPSTREAM": "car_layer_6",
+          "DOWNSTREAM": "car_layer_SOUTH_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_WEST_0_0",
+          "UPSTREAM": "car_layer_WEST_0",
+          "DOWNSTREAM": "car_layer_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_8_5",
+          "UPSTREAM": "car_layer_8",
+          "DOWNSTREAM": "car_layer_5",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_1_4",
+          "UPSTREAM": "car_layer_1",
+          "DOWNSTREAM": "car_layer_4",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_6_3",
+          "UPSTREAM": "car_layer_6",
+          "DOWNSTREAM": "car_layer_3",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_EAST_0_6",
+          "UPSTREAM": "car_layer_EAST_0",
+          "DOWNSTREAM": "car_layer_6",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_7_4",
+          "UPSTREAM": "car_layer_7",
+          "DOWNSTREAM": "car_layer_4",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_5_2",
+          "UPSTREAM": "car_layer_5",
+          "DOWNSTREAM": "car_layer_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_5_8",
+          "UPSTREAM": "car_layer_5",
+          "DOWNSTREAM": "car_layer_8",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_SOUTH_0_0",
+          "UPSTREAM": "car_layer_SOUTH_0",
+          "DOWNSTREAM": "car_layer_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_3_4",
+          "UPSTREAM": "car_layer_3",
+          "DOWNSTREAM": "car_layer_4",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_4_1",
+          "UPSTREAM": "car_layer_4",
+          "DOWNSTREAM": "car_layer_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_5_NORTH_1",
+          "UPSTREAM": "car_layer_5",
+          "DOWNSTREAM": "car_layer_NORTH_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_NORTH_0_2",
+          "UPSTREAM": "car_layer_NORTH_0",
+          "DOWNSTREAM": "car_layer_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_6_7",
+          "UPSTREAM": "car_layer_6",
+          "DOWNSTREAM": "car_layer_7",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_5_4",
+          "UPSTREAM": "car_layer_5",
+          "DOWNSTREAM": "car_layer_4",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_7_6",
+          "UPSTREAM": "car_layer_7",
+          "DOWNSTREAM": "car_layer_6",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_4_7",
+          "UPSTREAM": "car_layer_4",
+          "DOWNSTREAM": "car_layer_7",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_0_1",
+          "UPSTREAM": "car_layer_0",
+          "DOWNSTREAM": "car_layer_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_4_3",
+          "UPSTREAM": "car_layer_4",
+          "DOWNSTREAM": "car_layer_3",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_7_8",
+          "UPSTREAM": "car_layer_7",
+          "DOWNSTREAM": "car_layer_8",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_4_5",
+          "UPSTREAM": "car_layer_4",
+          "DOWNSTREAM": "car_layer_5",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_2_5",
+          "UPSTREAM": "car_layer_2",
+          "DOWNSTREAM": "car_layer_5",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_3_0",
+          "UPSTREAM": "car_layer_3",
+          "DOWNSTREAM": "car_layer_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_3_SOUTH_1",
+          "UPSTREAM": "car_layer_3",
+          "DOWNSTREAM": "car_layer_SOUTH_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_NORTH_2_8",
+          "UPSTREAM": "car_layer_NORTH_2",
+          "DOWNSTREAM": "car_layer_8",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_8_7",
+          "UPSTREAM": "car_layer_8",
+          "DOWNSTREAM": "car_layer_7",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_0_3",
+          "UPSTREAM": "car_layer_0",
+          "DOWNSTREAM": "car_layer_3",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_NORTH_1_5",
+          "UPSTREAM": "car_layer_NORTH_1",
+          "DOWNSTREAM": "car_layer_5",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_6_EAST_0",
+          "UPSTREAM": "car_layer_6",
+          "DOWNSTREAM": "car_layer_EAST_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_1_0",
+          "UPSTREAM": "car_layer_1",
+          "DOWNSTREAM": "car_layer_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_7_EAST_1",
+          "UPSTREAM": "car_layer_7",
+          "DOWNSTREAM": "car_layer_EAST_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_3_6",
+          "UPSTREAM": "car_layer_3",
+          "DOWNSTREAM": "car_layer_6",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_1_2",
+          "UPSTREAM": "car_layer_1",
+          "DOWNSTREAM": "car_layer_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        },
+        {
+          "ID": "car_layer_2_1",
+          "UPSTREAM": "car_layer_2",
+          "DOWNSTREAM": "car_layer_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "PersonalVehicle": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "car_layer"
+        }
+      ],
+      "MAP_ROADDB": {
+        "NODES": {
+          "car_layer_0": "0",
+          "car_layer_1": "1",
+          "car_layer_2": "2",
+          "car_layer_3": "3",
+          "car_layer_4": "4",
+          "car_layer_5": "5",
+          "car_layer_6": "6",
+          "car_layer_7": "7",
+          "car_layer_8": "8",
+          "car_layer_WEST_0": "WEST_0",
+          "car_layer_WEST_1": "WEST_1",
+          "car_layer_WEST_2": "WEST_2",
+          "car_layer_EAST_0": "EAST_0",
+          "car_layer_EAST_1": "EAST_1",
+          "car_layer_EAST_2": "EAST_2",
+          "car_layer_NORTH_0": "NORTH_0",
+          "car_layer_NORTH_1": "NORTH_1",
+          "car_layer_NORTH_2": "NORTH_2",
+          "car_layer_SOUTH_0": "SOUTH_0",
+          "car_layer_SOUTH_1": "SOUTH_1",
+          "car_layer_SOUTH_2": "SOUTH_2"
+        },
+        "LINKS": {
+          "car_layer_0_1": [
+            "0_1"
+          ],
+          "car_layer_0_3": [
+            "0_3"
+          ],
+          "car_layer_1_2": [
+            "1_2"
+          ],
+          "car_layer_1_0": [
+            "1_0"
+          ],
+          "car_layer_1_4": [
+            "1_4"
+          ],
+          "car_layer_2_1": [
+            "2_1"
+          ],
+          "car_layer_2_5": [
+            "2_5"
+          ],
+          "car_layer_3_4": [
+            "3_4"
+          ],
+          "car_layer_3_6": [
+            "3_6"
+          ],
+          "car_layer_3_0": [
+            "3_0"
+          ],
+          "car_layer_4_5": [
+            "4_5"
+          ],
+          "car_layer_4_3": [
+            "4_3"
+          ],
+          "car_layer_4_7": [
+            "4_7"
+          ],
+          "car_layer_4_1": [
+            "4_1"
+          ],
+          "car_layer_5_4": [
+            "5_4"
+          ],
+          "car_layer_5_8": [
+            "5_8"
+          ],
+          "car_layer_5_2": [
+            "5_2"
+          ],
+          "car_layer_6_7": [
+            "6_7"
+          ],
+          "car_layer_6_3": [
+            "6_3"
+          ],
+          "car_layer_7_8": [
+            "7_8"
+          ],
+          "car_layer_7_6": [
+            "7_6"
+          ],
+          "car_layer_7_4": [
+            "7_4"
+          ],
+          "car_layer_8_7": [
+            "8_7"
+          ],
+          "car_layer_8_5": [
+            "8_5"
+          ],
+          "car_layer_WEST_0_0": [
+            "WEST_0_0"
+          ],
+          "car_layer_0_WEST_0": [
+            "0_WEST_0"
+          ],
+          "car_layer_WEST_1_1": [
+            "WEST_1_1"
+          ],
+          "car_layer_1_WEST_1": [
+            "1_WEST_1"
+          ],
+          "car_layer_WEST_2_2": [
+            "WEST_2_2"
+          ],
+          "car_layer_2_WEST_2": [
+            "2_WEST_2"
+          ],
+          "car_layer_EAST_0_6": [
+            "EAST_0_6"
+          ],
+          "car_layer_6_EAST_0": [
+            "6_EAST_0"
+          ],
+          "car_layer_EAST_1_7": [
+            "EAST_1_7"
+          ],
+          "car_layer_7_EAST_1": [
+            "7_EAST_1"
+          ],
+          "car_layer_EAST_2_8": [
+            "EAST_2_8"
+          ],
+          "car_layer_8_EAST_2": [
+            "8_EAST_2"
+          ],
+          "car_layer_NORTH_0_2": [
+            "NORTH_0_2"
+          ],
+          "car_layer_2_NORTH_0": [
+            "2_NORTH_0"
+          ],
+          "car_layer_NORTH_1_5": [
+            "NORTH_1_5"
+          ],
+          "car_layer_5_NORTH_1": [
+            "5_NORTH_1"
+          ],
+          "car_layer_NORTH_2_8": [
+            "NORTH_2_8"
+          ],
+          "car_layer_8_NORTH_2": [
+            "8_NORTH_2"
+          ],
+          "car_layer_SOUTH_0_0": [
+            "SOUTH_0_0"
+          ],
+          "car_layer_0_SOUTH_0": [
+            "0_SOUTH_0"
+          ],
+          "car_layer_SOUTH_1_3": [
+            "SOUTH_1_3"
+          ],
+          "car_layer_3_SOUTH_1": [
+            "3_SOUTH_1"
+          ],
+          "car_layer_SOUTH_2_6": [
+            "SOUTH_2_6"
+          ],
+          "car_layer_6_SOUTH_2": [
+            "6_SOUTH_2"
+          ]
+        }
+      }
+    },
+    {
+      "ID": "velov_layer",
+      "TYPE": "mnms.graph.layers.SharedVehicleLayer",
+      "VEH_TYPE": "mnms.vehicles.veh_type.Bike",
+      "DEFAULT_SPEED": 3,
+      "SERVICES": [
+        {
+          "TYPE": "mnms.mobility_service.vehicle_sharing.VehicleSharingMobilityService",
+          "DT_MATCHING": 1,
+          "VEH_CAPACITY": 1,
+          "ID": "velov",
+          "STATIONS": []
+        }
+      ],
+      "NODES": [
+        {
+          "ID": "velov_layer_SOUTH_1",
+          "X": 1000.0,
+          "Y": -1000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_SOUTH_0",
+          "X": 0.0,
+          "Y": -1000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_NORTH_2",
+          "X": 2000.0,
+          "Y": 3000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_NORTH_0",
+          "X": 0.0,
+          "Y": 3000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_NORTH_1",
+          "X": 1000.0,
+          "Y": 3000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_EAST_2",
+          "X": 3000.0,
+          "Y": 2000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_EAST_0",
+          "X": 3000.0,
+          "Y": 0.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_WEST_2",
+          "X": -1000.0,
+          "Y": 2000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_WEST_1",
+          "X": -1000.0,
+          "Y": 1000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_EAST_1",
+          "X": 3000.0,
+          "Y": 1000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_6",
+          "X": 2000.0,
+          "Y": 0.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_WEST_0",
+          "X": -1000.0,
+          "Y": 0.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_7",
+          "X": 2000.0,
+          "Y": 1000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_8",
+          "X": 2000.0,
+          "Y": 2000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_SOUTH_2",
+          "X": 2000.0,
+          "Y": -1000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_5",
+          "X": 1000.0,
+          "Y": 2000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_4",
+          "X": 1000.0,
+          "Y": 1000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_3",
+          "X": 1000.0,
+          "Y": 0.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_2",
+          "X": 0.0,
+          "Y": 2000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_1",
+          "X": 0.0,
+          "Y": 1000.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        },
+        {
+          "ID": "velov_layer_0",
+          "X": 0.0,
+          "Y": 0.0,
+          "LABEL": "velov_layer",
+          "EXCLUDE_MOVEMENTS": {}
+        }
+      ],
+      "LINKS": [
+        {
+          "ID": "velov_layer_1_4",
+          "UPSTREAM": "velov_layer_1",
+          "DOWNSTREAM": "velov_layer_4",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_EAST_2_8",
+          "UPSTREAM": "velov_layer_EAST_2",
+          "DOWNSTREAM": "velov_layer_8",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_SOUTH_2_6",
+          "UPSTREAM": "velov_layer_SOUTH_2",
+          "DOWNSTREAM": "velov_layer_6",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_3_SOUTH_1",
+          "UPSTREAM": "velov_layer_3",
+          "DOWNSTREAM": "velov_layer_SOUTH_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_0_SOUTH_0",
+          "UPSTREAM": "velov_layer_0",
+          "DOWNSTREAM": "velov_layer_SOUTH_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_6_SOUTH_2",
+          "UPSTREAM": "velov_layer_6",
+          "DOWNSTREAM": "velov_layer_SOUTH_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_SOUTH_0_0",
+          "UPSTREAM": "velov_layer_SOUTH_0",
+          "DOWNSTREAM": "velov_layer_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_NORTH_2_8",
+          "UPSTREAM": "velov_layer_NORTH_2",
+          "DOWNSTREAM": "velov_layer_8",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_4_7",
+          "UPSTREAM": "velov_layer_4",
+          "DOWNSTREAM": "velov_layer_7",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_NORTH_1_5",
+          "UPSTREAM": "velov_layer_NORTH_1",
+          "DOWNSTREAM": "velov_layer_5",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_3_0",
+          "UPSTREAM": "velov_layer_3",
+          "DOWNSTREAM": "velov_layer_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_NORTH_0_2",
+          "UPSTREAM": "velov_layer_NORTH_0",
+          "DOWNSTREAM": "velov_layer_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_7_EAST_1",
+          "UPSTREAM": "velov_layer_7",
+          "DOWNSTREAM": "velov_layer_EAST_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_EAST_1_7",
+          "UPSTREAM": "velov_layer_EAST_1",
+          "DOWNSTREAM": "velov_layer_7",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_WEST_2_2",
+          "UPSTREAM": "velov_layer_WEST_2",
+          "DOWNSTREAM": "velov_layer_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_1_WEST_1",
+          "UPSTREAM": "velov_layer_1",
+          "DOWNSTREAM": "velov_layer_WEST_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_EAST_0_6",
+          "UPSTREAM": "velov_layer_EAST_0",
+          "DOWNSTREAM": "velov_layer_6",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_1_2",
+          "UPSTREAM": "velov_layer_1",
+          "DOWNSTREAM": "velov_layer_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_4_1",
+          "UPSTREAM": "velov_layer_4",
+          "DOWNSTREAM": "velov_layer_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_WEST_1_1",
+          "UPSTREAM": "velov_layer_WEST_1",
+          "DOWNSTREAM": "velov_layer_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_0_WEST_0",
+          "UPSTREAM": "velov_layer_0",
+          "DOWNSTREAM": "velov_layer_WEST_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_8_7",
+          "UPSTREAM": "velov_layer_8",
+          "DOWNSTREAM": "velov_layer_7",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_8_NORTH_2",
+          "UPSTREAM": "velov_layer_8",
+          "DOWNSTREAM": "velov_layer_NORTH_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_4_3",
+          "UPSTREAM": "velov_layer_4",
+          "DOWNSTREAM": "velov_layer_3",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_7_6",
+          "UPSTREAM": "velov_layer_7",
+          "DOWNSTREAM": "velov_layer_6",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_7_8",
+          "UPSTREAM": "velov_layer_7",
+          "DOWNSTREAM": "velov_layer_8",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_8_EAST_2",
+          "UPSTREAM": "velov_layer_8",
+          "DOWNSTREAM": "velov_layer_EAST_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_6_3",
+          "UPSTREAM": "velov_layer_6",
+          "DOWNSTREAM": "velov_layer_3",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_6_EAST_0",
+          "UPSTREAM": "velov_layer_6",
+          "DOWNSTREAM": "velov_layer_EAST_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_2_NORTH_0",
+          "UPSTREAM": "velov_layer_2",
+          "DOWNSTREAM": "velov_layer_NORTH_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_0_3",
+          "UPSTREAM": "velov_layer_0",
+          "DOWNSTREAM": "velov_layer_3",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_3_6",
+          "UPSTREAM": "velov_layer_3",
+          "DOWNSTREAM": "velov_layer_6",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_5_2",
+          "UPSTREAM": "velov_layer_5",
+          "DOWNSTREAM": "velov_layer_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_3_4",
+          "UPSTREAM": "velov_layer_3",
+          "DOWNSTREAM": "velov_layer_4",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_5_8",
+          "UPSTREAM": "velov_layer_5",
+          "DOWNSTREAM": "velov_layer_8",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_8_5",
+          "UPSTREAM": "velov_layer_8",
+          "DOWNSTREAM": "velov_layer_5",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_SOUTH_1_3",
+          "UPSTREAM": "velov_layer_SOUTH_1",
+          "DOWNSTREAM": "velov_layer_3",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_5_NORTH_1",
+          "UPSTREAM": "velov_layer_5",
+          "DOWNSTREAM": "velov_layer_NORTH_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_7_4",
+          "UPSTREAM": "velov_layer_7",
+          "DOWNSTREAM": "velov_layer_4",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_2_1",
+          "UPSTREAM": "velov_layer_2",
+          "DOWNSTREAM": "velov_layer_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_6_7",
+          "UPSTREAM": "velov_layer_6",
+          "DOWNSTREAM": "velov_layer_7",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_WEST_0_0",
+          "UPSTREAM": "velov_layer_WEST_0",
+          "DOWNSTREAM": "velov_layer_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_4_5",
+          "UPSTREAM": "velov_layer_4",
+          "DOWNSTREAM": "velov_layer_5",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_2_5",
+          "UPSTREAM": "velov_layer_2",
+          "DOWNSTREAM": "velov_layer_5",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_5_4",
+          "UPSTREAM": "velov_layer_5",
+          "DOWNSTREAM": "velov_layer_4",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_2_WEST_2",
+          "UPSTREAM": "velov_layer_2",
+          "DOWNSTREAM": "velov_layer_WEST_2",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_1_0",
+          "UPSTREAM": "velov_layer_1",
+          "DOWNSTREAM": "velov_layer_0",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        },
+        {
+          "ID": "velov_layer_0_1",
+          "UPSTREAM": "velov_layer_0",
+          "DOWNSTREAM": "velov_layer_1",
+          "LENGTH": 1000.0,
+          "COSTS": {
+            "velov": {
+              "length": 1000.0
+            }
+          },
+          "LABEL": "velov_layer"
+        }
+      ],
+      "MAP_ROADDB": {
+        "NODES": {
+          "velov_layer_0": "0",
+          "velov_layer_1": "1",
+          "velov_layer_2": "2",
+          "velov_layer_3": "3",
+          "velov_layer_4": "4",
+          "velov_layer_5": "5",
+          "velov_layer_6": "6",
+          "velov_layer_7": "7",
+          "velov_layer_8": "8",
+          "velov_layer_WEST_0": "WEST_0",
+          "velov_layer_WEST_1": "WEST_1",
+          "velov_layer_WEST_2": "WEST_2",
+          "velov_layer_EAST_0": "EAST_0",
+          "velov_layer_EAST_1": "EAST_1",
+          "velov_layer_EAST_2": "EAST_2",
+          "velov_layer_NORTH_0": "NORTH_0",
+          "velov_layer_NORTH_1": "NORTH_1",
+          "velov_layer_NORTH_2": "NORTH_2",
+          "velov_layer_SOUTH_0": "SOUTH_0",
+          "velov_layer_SOUTH_1": "SOUTH_1",
+          "velov_layer_SOUTH_2": "SOUTH_2"
+        },
+        "LINKS": {
+          "velov_layer_0_1": [
+            "0_1"
+          ],
+          "velov_layer_0_3": [
+            "0_3"
+          ],
+          "velov_layer_1_2": [
+            "1_2"
+          ],
+          "velov_layer_1_0": [
+            "1_0"
+          ],
+          "velov_layer_1_4": [
+            "1_4"
+          ],
+          "velov_layer_2_1": [
+            "2_1"
+          ],
+          "velov_layer_2_5": [
+            "2_5"
+          ],
+          "velov_layer_3_4": [
+            "3_4"
+          ],
+          "velov_layer_3_6": [
+            "3_6"
+          ],
+          "velov_layer_3_0": [
+            "3_0"
+          ],
+          "velov_layer_4_5": [
+            "4_5"
+          ],
+          "velov_layer_4_3": [
+            "4_3"
+          ],
+          "velov_layer_4_7": [
+            "4_7"
+          ],
+          "velov_layer_4_1": [
+            "4_1"
+          ],
+          "velov_layer_5_4": [
+            "5_4"
+          ],
+          "velov_layer_5_8": [
+            "5_8"
+          ],
+          "velov_layer_5_2": [
+            "5_2"
+          ],
+          "velov_layer_6_7": [
+            "6_7"
+          ],
+          "velov_layer_6_3": [
+            "6_3"
+          ],
+          "velov_layer_7_8": [
+            "7_8"
+          ],
+          "velov_layer_7_6": [
+            "7_6"
+          ],
+          "velov_layer_7_4": [
+            "7_4"
+          ],
+          "velov_layer_8_7": [
+            "8_7"
+          ],
+          "velov_layer_8_5": [
+            "8_5"
+          ],
+          "velov_layer_WEST_0_0": [
+            "WEST_0_0"
+          ],
+          "velov_layer_0_WEST_0": [
+            "0_WEST_0"
+          ],
+          "velov_layer_WEST_1_1": [
+            "WEST_1_1"
+          ],
+          "velov_layer_1_WEST_1": [
+            "1_WEST_1"
+          ],
+          "velov_layer_WEST_2_2": [
+            "WEST_2_2"
+          ],
+          "velov_layer_2_WEST_2": [
+            "2_WEST_2"
+          ],
+          "velov_layer_EAST_0_6": [
+            "EAST_0_6"
+          ],
+          "velov_layer_6_EAST_0": [
+            "6_EAST_0"
+          ],
+          "velov_layer_EAST_1_7": [
+            "EAST_1_7"
+          ],
+          "velov_layer_7_EAST_1": [
+            "7_EAST_1"
+          ],
+          "velov_layer_EAST_2_8": [
+            "EAST_2_8"
+          ],
+          "velov_layer_8_EAST_2": [
+            "8_EAST_2"
+          ],
+          "velov_layer_NORTH_0_2": [
+            "NORTH_0_2"
+          ],
+          "velov_layer_2_NORTH_0": [
+            "2_NORTH_0"
+          ],
+          "velov_layer_NORTH_1_5": [
+            "NORTH_1_5"
+          ],
+          "velov_layer_5_NORTH_1": [
+            "5_NORTH_1"
+          ],
+          "velov_layer_NORTH_2_8": [
+            "NORTH_2_8"
+          ],
+          "velov_layer_8_NORTH_2": [
+            "8_NORTH_2"
+          ],
+          "velov_layer_SOUTH_0_0": [
+            "SOUTH_0_0"
+          ],
+          "velov_layer_0_SOUTH_0": [
+            "0_SOUTH_0"
+          ],
+          "velov_layer_SOUTH_1_3": [
+            "SOUTH_1_3"
+          ],
+          "velov_layer_3_SOUTH_1": [
+            "3_SOUTH_1"
+          ],
+          "velov_layer_SOUTH_2_6": [
+            "SOUTH_2_6"
+          ],
+          "velov_layer_6_SOUTH_2": [
+            "6_SOUTH_2"
+          ]
+        }
+      }
+    }
+  ],
+  "TRANSIT": []
+}

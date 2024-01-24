@@ -1,5 +1,5 @@
 from mnms.generation.roads import generate_manhattan_road
-from mnms.generation.layers import generate_layer_from_roads, _generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_layer_from_roads, generate_matching_origin_destination_layer
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.graph.layers import MultiLayerGraph
 
@@ -22,7 +22,7 @@ def generate_manhattan_passenger_car(n, link_length, resid="RES") -> MultiLayerG
                                           "CAR",
                                           mobility_services=[PersonalMobilityService()])
 
-    odlayer = _generate_matching_origin_destination_layer(roads)
+    odlayer = generate_matching_origin_destination_layer(roads)
 
     mlgraph = MultiLayerGraph([layer_car],
                               odlayer,

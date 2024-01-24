@@ -4,7 +4,8 @@ from pathlib import Path
 
 from hipop.graph import link_to_dict, dict_to_link
 
-from mnms.graph.layers import MultiLayerGraph, OriginDestinationLayer
+from mnms.graph.layers import OriginDestinationLayer
+from mnms.graph.layers import MultiLayerGraph
 from mnms.graph.road import RoadDescriptor
 from mnms.io.utils import MNMSEncoder, load_class_by_module_name
 
@@ -50,12 +51,13 @@ def load_graph(filename: Union[str, Path]):
 
     mlgraph = MultiLayerGraph(layers)
 
-    for data_link in data["TRANSIT"]:
-        mlgraph.connect_layers(data_link["ID"],
-                               data_link["UPSTREAM"],
-                               data_link["DOWNSTREAM"],
-                               data_link["LENGTH"],
-                               data_link["COSTS"])
+    if "TRANSIT" in data:
+        for data_link in data["TRANSIT"]:
+            mlgraph.connect_layers(data_link["ID"],
+                                   data_link["UPSTREAM"],
+                                   data_link["DOWNSTREAM"],
+                                   data_link["LENGTH"],
+                                   data_link["COSTS"])
 
     return mlgraph
 

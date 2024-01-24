@@ -1,7 +1,7 @@
 import unittest
 from tempfile import TemporaryDirectory
 
-from mnms.generation.layers import _generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_matching_origin_destination_layer
 from mnms.graph.layers import CarLayer, BusLayer, MultiLayerGraph
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import Zone
@@ -44,7 +44,7 @@ class TestTransitLayer(unittest.TestCase):
                               TimeTable.create_table_freq("08:00:00", "18:00:00", Dt(minutes=10)),
                               True)
 
-        odlayer = _generate_matching_origin_destination_layer(self.roads)
+        odlayer = generate_matching_origin_destination_layer(self.roads)
 
         self.mlgraph = MultiLayerGraph([car_layer, bus_layer],
                                        odlayer,
@@ -59,10 +59,14 @@ class TestTransitLayer(unittest.TestCase):
     def test_existence(self):
         transit_layer = self.mlgraph.transitlayer
 
+        print(transit_layer.links)
         self.assertEqual(len(transit_layer.links), 3)
-        self.assertEqual(len(transit_layer.links["ODLAYER"]), 2)
-        self.assertEqual(len(transit_layer.links["BUS"]), 1)
-        self.assertEqual(len(transit_layer.links["CAR"]), 2)
+        self.assertEqual(len(transit_layer.links["ODLAYER"]["CAR"]), 3)
+        self.assertEqual(len(transit_layer.links["ODLAYER"]["BUS"]), 2)
+        self.assertEqual(len(transit_layer.links["BUS"]["ODLAYER"]), 2)
+        self.assertEqual(len(transit_layer.links["BUS"]["CAR"]), 0)
+        self.assertEqual(len(transit_layer.links["CAR"]["ODLAYER"]), 3)
+        self.assertEqual(len(transit_layer.links["CAR"]["BUS"]), 1)
 
     def test_iter(self):
         transit_layer = self.mlgraph.transitlayer

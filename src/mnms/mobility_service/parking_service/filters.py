@@ -4,10 +4,10 @@ from typing import List, Union, Protocol, runtime_checkable, Iterable
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-from mnms.graph.abstract import AbstractLayer
+from mnms.graph.layers import AbstractLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.mobility_service.parking_service.depot import Depot
-from mnms.vehicles.veh_type import Vehicle, VehicleState
+from mnms.vehicles.veh_type import Vehicle, ActivityType
 
 
 Mask = Union[NDArray[bool], List[bool]]
@@ -140,7 +140,7 @@ class IsWaiting(VehicleFilter):
         Return a mask (boolean array), if vehicle.waiting True else False
         """
 
-        return [True if veh.state is VehicleState.STOP else False for veh in vehicles]
+        return [True if veh.activity_type is ActivityType.STOP else False for veh in vehicles]
 
 
 class InZoneFilter(VehicleFilter):
@@ -284,7 +284,7 @@ class ToNearestDepot(VehicleFilter):
         mask = []
 
         for veh in vehicles:
-            if veh.state is VehicleState.REPOSITIONING and veh.activity.node == nearest_depot.node:
+            if veh.activity_type is ActivityType.REPOSITIONING and veh.activity.node == nearest_depot.node:
                 mask.append(True)
             else:
                 mask.append(False)
@@ -306,7 +306,7 @@ class ToZonalDepot(VehicleFilter):
 
         mask = []
         for veh in vehicles:
-            if veh.state is VehicleState.REPOSITIONING and veh.activity.node in depots_in_zone:
+            if veh.activity_type is ActivityType.REPOSITIONING and veh.activity.node in depots_in_zone:
                 mask.append(True)
             else:
                 mask.append(False)
@@ -335,7 +335,7 @@ class ToNearestZonalDepot(VehicleFilter):
 
         mask = []
         for veh in vehicles:
-            if veh.state is VehicleState.REPOSITIONING and veh.activity.node == nearest_depot.node:
+            if veh.activity_type is ActivityType.REPOSITIONING and veh.activity.node == nearest_depot.node:
                 mask.append(True)
             else:
                 mask.append(False)

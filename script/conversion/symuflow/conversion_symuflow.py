@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from mnms.graph.road import RoadDescriptor
-from mnms.graph.layers import MultiLayerGraph, CarLayer, PublicTransportLayer
+from mnms.graph.abstract import MultiLayerGraph, CarLayer, PublicTransportLayer
 from mnms.graph.zone import construct_zone_from_contour
 from mnms.generation.layers import get_bounding_box
 from mnms.io.graph import save_graph
@@ -77,7 +77,7 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, List[str]]=N
                         reserved_lane.append(lane_elem.attrib["num_voie"])
         points.append(coords_aval)
         length = np.sum(
-            [np.linalg.norm(points[i + 1] - points) for i in range(len(points) - 1)]
+            [np.linalg.norm(points[i + 1] - points[i]) for i in range(len(points) - 1)]
         )
 
         troncons[lid] = {"up": up_nid, "down": down_nid, "length": length}

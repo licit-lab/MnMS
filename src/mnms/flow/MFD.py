@@ -14,7 +14,7 @@ from mnms.graph.zone import Zone
 from mnms.log import create_logger
 from mnms.time import Dt, Time
 from mnms.vehicles.manager import VehicleManager
-from mnms.vehicles.veh_type import Vehicle, VehicleState
+from mnms.vehicles.veh_type import Vehicle, ActivityType
 from mnms.graph.layers import PublicTransportLayer
 
 log = create_logger(__name__)
@@ -60,7 +60,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
     def __init__(self, outfile: str = None):
         super(MFDFlowMotor, self).__init__(outfile=outfile)
         if outfile is not None:
-            self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'MODE', 'SPEED', 'ACCUMULATION'])
+            self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'VEHICLE_TYPE', 'SPEED', 'ACCUMULATION'])
 
         self.reservoirs: Dict[str, Reservoir] = dict()
         self.users: Optional[Dict[str, User]] = dict()
@@ -90,7 +90,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                             if i == 0:
                                 l_dnode_pos = roads.nodes[roads.sections[section].downstream].position
                                 sections_length.append((section, _dist(unode_pos - l_dnode_pos)))
-                            if i == len(self._graph.map_reference_links[lid])-1:
+                            elif i == len(self._graph.map_reference_links[lid])-1:
                                 l_unode_pos = roads.nodes[roads.sections[section].upstream].position
                                 sections_length.append((section, _dist(l_unode_pos - dnode_pos)))
                             else:
@@ -115,42 +115,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     break
 
     def initialize(self, walk_speed):
-        # initialize costs on links
-        link_layers = list()
 
-        for lid, layer in self._graph.layers.items():
-            link_layers.append(layer.graph.links) # only non transit links concerned
-
-        for link in self._graph.graph.links.values():
-            costs = {}
-            if link.label == "TRANSIT":
-                layer = self._graph.transitlayer
-                speed = walk_speed
-                costs["WALK"] = {"speed": speed,
-                                 "travel_time": link.length / speed}
-                # NB: travel_time could be defined as a cost_function
-                for mservice, cost_functions in layer._costs_functions.items():
-                    for cost_name, cost_func in cost_functions.items():
-                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
-            else:
-                layer = self._graph.layers[link.label]
-                speed = layer.default_speed
-
-                link_layer_id = link.label
-                for mservice in self._graph.layers[link_layer_id].mobility_services.keys():
-                    costs[mservice] = {"speed": speed,
-                                       "travel_time": link.length/speed}
-            # NB: travel_time could be defined as a cost_function
-                for mservice, cost_functions in layer._costs_functions.items():
-                    for cost_name, cost_func in cost_functions.items():
-                        costs[mservice][cost_name] = cost_func(self._graph, link, costs)
-
-            link.update_costs(costs)
-
-            for links in link_layers: # only non transit links concerned
-                layer_link = links.get(link.id, None)
-                if layer_link is not None:
-                    layer_link.update_costs(costs)
+        self._graph.initialize_costs(walk_speed)
 
         # Other initializations
         self.dict_accumulations = {}
@@ -171,6 +137,16 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         self.reservoirs[res.id] = res
 
     def set_vehicle_position(self, veh: Vehicle):
+        """
+                Estimates vehicle position from current link and remaining link length
+
+                Args:
+                    veh: The vehicle
+
+                Note:
+                    This estimate can be improved if the length is taken into account and the specific case of the
+                    vehicle on the upstream or downstream node is considered separately
+        """
         unode, dnode = veh.current_link
         remaining_length = veh.remaining_link_length
 
@@ -188,6 +164,13 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         veh.set_position(unode_pos+normalized_direction*travelled)
 
     def move_veh(self, veh: Vehicle, tcurrent: Time, dt: float, speed: float) -> float:
+        """Move a vehicle
+
+            Parameters
+
+            Returns
+        """
+
         dist_travelled = dt*speed
 
         if dist_travelled > veh.remaining_link_length:
@@ -196,9 +179,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             veh.update_distance(dist_travelled)
             veh._remaining_link_length = 0
             self.set_vehicle_position(veh)
-            for passenger_id, passenger in veh.passenger.items():
-                passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
-
             try:
                 current_link, remaining_link_length = next(veh.activity.iter_path)
                 veh._current_link = current_link
@@ -206,16 +186,18 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 veh._remaining_link_length = remaining_link_length
             except StopIteration:
                 veh._current_node = veh.current_link[1]
-                veh.next_activity()
-                if veh.state is VehicleState.STOP:
+                veh.next_activity(tcurrent)
+                if not veh.is_moving:
                     elapsed_time = dt
+            for passenger_id, passenger in veh.passengers.items():
+                passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position, tcurrent)
             return elapsed_time
         else:
             veh._remaining_link_length -= dist_travelled
             veh.update_distance(dist_travelled)
             self.set_vehicle_position(veh)
-            for passenger_id, passenger in veh.passenger.items():
-                passenger.set_position(veh._current_link, veh.remaining_link_length, veh.position)
+            for passenger_id, passenger in veh.passengers.items():
+                passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position, tcurrent)
             return dt
 
     def get_vehicle_zone(self, veh):
@@ -245,16 +227,18 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
         while self.veh_manager.has_new_vehicles:
             new_veh = self.veh_manager._new_vehicles.pop()
+            if new_veh.position is None:
+                self.set_vehicle_position(new_veh)
             new_veh.notify(self._tcurrent)
 
         # Calculate accumulations
         current_vehicles = dict()
         for veh_id, veh in self.veh_manager._vehicles.items():
             if veh.activity is None:
-                veh.next_activity()
+                veh.next_activity(self._tcurrent)
             while veh.activity.is_done:
-                veh.next_activity()
-            if veh.state is not VehicleState.STOP:
+                veh.next_activity(self._tcurrent)
+            if veh.is_moving:
                 self.count_moving_vehicle(veh, current_vehicles)
 
         log.info(f"Moving {len(current_vehicles)} vehicles")
@@ -290,28 +274,41 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
     def finish_vehicle_activities(self, veh: Vehicle):
         elapsed_time = Dt(seconds=veh.remaining_link_length / veh.speed)
-        log.info(f"{veh} finished its activity {veh.state}")
+        log.info(f"{veh} finished its activity {veh.activity_type}")
         veh.update_distance(veh.remaining_link_length)
         veh._remaining_link_length = 0
         veh._current_node = veh._current_link[1]
         self.set_vehicle_position(veh)
-        veh.next_activity()
         new_time = self._tcurrent.add_time(elapsed_time)
+        veh.next_activity(new_time)
         veh.notify(new_time)
         veh.notify_passengers(new_time)
 
-    def update_graph(self):
+    def update_graph(self, threshold):
+        """Method that updates the costs on links of the transportation graph.
+
+        Args:
+            -threshold: threshold on the speed variation below which costs are not
+             updated on a certain link
+        """
+
         graph = self._graph.graph
         banned_links = self._graph.dynamic_space_sharing.banned_links
         banned_cost = self._graph.dynamic_space_sharing.cost
 
         link_layers = list()
-        for lid, layer in self._graph.layers.items():
+        for _, layer in self._graph.layers.items():
             link_layers.append(layer.graph.links)
 
-        for lid, link_info in self._layer_link_length_mapping.items():
+        linkcosts = {}
+
+        for lid, link in graph.links.items():
+            if link.label == 'TRANSIT':
+                continue
+            link_info = self._layer_link_length_mapping[lid]
             total_len = 0
             new_speed = 0
+            old_speed = link.costs[list(link.costs.keys())[0]]["speed"]
             for section, length in link_info.sections:
                 res_id = self._section_to_reservoir[section]
                 res = self.reservoirs[res_id]
@@ -320,15 +317,10 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 if speed is not None:
                     new_speed += length * speed
                 else:
-                    new_speed += length * graph.links[lid].cost["speed"]
+                    new_speed += length * old_speed
             new_speed = new_speed / total_len if total_len != 0 else new_speed
-            if new_speed != 0:  # TODO: check if this condition is still useful
-                # costs = {'travel_time': total_len / new_speed,
-                #          'speed': new_speed,
-                #          'length': total_len}
+            if new_speed != 0 and abs(new_speed - old_speed) > threshold:
                 costs = defaultdict(dict)
-
-                link = link_info.link
 
                 # Update critical costs first
                 for mservice in link.costs.keys():
@@ -337,24 +329,26 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                                        'length': total_len}
 
                 # The update the generalized one
-                layer = self._graph.layers[graph.links[lid].label]
+                layer=self._graph.layers[link.label]
                 costs_functions = layer._costs_functions
                 for mservice, cost_funcs in costs_functions.items():
                     for cost_name, cost_f in cost_funcs.items():
-                        costs[mservice][cost_name] = cost_f(self._graph, graph.links[lid], costs)
+                        costs[mservice][cost_name] = cost_f(self._graph, link, costs)
 
                 # Test if link is banned, if yes do not update the cost for the banned mobility service
                 if lid in banned_links:
                     mservice = banned_links[lid].mobility_service
                     costs[mservice].pop(banned_cost, None)
 
-                graph.update_link_costs(lid, costs)
+                linkcosts[lid]=costs
 
                 # Update of the cost in the corresponding graph layer
                 for links in link_layers:
                     if lid in links:
                         links[lid].update_costs(costs)
                         break
+        if len(linkcosts) > 0:
+            graph.update_costs(linkcosts)
 
     def write_result(self, step_affectation: int, step_flow:int):
         tcurrent = self._tcurrent.time

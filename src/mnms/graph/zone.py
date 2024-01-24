@@ -18,14 +18,22 @@ class Zone(object):
     def is_inside(self, points: List[Point]):
         return points_in_polygon(self.contour, points)
 
+@dataclass
+class MLZone():
+    id: str
+    links: Set[str]
+    contour: PointList
 
-def construct_zone_from_contour(roads: "RoadDescriptor", _id: str, contour: PointList):
-    section_centers = [0 for _ in range(len(roads.sections))]
-    section_ids = np.array([s for s in roads.sections])
 
-    for i, data in enumerate(roads.sections.values()):
-        up_pos = roads.nodes[data.upstream].position
-        down_pos = roads.nodes[data.downstream].position
+def construct_zone_from_contour(roads: "RoadDescriptor", _id: str, contour: PointList, mlgraph=None):
+    sections = roads.sections if mlgraph is None else mlgraph.graph.links
+    nodes = roads.nodes if mlgraph is None else mlgraph.graph.nodes
+    section_centers = [0 for _ in range(len(sections))]
+    section_ids = np.array([s for s in sections])
+
+    for i, data in enumerate(sections.values()):
+        up_pos = nodes[data.upstream].position
+        down_pos = nodes[data.downstream].position
         section_centers[i] = np.array([(up_pos[0] + down_pos[0]) / 2., (up_pos[1] + down_pos[1]) / 2.])
 
     section_centers = np.array(section_centers)
@@ -33,7 +41,10 @@ def construct_zone_from_contour(roads: "RoadDescriptor", _id: str, contour: Poin
     contour_array = np.array(contour)
     mask = points_in_polygon(contour_array, section_centers)
     zone_links = section_ids[mask].tolist()
-    return Zone(_id, zone_links, contour)
+    if mlgraph is None:
+        return Zone(_id, zone_links, contour)
+    else:
+        return MLZone(_id, zone_links, contour)
 
 
 def construct_zone_from_sections(roads: "RoadDescriptor", _id: str, sections: List[str]):

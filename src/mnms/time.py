@@ -34,8 +34,8 @@ class Dt(object):
         minutes = new_minutes%60
         seconds = new_seconds%60
 
-        self._hours = hours
-        self._minutes = minutes
+        self._hours = int(hours)
+        self._minutes = int(minutes)
         self._seconds = Decimal(seconds)
 
     def __mul__(self, other:int):
@@ -140,6 +140,8 @@ class Time(object):
         time._seconds = s
         time._minutes = int(m)
         time._hours = int(h)
+        if time._hours > 24 or time._hours == 24 and (time._minutes > 0 or time._seconds > 0):
+            log.warning(f'Return a time with more than 24 hours')
 
         return time
 
@@ -280,6 +282,14 @@ class TimeTable(object):
             ntime = current_time.add_time(dt)
             table.append(ntime)
             current_time = ntime
+        return cls(table)
+
+    @classmethod
+    def convert_table_freq(cls, departures: List[str]):
+        table = []
+        for departure in departures:
+            ntime = Time(departure)
+            table.append(ntime)
         return cls(table)
 
     def get_next_departure(self, date):

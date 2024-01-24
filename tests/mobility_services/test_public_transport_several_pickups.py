@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from mnms.demand import BaseDemandManager, User
 from mnms.demand.user import UserState
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
-from mnms.generation.layers import _generate_matching_origin_destination_layer
+from mnms.generation.layers import generate_matching_origin_destination_layer
 from mnms.generation.roads import generate_line_road
 from mnms.graph.layers import MultiLayerGraph, PublicTransportLayer
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
@@ -15,7 +15,7 @@ from mnms.time import Time, Dt, TimeTable
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.vehicles.veh_type import Bus
-from mnms.vehicles.veh_type import VehicleState
+from mnms.vehicles.veh_type import ActivityType
 
 
 class TestPublicTransportSeveralPickups(unittest.TestCase):
@@ -43,7 +43,7 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
                             [['0_1'], ['0_1'], ['0_1'], ['0_1'], ['0_1']],
                             TimeTable.create_table_freq('07:00:00', '08:30:00', Dt(minutes=10)))
 
-        odlayer = _generate_matching_origin_destination_layer(roads)
+        odlayer = generate_matching_origin_destination_layer(roads)
 
 
         mlgraph = MultiLayerGraph([pblayer],
@@ -108,5 +108,5 @@ class TestPublicTransportSeveralPickups(unittest.TestCase):
     def test_buses_arrival(self):
         # Check that buses from id 0 to id 5 have arrived
         for veh in self.supervisor._flow_motor.veh_manager._vehicles.values():
-            self.assertEqual(veh.state, VehicleState.STOP)
+            self.assertEqual(veh.activity_type, ActivityType.STOP)
             self.assertEqual(veh._current_node, 'L0_S5')

@@ -9,6 +9,9 @@ log = create_logger(__name__)
 
 
 class Observer(ABC):
+    """
+                Represents a observer
+    """
     @abstractmethod
     def update(self, subject:'Subject'):
         pass
@@ -19,6 +22,9 @@ class Observer(ABC):
 
 
 class TimeDependentObserver(ABC):
+    """
+                    Represents a time dependant observer
+    """
     @abstractmethod
     def update(self, subject:'TimeDependentSubject', time:Time):
         pass
@@ -29,31 +35,51 @@ class TimeDependentObserver(ABC):
 
 
 class Subject(ABC):
+    """
+            Represents what is being observed
+    """
+
     def __init__(self):
+        """Create an empty observer list"""
         self._observers: List[Observer] = []
 
     def attach(self, obs):
-        self._observers.append(obs)
+        """If the observer is not in the list,
+        append it into the list"""
+        if obs not in self._observers:
+            self._observers.append(obs)
 
     def detach(self, obs):
+        """Remove the observer from the observer list"""
         self._observers.remove(obs)
 
     def notify(self):
+        """Alerts the observers"""
         for obs in self._observers:
             obs.update(self)
 
 
 class TimeDependentSubject(ABC):
+    """
+        Represents time-dependent observations
+    """
+
     def __init__(self):
+        """Create an empty observer list"""
         self._observers: List[TimeDependentObserver] = []
 
     def attach(self, obs):
-        self._observers.append(obs)
+        """If the observer is not in the list,
+        append it into the list"""
+        if obs not in self._observers:
+            self._observers.append(obs)
 
     def detach(self, obs):
+        """Remove the observer from the observer list"""
         self._observers.remove(obs)
 
     def notify(self, time: Time):
+        """Alerts the observers"""
         for obs in self._observers:
             obs.update(self, time)
 
@@ -67,7 +93,7 @@ class CSVUserObserver(TimeDependentObserver):
             filename: The name of the file
             prec: The precision for floating point number
         """
-        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "STATE", "VEHICLE", "CONTINUOUS_JOURNEY"]
+        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "STATE", "VEHICLE"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -80,12 +106,11 @@ class CSVUserObserver(TimeDependentObserver):
     def update(self, subject: 'User', time: Time):
         row = [str(time),
                subject.id,
-               f"{subject._current_link[0]} {subject._current_link[1]}",
+               f"{subject.current_link[0]} {subject.current_link[1]}" if subject.current_link is not None else None,
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
                f"{subject.distance:.{self._prec}f}",
                subject.state.name,
-               str(subject._vehicle.id) if subject._vehicle is not None else None,
-               subject._continuous_journey]
+               str(subject.vehicle.id) if subject.vehicle is not None else None]
         # log.info(f"OBS {time}: {row}")
 
         self._csvhandler.writerow(row)
@@ -118,8 +143,8 @@ class CSVVehicleObserver(TimeDependentObserver):
                f"{subject.current_link[0]} {subject.current_link[1]}" if subject.current_link is not None else None,
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
                f"{subject.speed:.{self._prec}f}",
-               subject.state.name if subject.state is not None else None,
+               subject.activity_type.name if subject.activity_type is not None else None,
                f"{subject.distance:.{self._prec}f}",
-               ' '.join(p for p in subject.passenger)]
+               ' '.join(p for p in subject.passengers)]
         # log.info(f"OBS {time}: {row}")
         self._csvhandler.writerow(row)
