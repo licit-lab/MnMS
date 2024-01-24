@@ -16,6 +16,19 @@ log = create_logger(__name__)
 
 
 def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
+    """Method that inserts the pick-up and drop-off user activities in a public
+    transport vehicle's plan.
+
+    Args:
+        -pu_node: user pick-up node
+        -ind_pu: index in vehicle's list of activities where user pick-up activity
+         should be inserted
+        -do_node: user drop-off node
+        -ind_do: index in vehicle's list of activities where user drop-off activity
+         should be inserted
+        -user: user to pick-up and drop-off
+        -veh: vehicle which will pick-up and drop-off user
+    """
     if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
         activities_including_curr = [veh.activity] + [a for a in veh.activities]
         decrement_insert_index = True
@@ -126,15 +139,15 @@ def _insert_in_activity(pu_node, ind_pu, do_node, ind_do, user, veh):
 
 
 class PublicTransportMobilityService(AbstractMobilityService):
-    def __init__(self, _id: str, veh_capacity=50):
+    def __init__(self, id: str, veh_capacity: int = 50):
         """
-        Implement a public transport mobility service, it can create lines
+        Implement a public transport mobility service based on lines and timetables.
 
         Args:
-            _id: The id of the service
-            veh_capacity: The capacity of the vehicle using this service
+            -id: The id of the service
+            -veh_capacity: The capacity of the vehicle this service is using
         """
-        super(PublicTransportMobilityService, self).__init__(_id, veh_capacity=veh_capacity, dt_matching=0,
+        super(PublicTransportMobilityService, self).__init__(id, veh_capacity=veh_capacity, dt_matching=0,
                                                              dt_periodic_maintenance=0)
         self.vehicles: Dict[str, Deque[Vehicle]] = defaultdict(deque)
         self._timetable_iter: Dict[str, Generator[Time, None, None]] = dict()
@@ -149,15 +162,29 @@ class PublicTransportMobilityService(AbstractMobilityService):
         return self.layer.lines
 
     def clean_arrived_vehicles(self, lid: str):
+        """Recursive method that deletes the vehciles which arrived at the final
+        stop of their line.
+
+        Args:
+            -lid: line id
+        """
         if len(self.vehicles[lid]) > 0:
             first_veh = self.vehicles[lid][-1]
             if first_veh.activity_type is VehicleActivityStop:
-                log.info(f"Deleting arrived veh: {first_veh}")
+                log.info(f"Deleting arrived {self.id} vehicle {first_veh}")
                 self.vehicles[lid].pop()
                 self.fleet.delete_vehicle(first_veh.id)
                 self.clean_arrived_vehicles(lid)
 
     def construct_public_transport_path(self, lid):
+        """Method that builds the activity path for a certain public transport line.
+
+        Args:
+            -lid: line id
+
+        Returns:
+            -veh_path: path of a vehicle serving the line
+        """
         veh_path = list()
         path = self.lines[lid]['nodes']
         for i in range(len(path) - 1):
@@ -169,13 +196,17 @@ class PublicTransportMobilityService(AbstractMobilityService):
         return veh_path
 
     def new_departures(self, time, dt, lid: str, all_departures=None):
-        """
-        Recursive function returning all the departures of a public transport line during the current time step
+        """Recursive function returning all the departures of a public transport
+        line during the current time step.
 
         Args:
-            time: The current time
-            dt: The time step
-            all_departures:
+            -time: The current time
+            -dt: The time step
+            -lid: line id
+            -all_departures: previously saved new departures in the recursive call
+
+        Returns:
+            -all_departures: lists of vehicles that are about to start service on the line
         """
         veh_path = self.construct_public_transport_path(lid)
         end_node = self.lines[lid]['nodes'][-1]
@@ -190,7 +221,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 new_veh._current_link = veh_path[0][0]
                 new_veh._remaining_link_length = veh_path[0][1]
                 self._next_veh_departure[lid] = (self._current_time_table[lid], new_veh)
-                log.info(f"Next departure {new_veh}")
+                log.info(f"Vehicle {new_veh.id} of type {type(new_veh)} created for next departure on {self.id} line {lid}")
             all_departures = list()
 
         if time > self._current_time_table[lid]:
@@ -203,8 +234,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         next_time = time.add_time(dt)
         if time <= self._current_time_table[lid] < next_time:
-            log.info(f"New departure {self._next_veh_departure[lid][1]}")
             start_veh = self._next_veh_departure[lid][1]
+            log.info(f"Vehicle {start_veh.id} of type {type(start_veh)} starts service on {self.id} line {lid}")
             stop_activity = start_veh.activity
             repo_activity = VehicleActivityRepositioning(stop_activity.node,
                                                          stop_activity.path,
@@ -225,7 +256,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 new_veh._current_link = veh_path[0][0]
                 new_veh._remaining_link_length = veh_path[0][1]
                 self._next_veh_departure[lid] = (self._next_time_table[lid], new_veh)
-                log.info(f"Next departure {new_veh}")
+                log.info(f"Vehicle {new_veh.id} of type {type(new_veh)} created for next departure on {self.id} line {lid}")
             except StopIteration:
                 self._next_veh_departure[lid] = None
                 return all_departures
@@ -234,8 +265,16 @@ class PublicTransportMobilityService(AbstractMobilityService):
         return all_departures
 
     def add_passenger(self, user: User, drop_node: str, veh: Vehicle, line_nodes: List[str]):
+        """Method that updates a public transport vehicle plan by inserting user's pick-up and
+        drop-off.
 
-        log.info(f"Add passenger {user} -> {veh}")
+        Args:
+            -user: user to pick-up and drop-off
+            -drop_node: node where user would like to be dropped-off
+            -veh: vehicle that will pick-up and drop-off the user
+            -line_nodes: list of nodes the vehicle should follow
+        """
+        log.info(f"User {user.id} matched with vehicle {veh.id} of mobility service {self.id}")
         user.set_state_waiting_vehicle(veh)
 
         pu_node_ind = line_nodes.index(user.current_node)
@@ -244,7 +283,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         assert pu_node_ind <= do_node_ind, f'Pickup index {pu_node_ind} should necessarily take place '\
             f'before dropoff index {do_node_ind} on the public transport line for User {user.id}.'
 
-        # Get the indexes of veh.activities where pickup and serving activities
+        # Get the indices of veh.activities where pickup and serving activities
         # should be inserted
         if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
             activities_including_curr = [veh.activity] + [a for a in veh.activities]
@@ -266,6 +305,17 @@ class PublicTransportMobilityService(AbstractMobilityService):
         _insert_in_activity(user.current_node, ind_pu, drop_node, ind_do, user, veh)
 
     def estimation_pickup_time(self, user: User, veh: Vehicle, line: dict):
+        """Method that estimates the time a user will wait before being picked up
+        by a vehicle running on a selected line of this service.
+
+        Args:
+            -user: user who requested the service
+            -veh: vehicle identified to serve the user
+            -line: line identified for the user
+
+        Returns:
+            -pickup_time: the estimated pick-up time
+        """
         user_node = user.current_node
         veh_link_borders = veh.current_link
         veh_link_length = self.gnodes[veh_link_borders[0]].adj[veh_link_borders[1]].length
@@ -286,12 +336,21 @@ class PublicTransportMobilityService(AbstractMobilityService):
         #     from the speed computed in the MFD flow so estimation of pickup time
         #     is incorrect)
 
-        dt = Dt(seconds=dist/veh.speed)
+        pickup_time = Dt(seconds=dist/veh.speed)
 
-        return dt
+        return pickup_time
 
     def request(self, user: User, drop_node: str) -> Dt:
-        # for user, drop_node in users.values():
+        """Method that associates a requesting user to a vehicle ans returns the
+        expected pick-up time.
+
+        Args:
+            -user: user who requested the service
+            -drop_node: node where user would like to be dropped off
+
+        Returns:
+            -pickup_time: expected pick-up time
+        """
         start = user.current_node
 
         chosen_veh = None
@@ -304,7 +363,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 user_line_id = lid
                 break
         else:
-            log.error(f'{user} start is not in the PublicTransport mobility service {self.id}')
+            log.error(f'User {user.id} current node is not served by {self.id} mobility service.')
             sys.exit(-1)
 
         if not self.gnodes[start].radj:
@@ -326,11 +385,25 @@ class PublicTransportMobilityService(AbstractMobilityService):
         return self.estimation_pickup_time(user, chosen_veh, chosen_line)
 
     def matching(self, user: User, drop_node: str):
+        """Method that matches a user with the proper vehicle.
+
+        Args:
+            -user: user to be matched
+            -drop_node: node where user would like to be dropped off
+        """
         veh, line = self._cache_request_vehicles[user.id]
-        log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self._id}')
+        log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self.id}')
         self.add_passenger(user, drop_node, veh, line["nodes"])
 
     def step_maintenance(self, dt: Dt):
+        """Method that proceeds to the maintenance phase. For PublicTransportMobilityService,
+        it consists in creating the vehicles at the lines terminal stops ahead of time,
+        launching the vehicles service when needed, according to the
+        timetables, and deleting the vehicles which arrived at the last stop of the line.
+
+        Args:
+            -dt: time elapsed since the last maintenance phase
+        """
         self.gnodes = self.graph.nodes
         for lid in self.lines:
             for new_veh in self.new_departures(self._tcurrent, dt, lid):
@@ -338,16 +411,6 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 if new_veh.activity.activity_type is ActivityType.STOP:
                     new_veh.activity.is_done = True
 
-                # If no user are waiting for this bus, switch activity_type to repositioning to end of line
-                # if not new_veh.activities:
-                #     stop_activity = new_veh.activity
-                #     repo_activity = VehicleActivityRepositioning(stop_activity.node,
-                #                                                  stop_activity.path,
-                #                                                  stop_activity.user)
-                #     new_veh.add_activities([repo_activity])
-                #     new_veh.next_activity()
-
-                log.info(f"Start {new_veh}")
                 if self._observer is not None:
                     new_veh.attach(self._observer)
 
@@ -363,11 +426,10 @@ class PublicTransportMobilityService(AbstractMobilityService):
         pass
 
     def service_level_costs(self, nodes: List[str]) -> dict:
-        """
-                Returns the dict of costs representing the cost of the service computed from a path
+        """Returns the dict of costs representing the cost of the service computed from a path
 
-                Args:
-                    nodes: path (list of nodes)
+        Args:
+            -nodes: path (list of nodes)
         """
         return create_service_costs()
 

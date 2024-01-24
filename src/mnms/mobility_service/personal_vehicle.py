@@ -15,6 +15,13 @@ class PersonalMobilityService(AbstractMobilityService):
         return True
 
     def step_maintenance(self, dt: Dt):
+        """Method that proceeds to the maintenance phase. For PersonalMobilityService,
+        it consists in deleting the vehicles of users who already arrived at their
+        destination.
+
+        Args:
+            -dt: time elapsed since the previous maintenance phase
+        """
         for veh in list(self.fleet.vehicles.values()):
             if veh.activity_type is ActivityType.STOP:
                 if veh.last_dropped_off_user is None or (veh.last_dropped_off_user is not None and veh.last_dropped_off_user.state == UserState.ARRIVED):
@@ -24,9 +31,25 @@ class PersonalMobilityService(AbstractMobilityService):
         pass
 
     def request(self, user: User, drop_node: str) -> Dt:
-        return Dt()
+        """Method that returns the expected pick-up time.
+
+        Args:
+            -user: user who requested the service
+            -drop_node: node where user would like to be droppped off
+
+        Returns:
+            -pickup_time: expected time for user to be picked up
+        """
+        pickup_time = Dt()
+        return pickup_time
 
     def matching(self, user: User, drop_node: str):
+        """Method that proceeds to the matching of a user with a personal vehicle.
+
+        Args:
+            -user: user who should be matched
+            -drop_node: node where user would like to be dropped off
+        """
         upath = list(user.path.nodes)
         upath = upath[user.get_current_node_index():user.get_node_index_in_path(drop_node) + 1]
         veh_path = self.construct_veh_path(upath)
@@ -35,6 +58,7 @@ class PersonalMobilityService(AbstractMobilityService):
         for veh in list(self.fleet.vehicles.values()):
             if veh.activity_type is ActivityType.STOP and veh.last_dropped_off_user == user:
                 found = True
+                # If so, match her with her own vehicle
                 assert veh.current_node == upath[0], f'User {user.id} tried to take her personal vehcile back at the wrong node ({veh.current_node} != {upath[0]})'
                 activities = [VehicleActivityServing(node=upath[-1],
                                                    path=veh_path,
@@ -43,7 +67,7 @@ class PersonalMobilityService(AbstractMobilityService):
                 if veh.activity_type is ActivityType.STOP:
                     veh.activity.is_done = True
         if not found:
-            # Create a new personal vehicle
+            # If not, create a new personal vehicle
             new_veh = self.fleet.create_vehicle(upath[0],
                                             capacity=self._veh_capacity,
                                             activities=[VehicleActivityServing(node=upath[-1],
