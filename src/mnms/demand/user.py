@@ -694,6 +694,7 @@ class Path(object):
     def construct_layers_from_links(self, gnodes):
         previous_layer = gnodes[self.nodes[0]].adj[self.nodes[1]].label
         index = 0
+        i = 0
         layers = []
         for i in range(1,len(self.nodes)-1):
             layer = gnodes[self.nodes[i]].adj[self.nodes[i+1]].label
