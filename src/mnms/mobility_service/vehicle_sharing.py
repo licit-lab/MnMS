@@ -32,11 +32,12 @@ class Station(TimeDependentSubject):
 class VehicleSharingMobilityService(AbstractMobilityService):
 
     def __init__(self,
-                 _id: str,
+                 id: str,
                  free_floating_possible: bool,
                  dt_matching: int,
-                 dt_step_maintenance: int = 0):
-        super(VehicleSharingMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
+                 dt_periodic_maintenance: int = 0):
+        super(VehicleSharingMobilityService, self).__init__(id, veh_capacity=1, dt_matching=dt_matching,
+            dt_periodic_maintenance=dt_periodic_maintenance)
 
         self.free_floating_possible = free_floating_possible
         self.stations = dict()
@@ -44,7 +45,20 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
     def create_station(self, id_station: str, dbroads_node: str, layer_node:str='', capacity: int=30, nb_initial_veh: int = 0, free_floating=False) \
             -> Station:
+        """Method that creates a station for the shared vehicles of this service.
 
+        Args:
+            -id_station: id of the station to create
+            -dbroads_node: id of the roads node where the station should be created
+            -layer_node: id of the multilayer graph node where the station should be created
+            -capacity: number of parking spots in the station
+            - nb_initial_veh: number of vehicles to create jointly with the station
+            -free_floating: boolean which is True is the station is free-floating, False
+             otherwise
+
+        Returns:
+            -station: the created station
+        """
         if len(dbroads_node)>0:
             layer_node = self.layer.id + '_' + dbroads_node
         else:
@@ -86,6 +100,10 @@ class VehicleSharingMobilityService(AbstractMobilityService):
              by the user_low
             -user_flow: the UserFlow object of the simulation
             -decision_model: the AbstractDecisionModel object of the simulation
+
+        Returns:
+            -users_canceling: the list of users who should cancel because the station was
+             removed
         """
         log.info(f'{self._id} vehicle sharing service: Station {id_station} is diconnected and removed')
         self.map_node_station.pop(self.stations[id_station].node)
@@ -101,28 +119,21 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
     def init_free_floating_vehicles(self, id_node: str, nb_veh: int):
         """
-        Create the vehicles and the corresponding free-floating station
+        Creates the vehicles and the corresponding free-floating station.
 
-        Parameters
-        ----------
-        id_node: Node where the vehicles are
-        nb_veh: Number of shared vehicles to be created at this node
-
+        Args:
+            -id_node: Roads node where the vehicles are
+            -nb_veh: Number of shared vehicles to be created at this node
         """
         id_station = 'ff_station_' + self.id + '_' + id_node
         self.create_station(id_station, id_node, '', nb_veh, nb_veh, True)
 
     def create_free_floating_station(self, veh: Vehicle):
         """
-        Create the free floating station corresponding to the vehicle
+        Creates the free floating station corresponding to the vehicle
 
-        Parameters
-        ----------
-        veh: Vehicle
-
-        Returns
-        -------
-
+        Args:
+            -veh: Vehicle
         """
         id_station = 'ff_station_' + self.id + '_' + veh.current_node
 
@@ -134,15 +145,30 @@ class VehicleSharingMobilityService(AbstractMobilityService):
             self.layer.connect_station(id_station, self.layer._multi_graph.odlayer, 500)
 
     def available_vehicles(self, id_station: str):
+        """Method that finds the vehicles available currently at a given station.
 
+        Args:
+            -id_station: id of the station where to find for available vehicles
+
+        Returns:
+            -vehs: the list of available vehicles ids
+        """
         assert id_station in self.stations
 
         node = self.stations[id_station].node
 
-        return [v.id for v in self.fleet.vehicles.values() if (node == v.current_node and v.activity_type==ActivityType.STOP)]
+        vehs = [v.id for v in self.fleet.vehicles.values() if (node == v.current_node and v.activity_type==ActivityType.STOP)]
+
+        return vehs
 
     def step_maintenance(self, dt: Dt):
+        """Method that proceeds to the maintenance phase of this service.
+        It associates the stopped vehicles to the existing stations and eventually
+        create a new free-floating station when the service authorizes it.
 
+        Args:
+            -dt: time elapsed since the previous maintenance phase
+        """
         # TO DO: optimisation (not manage all the vehicle)
         for veh in self.fleet.vehicles.values():
             if veh.activity_type is ActivityType.STOP:
@@ -161,15 +187,16 @@ class VehicleSharingMobilityService(AbstractMobilityService):
         pass
 
     def request(self, user: User, drop_node: str) -> Dt:
+        """Method that associates a requesting user to a vehicle of the service.
+
+            Args:
+                -user: User requesting a vehicle
+                -drop_node: The station of vehicle sharing
+
+            Returns:
+                -service_dt: estimated pickup time which is null if a vehicle is
+                 available, inf otherwise
         """
-
-                Args:
-                    user: User requesting a vehicle
-                    drop_node: The station of vehicle sharing
-
-                Returns: 0 if a vehicle is available, inf if not
-
-                """
         uid = user.id
 
         if user.current_node in self.map_node_station:
@@ -189,6 +216,20 @@ class VehicleSharingMobilityService(AbstractMobilityService):
         return service_dt
 
     def matching(self, user: User, drop_node: str, new_users: List[User], user_flow: UserFlow, decision_model: AbstractDecisionModel):
+        """Method that proceeds to the matching between a requesting user and an identified vehicle.
+
+        Args:
+            -user: the user to be matched
+            -drop_node: the node where user would like to be dropped off
+            -new_users: the list of users who have just/are about to depart but not
+             yet considered in the user flow
+            -user_flow: the simulation user flow module
+            -decision_model: the simulation decision model
+
+        Returns:
+            -users_canceling: the list of users who should cancel their request for
+             this service because a station has been removed
+        """
         veh_id, veh_path = self._cache_request_vehicles[user.id]
         log.info(f'User {user.id} matched with vehicle {veh_id} of mobility service {self._id}')
         upath = list(user.path.nodes)
@@ -216,7 +257,8 @@ class VehicleSharingMobilityService(AbstractMobilityService):
             users_canceling = self.remove_station(station._id, user.id, new_users, user_flow, decision_model)
             return users_canceling
 
-        return []
+        users_canceling = []
+        return users_canceling
 
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
         pass
