@@ -26,16 +26,23 @@ def compute_path_travel_time(path, graph, ms_id):
 class OnDemandMobilityService(AbstractMobilityService):
 
     def __init__(self,
-                 _id: str,
+                 id: str,
                  dt_matching: int,
-                 dt_step_maintenance: int = 0,
+                 dt_periodic_maintenance: int = 0,
                  matching_strategy: str='nearest_idle_vehicle'):
-        super(OnDemandMobilityService, self).__init__(_id, 1, dt_matching, dt_step_maintenance)
+        super(OnDemandMobilityService, self).__init__(id,  veh_capacity=1, dt_matching=dt_matching,
+            dt_periodic_maintenance=dt_periodic_maintenance)
 
         self.gnodes = dict()
         self._matching_strategy = matching_strategy
 
     def create_waiting_vehicle(self, node: str):
+        """Method to create a vehicle at a certain node of the layer on which this
+        mobility service runs.
+
+        Args:
+            -node: node at which the vehicle should be created
+        """
         assert node in self.graph.nodes
         new_veh = self.fleet.create_vehicle(node,
                                             capacity=self._veh_capacity,
@@ -46,6 +53,13 @@ class OnDemandMobilityService(AbstractMobilityService):
             new_veh.attach(self._observer)
 
     def step_maintenance(self, dt: Dt):
+        """Method that proceeds to the maintenance phase. It only updates the dictionnary
+        of nodes of the graph on which this mobility service runs. TODO: check if this
+        is really needed...
+
+        Args:
+            -dt: time elapsed since the previous maintenance phase
+        """
         self.gnodes = self.graph.nodes
 
     def periodic_maintenance(self, dt: Dt):
@@ -175,11 +189,6 @@ class OnDemandMobilityService(AbstractMobilityService):
                         continue
                         # raise PathNotFound(choosen_veh._current_node, user.current_node)
 
-                    len_path = 0
-                    for i in range(len(veh_path) - 1):
-                        j = i + 1
-                        len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
-
                     service_dt = Dt(seconds=cost)
                     self._cache_request_vehicles[uid] = choosen_veh, veh_path
                     break
@@ -187,7 +196,13 @@ class OnDemandMobilityService(AbstractMobilityService):
         return service_dt
 
     def matching(self, user: User, drop_node: str):
+        """Method that proceeds to the matching between a user and an already identified
+        vehicle of this service.
 
+        Args:
+            -user: user to be matched
+            -drop_node: node where user would like to be dropped off
+        """
         veh, veh_path = self._cache_request_vehicles[user.id]
         log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self._id}')
         upath = list(user.path.nodes)
@@ -232,20 +247,25 @@ class OnDemandMobilityService(AbstractMobilityService):
 
 class OnDemandDepotMobilityService(OnDemandMobilityService):
     def __init__(self,
-                 _id: str,
+                 id: str,
                  dt_matching: int,
-                 dt_step_maintenance: int = 0):
-        """
-        Class for modelling an on-demand mobility service with depots
-
-        Args:
-            depot: the list of depot (defined by location -a node-, the waiting vehicles and the capacity)
-        """
-        super(OnDemandDepotMobilityService, self).__init__(_id, dt_matching, dt_step_maintenance)
+                 dt_periodic_maintenance: int = 0,
+                 matching_strategy: str = 'nearest_idle_vehicle'):
+        super(OnDemandDepotMobilityService, self).__init__(id, dt_matching, dt_periodic_maintenance,
+            matching_strategy)
         self.gnodes = None
         self.depots = dict()
 
-    def _create_waiting_vehicle(self, node: str):
+    def create_waiting_vehicle(self, node: str):
+        """Method to create a vehicle at a certain node of the layer on which this
+        mobility service runs.
+
+        Args:
+            -node: node at which the vehicle should be created
+
+        Returns:
+            -new_veh: the new vehicle
+        """
         assert node in self.graph.nodes
         new_veh = self.fleet.create_vehicle(node,
                                             capacity=self._veh_capacity,
@@ -258,36 +278,62 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
         return new_veh
 
     def add_depot(self, node: str, capacity: int):
+        """Method to create a depot full of vehicles.
+
+        Args:
+            -node: node where the depot should be created
+            -capacity: maximum number of vehicles that can be parked in the depot
+        """
         self.depots[node] = {"capacity": capacity,
                             "vehicles": set()}
 
         for _ in range(capacity):
-            new_veh = self._create_waiting_vehicle(node)
+            new_veh = self.create_waiting_vehicle(node)
             self.depots[node]["vehicles"].add(new_veh.id)
 
     def is_depot_full(self, node: str):
-        return self.depots[node]["capacity"] == len(self.depots[node]["vehicles"])
+        """Method that checks if a depot has free parking spot or not.
+
+        Args:
+            -node: node where to check the depot state
+
+        Returns:
+            -full: boolean which is True if the depot is full, False otherwise
+        """
+        assert node in self.depots, f'Cannot find any depot located at {node} node'
+        full = self.depots[node]["capacity"] <= len(self.depots[node]["vehicles"])
+        return full
 
     def step_maintenance(self, dt: Dt):
+        """Method that proceeds to the maintenance phase.
+        It updates the dictionnary of nodes of the graph on which this mobility
+        service runs.
+        Moreover, it makes the stopped vehciles reposition themselves toward the nearest
+        depot.
+
+        Args:
+            -dt: time elapsed since the previous maintenance phase
+        """
         self.gnodes = self.graph.nodes
 
         depot = list(self.depots.keys())
-        depot_pos = np.array([self.gnodes[d].position for d in self.depots.keys()])
+        depot_pos = np.array([self.gnodes[d].position for d in depot])
 
+        # For each stopped vehicle
         for veh in self.fleet.vehicles.values():
             if veh.activity_type is ActivityType.STOP:
                 if veh._current_node not in self.depots:
+                    # Find the nearest non full depot
                     veh_position = veh.position
                     dist_vector = np.linalg.norm(depot_pos - veh_position, axis=1)
                     sorted_ind = np.argsort(dist_vector)
-
                     nearest_depot = None
                     for nearest_depot_ind in sorted_ind:
                         current_depot = depot[nearest_depot_ind]
                         if not self.is_depot_full(current_depot):
                             nearest_depot = current_depot
                             break
-
+                    # Get the shortest path till the nearest depot
                     veh_path, cost = dijkstra(self.graph,
                                               veh._current_node,
                                               nearest_depot,
@@ -297,70 +343,24 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
                                               {self.layer.id})
                     if cost == float('inf'):
                         raise PathNotFound(veh._current_node, depot)
-
+                    # Make the vehicle reposition till the nearest depot
                     veh_path = self.construct_veh_path(veh_path)
                     repositioning = VehicleActivityRepositioning(node=nearest_depot,
                                                                  path=veh_path)
                     veh.activity.is_done = True
                     veh.add_activities([repositioning])
                 else:
+                    # Vehicle is in the depot
                     self.depots[veh._current_node]["vehicles"].add(veh.id)
 
-    def request(self, user: User, drop_node: str) -> Dt:
-        """
+    def matching(self, user: User, drop_node: str):
+        """Method that matches a user with an already identified vehicle of this
+        service.
 
         Args:
-            user: User requesting a ride
-            drop_node:
-
-        Returns: waiting time before pick-up
-
+            -user: user to be matched
+            -drop_node: node where the user would like to be dropped off
         """
-
-        service_dt = Dt(hours=24)
-        upos = user.position
-
-        vehs = list(self.fleet.vehicles.keys())
-
-        while vehs:
-            veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
-            dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
-            nearest_veh_index = np.argmin(dist_vector)
-            nearest_veh = vehs[nearest_veh_index]
-
-            vehs.remove(nearest_veh)
-            choosen_veh = self.fleet.vehicles[nearest_veh]
-            #if not choosen_veh.is_full:
-            if choosen_veh.is_empty:
-                # Vehicle available if either stopped or repositioning, and has no activity planned afterwards
-                available = True if ((choosen_veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) and (not choosen_veh.activities)) else False
-                if available:
-                    # Compute pick-up path and cost from end of current activity
-                    veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
-                    choosen_veh.activities[-1].node
-                    veh_path, cost = dijkstra(self.graph,
-                                              veh_last_node,
-                                              user.current_node,
-                                              'travel_time',
-                                              {self.layer.id: self.id,
-                                               "TRANSIT": "WALK"},
-                                              {self.layer.id})
-                    # If vehicle cannot reach user, skip and consider next vehicle
-                    if cost == float('inf'):
-                        continue
-
-                    len_path = 0
-                    for i in range(len(veh_path) - 1):
-                        j = i + 1
-                        len_path += self.gnodes[veh_path[i]].adj[veh_path[j]].length
-
-                    service_dt = Dt(seconds=cost)
-                    self._cache_request_vehicles[user.id] = choosen_veh, veh_path
-                    break
-
-        return service_dt
-
-    def matching(self, user: User, drop_node: str):
         veh, veh_path = self._cache_request_vehicles[user.id]
         log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self._id}')
         upath = list(user.path.nodes)
@@ -392,6 +392,7 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
             if veh._current_node in self.depots:
+                # Remove the vehicle from the depot
                 self.depots[veh._current_node]["vehicles"].remove(veh.id)
 
     def __dump__(self):
