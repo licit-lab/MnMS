@@ -129,7 +129,8 @@ class CSVDemandManager(AbstractDemandManager):
         self._demand_type = None
         self._optional_columns = None
         mandatory_columns = ['ID', 'DEPARTURE', 'ORIGIN', 'DESTINATION']
-        time_format = "%H:%M:%S"
+        time_format_1 = "%H:%M:%S"
+        time_format_2 = "%H:%M:%S.%f"
 
         try:
             headers = next(self._reader)
@@ -157,9 +158,12 @@ class CSVDemandManager(AbstractDemandManager):
         first_line = next(self._reader)
         departure_time = first_line[1]
         try:
-            datetime.strptime(departure_time, time_format)
+            datetime.strptime(departure_time, time_format_1)
         except ValueError:
-            raise CSVDemandParseError(csvfile)
+            try:
+                datetime.strptime(departure_time, time_format_2)
+            except ValueError:
+                raise CSVDemandParseError(csvfile)
         match_x = re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[2])
         match_y = re.match(r'^[-+]?[0-9]*\.*[0-9]*\d\s[-+]?[0-9]*\.*[0-9]*\d$', first_line[3])
         if match_x is not None and match_y is not None:
