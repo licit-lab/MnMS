@@ -207,6 +207,18 @@ class AbstractMobilityService(ABC):
             # Do not tirgger a matching phase
             self._counter_matching += 1
 
+    def estimate_pickup_time_for_planning(self, pu_node):
+        """Method that returns the estimated pickup time at a specific node. This
+        information is used by user to (re)plan.
+
+        Args:
+            -pu_node: pickup node
+
+        Returns:
+            -estimated pickup time in seconds
+        """
+        return 0
+
     def remove_activity_by_index(self, veh, index, mlgraph, cost):
         """Method that removes an activity in a vehicle plan by index and
         adapt the following activity path consequently.

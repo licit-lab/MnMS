@@ -1,5 +1,6 @@
 import unittest
 from tempfile import TemporaryDirectory
+import pandas as pd
 
 from mnms.demand import User, BaseDemandManager
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
@@ -99,7 +100,11 @@ class TestCostsFunctions(unittest.TestCase):
         ## Demand
         self.demand = BaseDemandManager([User("U0", [-20, 0], [0, 5000], Time("07:00:00"))])
         self.demand.add_user_observer(CSVUserObserver(self.pathdir+'myuser.csv'))
-        self.decision_model = DummyDecisionModel(mlgraph, cost='generalized_cost')
+        self.decision_model = DummyDecisionModel(mlgraph, cost='generalized_cost',
+            outfile=self.pathdir+'paths.csv', verbose_file=True)
+        def gc_waiting(wt, vot=0.003):
+            return vot * wt
+        self.decision_model.add_waiting_cost_function('generalized_cost', gc_waiting)
 
         ## MFDFlowMotor
         self.flow = MFDFlowMotor()
@@ -149,7 +154,6 @@ class TestCostsFunctions(unittest.TestCase):
                        Dt(seconds=1),
                        10)
         self.assertIn("generalized_cost", self.mlgraph.transitlayer._costs_functions["WALK"])
-        print(self.supervisor._flow_motor.reservoirs['res'].dict_accumulations)
         for lid, link in self.mlgraph.graph.links.items():
             for mservice, costs in link.costs.items():
                 self.assertIn('generalized_cost', costs.keys())
@@ -169,19 +173,33 @@ class TestCostsFunctions(unittest.TestCase):
                     elif layer_link_id in ['L1_B2_B3', 'L1_B1_B2']:
                         self.assertAlmostEqual(layer_link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 9)
 
-        # TODO: for now, estimated travel time and realized travel time are different,
-        #       so as estimated travel cost and realized travel cost because the
-        #       waiting time for a vehicle (PT, MoD, etc.) is not included in the
-        #       estimation of travel time/cost. New feature = add a waiting time
-        #       estimator
+    def test_waiting_cost(self):
+        self.setUp()
+        self.supervisor.run(Time("07:00:00"),
+                       Time("09:00:00"),
+                       Dt(seconds=1),
+                       10)
+        with open(self.pathdir + "paths.csv") as f:
+            dfp = pd.read_csv(f, sep=';')
+        self.assertEqual(1, len(dfp))
+        cost = 3 * 0.003 * 50 / 1.42 + 0.0005 * 2000 + 0.003 * 2000 / 8.33 + 6.44 + 0.003 * 2900 / 7 + 0.003 * 30
+        self.assertAlmostEqual(dfp['COST'].iloc[0],cost)
 
-        #total_cost = 2 * 0.003 * 50 / 1.42 + 0.003 * 2000 / 7 + 0.0005 * 2000 + 0.003 * 20 / 1.42 + 3 + 2 + 1.44 + 2 * 0.003 * 1450 / 7
-        #travel_time = Dt(seconds=2 * 50 / 1.42 + 2000 / 7 + 20 / 1.42 + 2 * 1450 / 7)
-        #predicted_arrival_time = self.demand._users[0].departure_time.add_time(travel_time)
-
-        #print(f"User arrival time = {self.demand._users[0].arrival_time}, predicted arrival time = {predicted_arrival_time}")
-        #print(f"User path cost = {self.demand._users[0].path.path_cost}, predicted cost = {total_cost}")
-        #print(f"User path {self.demand._users[0].path}")
-
-        #self.assertAlmostEqual(self.demand._users[0].path.path_cost, total_cost)
-        #self.assertAlmostEqual(self.demand._users[0].arrival_time.to_seconds(), predicted_arrival_time.to_seconds())
+    def test_additional_cost(self):
+        self.setUp()
+        def gc_additional(path, user):
+            mss = ','.join(path.mobility_services)
+            if 'PersonalVehicle,WALK,Bus' in mss:
+                return -1
+            else:
+                return 0
+        self.decision_model.add_additional_cost_function('generalized_cost', gc_additional)
+        self.supervisor.run(Time("07:00:00"),
+                       Time("09:00:00"),
+                       Dt(seconds=1),
+                       10)
+        with open(self.pathdir + "paths.csv") as f:
+            dfp = pd.read_csv(f, sep=';')
+        self.assertEqual(1, len(dfp))
+        cost = 3 * 0.003 * 50 / 1.42 + 0.0005 * 2000 + 0.003 * 2000 / 8.33 + 6.44 + 0.003 * 2900 / 7 + 0.003 * 30 - 1
+        self.assertAlmostEqual(dfp['COST'].iloc[0],cost)

@@ -304,7 +304,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         # Insert the activities corresponding to pickup and serving in vehicles' activities
         _insert_in_activity(user.current_node, ind_pu, drop_node, ind_do, user, veh)
 
-    def estimation_pickup_time(self, user: User, veh: Vehicle, line: dict):
+    def estimation_pickup_time_at_match(self, user: User, veh: Vehicle, line: dict):
         """Method that estimates the time a user will wait before being picked up
         by a vehicle running on a selected line of this service.
 
@@ -357,14 +357,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         chosen_line = None
 
         # Select the proper line for user
-        for lid, line in self.lines.items():
-            if start in line['nodes']:
-                chosen_line = line
-                user_line_id = lid
-                break
-        else:
-            log.error(f'User {user.id} current node is not served by {self.id} mobility service.')
-            sys.exit(-1)
+        user_line_id, chosen_line = self.find_line(start)
 
         if not self.gnodes[start].radj:
             departure_time, waiting_veh = self._next_veh_departure[user_line_id]
@@ -382,7 +375,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         self._cache_request_vehicles[user.id] = (chosen_veh, chosen_line)
 
-        return self.estimation_pickup_time(user, chosen_veh, chosen_line)
+        return self.estimation_pickup_time_at_match(user, chosen_veh, chosen_line)
 
     def matching(self, user: User, drop_node: str):
         """Method that matches a user with the proper vehicle.
@@ -415,6 +408,42 @@ class PublicTransportMobilityService(AbstractMobilityService):
                     new_veh.attach(self._observer)
 
             self.clean_arrived_vehicles(lid)
+
+    def find_line(self, node):
+        """Method that finds back the line serving a certain node.
+
+        Args:
+            -node: node to associate to a line
+
+        Returns:
+            -chosen_line_id: the id of the line serving the node
+            -chosen_line: the line serving the node
+        """
+        for lid, line in self.lines.items():
+            if node in line['nodes']:
+                chosen_line = line
+                chosen_line_id = lid
+                break
+        else:
+            log.error(f'Node {node} is not served by {self.id} mobility service.')
+            sys.exit(-1)
+        return chosen_line_id, chosen_line
+
+    def estimate_pickup_time_for_planning(self, pu_node):
+        """Method that returns the estimated pickup time for a specific public transport
+        node. The estimated pick up time corresponds to the headway of the line serving
+        the node divided by 2.
+
+        Args:
+            -pu_node: pickup node
+
+        Returns:
+            -estimated_pickup_time: estimated pickup time in seconds
+        """
+        _, chosen_line = self.find_line(pu_node)
+        estimated_pickup_time = chosen_line['table'].get_freq() / 2
+        return estimated_pickup_time
+
 
     def periodic_maintenance(self, dt: Dt):
         pass
