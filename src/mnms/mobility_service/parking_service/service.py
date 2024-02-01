@@ -72,13 +72,13 @@ def get_remaining_distance(veh: Vehicle, plan: List[VehicleActivity]) -> float:
 
 class ParkingService(AbstractOnDemandMobilityService):
     def __init__(self,
-                 _id: str,
+                 id: str,
                  dt_matching: int,
                  dt_rebalancing: int,
                  veh_capacity: int,
                  horizon: AbstractDemandHorizon,
                  vehicle_filter: FilterProtocol = None):
-        super(ParkingService, self).__init__(_id, veh_capacity, dt_matching, dt_rebalancing, horizon)
+        super(ParkingService, self).__init__(id, veh_capacity, dt_matching, dt_rebalancing, horizon)
 
         self._vehicle_filter = IsWaiting() & InRadiusFilter(100) if vehicle_filter is None else vehicle_filter
         self._replanning_strategy = None

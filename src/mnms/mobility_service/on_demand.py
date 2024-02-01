@@ -1,8 +1,11 @@
 from typing import Tuple, Dict, List
 
 import numpy as np
+from scipy.optimize import linear_sum_assignment
+import multiprocessing
+import sys
 
-from hipop.shortest_path import dijkstra
+from hipop.shortest_path import dijkstra, parallel_dijkstra
 
 from mnms import create_logger
 from mnms.demand import User
@@ -29,12 +32,22 @@ class OnDemandMobilityService(AbstractMobilityService):
                  id: str,
                  dt_matching: int,
                  dt_periodic_maintenance: int = 0,
-                 matching_strategy: str='nearest_idle_vehicle'):
-        super(OnDemandMobilityService, self).__init__(id,  veh_capacity=1, dt_matching=dt_matching,
+                 matching_strategy: str='nearest_idle_vehicle_in_radius_fifo',
+                 radius: float = 10000):
+        super(OnDemandMobilityService, self).__init__(id, veh_capacity=1, dt_matching=dt_matching,
             dt_periodic_maintenance=dt_periodic_maintenance)
 
         self.gnodes = dict()
         self._matching_strategy = matching_strategy
+        self._radius = radius
+
+    @property
+    def matching_strategy(self):
+        return self._matching_strategy
+
+    @property
+    def radius(self):
+        return self._radius
 
     def create_waiting_vehicle(self, node: str):
         """Method to create a vehicle at a certain node of the layer on which this
@@ -65,52 +78,217 @@ class OnDemandMobilityService(AbstractMobilityService):
     def periodic_maintenance(self, dt: Dt):
         pass
 
-    def request(self, user: User, drop_node: str) -> Dt:
-        """Method that associates a vehicle of this mobility service to the requesting
-        user. It calls the proper matching strategy.
+    def launch_matching(self, new_users, user_flow, decision_model):
+        """
+        Method that launches the matching phase.
 
         Args:
-            -user: user requesting a ride
-            -drop_node: node where user would like to be dropped off
-
-        Returns:
-            -service_dt: waiting time before pick-up
+            -new_users: users who have chosen a path but not yet departed
+            -user_flow: the UserFlow object of the simulation
+            -decision_model: the AbstractDecisionModel object of the simulation
         """
-        if self._matching_strategy == 'nearest_idle_vehicle':
-            service_dt = self.request_nearest_idle_vehicle(user, drop_node)
-        elif self._matching_strategy == 'nearest_vehicle_in_radius':
-            service_dt = self.request_nearest_vehicle_in_radius(user, drop_node)
+        if self._counter_matching == self._dt_matching:
+            # Trigger a matching phase
+            self._counter_matching = 0
+            if self.matching_strategy in ['nearest_idle_vehicle_in_radius_fifo', 'nearest_vehicle_in_radius_fifo']:
+                self.launch_matching_fifo()
+            elif self.matching_strategy in ['nearest_idle_vehicle_in_radius_batched', 'nearest_vehicle_in_radius_batched']:
+                self.launch_matching_batch()
+            else:
+                log.error(f'Matching strategy {self.matching_strategy} unknown for {self.id} mobility service')
+                sys.exit(-1)
         else:
-            log.error(f'Unknown matching strategy {self._matching_strategy} for {self.id} mobility service')
+            # Do not tirgger a matching phase
+            self._counter_matching += 1
+
+    def launch_matching_fifo(self):
+        """Method that launches the matching phase by treating the requests one by
+        one in  order of arrival.
+        """
+        reqs = list(self._user_buffer.values())
+        sorted_reqs = sorted(reqs)
+        for req in sorted_reqs:
+            user = req.user
+            drop_node = req.drop_node
+            if self.matching_strategy == 'nearest_idle_vehicle_in_radius_fifo':
+                service_dt = self.request_nearest_idle_vehicle_in_radius_fifo(user, drop_node)
+            elif self.matching_strategy == 'nearest_vehicle_in_radius_fifo':
+                service_dt = self.request_nearest_vehicle_in_radius_fifo(user, drop_node)
+            else:
+                log.error(f'Matching strategy {self.matching_strategy} unknown for {self.id} mobility service')
+                sys.exit(-1)
+            # Check pick-up time proposition compared with user waiting tolerance
+            if user.pickup_dt[self.id] > service_dt:
+                # Match user with vehicle
+                self.matching(user, drop_node)
+                # Remove user from list of users waiting to be matched
+                self.cancel_request(user.id)
+            else:
+                log.info(f"{user.id} refused {self.id} offer (predicted pickup time ({service_dt}) is too long, wait for better proposition...")
+            self._cache_request_vehicles = dict()
+
+    def launch_matching_batch(self):
+        """Method that launches the matching phase by treating the requests jointly.
+        """
+        ### Get the batches of requests and considered vehicles
+        reqs = list(self._user_buffer.values())
+        if self.matching_strategy == 'nearest_idle_vehicle_in_radius_batched':
+            vehs = [veh for veh in self.fleet.vehicles.values() if (veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) \
+                and (not veh.activities)]
+        elif self.matching_strategy == 'nearest_vehicle_in_radius_batched':
+            vehs = list(self.fleet.vehicles.values())
+        else:
+            log.error(f'Matching strategy {self.matching_strategy} unknown for {self.id} mobility service')
             sys.exit(-1)
-        return service_dt
+        vehs = np.array(vehs)
 
+        ### Compute the pickup times matrix (for all req-veh pairs)
+        inf = 10e8 # will be applied when veh is out of request's radius or service time out of user's tolerance
+        pickup_times_matrix = np.full((len(reqs), len(vehs)), inf)
+        veh_paths_matrix = np.full((len(reqs), len(vehs)), None)
 
-    def request_nearest_vehicle_in_radius(self, user: User, drop_node: str, radius: float = 5000) -> Dt:
-        """Assigns the vehicle with the smallest pick up time among vehicles located within
-        a certain radius around the user pick-up node. Vehicles are considered even if they
-        already have activities in their plan (the activities related to the new user are considered
-        inserted at the end of the vehicle plan).
+        ## Gathers params for calling Dijkstra in parallel once
+        ridxs = []
+        vidxs = []
+        origins = []
+        destinations = []
+        for ridx, req in enumerate(reqs):
+            # Search for the vehicles close to the user (within radius)
+            vehs_pos = np.array([v.position for v in vehs])
+            dist_vector = np.linalg.norm(vehs_pos - req.user.position, axis=1)
+            nearest_vehs_indices = dist_vector <= self.radius # radius in meters
+            nearest_vehs = vehs[nearest_vehs_indices]
+            nearest_vehs_indices = list(np.where(nearest_vehs_indices)[0])
+
+            # Compute estimated pickup time for the vehicles nearby
+            for vidx, veh in zip(nearest_vehs_indices, nearest_vehs):
+                veh_last_node = veh.activity.node if not veh.activities else \
+                        veh.activities[-1].node
+                ridxs.append(ridx)
+                vidxs.append(vidx)
+                origins.append(veh_last_node)
+                destinations.append(req.user.current_node)
+
+        ## Call Dijkstra once
+        paths = parallel_dijkstra(self.graph,
+                                  origins,
+                                  destinations,
+                                  [{self.layer.id: self.id}]*len(origins),
+                                  'travel_time',
+                                  multiprocessing.cpu_count(),
+                                  [{self.layer.id}]*len(origins))
+
+        ## Parse outputs and complete the pickup times and veh paths matrices
+        for i in range(len(paths)):
+            ridx = ridxs[i]
+            req = reqs[ridx]
+            vidx = vidxs[i]
+            veh = vehs[vidx]
+            veh_path, tt = paths[i]
+            # If vehicle cannot reach user, skip and consider next vehicle
+            if tt == float('inf'):
+                continue
+            service_dt = Dt(seconds=tt)
+            if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
+                veh_curr_act_path_nodes = veh.path_to_nodes(veh.activity.path)
+                veh_curr_node_ind_in_path = veh_curr_act_path_nodes.index(veh.current_node) # NB: works only when an acticity path does not contain several times the same node
+                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.graph, self.id))
+                current_link = self.graph.nodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
+                service_dt += Dt(seconds=veh.remaining_link_length / current_link.costs[self.id]['speed'])
+            for a in veh.activities:
+                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
+            # Apply user's waiting tolerance
+            if service_dt < req.user.pickup_dt[self.id]:
+                pickup_times_matrix[ridx][vidx] = service_dt.to_seconds()
+                veh_paths_matrix[ridx][vidx] = veh_path
+
+        ### Solve the minimum total pickup time matching problem
+        row_ind, col_ind = linear_sum_assignment(pickup_times_matrix)
+
+        ### Parse outputs and proceed to the matches when relevant
+        for i in range(len(row_ind)):
+            req_ind = row_ind[i]
+            req = reqs[req_ind]
+            veh_ind = col_ind[i]
+            veh = vehs[veh_ind]
+            if pickup_times_matrix[req_ind][veh_ind] < inf:
+                veh_path = veh_paths_matrix[req_ind][veh_ind]
+                self._cache_request_vehicles[req.user.id] = veh, veh_path
+                self.matching(req.user, req.drop_node)
+                self.cancel_request(req.user.id)
+                self._cache_request_vehicles = dict()
+
+    def request_nearest_idle_vehicle_in_radius_fifo(self, user: User, drop_node: str) -> Dt:
+        """The nearest (in time) idle vehicle located within a certain radius around the
+        desired pickup point at the end of its plan is matched with the user. If no
+        idle vehicle is within the specified radius, returns an infinite waiting time.
 
         Args:
             -user: user requesting a ride
             -drop_node: node where user would like to be dropped off
-            -radius: radius wihtin which vehicles are considered for the match
 
         Returns:
             -service_dt: waiting time before pick-up
-
         """
-        upos = user.position
-        uid = user.id
+        # Get all idle vehicles of the fleet
+        idle_vehs = np.array([veh for veh in self.fleet.vehicles.values() if (veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) \
+            and (not veh.activities)])
+        if len(idle_vehs) == 0:
+            # There is no idle vehicle in the fleet, match is not possible
+            return Dt(hours=24)
+
+        # Search for the idle vehicles close to the user (within radius)
+        vehs_pos = np.array([v.position for v in idle_vehs])
+        dist_vector = np.linalg.norm(vehs_pos - user.position, axis=1)
+        nearest_vehs_indices = dist_vector <= self.radius
+        nearest_vehs = idle_vehs[nearest_vehs_indices]
+        if len(nearest_vehs) == 0:
+            # There is no vehicle surrounding the user, match is not possible
+            return Dt(hours=24)
+
+        # Compute service time for the idle vehs in radius
+        candidates = []
+        for veh in nearest_vehs:
+            veh_node = veh.current_node
+            veh_path, tt = dijkstra(self.graph, veh_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+            if tt == float('inf'):
+                # This vehicle cannot reach user, skip and consider next vehicle
+                continue
+            service_dt = Dt(seconds=tt)
+            candidates.append((veh, service_dt, veh_path))
+
+        # Select the veh with the smallest service time
+        if candidates:
+            candidates.sort(key=lambda x:x[1])
+            self._cache_request_vehicles[user.id] = candidates[0][0], candidates[0][2]
+        else:
+            return Dt(hours=24)
+
+        return candidates[0][1]
+
+    def request_nearest_vehicle_in_radius_fifo(self, user: User, drop_node: str) -> Dt:
+        """The nearest (in time) vehicle located within a certain radius around the
+        desired pickup point at the end of its plan is matched with the user. If no
+        vehicle is or finishes its plan within the specified radius, returns an infinite
+        waiting time.
+
+        Args:
+            -user: user requesting a ride
+            -drop_node: node where user would like to be dropped off
+
+        Returns:
+            -service_dt: waiting time before pick-up
+        """
+        # Get all vehicles of the fleet
         vehs = np.array(list(self.fleet.vehicles.values()))
         if len(vehs) == 0:
+            # There is no vehicle in the fleet, match is not possible
             return Dt(hours=24)
-        vehs_pos = np.array([v.position for v in vehs])
 
-        # Search for the vehicles close to the user
-        dist_vector = np.linalg.norm(vehs_pos - upos, axis=1)
-        nearest_vehs_indices = dist_vector <= radius # radius in meters
+        # Search for the vehicles close to the user (within radius)
+        vehs_pos = np.array([v.position for v in vehs])
+        dist_vector = np.linalg.norm(vehs_pos - user.position, axis=1)
+        nearest_vehs_indices = dist_vector <= self.radius # radius in meters
         nearest_vehs = vehs[nearest_vehs_indices]
 
         # If no vehicle surrounds the user, return inf service time
@@ -127,6 +305,7 @@ class OnDemandMobilityService(AbstractMobilityService):
             if tt == float('inf'):
                 continue
 
+            # Compute the estimated pickup time including end of current vehicle's plan plus the pickup activity for user
             service_dt = Dt(seconds=tt)
             if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
                 veh_curr_act_path_nodes = veh.path_to_nodes(veh.activity.path)
@@ -141,59 +320,59 @@ class OnDemandMobilityService(AbstractMobilityService):
         # Select the veh with the smallest service time
         if candidates:
             candidates.sort(key=lambda x:x[1])
-            self._cache_request_vehicles[uid] = candidates[0][0], candidates[0][2]
+            self._cache_request_vehicles[user.id] = candidates[0][0], candidates[0][2]
         else:
             return Dt(hours=24)
 
         return candidates[0][1]
 
-    def request_nearest_idle_vehicle(self, user: User, drop_node: str) -> Dt:
-        """Assigns the nearest idle vehicle to the requesting user.
-
-        Args:
-            -user: User requesting a ride
-            -drop_node: node where user would like to be dropped off
-
-        Returns:
-            -service_dt: waiting time before pick-up
-        """
-
-        upos = user.position
-        uid = user.id
-        vehs = list(self.fleet.vehicles.keys())
-
-        service_dt = Dt(hours=24)
-
-        while vehs:
-
-            # Search for the nearest vehicle to the user
-            veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
-            dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
-            nearest_veh_index = np.argmin(dist_vector)
-            nearest_veh = vehs[nearest_veh_index]
-
-            vehs.remove(nearest_veh)
-
-            choosen_veh = self.fleet.vehicles[nearest_veh]
-#            if not choosen_veh.is_full:
-            if choosen_veh.is_empty:
-                # Vehicle available if either stopped or repositioning, and has no activity planned afterwards
-                available = True if ((choosen_veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) and (not choosen_veh.activities)) else False
-                if available:
-                    # Compute pick-up path and cost from end of current activity
-                    veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
-                    choosen_veh.activities[-1].node
-                    veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
-                    # If vehicle cannot reach user, skip and consider next vehicle
-                    if cost == float('inf'):
-                        continue
-                        # raise PathNotFound(choosen_veh._current_node, user.current_node)
-
-                    service_dt = Dt(seconds=cost)
-                    self._cache_request_vehicles[uid] = choosen_veh, veh_path
-                    break
-
-        return service_dt
+    # def request_nearest_idle_vehicle(self, user: User, drop_node: str) -> Dt:
+    #     """Assigns the nearest idle vehicle to the requesting user.
+    #
+    #     Args:
+    #         -user: User requesting a ride
+    #         -drop_node: node where user would like to be dropped off
+    #
+    #     Returns:
+    #         -service_dt: waiting time before pick-up
+    #     """
+    #
+    #     upos = user.position
+    #     uid = user.id
+    #     vehs = list(self.fleet.vehicles.keys())
+    #
+    #     service_dt = Dt(hours=24)
+    #
+    #     while vehs:
+    #
+    #         # Search for the nearest vehicle to the user
+    #         veh_pos = np.array([self.fleet.vehicles[v].position for v in vehs])
+    #         dist_vector = np.linalg.norm(veh_pos - upos, axis=1)
+    #         nearest_veh_index = np.argmin(dist_vector)
+    #         nearest_veh = vehs[nearest_veh_index]
+    #
+    #         vehs.remove(nearest_veh)
+    #
+    #         choosen_veh = self.fleet.vehicles[nearest_veh]
+    #         #if not choosen_veh.is_full:
+    #         if choosen_veh.is_empty:
+    #             # Vehicle available if either stopped or repositioning, and has no activity planned afterwards
+    #             available = True if ((choosen_veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) and (not choosen_veh.activities)) else False
+    #             if available:
+    #                 # Compute pick-up path and cost from end of current activity
+    #                 veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
+    #                 choosen_veh.activities[-1].node
+    #                 veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+    #                 # If vehicle cannot reach user, skip and consider next vehicle
+    #                 if cost == float('inf'):
+    #                     continue
+    #                     # raise PathNotFound(choosen_veh._current_node, user.current_node)
+    #
+    #                 service_dt = Dt(seconds=cost)
+    #                 self._cache_request_vehicles[uid] = choosen_veh, veh_path
+    #                 break
+    #
+    #     return service_dt
 
     def matching(self, user: User, drop_node: str):
         """Method that proceeds to the matching between a user and an already identified
@@ -250,7 +429,7 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
                  id: str,
                  dt_matching: int,
                  dt_periodic_maintenance: int = 0,
-                 matching_strategy: str = 'nearest_idle_vehicle'):
+                 matching_strategy: str = 'nearest_idle_vehicle_in_radius_fifo'):
         super(OnDemandDepotMobilityService, self).__init__(id, dt_matching, dt_periodic_maintenance,
             matching_strategy)
         self.gnodes = None

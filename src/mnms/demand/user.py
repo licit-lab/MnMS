@@ -407,7 +407,7 @@ class User(TimeDependentSubject):
             self.remaining_link_length = gnodes[self.path.nodes[current_node_ind]].adj[self.path.nodes[current_node_ind+1]].length
         else:
             # Find user former requested drop node
-            former_drop_node = self.requested_service.user_buffer[self.id][1]
+            former_drop_node = self.requested_service.user_buffer[self.id].drop_node
             if new_drop_node != former_drop_node:
                 # User maintains her request but changes the requested drop node
                 self.requested_service.update_request(self, new_drop_node)
@@ -758,3 +758,11 @@ class Path(object):
                 dn = self.nodes[j+1]
                 path_cost += mlgraph.graph.nodes[un].adj[dn].costs[ms][cost]
         self.path_cost = path_cost
+
+    def increment_path_cost(self, additional_cost):
+        """Method that adds an additional cost value to the current path cost.
+
+        Args:
+            -additional_cost: the cost to add
+        """
+        self.path_cost += additional_cost

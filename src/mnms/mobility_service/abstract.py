@@ -14,20 +14,22 @@ log = create_logger(__name__)
 
 class AbstractMobilityService(ABC):
     def __init__(self,
-                 _id: str,
+                 id: str,
                  veh_capacity: int,
                  dt_matching: int,
                  dt_periodic_maintenance: int):
         """
-        Interface for defining a new type of mobility service
+        Interface for defining a new type of mobility service.
 
         Args:
-            _id: the id of the mobility service
-            veh_capacity: the capacity of the vehicles
-            dt_matching: the time of accumulation of request before matching
-            dt_periodic_maintenance: duration in number of time steps of the maintenance period
+            -id: the id of the mobility service
+            -veh_capacity: the capacity of the vehicles composing its fleet
+            -dt_matching: the number of flow time steps elapsed between two calls
+             of the matching
+            -dt_periodic_maintenance: the number of flow steps elapsed between two
+             call of the periodic maintenance
         """
-        self._id: str = _id
+        self._id: str = id
         self.layer: "AbstractLayer" = None
         self.fleet: Optional[FleetManager] = None
         self._veh_capacity: int = veh_capacity
@@ -40,8 +42,8 @@ class AbstractMobilityService(ABC):
         self._counter_maintenance: int = 0
         self._counter_matching: int = 0
 
-        self._user_buffer: Dict[str, Tuple[User, str]] = dict()     # Dynamic list of user with their drop node to process
-        self._cache_request_vehicles = dict()                       # Result of requests for each user
+        self._user_buffer: Dict[str, Request] = dict()     # Dynamic list of user with request
+        self._cache_request_vehicles = dict()              # Result of requests for each user
 
         self._observer: Optional = None
 
@@ -96,7 +98,7 @@ class AbstractMobilityService(ABC):
         #return create_service_costs()
         pass
 
-    def add_request(self, user: "User", drop_node:str) -> None:
+    def add_request(self, user: "User", drop_node:str, request_time:Time) -> None:
         """
         Add a new request to the mobility service defined by the users and its drop node
 
@@ -104,12 +106,14 @@ class AbstractMobilityService(ABC):
         ----------
         user: user object
         drop_node: drop node id
+        request_time: time at which request is placed
 
         Returns
         -------
 
         """
-        self._user_buffer[user.id] = (user, drop_node) #NB: works only for at most one simulatneous request per user...
+        self._user_buffer[user.id] = Request(user, drop_node, request_time)
+        #NB: works only for at most one simulatneous request per user...
 
     def cancel_request(self, uid: str) -> None:
         """
@@ -137,7 +141,7 @@ class AbstractMobilityService(ABC):
 
         """
         if user.id in self._user_buffer.keys():
-            self._user_buffer[user.id] = (user, drop_node)
+            self._user_buffer[user.id] = Request(user, drop_node, self._user_buffer[user.id].request_time)
         else:
             log.warning(f'User {user.id} tried to update a request addressed to {self.id} '\
                 f'mobility service but no request from this user was found in the buffer.')
@@ -177,7 +181,9 @@ class AbstractMobilityService(ABC):
             self._counter_matching = 0
             users_canceling = [] # gathers the users who want to cancel after a
                                  # match happened between of vehicle and another user
-            for uid, (user, drop_node) in list(self._user_buffer.items()):
+            for uid, req in list(self._user_buffer.items()):
+                user = req.user
+                drop_node = req.drop_node
                 if uid not in users_canceling:
                     # User makes service request
                     service_dt = self.request(user, drop_node)
@@ -191,7 +197,7 @@ class AbstractMobilityService(ABC):
                         else:
                             self.matching(user, drop_node)
                         # Remove user from list of users waiting to be matched
-                        self._user_buffer.pop(uid)
+                        self.cancel_request(uid)
                     else:
                         log.info(f"{uid} refused {self.id} offer (predicted pickup time ({service_dt}) is too long, wait for better proposition...")
                     self._cache_request_vehicles = dict()
@@ -451,7 +457,6 @@ class AbstractMobilityService(ABC):
         """
         pass
 
-    @abstractmethod
     def request(self, user: User, drop_node: str) -> Dt:
         """
         Request the mobility service for a user
@@ -531,3 +536,29 @@ class AbstractOnDemandMobilityService(AbstractMobilityService, metaclass=ABCMeta
             self.rebalancing(next_demand, self._horizon.dt)
         else:
             self._counter_maintenance += 1
+
+class Request(object):
+
+    def __init__(self, user, drop_node, request_time):
+        """Constructor of a Request object.
+
+        Args:
+            -user: user who made the request
+            -drop_node: node where user would like to be dropped off
+            -request_time: time at which user issued the request
+        """
+        self.user = user
+        self.drop_node = drop_node
+        self.request_time = request_time
+
+    def __leq__(self, other):
+        if self.request_time <= other.request_time:
+            return True
+        else:
+            return False
+
+    def __lt__(self, other):
+        if self.request_time < other.request_time:
+            return True
+        else:
+            return False
