@@ -270,40 +270,36 @@ class MultiLayerGraph(object):
         assert self.odlayer is not None
         _norm = np.linalg.norm
 
-        odlayer_nodes = set()
-        odlayer_nodes.update(self.odlayer.origins.keys())
-        odlayer_nodes.update(self.odlayer.destinations.keys())
+        graph_node_ids = np.array([nid for nid in self.layers[layer_id].graph.nodes])
+        graph_node_pos = np.array([n.position for n in self.layers[layer_id].graph.nodes.values()])
 
-        graph_node_ids = np.array([nid for nid in self.graph.nodes])
-        graph_node_pos = np.array([n.position for n in self.graph.nodes.values()])
-
-        graph_nodes = self.graph.nodes
+        graph_nodes = self.layers[layer_id].graph.nodes
         for nid in graph_nodes:
-            if nid not in odlayer_nodes:
-                node = graph_nodes[nid]
-                npos = np.array(node.position)
-                dist_nodes = _norm(graph_node_pos-npos, axis=1)
-                mask = dist_nodes < connection_distance
-                for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
-                    if layer_nid != nid:
-                        if layer_nid not in odlayer_nodes:
-                            olayer = self.graph.nodes[nid].label
-                            dlayer = self.graph.nodes[layer_nid].label
-                            if olayer == layer_id and dlayer == layer_id:
-                                lid = f"{nid}_{layer_nid}"
-                                self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
-                                self.map_linkid_layerid[lid]="TRANSIT"
-                                # Add the transit link into the transit layer
-                                self.transitlayer.add_link(lid, olayer, dlayer)
+            node = graph_nodes[nid]
+            npos = np.array(node.position)
+            dist_nodes = _norm(graph_node_pos - npos, axis=1)
+            mask = dist_nodes < connection_distance
+            for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
+                bool_connect = (layer_nid != nid)
+                if bool_connect:
+                    lid = f"{nid}_{layer_nid}"
+                    self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
+                    self.map_linkid_layerid[lid] = "TRANSIT"
+                    # Add the transit link into the transit layer
+                    self.transitlayer.add_link(lid, layer_id, layer_id)
 
-    def connect_inter_layers(self, layer_id_list: List[str], connection_distance: float):
+    def connect_inter_layers(self, layer_id_list, connection_distance: float, extend_connect=False,
+                                    max_connect_dist=100):
         """
-                Connect different layers with transit links
+                Connect different layers with transit links. If no nodes are found within the connexion distance, the
+                nearest node within max_connect_dist is connected.
 
                 Args:
-                    _id: The id of the service
-                    veh_capacity: The capacity of the vehicle using this service
-
+                    layer_id_list: list of layers to connect
+                    connection_distance: each node  is connected to the nodes within a radius defined by
+                        connection_distance (m)
+                    extend_connect: try to find one node if none are found within connection_distance
+                    max_connect_dist: max search distance for extend_connect
                 Returns:
                     Nothing
         """
@@ -311,38 +307,32 @@ class MultiLayerGraph(object):
         assert self.odlayer is not None
         _norm = np.linalg.norm
 
-        odlayer_nodes = set()
-        odlayer_nodes.update(self.odlayer.origins.keys())
-        odlayer_nodes.update(self.odlayer.destinations.keys())
+        for olayer_id in layer_id_list:
+            onodes = self.layers[olayer_id].get_connection_nodes()
+            graph_onode_ids = np.array([n['ID'] for n in onodes])
+            graph_onode_pos = np.array([np.array([n['X'], n['Y']]) for n in onodes])
+            for dlayer_id in layer_id_list:
+                if olayer_id != dlayer_id:
+                    dnodes = self.layers[dlayer_id].get_connection_nodes()
+                    graph_dnode_ids = np.array([n['ID'] for n in dnodes])
+                    graph_dnode_pos = np.array([np.array([n['X'], n['Y']]) for n in dnodes])
 
-        graph_node_ids = []
-        graph_node_label=[]
-        graph_node_pos=np.empty((0,2))
-
-        for layer_id in layer_id_list:
-            nodes = self.layers[layer_id].get_connection_nodes()
-
-            graph_node_ids = np.append(graph_node_ids,np.array([n['ID'] for n in nodes]))
-            graph_node_label = np.append(graph_node_label,np.array([layer_id for n in nodes]))
-            graph_node_pos = np.append(graph_node_pos,np.array([np.array([n['X'], n['Y']]) for n in nodes]),axis=0)
-
-        for nid in graph_node_ids:
-            if nid not in odlayer_nodes:
-                idx=np.where(graph_node_ids==nid)
-                npos = graph_node_pos[idx]
-                olayer=graph_node_label[idx][0]
-                dist_nodes = _norm(graph_node_pos-npos, axis=1)
-                mask = dist_nodes < connection_distance
-                for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
-                    if layer_nid != nid:
-                        if layer_nid not in odlayer_nodes:
-                            idxd = np.where(graph_node_ids == layer_nid)
-                            dlayer=graph_node_label[idxd][0]
-                            lid = f"{nid}_{layer_nid}"
-                            self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
-                            self.map_linkid_layerid[lid]="TRANSIT"
-                            # Add the transit link into the transit layer
-                            self.transitlayer.add_link(lid, olayer, dlayer)
+                    for onid in graph_onode_ids:
+                        idxs = np.where(graph_onode_ids == onid)  # several is several shared vehicles at same node
+                        for idx in idxs[0]:
+                            onpos = graph_onode_pos[idx]
+                            dist_nodes = _norm(graph_dnode_pos - onpos, axis=1)
+                            mask = dist_nodes < connection_distance
+                            if mask.sum() == 0 and extend_connect:  # connect closest node (if not too far)
+                                if dist_nodes.min() <= max_connect_dist:
+                                    mask[np.argmin(dist_nodes)] = True
+                            for layer_nid, dist in zip(graph_dnode_ids[mask], dist_nodes[mask]):
+                                idxd = np.where(graph_dnode_ids == layer_nid)
+                                lid = f"{onid}_{layer_nid}"
+                                self.graph.add_link(lid, onid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
+                                self.map_linkid_layerid[lid] = "TRANSIT"
+                                # Add the transit link into the transit layer
+                                self.transitlayer.add_link(lid, olayer_id, dlayer_id)
 
     def construct_layer_service_mapping(self):
         for layer in self.layers.values():
