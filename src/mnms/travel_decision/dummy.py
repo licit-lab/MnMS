@@ -1,4 +1,5 @@
 from typing import List
+import numpy as np
 
 from mnms.graph.layers import MultiLayerGraph
 from mnms.demand.user import Path
@@ -6,7 +7,8 @@ from mnms.travel_decision.abstract import AbstractDecisionModel
 
 
 class DummyDecisionModel(AbstractDecisionModel):
-    def __init__(self, mmgraph: MultiLayerGraph, considered_modes=None, cost='travel_time', outfile:str=None, verbose_file=False, personal_mob_service_park_radius:float=100):
+    def __init__(self, mmgraph: MultiLayerGraph, considered_modes=None, cost='travel_time', outfile:str=None,
+        verbose_file=False, personal_mob_service_park_radius:float=100, random_choice_for_equal_costs:bool=False):
         """
         Deterministic decision model: the path with the lowest cost is chosen.
 
@@ -19,11 +21,27 @@ class DummyDecisionModel(AbstractDecisionModel):
             -verbose_file: If True write all the computed shortest path, not only the one that is selected
             -personal_mob_service_park_radius: radius around user's personal veh parking location in which
                                                she can still have access to her vehicle
+            -random_choice_for_equal_costs: boolean specifying if the choice among paths with
+                                            equal costs should be random or deterministic
         """
         super(DummyDecisionModel, self).__init__(mmgraph, considered_modes=considered_modes,
                                                  n_shortest_path=1, outfile=outfile,
                                                  verbose_file=verbose_file,
                                                  cost=cost, personal_mob_service_park_radius=personal_mob_service_park_radius)
+        self.random_choice_for_equal_costs = random_choice_for_equal_costs
+        self._seed = None
+        self._rng = None
+
+    def set_random_seed(self, seed):
+        """Method that sets the random seed for this decision model.
+
+        Args:
+            -seed: seed as an integer
+        """
+        if seed is not None and self.random_choice_for_equal_costs:
+            self._seed = seed
+            rng = np.random.default_rng(self._seed)
+            self._rng = rng
 
     def path_choice(self, paths:List[Path]) -> Path:
         """Method that proceeds to the selection of the path.
@@ -33,4 +51,9 @@ class DummyDecisionModel(AbstractDecisionModel):
         """
         # Sort paths by ascending cost before returning the best path
         paths.sort(key=lambda p: p.path_cost)
-        return paths[0]
+        if self.random_choice_for_equal_costs:
+            min_cost = paths[0].path_cost
+            min_cost_paths = [p for p in paths if p.path_cost == min_cost]
+            return self._rng.choice(min_cost_paths)
+        else:
+            return paths[0]
