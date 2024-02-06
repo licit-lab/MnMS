@@ -4,17 +4,20 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 import multiprocessing
 import sys
+import math
 
 from hipop.shortest_path import dijkstra, parallel_dijkstra
 
 from mnms import create_logger
 from mnms.demand import User
-from mnms.mobility_service.abstract import AbstractMobilityService
-from mnms.time import Dt
+from mnms.mobility_service.abstract import AbstractMobilityService, Request
+from mnms.time import Dt, Time
 from mnms.tools.exceptions import PathNotFound
 from mnms.vehicles.veh_type import ActivityType, VehicleActivityServing, VehicleActivityStop, \
     VehicleActivityPickup, VehicleActivityRepositioning, Vehicle, VehicleActivity
 from mnms.tools.cost import create_service_costs
+from mnms.tools.geometry import polygon_area, get_bounding_box
+from mnms.graph.zone import LayerZone
 
 log = create_logger(__name__)
 
@@ -33,13 +36,36 @@ class OnDemandMobilityService(AbstractMobilityService):
                  dt_matching: int,
                  dt_periodic_maintenance: int = 0,
                  matching_strategy: str='nearest_idle_vehicle_in_radius_fifo',
-                 radius: float = 10000):
+                 radius: float = 10000,
+                 detour_ratio: float = 1.343,
+                 default_waiting_time: float = 0):
+        """Constructor of an OnDeamndMobilityService object.
+
+        Args:
+            -id: id of the service
+            -dt_matching: the number of flow time steps elapsed between two calls
+             of the matching
+            -dt_periodic_maintenance: the number of flow steps elapsed between two
+             call of the periodic maintenance
+            -matching_strategy: strategy to apply for the matching
+            -radius: radius in meters used by matching strategies
+            -detour_ratio: distance on the actual road network to straight line distance
+            -default_waiting_time: default estimated waiting time broadcasted to users at
+             the moment of their planning, it is applied initially and when there is no
+             idle vehicle nor open request
+        """
         super(OnDemandMobilityService, self).__init__(id, veh_capacity=1, dt_matching=dt_matching,
             dt_periodic_maintenance=dt_periodic_maintenance)
 
         self.gnodes = dict()
+        self.detour_ratio = detour_ratio
+        self.default_waiting_time = default_waiting_time
+
         self._matching_strategy = matching_strategy
         self._radius = radius
+        self._zones = {}
+        self._estimated_pickup_times = {'default': default_waiting_time}
+        self._requests_history = []
 
     @property
     def matching_strategy(self):
@@ -48,6 +74,18 @@ class OnDemandMobilityService(AbstractMobilityService):
     @property
     def radius(self):
         return self._radius
+
+    @property
+    def zones(self):
+        return self._zones
+
+    @property
+    def estimated_pickup_times(self):
+        return self._estimated_pickup_times
+
+    @property
+    def requests_history(self):
+        return self._requests_history
 
     def create_waiting_vehicle(self, node: str):
         """Method to create a vehicle at a certain node of the layer on which this
@@ -65,20 +103,189 @@ class OnDemandMobilityService(AbstractMobilityService):
         if self._observer is not None:
             new_veh.attach(self._observer)
 
+    def add_zone(self, zone: LayerZone):
+        """Method to add a zone.
+
+        Args:
+            -zone: the zone to add to this service
+        """
+        # Check that this has not been already added
+        assert zone.id not in self._zones.keys(), f'Try to add zone {zone.id} in {self.id} '\
+            'mobility service but another zone with the same id already exists...'
+        # Check consistency of the zone
+        if self.layer is not None:
+            assert len(set(zone.links).intersection(set(self.graph.links.keys()))) == len(zone.links), \
+                f'Some links of LayerZone {zone.id} do not belong to {self.id} layer...'
+        # Add the zone and initialize the estimated pickup time in it to the default value
+        self._zones[zone.id] = zone
+        self._estimated_pickup_times[zone.id] = self.default_waiting_time
+
+    def add_zoning(self, zones: List[LayerZone]):
+        """Method to add a zoning to the service.
+
+        Args:
+            -zones: list of zones to add to the service
+        """
+        # We overwrite the current zoning
+        self._zones = {}
+        for zone in zones:
+            self.add_zone(zone)
+
+    def add_request(self, user: "User", drop_node:str, request_time:Time) -> None:
+        """
+        Add a new request to the mobility service defined by the user and her drop node.
+
+        Args:
+            -user: user object
+            -drop_node: drop node id
+            -request_time: time at which request is placed
+        """
+        self._user_buffer[user.id] = Request(user, drop_node, request_time)
+        #NB: works only for at most one simulatneous request per user...
+        # Save the request in the proper zone to be able to compute request arrival rate
+        self._requests_history.append(Request(user, drop_node, request_time))
+
+    def get_idle_vehicles(self):
+        """Method that returns the list of idle vehicles of this service.
+        """
+        vehs = np.array([veh for veh in self.fleet.vehicles.values() if (veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) \
+            and (not veh.activities)])
+        return vehs
+
     def step_maintenance(self, dt: Dt):
-        """Method that proceeds to the maintenance phase. It only updates the dictionnary
-        of nodes of the graph on which this mobility service runs. TODO: check if this
-        is really needed...
+        """Method that proceeds to the maintenance phase. It updates the dictionnary
+        of nodes of the graph on which this mobility service runs (TODO: check if this
+        is really needed). Also, it computes the estimated waiting time(s) for a request
+        in each zone of this service.
 
         Args:
             -dt: time elapsed since the previous maintenance phase
         """
+        # Update dict of graph nodes
         self.gnodes = self.graph.nodes
+
+        # (Re)compute estimated pickup times
+        self.update_estimated_pickup_times(dt)
+
+    def update_estimated_pickup_times(self, dt: Dt):
+        """Method that computes the estimated waiting time(s) for a request
+        in each zone of this service.
+
+        Args:
+            -dt: time elapsed since the previous maintenance phase
+        """
+        # Treat zone per zone when they are defined
+        count_links_treated = 0
+        for zid, z in self._zones.items():
+            count_links_treated += len(z.links)
+            # Count the nb of idle vehicles in this zone
+            idle_vehs = self.get_idle_vehicles()
+            idle_vehs_pos = [veh.position for veh in idle_vehs]
+            mask = z.is_inside(idle_vehs_pos)
+            idle_vehs_in_z = np.array(idle_vehs)[mask]
+
+            # Count the nb of open requests in this zone
+            open_reqs = list(self.user_buffer.values())
+            reqs_pos = [req.user.position for req in open_reqs]
+            mask = z.is_inside(reqs_pos)
+            open_reqs_in_z = np.array(open_reqs)[mask]
+
+            area = polygon_area(z.contour)
+            mean_speed = np.mean([self.graph.links[lid].costs[self.id]['speed'] for lid in z.links])
+            tau = (self.dt_matching+1) * dt.to_seconds()
+
+            # Oversupply mode
+            if (len(idle_vehs_in_z) > len(open_reqs_in_z)) or (len(idle_vehs_in_z) == len(open_reqs_in_z) and len(idle_vehs_in_z) > 0):
+                    idle_vehs_density_in_z = len(idle_vehs_in_z) / area
+                    w = tau / 2 + z.detour_ratio / (2 * mean_speed * math.sqrt(idle_vehs_density_in_z))
+            # Undersupply mode
+            elif (len(idle_vehs_in_z) < len(open_reqs_in_z)) or (len(idle_vehs_in_z) == len(open_reqs_in_z) and len(open_reqs_in_z) > 0):
+                open_reqs_density_in_z = len(open_reqs_in_z) / area
+                # Compute mean requests arrival rate in this zone
+                reqs_hist_pos = [self.graph.nodes[req.pickup_node].position for req in self.requests_history]
+                mask = z.is_inside(reqs_hist_pos)
+                reqs_hist_in_z = np.array(self.requests_history)[mask]
+                if len(reqs_hist_in_z) == 0:
+                    log.warning(f'There is no request history in zone {zid}, impossible to estimate pickup time there...')
+                    continue
+                delta_t = (max(reqs_hist_in_z).request_time - min(reqs_hist_in_z).request_time).to_seconds()
+                if delta_t == 0:
+                    delta_t = dt.to_seconds() # dt is the smallest time step
+                reqs_arrival_rate_in_z = len(reqs_hist_in_z) / delta_t
+                # Deduce estimates waiting time
+                w = len(open_reqs_in_z) / reqs_arrival_rate_in_z - tau / 2 + z.detour_ratio / (mean_speed * math.sqrt(math.pi * open_reqs_density_in_z))
+            # No idle vehicle nor open request : apply default waiting time
+            else:
+                w = self.default_waiting_time
+            self._estimated_pickup_times[zid] = w
+        # Check that all links of this service's layer have been treated
+        if len(self.zones) > 0 and count_links_treated < len(self.graph.links):
+            log.warning(f'Incomplete zoning defined for {self.id} service, we compute '\
+                'the estimated waiting time on remaining links considering the whole network...')
+
+        # Treat links all together when no zone is defined
+        if len(self.zones) == 0 or (len(self.zones) > 0 and count_links_treated < len(self.graph.links)):
+            # Count the nb of idle vehicles on the whole network
+            idle_vehs = self.get_idle_vehicles()
+
+            # Count the nb of open requests on the whole network
+            open_reqs = list(self.user_buffer.values())
+
+            tau = (self.dt_matching+1) * dt.to_seconds()
+            bbox = get_bounding_box(None, graph=self.graph)
+            area = max(1, (bbox.xmax - bbox.xmin)) * max(1,(bbox.ymax - bbox.ymin)) # max(1,-) for flat networks
+            mean_speed = np.mean([self.graph.links[lid].costs[self.id]['speed'] for lid in self.graph.links])
+            delta_t = (max(open_reqs).request_time - min(open_reqs).request_time).to_seconds() if open_reqs else np.nan
+            if delta_t == 0:
+                delta_t = dt.to_seconds() # dt is the smallest time step
+
+            # Oversupply
+            if (len(idle_vehs) > len(open_reqs)) or (len(idle_vehs) == len(open_reqs) and len(idle_vehs) > 0):
+                idle_vehs_density = len(idle_vehs) / area
+                w = tau / 2 + self.detour_ratio / (2 * mean_speed * math.sqrt(idle_vehs_density))
+            # Undersupply
+            elif (len(idle_vehs) < len(open_reqs)) or (len(idle_vehs) == len(open_reqs) and len(open_reqs) > 0):
+                open_reqs_density = len(open_reqs) / area
+                # Compute mean requests arrival rate on these links
+                reqs_hist = self.requests_history
+                assert len(reqs_hist) > 0, f'There is no request history, impossible to estimate pickup time there...'
+                delta_t = (max(reqs_hist).request_time - min(reqs_hist).request_time).to_seconds()
+                if delta_t == 0:
+                    delta_t = dt.to_seconds() # dt is the smallest time step
+                reqs_arrival_rate = len(reqs_hist) / delta_t
+                w = len(open_reqs) / reqs_arrival_rate - tau / 2 + self.detour_ratio / (mean_speed * math.sqrt(math.pi * open_reqs_density))
+            # No idle vehicle nor open request : apply default waiting time
+            else:
+                w = self.default_waiting_time
+            self._estimated_pickup_times['default'] = w
+
+    def estimate_pickup_time_for_planning(self, pu_node):
+        """Method that returns the estimated pickup time at a specific node. This
+        information is used by user to (re)plan. If the node belongs to several zones,
+        return the mean of their estimated pickup times.
+
+        Args:
+            -pu_node: pickup node
+
+        Returns:
+            -estimated pickup time in seconds
+        """
+        # Find the zone(s) the pickup node belongs to
+        wts = []
+        for zid, z in self.zones.items():
+            punode_in_z = z.is_inside([self.graph.nodes[pu_node].position])[0]
+            if punode_in_z:
+                wts.append(self.estimated_pickup_times[zid])
+        if wts:
+            return np.mean(wts)
+        else:
+            # Pickup node belongs to no zone
+            return self.estimated_pickup_times['default']
 
     def periodic_maintenance(self, dt: Dt):
         pass
 
-    def launch_matching(self, new_users, user_flow, decision_model):
+    def launch_matching(self, new_users, user_flow, decision_model, dt):
         """
         Method that launches the matching phase.
 
@@ -86,8 +293,9 @@ class OnDemandMobilityService(AbstractMobilityService):
             -new_users: users who have chosen a path but not yet departed
             -user_flow: the UserFlow object of the simulation
             -decision_model: the AbstractDecisionModel object of the simulation
+            -dt: time since last call of this method (flow time step)
         """
-        if self._counter_matching == self._dt_matching:
+        if self._counter_matching == self.dt_matching:
             # Trigger a matching phase
             self._counter_matching = 0
             if self.matching_strategy in ['nearest_idle_vehicle_in_radius_fifo', 'nearest_vehicle_in_radius_fifo']:
@@ -97,15 +305,17 @@ class OnDemandMobilityService(AbstractMobilityService):
             else:
                 log.error(f'Matching strategy {self.matching_strategy} unknown for {self.id} mobility service')
                 sys.exit(-1)
+            # (Re)compute estimated pickup times after this matching phase
+            self.update_estimated_pickup_times(dt)
         else:
-            # Do not tirgger a matching phase
+            # Do not trigger a matching phase
             self._counter_matching += 1
 
     def launch_matching_fifo(self):
         """Method that launches the matching phase by treating the requests one by
         one in  order of arrival.
         """
-        reqs = list(self._user_buffer.values())
+        reqs = list(self.user_buffer.values())
         sorted_reqs = sorted(reqs)
         for req in sorted_reqs:
             user = req.user
@@ -131,10 +341,9 @@ class OnDemandMobilityService(AbstractMobilityService):
         """Method that launches the matching phase by treating the requests jointly.
         """
         ### Get the batches of requests and considered vehicles
-        reqs = list(self._user_buffer.values())
+        reqs = list(self.user_buffer.values())
         if self.matching_strategy == 'nearest_idle_vehicle_in_radius_batched':
-            vehs = [veh for veh in self.fleet.vehicles.values() if (veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) \
-                and (not veh.activities)]
+            vehs = self.get_idle_vehicles()
         elif self.matching_strategy == 'nearest_vehicle_in_radius_batched':
             vehs = list(self.fleet.vehicles.values())
         else:
@@ -231,8 +440,7 @@ class OnDemandMobilityService(AbstractMobilityService):
             -service_dt: waiting time before pick-up
         """
         # Get all idle vehicles of the fleet
-        idle_vehs = np.array([veh for veh in self.fleet.vehicles.values() if (veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) \
-            and (not veh.activities)])
+        idle_vehs = self.get_idle_vehicles()
         if len(idle_vehs) == 0:
             # There is no idle vehicle in the fleet, match is not possible
             return Dt(hours=24)
@@ -414,7 +622,7 @@ class OnDemandMobilityService(AbstractMobilityService):
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
-                "DT_MATCHING": self._dt_matching,
+                "DT_MATCHING": self.dt_matching,
                 "VEH_CAPACITY": self._veh_capacity,
                 "ID": self.id}
 
@@ -429,9 +637,12 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
                  id: str,
                  dt_matching: int,
                  dt_periodic_maintenance: int = 0,
-                 matching_strategy: str = 'nearest_idle_vehicle_in_radius_fifo'):
+                 matching_strategy: str = 'nearest_idle_vehicle_in_radius_fifo',
+                 radius: float = 10000,
+                 detour_ratio: float = 1.343,
+                 default_waiting_time: float = 0):
         super(OnDemandDepotMobilityService, self).__init__(id, dt_matching, dt_periodic_maintenance,
-            matching_strategy)
+            matching_strategy, radius, detour_ratio, default_waiting_time)
         self.gnodes = None
         self.depots = dict()
 
@@ -576,7 +787,7 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
-                "DT_MATCHING": self._dt_matching,
+                "DT_MATCHING": self.dt_matching,
                 "VEH_CAPACITY": self._veh_capacity,
                 "ID": self.id}
 

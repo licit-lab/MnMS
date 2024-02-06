@@ -58,6 +58,10 @@ class AbstractMobilityService(ABC):
         return self._user_buffer
 
     @property
+    def dt_matching(self):
+        return self._dt_matching
+
+    @property
     def graph(self):
         return self.layer.graph
 
@@ -167,7 +171,7 @@ class AbstractMobilityService(ABC):
         else:
             self._counter_maintenance += 1
 
-    def launch_matching(self, new_users, user_flow, decision_model):
+    def launch_matching(self, new_users, user_flow, decision_model, dt):
         """
         Method that launches the matching phase.
 
@@ -175,8 +179,9 @@ class AbstractMobilityService(ABC):
             -new_users: users who have chosen a path but not yet departed
             -user_flow: the UserFlow object of the simulation
             -decision_model: the AbstractDecisionModel object of the simulation
+            -dt: time since last call of this method (flow time step)
         """
-        if self._counter_matching == self._dt_matching:
+        if self._counter_matching == self.dt_matching:
             # Trigger a matching phase
             self._counter_matching = 0
             users_canceling = [] # gathers the users who want to cancel after a
@@ -562,6 +567,10 @@ class Request(object):
         self.user = user
         self.drop_node = drop_node
         self.request_time = request_time
+        self.pickup_node = user.current_node
+
+    def __repr__(self):
+        return f'Request({self.user.id}, {self.pickup_node}, {self.drop_node}, {self.request_time})'
 
     def __leq__(self, other):
         if self.request_time <= other.request_time:

@@ -11,8 +11,11 @@ class BoundingBox:
     ymax: float
 
 
-def get_bounding_box(roads: "RoadDescriptor"):
-    positions = np.array([node.position for node in roads.nodes.values()])
+def get_bounding_box(roads: "RoadDescriptor", graph = None):
+    if graph is None:
+        positions = np.array([node.position for node in roads.nodes.values()])
+    else:
+        positions = np.array([node.position for node in graph.nodes.values()])
     return BoundingBox(np.min(positions[:, 0]),
                        np.min(positions[:, 1]),
                        np.max(positions[:, 0]),
@@ -20,6 +23,8 @@ def get_bounding_box(roads: "RoadDescriptor"):
 
 
 def points_in_polygon(polygon, pts):
+    if len(pts) == 0:
+        return []
     pts = np.asarray(pts, dtype='float32')
     polygon = np.asarray(polygon, dtype='float32')
     contour2 = np.vstack((polygon[1:], polygon[:1]))
@@ -36,3 +41,14 @@ def points_in_polygon(polygon, pts):
     mask3 = ~(count % 2 == 0)
     mask = mask1 | mask2 | mask3
     return mask
+
+def polygon_area(polygon):
+    """Method that computes the area of a polygon based on Schoelace formula.
+
+    Args:
+        -polygon: defined by a list of points
+    """
+    x = [p[0] for p in polygon]
+    y = [p[1] for p in polygon]
+    area = 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+    return area
