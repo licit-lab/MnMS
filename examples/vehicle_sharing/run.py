@@ -23,7 +23,7 @@ set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
 attach_log_file('simulation.log')
 
 if b_from_json:
-    mlgraph=load_graph('free_floating_example.json')
+    mlgraph=load_graph('velov_example.json')
 
     # OD layer
     odlayer = generate_grid_origin_destination_layer(-1000, -1000, 3000, 3000, 5, 5)
@@ -45,7 +45,7 @@ else:
     mlgraph = MultiLayerGraph([velov_layer], odlayer)
 
     if not b_from_json:
-        save_graph(mlgraph, 'free_floating_example.json')
+        save_graph(mlgraph, 'velov_example.json')
 
 # Add stations
 mlgraph.layers['velov_layer'].mobility_services['velov'].create_station('S1', '2', capacity=20, nb_initial_veh=5)
