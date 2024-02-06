@@ -1,4 +1,4 @@
-name: mnms_licit
+name: mnms
 channels:
   - conda-forge
   - anaconda
