@@ -186,8 +186,11 @@ class AbstractMobilityService(ABC):
             self._counter_matching = 0
             users_canceling = [] # gathers the users who want to cancel after a
                                  # match happened between of vehicle and another user
-            for uid, req in list(self._user_buffer.items()):
+            reqs = list(self.user_buffer.values())
+            sorted_reqs = sorted(reqs)
+            for req in sorted_reqs:
                 user = req.user
+                uid = user.id
                 drop_node = req.drop_node
                 if uid not in users_canceling:
                     # User makes service request
