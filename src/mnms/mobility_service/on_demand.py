@@ -16,8 +16,8 @@ from mnms.tools.exceptions import PathNotFound
 from mnms.vehicles.veh_type import ActivityType, VehicleActivityServing, VehicleActivityStop, \
     VehicleActivityPickup, VehicleActivityRepositioning, Vehicle, VehicleActivity
 from mnms.tools.cost import create_service_costs
-from mnms.tools.geometry import polygon_area, get_bounding_box
-from mnms.graph.zone import LayerZone
+from mnms.tools.geometry import polygon_area, get_bounding_box, voronoi_zones
+from mnms.graph.zone import LayerZone, construct_zone_from_contour
 
 log = create_logger(__name__)
 
@@ -666,6 +666,33 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
             new_veh.attach(self._observer)
 
         return new_veh
+
+    def add_zoning(self, zones: List[LayerZone] = None):
+        """Method to add a zoning to the service. This method should be called after
+        the MultiLayerGraph creation when no argument is passed to it.
+
+        Args:
+            -zones: list of zones to add to the service, if None, an automatic zoning
+             corresponding to Voronoi diagram of the depots
+        """
+        # We overwrite the current zoning
+        self._zones = {}
+        if zones is not None:
+            for zone in zones:
+                self.add_zone(zone)
+        else:
+            assert len(self.depots) > 1, f'There is strictly less than 2 depots in {self.id} service,'\
+                    ' cannot create an automatic zoning'
+            assert self.layer is not None, 'The add_zoning method should be called after the MultiLayerGraph creation, '\
+                'cannot create an automatic zoning'
+            depots_nodes = list(self.depots.keys())
+            depots_pos = np.array([self.graph.nodes[n].position for n in depots_nodes])
+            bbox = get_bounding_box(None, self.layer.graph)
+            vor_contours = voronoi_zones(depots_pos, bbox)
+            for i, vor_contour in enumerate(vor_contours):
+                vor_zone = construct_zone_from_contour(None, f'{self.id}_zone_{depots_nodes[i]}',
+                    vor_contour, graph=self.layer.graph, zone_type='LayerZone')
+                self.add_zone(vor_zone)
 
     def add_depot(self, node: str, capacity: int):
         """Method to create a depot full of vehicles.
