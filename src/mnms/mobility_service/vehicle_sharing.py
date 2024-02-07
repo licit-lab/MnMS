@@ -28,6 +28,9 @@ class Station(TimeDependentSubject):
 
         self.waiting_vehicles = []
 
+    def __repr__(self):
+        return f'Station({self._id}, {len(self.waiting_vehicles)}/{self.capacity})'
+
 
 class VehicleSharingMobilityService(AbstractMobilityService):
 
@@ -35,11 +38,32 @@ class VehicleSharingMobilityService(AbstractMobilityService):
                  id: str,
                  free_floating_possible: bool,
                  dt_matching: int,
-                 dt_periodic_maintenance: int = 0):
+                 dt_periodic_maintenance: int = 0,
+                 critical_nb_vehs: int = 10,
+                 alpha: float = 600,
+                 beta : float = 0.1):
+        """Constructor of VehicleSharingMobilityService objects.
+
+        Args:
+            -id: the id of the mobility service
+            -free_floating_possible:
+            -dt_matching: the number of flow time steps elapsed between two calls
+             of the matching
+            -dt_periodic_maintenance: the number of flow steps elapsed between two
+             call of the periodic maintenance
+            -critical_nb_vehs: the number of vehicles available at station below which
+             the estimated waiting time starts to increase
+            -alpha: maximum estimated pickup time
+            -beta: parameter controlling the shape of the estimated pickup time
+             curve
+        """
         super(VehicleSharingMobilityService, self).__init__(id, veh_capacity=1, dt_matching=dt_matching,
             dt_periodic_maintenance=dt_periodic_maintenance)
 
         self.free_floating_possible = free_floating_possible
+        self.critical_nb_vehs = critical_nb_vehs
+        self.alpha = alpha
+        self.beta = beta
         self.stations = dict()
         self.map_node_station = dict()
 
@@ -113,7 +137,7 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
         # Manage users who were supposed to use one of the deleted links
         users_canceling = user_flow.manage_links_removal_after_match(deleted_links, new_users, matched_user_id, self, decision_model)
-        
+
         return users_canceling
 
 
@@ -185,6 +209,30 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
     def periodic_maintenance(self, dt: Dt):
         pass
+
+    def estimate_pickup_time_for_planning(self, pu_node):
+        """Method that returns the estimated pickup time at a specific node. This
+        information is used by user to (re)plan.
+
+        Args:
+            -pu_node: pickup node
+
+        Returns:
+            -estimated pickup time in seconds
+        """
+        if self.free_floating_possible:
+            # Null estimated pickup time for free floating vehicle sharing
+            return 0
+        else:
+            # Find back the station at pickup node
+            if pu_node in self.map_node_station.keys():
+                station_id = self.map_node_station[pu_node]
+                station = self.stations[station_id]
+                estimated_putime = self.alpha * (1 - (len(station.waiting_vehicles)/self.critical_nb_vehs)**self.beta)
+                return estimated_putime
+            else:
+                log.error(f'Cannot find a {self.id} station at pickup node {pu_node}...')
+                sys.exit(-1)
 
     def request(self, user: User, drop_node: str) -> Dt:
         """Method that associates a requesting user to a vehicle of the service.
