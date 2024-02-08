@@ -362,9 +362,10 @@ class OnDemandMobilityService(AbstractMobilityService):
         origins = []
         destinations = []
         for ridx, req in enumerate(reqs):
-            # Search for the vehicles close to the user (within radius)
-            vehs_pos = np.array([v.position for v in vehs])
-            dist_vector = np.linalg.norm(vehs_pos - req.user.position, axis=1)
+            # Search for the vehicles close to the user at the end of their plan (within radius)
+            vehs_last_nodes = [v.activity.node if not v.activities else v.activities[-1].node for v in vehs]
+            vehs_last_pos = np.array([self.graph.nodes[n].position for n in vehs_last_nodes])
+            dist_vector = np.linalg.norm(vehs_last_pos - req.user.position, axis=1)
             nearest_vehs_indices = dist_vector <= self.radius # radius in meters
             nearest_vehs = vehs[nearest_vehs_indices]
             nearest_vehs_indices = list(np.where(nearest_vehs_indices)[0])
@@ -493,9 +494,10 @@ class OnDemandMobilityService(AbstractMobilityService):
             # There is no vehicle in the fleet, match is not possible
             return Dt(hours=24)
 
-        # Search for the vehicles close to the user (within radius)
-        vehs_pos = np.array([v.position for v in vehs])
-        dist_vector = np.linalg.norm(vehs_pos - user.position, axis=1)
+        # Search for the vehicles close to the user at the end of their plan (within radius)
+        vehs_last_nodes = [v.activity.node if not v.activities else v.activities[-1].node for v in vehs]
+        vehs_last_pos = np.array([self.graph.nodes[n].position for n in vehs_last_nodes])
+        dist_vector = np.linalg.norm(vehs_last_pos - user.position, axis=1)
         nearest_vehs_indices = dist_vector <= self.radius # radius in meters
         nearest_vehs = vehs[nearest_vehs_indices]
 
@@ -694,19 +696,20 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
                     vor_contour, graph=self.layer.graph, zone_type='LayerZone')
                 self.add_zone(vor_zone)
 
-    def add_depot(self, node: str, capacity: int):
+    def add_depot(self, node: str, capacity: int, fill: bool = True):
         """Method to create a depot full of vehicles.
 
         Args:
             -node: node where the depot should be created
             -capacity: maximum number of vehicles that can be parked in the depot
+            -fill: if True, we fill the depot with vehicles
         """
         self.depots[node] = {"capacity": capacity,
                             "vehicles": set()}
-
-        for _ in range(capacity):
-            new_veh = self.create_waiting_vehicle(node)
-            self.depots[node]["vehicles"].add(new_veh.id)
+        if fill:
+            for _ in range(capacity):
+                new_veh = self.create_waiting_vehicle(node)
+                self.depots[node]["vehicles"].add(new_veh.id)
 
     def is_depot_full(self, node: str):
         """Method that checks if a depot has free parking spot or not.
