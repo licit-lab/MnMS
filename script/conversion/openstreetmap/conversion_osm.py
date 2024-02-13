@@ -29,7 +29,6 @@ _veh_type_convertor = {'METRO': Metro,
                        'TRAM': Tram}
 
 
-
 def convert_osm_to_mnms(osm_query, output_dir, zone_dict: Dict[str, List[str]]=None, car_only=False, mono_res: Optional[str] = None):
     edges = dict()
     nodes = defaultdict(list)
@@ -84,27 +83,15 @@ def convert_osm_to_mnms(osm_query, output_dir, zone_dict: Dict[str, List[str]]=N
 
     car_layer = CarLayer(roads)
 
-    exclude_movements = dict()
-    for nid, coords in nodes.items():
-        exclude_movements[nid] = defaultdict(set)
+    for n in node_car:
+        car_layer.create_node(str(n), n)
 
-        for node_adj in adjacency[nid]:
-            if nid in junctions:
-                for move_up, move_downs in junctions[nid].items():
-                    if node_adj not in move_downs:
-                        exclude_movements[nid][move_up].add(node_adj)
-
-    car_layer = CarLayer(roads)
-
-    # for n in node_car:
-    #     car_layer.create_node(n, n, exclude_movements.get(n, None))
-    #
-    # for lid in link_car:
-    #     try:
-    #         car_layer.create_link(lid, edges[lid]['up'], edges[lid]['down'],
-    #                               {}, road_links=[lid])
-    #     except AssertionError:
-    #         print(f"Skipping troncon: {lid}, nodes already connected")
+    for lid in link_car:
+        try:
+            car_layer.create_link(lid, str(edges[lid]['up']), str(edges[lid]['down']),
+                                  {}, road_links=[lid])
+        except AssertionError:
+            print(f"Skipping troncon: {lid}, nodes already connected")
 
 
     mlgraph = MultiLayerGraph([car_layer])
