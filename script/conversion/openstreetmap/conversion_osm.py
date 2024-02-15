@@ -22,7 +22,7 @@ from mnms.log import LOGLEVEL, create_logger
 
 from coordinates import wgs_to_utm
 
-log = create_logger('symuflow_conversion')
+log = create_logger('osm_conversion')
 
 _veh_type_convertor = {'METRO': Metro,
                        'BUS': Bus,
