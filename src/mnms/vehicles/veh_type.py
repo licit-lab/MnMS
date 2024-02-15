@@ -214,6 +214,7 @@ class VehicleActivityServing(VehicleActivity):
         unode = veh._current_link[1] if veh._current_link is not None else veh._current_node
         next_node_ind = self.user.get_node_index_in_path(unode) + 1
         self.user.set_position((unode, upath[next_node_ind]), unode, 0, veh.position, tcurrent)
+        self.user.update_achieved_path_ms(veh.mobility_service)
         self.user.vehicle = None
         # self.user.notify(tcurrent)
         self.user.set_state_stop()

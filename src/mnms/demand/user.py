@@ -75,6 +75,7 @@ class User(TimeDependentSubject):
         self._remaining_link_length = None
         self._position = None
         self._achieved_path = list()
+        self._achieved_path_ms = list()
         self._vehicle = None
         self._waited_vehicle = None
         self._requested_service = None
@@ -133,6 +134,14 @@ class User(TimeDependentSubject):
     @achieved_path.setter
     def achieved_path(self, ap: List[str]):
         self._achieved_path = ap
+
+    @property
+    def achieved_path_ms(self):
+        return self._achieved_path
+
+    @achieved_path_ms.setter
+    def achieved_path_ms(self, ap_ms: List[str]):
+        self._achieved_path_ms = ap_ms
 
     @property
     def vehicle(self):
@@ -219,7 +228,7 @@ class User(TimeDependentSubject):
                 cnode_ind = cnode_ind[c-1]
         return cnode_ind
 
-    def get_node_index_in_path(self, node):
+    def get_node_index_in_path(self, node: str) -> int:
         """Method that finds the index of a node in user's path considering the path
         already achieved. The index of node returned should not be already passed by user.
 
@@ -239,7 +248,7 @@ class User(TimeDependentSubject):
             if c == 0:
                 ind = node_inds[0]
             else:
-                ind = node_inds[c]
+                ind = node_inds[c-1]
         return ind
 
     def finish_trip(self, arrival_time:Time):
@@ -568,6 +577,7 @@ class User(TimeDependentSubject):
             self.achieved_path = [dnode.id] # after teleportation, achieved_path is
                                             # reset and path does not contain the route
                                             # user has already passed through
+            self.achieved_path_ms = []
         return teleported
 
     def set_position(self, current_link:Tuple[str, str], current_node:str, remaining_length:float, position:np.ndarray, tcurrent: Time):
@@ -590,7 +600,7 @@ class User(TimeDependentSubject):
             self.set_state_deadend(tcurrent)
 
     def update_achieved_path(self, reached_node):
-        """Method that update user's achieved path with the new reached node.
+        """Method that updates user's achieved path with the new reached node.
 
         Args:
             -reached_node: node user has just reached
@@ -598,6 +608,14 @@ class User(TimeDependentSubject):
         if len(self.achieved_path) == 0 or reached_node != self.achieved_path[-1]:
             self.achieved_path.append(reached_node)
 
+    def update_achieved_path_ms(self, ms_id):
+        """Method that updates user's achieved path mobility services with a new
+        service user has just left.
+
+        Args:
+            -ms_id: the id of the mobility service user has just left
+        """
+        self.achieved_path_ms.append(ms_id)
 
     def update_distance(self, dist: float):
         """Method that increments the distance traveled by user.
