@@ -6,7 +6,7 @@ from numpy.typing import ArrayLike, NDArray
 
 from mnms.graph.layers import AbstractLayer
 from mnms.graph.road import RoadDescriptor
-from mnms.mobility_service.parking_service.depot import Depot
+from mnms.mobility_service.interfaces import Depot
 from mnms.vehicles.veh_type import Vehicle, ActivityType
 
 
@@ -104,9 +104,29 @@ class InRadiusFilter(VehicleFilter):
         """
         Return a mask (boolean array), if vehicle in self.radius True else False
         """
+        if len(vehicles) > 0:
+            veh_positions = np.array([veh.position for veh in vehicles])
+            dist_vector = np.linalg.norm(veh_positions - np.array(position), axis=1)
+            return dist_vector <= self.radius
+        else:
+            return []
 
-        veh_positions = np.array([veh.position for veh in vehicles])
-        dist_vector = np.linalg.norm(veh_positions - np.array(position), axis=1)
+class PlanEndsInRadiusFilter(VehicleFilter):
+    def __init__(self, radius: float):
+        self.radius = radius
+
+    def get_mask(self,
+                 layer: AbstractLayer,
+                 vehicles: Iterable[Vehicle],
+                 position: List[float] = None,
+                 deposits: List[Depot] = None) -> Mask:
+        """
+        Return a mask (boolean array), if vehicle in radius around position at the
+        end of its plan True, else False.
+        """
+        vehs_last_nodes = [v.activity.node if not v.activities else v.activities[-1].node for v in vehicles]
+        vehs_last_pos = np.array([layer.graph.nodes[n].position for n in vehs_last_nodes])
+        dist_vector = np.linalg.norm(vehs_last_pos - np.array(position), axis=1)
 
         return dist_vector <= self.radius
 
@@ -137,10 +157,23 @@ class IsWaiting(VehicleFilter):
                  position: List[float] = None,
                  deposits: List[Depot] = None) -> Mask:
         """
-        Return a mask (boolean array), if vehicle.waiting True else False
+        Return a mask (boolean array), if vehicle is STOP True else False
         """
 
         return [True if veh.activity_type is ActivityType.STOP else False for veh in vehicles]
+
+class IsIdle(VehicleFilter):
+    def get_mask(self,
+                 layer: AbstractLayer,
+                 vehicles: Iterable[Vehicle],
+                 position: List[float] = None,
+                 deposits: List[Depot] = None) -> Mask:
+        """
+        Return a mask (boolean array), if vehicle is idle (i.e. stop or repositionning without
+        coming acitivities) True else False.
+        """
+        return [True if (veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) and (not veh.activities) \
+            else False for veh in vehicles]
 
 
 class InZoneFilter(VehicleFilter):
@@ -339,4 +372,82 @@ class ToNearestZonalDepot(VehicleFilter):
                 mask.append(True)
             else:
                 mask.append(False)
+        return mask
+
+class DepotFilter(ABC):
+    @abstractmethod
+    def get_mask(self,
+                 layer: AbstractLayer,
+                 depots: Iterable[Depot],
+                 position: List[float] = None,
+                 vehicles: List[Vehicle] = None) -> Mask:
+        pass
+
+    def __and__(self, other):
+        return CombinedDepotFilter([self, other])
+
+    def __invert__(self):
+        return InvertedDepotFilter(self)
+
+class CombinedDepotFilter(object):
+    def __init__(self, filters: List[FilterProtocol]):
+        self.filters = filters
+
+    def get_mask(self,
+                 layer: AbstractLayer,
+                 depots: Iterable[Depot],
+                 position: List[float] = None,
+                 vehicles: List[Vehicle] = None) -> Mask:
+        all_masks = []
+        for f in self.filters:
+            all_masks.append(f.get_mask(layer, depots, position, vehicles))
+
+        return np.all(all_masks, axis=0)
+
+    def __and__(self, other):
+        if isinstance(other, CombinedDepotFilter):
+            return CombinedDepotFilter(self.filters + other.filters)
+        elif isinstance(other, FilterProtocol):
+            return CombinedDepotFilter(self.filters + [other])
+
+class InvertedDepotFilter:
+    def __init__(self, depot_filter: FilterProtocol):
+        self.depot_filter: FilterProtocol = depot_filter
+
+    def get_mask(self,
+                 layer: AbstractLayer,
+                 depots: Iterable[Depot],
+                 position: List[float] = None,
+                 vehicles: List[Vehicle] = None) -> Mask:
+
+        mask = np.array(self.depot_filter.get_mask(layer, depots, position, vehicles))
+        return ~mask
+
+class DepotIsNotFull(DepotFilter):
+    def get_mask(self,
+                 layer: AbstractLayer,
+                 depots: Iterable[Depot],
+                 position: List[float] = None,
+                 vehicles: List[Vehicle] = None) -> Mask:
+        """
+        Return a mask (boolean array), if depot is not full True else False.
+        """
+        return [not d.is_full() for d in depots]
+
+class IsNearestDepotFilter(DepotFilter):
+    def get_mask(self,
+                 layer: AbstractLayer,
+                 depots: Iterable[Depot],
+                 position: List[float] = None,
+                 vehicles: List[Vehicle] = None) -> Mask:
+        """
+        Return a mask (boolean array), if depot is the closest to position True
+        else False.
+        """
+        depots_pos = np.array([layer.graph.nodes[d.node].position for d in depots])
+        dist_vector = np.linalg.norm(depots_pos-np.array(position), axis=1)
+        ind_nearest = np.argmin(dist_vector)
+        mask = [False for _ in range(len(depots))]
+        mask[ind_nearest] = True
+
         return mask

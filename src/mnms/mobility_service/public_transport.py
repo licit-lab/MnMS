@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple, Optional, Deque, Generator, Type, Union
 
 from mnms.demand import User
 from mnms.log import create_logger
-from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.mobility_service.abstract import AbstractMobilityService, Request
 from mnms.time import Dt, Time
 from mnms.tools.cost import create_service_costs
 from mnms.tools.exceptions import VehicleNotFoundError
@@ -377,13 +377,14 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         return self.estimation_pickup_time_at_match(user, chosen_veh, chosen_line)
 
-    def matching(self, user: User, drop_node: str):
+    def matching(self, request: Request):
         """Method that matches a user with the proper vehicle.
 
         Args:
-            -user: user to be matched
-            -drop_node: node where user would like to be dropped off
+            -request: the request to match
         """
+        user = request.user
+        drop_node = request.drop_node
         veh, line = self._cache_request_vehicles[user.id]
         log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self.id}')
         self.add_passenger(user, drop_node, veh, line["nodes"])

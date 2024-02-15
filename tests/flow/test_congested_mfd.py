@@ -7,6 +7,7 @@ from mnms.generation.layers import generate_layer_from_roads, generate_matching_
 from mnms.generation.roads import generate_line_road
 from mnms.graph.layers import MultiLayerGraph
 from mnms.graph.zone import construct_zone_from_sections
+from mnms.mobility_service.abstract import Request
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.time import Time, Dt
 
@@ -53,7 +54,7 @@ def test_congested_mfd_no_congestion():
     user.set_path(Path(3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
     personal_car.add_request(user, 'C2', Time('00:01:00'))
-    personal_car.matching(user, "CarLayer_2")
+    personal_car.matching(Request(user, "CarLayer_2", Time('00:01:00')))
     flow.step(Dt(seconds=1))
 
     veh = list(personal_car.fleet.vehicles.values())[0]
@@ -106,14 +107,14 @@ def test_congested_mfd_congestion():
     user.set_path(Path(3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
     personal_car.add_request(user, 'C2', Time('00:01:00'))
-    personal_car.matching(user, "CarLayer_2")
+    personal_car.matching(Request(user, "CarLayer_2", Time('00:01:00')))
     flow.step(Dt(seconds=1))
 
     user2 = User('U1', '0', '4', Time('00:01:00'))
     user2.set_path(Path(3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
     personal_car.add_request(user2, 'C2', Time('00:01:00'))
-    personal_car.matching(user2, "CarLayer_2")
+    personal_car.matching(Request(user2, "CarLayer_2", Time('00:01:00')))
     flow.step(Dt(seconds=1))
     flow.step(Dt(seconds=1))
 

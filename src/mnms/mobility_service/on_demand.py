@@ -10,36 +10,29 @@ from hipop.shortest_path import dijkstra, parallel_dijkstra
 
 from mnms import create_logger
 from mnms.demand import User
-from mnms.mobility_service.abstract import AbstractMobilityService, Request
+from mnms.mobility_service.abstract import AbstractOnDemandMobilityService, AbstractOnDemandDepotMobilityService, Request, compute_path_travel_time
+from mnms.mobility_service.filters import PlanEndsInRadiusFilter, IsIdle, InRadiusFilter, DepotIsNotFull, IsNearestDepotFilter
 from mnms.time import Dt, Time
 from mnms.tools.exceptions import PathNotFound
 from mnms.vehicles.veh_type import ActivityType, VehicleActivityServing, VehicleActivityStop, \
     VehicleActivityPickup, VehicleActivityRepositioning, Vehicle, VehicleActivity
 from mnms.tools.cost import create_service_costs
-from mnms.tools.geometry import polygon_area, get_bounding_box, voronoi_zones
-from mnms.graph.zone import LayerZone, construct_zone_from_contour
+from mnms.tools.geometry import polygon_area, get_bounding_box
 
 log = create_logger(__name__)
 
 
-def compute_path_travel_time(path, graph, ms_id):
-    tt = 0
-    for leg in path:
-        leg_link = graph.nodes[leg[0][0]].adj[leg[0][1]]
-        tt += leg_link.costs[ms_id]['travel_time']
-    return tt
-
-class OnDemandMobilityService(AbstractMobilityService):
+class OnDemandMobilityService(AbstractOnDemandMobilityService):
 
     def __init__(self,
                  id: str,
                  dt_matching: int,
                  dt_periodic_maintenance: int = 0,
+                 default_waiting_time: float = 0,
                  matching_strategy: str='nearest_idle_vehicle_in_radius_fifo',
                  radius: float = 10000,
-                 detour_ratio: float = 1.343,
-                 default_waiting_time: float = 0):
-        """Constructor of an OnDeamndMobilityService object.
+                 detour_ratio: float = 1.343):
+        """Constructor of an OnDemandMobilityService object.
 
         Args:
             -id: id of the service
@@ -47,24 +40,20 @@ class OnDemandMobilityService(AbstractMobilityService):
              of the matching
             -dt_periodic_maintenance: the number of flow steps elapsed between two
              call of the periodic maintenance
-            -matching_strategy: strategy to apply for the matching
-            -radius: radius in meters used by matching strategies
-            -detour_ratio: distance on the actual road network to straight line distance
             -default_waiting_time: default estimated waiting time broadcasted to users at
              the moment of their planning, it is applied initially and when there is no
              idle vehicle nor open request
+            -matching_strategy: strategy to apply for the matching
+            -radius: radius in meters used by matching strategies
+            -detour_ratio: distance on the actual road network to straight line distance
         """
         super(OnDemandMobilityService, self).__init__(id, veh_capacity=1, dt_matching=dt_matching,
-            dt_periodic_maintenance=dt_periodic_maintenance)
-
+            dt_periodic_maintenance=dt_periodic_maintenance, default_waiting_time=default_waiting_time)
         self.gnodes = dict()
         self.detour_ratio = detour_ratio
-        self.default_waiting_time = default_waiting_time
 
         self._matching_strategy = matching_strategy
         self._radius = radius
-        self._zones = {}
-        self._estimated_pickup_times = {'default': default_waiting_time}
         self._requests_history = []
 
     @property
@@ -76,60 +65,8 @@ class OnDemandMobilityService(AbstractMobilityService):
         return self._radius
 
     @property
-    def zones(self):
-        return self._zones
-
-    @property
-    def estimated_pickup_times(self):
-        return self._estimated_pickup_times
-
-    @property
     def requests_history(self):
         return self._requests_history
-
-    def create_waiting_vehicle(self, node: str):
-        """Method to create a vehicle at a certain node of the layer on which this
-        mobility service runs.
-
-        Args:
-            -node: node at which the vehicle should be created
-        """
-        assert node in self.graph.nodes
-        new_veh = self.fleet.create_vehicle(node,
-                                            capacity=self._veh_capacity,
-                                            activities=[VehicleActivityStop(node=node)])
-        new_veh.set_position(self.graph.nodes[node].position)
-
-        if self._observer is not None:
-            new_veh.attach(self._observer)
-
-    def add_zone(self, zone: LayerZone):
-        """Method to add a zone.
-
-        Args:
-            -zone: the zone to add to this service
-        """
-        # Check that this has not been already added
-        assert zone.id not in self._zones.keys(), f'Try to add zone {zone.id} in {self.id} '\
-            'mobility service but another zone with the same id already exists...'
-        # Check consistency of the zone
-        if self.layer is not None:
-            assert len(set(zone.links).intersection(set(self.graph.links.keys()))) == len(zone.links), \
-                f'Some links of LayerZone {zone.id} do not belong to {self.id} layer...'
-        # Add the zone and initialize the estimated pickup time in it to the default value
-        self._zones[zone.id] = zone
-        self._estimated_pickup_times[zone.id] = self.default_waiting_time
-
-    def add_zoning(self, zones: List[LayerZone]):
-        """Method to add a zoning to the service.
-
-        Args:
-            -zones: list of zones to add to the service
-        """
-        # We overwrite the current zoning
-        self._zones = {}
-        for zone in zones:
-            self.add_zone(zone)
 
     def add_request(self, user: "User", drop_node:str, request_time:Time) -> None:
         """
@@ -140,17 +77,9 @@ class OnDemandMobilityService(AbstractMobilityService):
             -drop_node: drop node id
             -request_time: time at which request is placed
         """
-        self._user_buffer[user.id] = Request(user, drop_node, request_time)
-        #NB: works only for at most one simulatneous request per user...
+        super(OnDemandMobilityService, self).add_request(user, drop_node, request_time)
         # Save the request in the proper zone to be able to compute request arrival rate
         self._requests_history.append(Request(user, drop_node, request_time))
-
-    def get_idle_vehicles(self):
-        """Method that returns the list of idle vehicles of this service.
-        """
-        vehs = np.array([veh for veh in self.fleet.vehicles.values() if (veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) \
-            and (not veh.activities)])
-        return vehs
 
     def step_maintenance(self, dt: Dt):
         """Method that proceeds to the maintenance phase. It updates the dictionnary
@@ -259,32 +188,6 @@ class OnDemandMobilityService(AbstractMobilityService):
                 w = self.default_waiting_time
             self._estimated_pickup_times['default'] = w
 
-    def estimate_pickup_time_for_planning(self, pu_node):
-        """Method that returns the estimated pickup time at a specific node. This
-        information is used by user to (re)plan. If the node belongs to several zones,
-        return the mean of their estimated pickup times.
-
-        Args:
-            -pu_node: pickup node
-
-        Returns:
-            -estimated pickup time in seconds
-        """
-        # Find the zone(s) the pickup node belongs to
-        wts = []
-        for zid, z in self.zones.items():
-            punode_in_z = z.is_inside([self.graph.nodes[pu_node].position])[0]
-            if punode_in_z:
-                wts.append(self.estimated_pickup_times[zid])
-        if wts:
-            return np.mean(wts)
-        else:
-            # Pickup node belongs to no zone
-            return self.estimated_pickup_times['default']
-
-    def periodic_maintenance(self, dt: Dt):
-        pass
-
     def launch_matching(self, new_users, user_flow, decision_model, dt):
         """
         Method that launches the matching phase.
@@ -330,7 +233,7 @@ class OnDemandMobilityService(AbstractMobilityService):
             # Check pick-up time proposition compared with user waiting tolerance
             if user.pickup_dt[self.id] > service_dt:
                 # Match user with vehicle
-                self.matching(user, drop_node)
+                self.matching(req)
                 # Remove user from list of users waiting to be matched
                 self.cancel_request(user.id)
             else:
@@ -345,7 +248,7 @@ class OnDemandMobilityService(AbstractMobilityService):
         if self.matching_strategy == 'nearest_idle_vehicle_in_radius_batched':
             vehs = self.get_idle_vehicles()
         elif self.matching_strategy == 'nearest_vehicle_in_radius_batched':
-            vehs = list(self.fleet.vehicles.values())
+            vehs = self.get_all_vehicles()
         else:
             log.error(f'Matching strategy {self.matching_strategy} unknown for {self.id} mobility service')
             sys.exit(-1)
@@ -363,12 +266,10 @@ class OnDemandMobilityService(AbstractMobilityService):
         destinations = []
         for ridx, req in enumerate(reqs):
             # Search for the vehicles close to the user at the end of their plan (within radius)
-            vehs_last_nodes = [v.activity.node if not v.activities else v.activities[-1].node for v in vehs]
-            vehs_last_pos = np.array([self.graph.nodes[n].position for n in vehs_last_nodes])
-            dist_vector = np.linalg.norm(vehs_last_pos - req.user.position, axis=1)
-            nearest_vehs_indices = dist_vector <= self.radius # radius in meters
-            nearest_vehs = vehs[nearest_vehs_indices]
-            nearest_vehs_indices = list(np.where(nearest_vehs_indices)[0])
+            filter = PlanEndsInRadiusFilter(self.radius)
+            mask = filter.get_mask(self.layer, vehs, position=req.user.position)
+            nearest_vehs = vehs[mask]
+            nearest_vehs_indices = list(np.where(mask)[0])
 
             # Compute estimated pickup time for the vehicles nearby
             for vidx, veh in zip(nearest_vehs_indices, nearest_vehs):
@@ -424,7 +325,7 @@ class OnDemandMobilityService(AbstractMobilityService):
             if pickup_times_matrix[req_ind][veh_ind] < inf:
                 veh_path = veh_paths_matrix[req_ind][veh_ind]
                 self._cache_request_vehicles[req.user.id] = veh, veh_path
-                self.matching(req.user, req.drop_node)
+                self.matching(req)
                 self.cancel_request(req.user.id)
                 self._cache_request_vehicles = dict()
 
@@ -440,24 +341,18 @@ class OnDemandMobilityService(AbstractMobilityService):
         Returns:
             -service_dt: waiting time before pick-up
         """
-        # Get all idle vehicles of the fleet
-        idle_vehs = self.get_idle_vehicles()
-        if len(idle_vehs) == 0:
-            # There is no idle vehicle in the fleet, match is not possible
-            return Dt(hours=24)
-
-        # Search for the idle vehicles close to the user (within radius)
-        vehs_pos = np.array([v.position for v in idle_vehs])
-        dist_vector = np.linalg.norm(vehs_pos - user.position, axis=1)
-        nearest_vehs_indices = dist_vector <= self.radius
-        nearest_vehs = idle_vehs[nearest_vehs_indices]
-        if len(nearest_vehs) == 0:
-            # There is no vehicle surrounding the user, match is not possible
+        # Get all idle vehicles of the fleet within radius around user
+        filter = IsIdle() & InRadiusFilter(self.radius)
+        all_vehs = self.get_all_vehicles()
+        mask = filter.get_mask(self.layer, all_vehs, position=user.position)
+        idle_vehs_in_radius = all_vehs[mask]
+        if len(idle_vehs_in_radius) == 0:
+            # There is no idle vehicle in radius, match is not possible
             return Dt(hours=24)
 
         # Compute service time for the idle vehs in radius
         candidates = []
-        for veh in nearest_vehs:
+        for veh in idle_vehs_in_radius:
             veh_node = veh.current_node
             veh_path, tt = dijkstra(self.graph, veh_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
             if tt == float('inf'):
@@ -488,26 +383,18 @@ class OnDemandMobilityService(AbstractMobilityService):
         Returns:
             -service_dt: waiting time before pick-up
         """
-        # Get all vehicles of the fleet
-        vehs = np.array(list(self.fleet.vehicles.values()))
-        if len(vehs) == 0:
-            # There is no vehicle in the fleet, match is not possible
-            return Dt(hours=24)
-
-        # Search for the vehicles close to the user at the end of their plan (within radius)
-        vehs_last_nodes = [v.activity.node if not v.activities else v.activities[-1].node for v in vehs]
-        vehs_last_pos = np.array([self.graph.nodes[n].position for n in vehs_last_nodes])
-        dist_vector = np.linalg.norm(vehs_last_pos - user.position, axis=1)
-        nearest_vehs_indices = dist_vector <= self.radius # radius in meters
-        nearest_vehs = vehs[nearest_vehs_indices]
-
-        # If no vehicle surrounds the user, return inf service time
-        if len(nearest_vehs) == 0:
+        # Get all vehicles of the fleet within radius around user at the end of their plan
+        filter = PlanEndsInRadiusFilter(self.radius)
+        all_vehs = self.get_all_vehicles()
+        mask = filter.get_mask(self.layer, all_vehs, position=user.position)
+        vehs_in_radius = all_vehs[mask]
+        if len(vehs_in_radius) == 0:
+            # There is no vehicle in radius at the end of their plan
             return Dt(hours=24)
 
         # Compute service time for these vehs
         candidates = []
-        for veh in nearest_vehs:
+        for veh in vehs_in_radius:
             veh_last_node = veh.activity.node if not veh.activities else \
                     veh.activities[-1].node
             veh_path, tt = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
@@ -584,14 +471,15 @@ class OnDemandMobilityService(AbstractMobilityService):
     #
     #     return service_dt
 
-    def matching(self, user: User, drop_node: str):
+    def matching(self, request: Request):
         """Method that proceeds to the matching between a user and an already identified
         vehicle of this service.
 
         Args:
-            -user: user to be matched
-            -drop_node: node where user would like to be dropped off
+            -request: the request to match
         """
+        user = request.user
+        drop_node = request.drop_node
         veh, veh_path = self._cache_request_vehicles[user.id]
         log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self._id}')
         upath = list(user.path.nodes)
@@ -613,116 +501,39 @@ class OnDemandMobilityService(AbstractMobilityService):
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
 
-    def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
-        pass
-
-    def rebalancing(self, next_demand: List[User], horizon: List[Vehicle]):
-        pass
-
-    def service_level_costs(self, nodes: List[str]) -> dict:
-        return create_service_costs()
-
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
                 "DT_MATCHING": self.dt_matching,
-                "VEH_CAPACITY": self._veh_capacity,
-                "ID": self.id}
+                "DT_PERIODIC_MAINTENANCE": self.dt_periodic_maintenance,
+                "ID": self.id,
+                "DEFAULT_WAITING_TIME": self.default_waiting_time,
+                "MATCHING_STRATEGY": self.matching_strategy,
+                "RADIUS": self.radius,
+                "DETOUR_RATIO": self.detour_ratio}
 
     @classmethod
     def __load__(cls, data):
-        new_obj = cls(data['ID'], data["DT_MATCHING"], data["VEH_CAPACITY"])
+        new_obj = cls(data['ID'], data['DT_MATCHING'], data['DT_PERIODIC_MAINTENANCE'],
+            data['DEFAULT_WAITING_TIME'], data['MATCHING_STRATEGY'], data['RADIUS'],
+            data['DETOUR_RATIO'])
         return new_obj
 
 
-class OnDemandDepotMobilityService(OnDemandMobilityService):
+class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepotMobilityService):
     def __init__(self,
                  id: str,
                  dt_matching: int,
                  dt_periodic_maintenance: int = 0,
+                 default_waiting_time: float = 0,
                  matching_strategy: str = 'nearest_idle_vehicle_in_radius_fifo',
                  radius: float = 10000,
-                 detour_ratio: float = 1.343,
-                 default_waiting_time: float = 0):
-        super(OnDemandDepotMobilityService, self).__init__(id, dt_matching, dt_periodic_maintenance,
-            matching_strategy, radius, detour_ratio, default_waiting_time)
+                 detour_ratio: float = 1.343):
+        super(OnDemandDepotMobilityService, self).__init__(id, dt_matching, dt_periodic_maintenance=dt_periodic_maintenance,
+            matching_strategy=matching_strategy, radius=radius, detour_ratio=detour_ratio, default_waiting_time=default_waiting_time)
+        #NB: super is the first mother class, do not init the second mother class because
+        #    it contains the same attributes except depots
         self.gnodes = None
         self.depots = dict()
-
-    def create_waiting_vehicle(self, node: str):
-        """Method to create a vehicle at a certain node of the layer on which this
-        mobility service runs.
-
-        Args:
-            -node: node at which the vehicle should be created
-
-        Returns:
-            -new_veh: the new vehicle
-        """
-        assert node in self.graph.nodes
-        new_veh = self.fleet.create_vehicle(node,
-                                            capacity=self._veh_capacity,
-                                            activities=[VehicleActivityStop(node=node)])
-        new_veh.set_position(self.graph.nodes[node].position)
-
-        if self._observer is not None:
-            new_veh.attach(self._observer)
-
-        return new_veh
-
-    def add_zoning(self, zones: List[LayerZone] = None):
-        """Method to add a zoning to the service. This method should be called after
-        the MultiLayerGraph creation when no argument is passed to it.
-
-        Args:
-            -zones: list of zones to add to the service, if None, an automatic zoning
-             corresponding to Voronoi diagram of the depots
-        """
-        # We overwrite the current zoning
-        self._zones = {}
-        if zones is not None:
-            for zone in zones:
-                self.add_zone(zone)
-        else:
-            assert len(self.depots) > 1, f'There is strictly less than 2 depots in {self.id} service,'\
-                    ' cannot create an automatic zoning'
-            assert self.layer is not None, 'The add_zoning method should be called after the MultiLayerGraph creation, '\
-                'cannot create an automatic zoning'
-            depots_nodes = list(self.depots.keys())
-            depots_pos = np.array([self.graph.nodes[n].position for n in depots_nodes])
-            bbox = get_bounding_box(None, self.layer.graph)
-            vor_contours = voronoi_zones(depots_pos, bbox)
-            for i, vor_contour in enumerate(vor_contours):
-                vor_zone = construct_zone_from_contour(None, f'{self.id}_zone_{depots_nodes[i]}',
-                    vor_contour, graph=self.layer.graph, zone_type='LayerZone')
-                self.add_zone(vor_zone)
-
-    def add_depot(self, node: str, capacity: int, fill: bool = True):
-        """Method to create a depot full of vehicles.
-
-        Args:
-            -node: node where the depot should be created
-            -capacity: maximum number of vehicles that can be parked in the depot
-            -fill: if True, we fill the depot with vehicles
-        """
-        self.depots[node] = {"capacity": capacity,
-                            "vehicles": set()}
-        if fill:
-            for _ in range(capacity):
-                new_veh = self.create_waiting_vehicle(node)
-                self.depots[node]["vehicles"].add(new_veh.id)
-
-    def is_depot_full(self, node: str):
-        """Method that checks if a depot has free parking spot or not.
-
-        Args:
-            -node: node where to check the depot state
-
-        Returns:
-            -full: boolean which is True if the depot is full, False otherwise
-        """
-        assert node in self.depots, f'Cannot find any depot located at {node} node'
-        full = self.depots[node]["capacity"] <= len(self.depots[node]["vehicles"])
-        return full
 
     def step_maintenance(self, dt: Dt):
         """Method that proceeds to the maintenance phase.
@@ -734,53 +545,50 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
         Args:
             -dt: time elapsed since the previous maintenance phase
         """
+        ## Update graph nodes
         self.gnodes = self.graph.nodes
 
-        depot = list(self.depots.keys())
-        depot_pos = np.array([self.gnodes[d].position for d in depot])
-
+        ## Make stopped vehicles reposition toward the closest non full depot
+        depots = self.get_all_depots()
         # For each stopped vehicle
         for veh in self.fleet.vehicles.values():
             if veh.activity_type is ActivityType.STOP:
                 if veh._current_node not in self.depots:
                     # Find the nearest non full depot
-                    veh_position = veh.position
-                    dist_vector = np.linalg.norm(depot_pos - veh_position, axis=1)
-                    sorted_ind = np.argsort(dist_vector)
-                    nearest_depot = None
-                    for nearest_depot_ind in sorted_ind:
-                        current_depot = depot[nearest_depot_ind]
-                        if not self.is_depot_full(current_depot):
-                            nearest_depot = current_depot
-                            break
-                    # Get the shortest path till the nearest depot
-                    veh_path, cost = dijkstra(self.graph,
-                                              veh._current_node,
-                                              nearest_depot,
-                                              'travel_time',
-                                              {self.layer.id: self.id,
-                                               "TRANSIT": "WALK"},
-                                              {self.layer.id})
-                    if cost == float('inf'):
-                        raise PathNotFound(veh._current_node, depot)
-                    # Make the vehicle reposition till the nearest depot
-                    veh_path = self.construct_veh_path(veh_path)
-                    repositioning = VehicleActivityRepositioning(node=nearest_depot,
+                    filter = DepotIsNotFull() & IsNearestDepotFilter()
+                    mask = filter.get_mask(self.layer, depots, position=veh.position)
+                    nearest_depot = depots[mask]
+                    if len(nearest_depot) > 0:
+                        # Get the shortest path till the nearest depot
+                        veh_path, cost = dijkstra(self.graph,
+                                                veh._current_node,
+                                                nearest_depot,
+                                                'travel_time',
+                                                {self.layer.id: self.id,
+                                                "TRANSIT": "WALK"},
+                                                {self.layer.id})
+                        if cost == float('inf'):
+                            raise PathNotFound(veh._current_node, depots)
+                        # Make the vehicle reposition till the nearest depot
+                        veh_path = self.construct_veh_path(veh_path)
+                        repositioning = VehicleActivityRepositioning(node=nearest_depot,
                                                                  path=veh_path)
-                    veh.activity.is_done = True
-                    veh.add_activities([repositioning])
+                        veh.activity.is_done = True
+                        veh.add_activities([repositioning])
                 else:
-                    # Vehicle is in the depot
-                    self.depots[veh._current_node]["vehicles"].add(veh.id)
+                    # Add the vehicle in the depot if it is not yet inside
+                    if not self.depots[veh._current_node].contains(veh):
+                        self.depots[veh._current_node].add_vehicle(veh, None)
 
-    def matching(self, user: User, drop_node: str):
+    def matching(self, request: Request):
         """Method that matches a user with an already identified vehicle of this
         service.
 
         Args:
-            -user: user to be matched
-            -drop_node: node where the user would like to be dropped off
+            -request: the request to match
         """
+        user = request.user
+        drop_node = request.drop_node
         veh, veh_path = self._cache_request_vehicles[user.id]
         log.info(f'User {user.id} matched with vehicle {veh.id} of mobility service {self._id}')
         upath = list(user.path.nodes)
@@ -813,15 +621,21 @@ class OnDemandDepotMobilityService(OnDemandMobilityService):
             veh.activity.is_done = True
             if veh._current_node in self.depots:
                 # Remove the vehicle from the depot
-                self.depots[veh._current_node]["vehicles"].remove(veh.id)
+                self.depots[veh._current_node].remove_vehicle(veh)
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
                 "DT_MATCHING": self.dt_matching,
-                "VEH_CAPACITY": self._veh_capacity,
-                "ID": self.id}
+                "DT_PERIODIC_MAINTENANCE": self.dt_periodic_maintenance,
+                "ID": self.id,
+                "DEFAULT_WAITING_TIME": self.default_waiting_time,
+                "MATCHING_STRATEGY": self.matching_strategy,
+                "RADIUS": self.radius,
+                "DETOUR_RATIO": self.detour_ratio}
 
     @classmethod
     def __load__(cls, data):
-        new_obj = cls(data['ID'], data["DT_MATCHING"], data["VEH_CAPACITY"])
+        new_obj = cls(data['ID'], data["DT_MATCHING"], data["DT_PERIODIC_MAINTENANCE"],
+            data['DEFAULT_WAITING_TIME'], data['MATCHING_STRATEGY'], data['RADIUS'],
+            data['DETOUR_RATIO'])
         return new_obj

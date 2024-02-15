@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod, ABCMeta
 from typing import List, Tuple, Optional, Dict
 from mnms.time import Time, Dt
-from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.mobility_service.abstract import AbstractMobilityService, Request
 from mnms.log import create_logger
 from mnms.vehicles.veh_type import Vehicle, VehicleActivity
 from mnms.demand.user import User, UserState
@@ -263,12 +263,11 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
         return service_dt
 
-    def matching(self, user: User, drop_node: str, new_users: List[User], user_flow: UserFlow, decision_model: AbstractDecisionModel):
+    def matching(self, request: Request, new_users: List[User], user_flow: UserFlow, decision_model: AbstractDecisionModel):
         """Method that proceeds to the matching between a requesting user and an identified vehicle.
 
         Args:
-            -user: the user to be matched
-            -drop_node: the node where user would like to be dropped off
+            -request: the request to match
             -new_users: the list of users who have just/are about to depart but not
              yet considered in the user flow
             -user_flow: the simulation user flow module
@@ -278,6 +277,8 @@ class VehicleSharingMobilityService(AbstractMobilityService):
             -users_canceling: the list of users who should cancel their request for
              this service because a station has been removed
         """
+        user = request.user
+        drop_node = request.drop_node
         veh_id, veh_path = self._cache_request_vehicles[user.id]
         log.info(f'User {user.id} matched with vehicle {veh_id} of mobility service {self._id}')
         upath = list(user.path.nodes)

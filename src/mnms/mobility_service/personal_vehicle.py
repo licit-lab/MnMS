@@ -2,7 +2,7 @@ from typing import Tuple, List, Dict
 
 from mnms.demand import User
 from mnms.demand.user import UserState
-from mnms.mobility_service.abstract import AbstractMobilityService
+from mnms.mobility_service.abstract import AbstractMobilityService, Request
 from mnms.time import Dt
 from mnms.vehicles.veh_type import VehicleActivityServing, ActivityType, Vehicle, VehicleActivity
 from mnms.tools.cost import create_service_costs
@@ -43,13 +43,14 @@ class PersonalMobilityService(AbstractMobilityService):
         pickup_time = Dt()
         return pickup_time
 
-    def matching(self, user: User, drop_node: str):
+    def matching(self, request: Request):
         """Method that proceeds to the matching of a user with a personal vehicle.
 
         Args:
-            -user: user who should be matched
-            -drop_node: node where user would like to be dropped off
+            -request: the request to match
         """
+        user = request.user
+        drop_node = request.drop_node
         upath = list(user.path.nodes)
         upath = upath[user.get_current_node_index():user.get_node_index_in_path(drop_node) + 1]
         veh_path = self.construct_veh_path(upath)

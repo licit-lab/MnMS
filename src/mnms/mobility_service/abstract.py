@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod, ABCMeta
 from typing import List, Tuple, Optional, Dict
+import numpy as np
 
 from mnms.log import create_logger
 from mnms.demand.horizon import AbstractDemandHorizon
@@ -7,10 +8,67 @@ from mnms.demand.user import User
 from mnms.tools.cost import create_service_costs
 from mnms.time import Time, Dt
 from mnms.vehicles.fleet import FleetManager
-from mnms.vehicles.veh_type import Vehicle, VehicleActivity
+from mnms.vehicles.veh_type import Vehicle, VehicleActivity, VehicleActivityStop, ActivityType
 from hipop.shortest_path import dijkstra
+from mnms.graph.zone import LayerZone
+from mnms.mobility_service.interfaces import Depot
+from mnms.tools.geometry import polygon_area, get_bounding_box, voronoi_zones
+from mnms.graph.zone import LayerZone, construct_zone_from_contour
 
 log = create_logger(__name__)
+
+def compute_path_travel_time(path, graph, ms_id):
+    """Method that computes the travel time of a VehicleActivity path.
+
+    Args:
+        -path: VehicleActivity path
+        -graph: graph where path is defined
+        -ms_id: id of the mobility service the path concerns
+
+    Returns:
+        -tt: the path travel time
+    """
+    tt = 0
+    for leg in path:
+        leg_link = leg[0]
+        leg_link = graph.nodes[leg_link[0]].adj[leg_link[1]]
+        leg_dist = leg[1]
+        if leg_dist == leg_link.costs[ms_id]['length']:
+            tt += leg_link.costs[ms_id]['travel_time']
+        else:
+            # Path starts in the middle of one link
+            tt += leg_dist / leg_link.costs[ms_id]['speed']
+    return tt
+
+class Request(object):
+
+    def __init__(self, user, drop_node, request_time):
+        """Constructor of a Request object.
+
+        Args:
+            -user: user who made the request
+            -drop_node: node where user would like to be dropped off
+            -request_time: time at which user issued the request
+        """
+        self.user = user
+        self.drop_node = drop_node
+        self.request_time = request_time
+        self.pickup_node = user.current_node
+
+    def __repr__(self):
+        return f'Request({self.user.id}, {self.pickup_node}, {self.drop_node}, {self.request_time})'
+
+    def __leq__(self, other):
+        if self.request_time <= other.request_time:
+            return True
+        else:
+            return False
+
+    def __lt__(self, other):
+        if self.request_time < other.request_time:
+            return True
+        else:
+            return False
 
 class AbstractMobilityService(ABC):
     def __init__(self,
@@ -47,8 +105,6 @@ class AbstractMobilityService(ABC):
 
         self._observer: Optional = None
 
-        self._observer: Optional = None
-
     @property
     def id(self):
         return self._id
@@ -64,6 +120,14 @@ class AbstractMobilityService(ABC):
     @property
     def graph(self):
         return self.layer.graph
+
+    @property
+    def veh_capacity(self):
+        return self._veh_capacity
+
+    @property
+    def observer(self):
+        return self._observer
 
     def set_time(self, time:Time):
         self._tcurrent = time.copy()
@@ -201,9 +265,9 @@ class AbstractMobilityService(ABC):
                         if type(self).__name__ == 'VehicleSharingMobilityService':
                             # Args user_flow and decision_model are useful for some types of mobility services, vehcile sharing for example
                             # where a match can lead to other user canceling their request
-                            users_canceling.extend(self.matching(user, drop_node, new_users, user_flow, decision_model))
+                            users_canceling.extend(self.matching(req, new_users, user_flow, decision_model))
                         else:
-                            self.matching(user, drop_node)
+                            self.matching(req)
                         # Remove user from list of users waiting to be matched
                         self.cancel_request(uid)
                     else:
@@ -439,7 +503,6 @@ class AbstractMobilityService(ABC):
         veh = passenger.vehicle
         self.modify_user_drop_node(passenger, veh, new_drop_node, former_drop_node, gnodes, mlgraph, cost)
 
-    @abstractmethod
     def periodic_maintenance(self, dt: Dt):
         """
         This method is called every Dt steps to perform maintenance
@@ -466,13 +529,11 @@ class AbstractMobilityService(ABC):
         pass
 
     @abstractmethod
-    def matching(self, user: User, drop_node: str):
+    def matching(self, request: Request):
         """
-        Match the user and the vehicle
+        Matches a request and a vehicle
         Args:
-            user: User requesting a ride
-            drop_node: The node where the user wants to go down
-
+            -request: the request to match
         Returns:
         """
         pass
@@ -489,7 +550,6 @@ class AbstractMobilityService(ABC):
         """
     pass
 
-    @abstractmethod
     def rebalancing(self, next_demand: List[User], horizon: Dt):
         """
         Rebalancing of the mobility service fleet
@@ -505,7 +565,6 @@ class AbstractMobilityService(ABC):
         """
         pass
 
-    @abstractmethod
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
         """
         Update the activities of a vehicle
@@ -531,19 +590,15 @@ class AbstractMobilityService(ABC):
         pass
 
 
-class AbstractOnDemandMobilityService(AbstractMobilityService, metaclass=ABCMeta):
+class AbstractPredictiveMobilityService(AbstractMobilityService, metaclass=ABCMeta):
     def __init__(self,
-                 _id: str,
+                 id: str,
+                 veh_capacity: int,
                  dt_matching: int,
                  dt_rebalancing: int,
-                 veh_capacity: int,
                  horizon: AbstractDemandHorizon):
-        super(AbstractOnDemandMobilityService, self).__init__(_id, veh_capacity, dt_matching, dt_rebalancing)
+        super(AbstractPredictiveMobilityService, self).__init__(id, veh_capacity, dt_matching, dt_rebalancing)
         self._horizon: AbstractDemandHorizon = horizon
-
-    @abstractmethod
-    def rebalancing(self, next_demand: List[User], horizon: Dt):
-        pass
 
     def update(self, dt: Dt):
         self.step_maintenance(dt)
@@ -557,32 +612,198 @@ class AbstractOnDemandMobilityService(AbstractMobilityService, metaclass=ABCMeta
         else:
             self._counter_maintenance += 1
 
-class Request(object):
 
-    def __init__(self, user, drop_node, request_time):
-        """Constructor of a Request object.
+class AbstractOnDemandMobilityService(AbstractMobilityService, metaclass=ABCMeta):
+    def __init__(self,
+                 id: str,
+                 veh_capacity: int,
+                 dt_matching: int,
+                 dt_periodic_maintenance: int,
+                 default_waiting_time: float = 0):
+        """Constructor of an AbstractOnDemandMobilityService object.
 
         Args:
-            -user: user who made the request
-            -drop_node: node where user would like to be dropped off
-            -request_time: time at which user issued the request
+            -id: id of the service
+            -veh_capacity: capacity of the vehicles of this service
+            -dt_matching: the number of flow time steps elapsed between two calls
+             of the matching
+            -dt_periodic_maintenance: the number of flow steps elapsed between two
+             call of the periodic maintenance
+            -default_waiting_time: default estimated waiting time broadcasted to users at
+             the moment of their planning, it is applied initially and when there is no
+             idle vehicle nor open request
         """
-        self.user = user
-        self.drop_node = drop_node
-        self.request_time = request_time
-        self.pickup_node = user.current_node
+        super(AbstractOnDemandMobilityService, self).__init__(id, veh_capacity, dt_matching, dt_periodic_maintenance)
+        self._zones = {}
+        self.default_waiting_time = default_waiting_time
+        self._estimated_pickup_times = {'default': default_waiting_time}
 
-    def __repr__(self):
-        return f'Request({self.user.id}, {self.pickup_node}, {self.drop_node}, {self.request_time})'
+    @property
+    def zones(self):
+        return self._zones
 
-    def __leq__(self, other):
-        if self.request_time <= other.request_time:
-            return True
+    @property
+    def estimated_pickup_times(self):
+        return self._estimated_pickup_times
+
+    def create_waiting_vehicle(self, node: str):
+        """Method to create a vehicle at a certain node of the layer on which this
+        mobility service runs.
+
+        Args:
+            -node: node at which the vehicle should be created
+
+        Returns:
+            -new_veh: the newly created vehicle
+        """
+        assert node in self.graph.nodes
+        new_veh = self.fleet.create_vehicle(node,
+                                            capacity=self.veh_capacity,
+                                            activities=[VehicleActivityStop(node=node)])
+        new_veh.set_position(self.graph.nodes[node].position)
+
+        if self.observer is not None:
+            new_veh.attach(self.observer)
+
+        return new_veh
+
+    def add_zone(self, zone: LayerZone):
+        """Method to add a zone for this service.
+
+        Args:
+            -zone: the zone to add to this service
+        """
+        # Check that this zone id has not been already added
+        assert zone.id not in self._zones.keys(), f'Try to add zone {zone.id} in {self.id} '\
+            'mobility service but another zone with the same id already exists...'
+        # Check consistency of the zone
+        if self.layer is not None:
+            assert len(set(zone.links).intersection(set(self.graph.links.keys()))) == len(zone.links), \
+                f'Some links of LayerZone {zone.id} do not belong to {self.id} layer...'
+        # Add the zone and initialize the estimated pickup time in it to the default value
+        self._zones[zone.id] = zone
+        self._estimated_pickup_times[zone.id] = self.default_waiting_time
+
+    def add_zoning(self, zones: List[LayerZone]):
+        """Method to add a zoning to the service.
+
+        Args:
+            -zones: list of zones to add to the service
+        """
+        # We overwrite the current zoning
+        self._zones = {}
+        for zone in zones:
+            self.add_zone(zone)
+
+    def estimate_pickup_time_for_planning(self, pu_node):
+        """Method that returns the estimated pickup time at a specific node. This
+        information is used by user to (re)plan. If the node belongs to several zones,
+        return the mean of their estimated pickup times.
+
+        Args:
+            -pu_node: pickup node
+
+        Returns:
+            -estimated pickup time in seconds
+        """
+        # Find the zone(s) the pickup node belongs to
+        wts = []
+        for zid, z in self.zones.items():
+            punode_in_z = z.is_inside([self.graph.nodes[pu_node].position])[0]
+            if punode_in_z:
+                wts.append(self.estimated_pickup_times[zid])
+        if wts:
+            return np.mean(wts)
         else:
-            return False
+            # Pickup node belongs to no zone
+            return self.estimated_pickup_times['default']
 
-    def __lt__(self, other):
-        if self.request_time < other.request_time:
-            return True
+    def get_idle_vehicles(self):
+        """Method that returns the array of idle vehicles of this service.
+        """
+        all_vehs = self.get_all_vehicles()
+        mask = [True if (veh.activity_type in [ActivityType.STOP, ActivityType.REPOSITIONING]) and (not veh.activities) \
+            else False for veh in all_vehs]
+        idle_vehs = all_vehs[mask]
+        return idle_vehs
+
+    def get_all_vehicles(self):
+        """Method that returns the array of all vehicles of this service.
+        """
+        vehs = np.array(list(self.fleet.vehicles.values()))
+        return vehs
+
+    def service_level_costs(self, nodes: List[str]) -> dict:
+        return create_service_costs()
+
+
+class AbstractOnDemandDepotMobilityService(AbstractOnDemandMobilityService):
+    def __init__(self,
+                 id: str,
+                 veh_capacity: int,
+                 dt_matching: int,
+                 dt_periodic_maintenance: int,
+                 default_waiting_time: float = 0):
+        """Constructor of an AbstractOnDemandDepotMobilityService object.
+
+        Args:
+            -id: id of the service
+            -veh_capacity: capacity of the vehicles of this service
+            -dt_matching: the number of flow time steps elapsed between two calls
+             of the matching
+            -dt_periodic_maintenance: the number of flow steps elapsed between two
+             call of the periodic maintenance
+            -default_waiting_time: default estimated waiting time broadcasted to users at
+             the moment of their planning, it is applied initially and when there is no
+             idle vehicle nor open request
+        """
+        super(AbstractOnDemandDepotMobilityService, self).__init__(id, veh_capacity, dt_matching,
+            dt_periodic_maintenance, default_waiting_time)
+        self.depots = dict()
+
+    def add_depot(self, node: str, capacity: int, fill: bool = True):
+        """Method to create a depot full of vehicles.
+
+        Args:
+            -node: node where the depot should be created
+            -capacity: maximum number of vehicles that can be parked in the depot
+            -fill: if True, we fill the depot with vehicles
+        """
+        assert node not in self.depots, f'There is already one {self.id} depot at node {node}...'
+        self.depots[node] = Depot(f'Depot_{self.id}_{node}', node, capacity)
+        if fill:
+            for _ in range(capacity):
+                new_veh = self.create_waiting_vehicle(node)
+                self.depots[node].add_vehicle(new_veh, None)
+
+    def add_zoning(self, zones: List[LayerZone] = None):
+        """Method to add a zoning to the service. This method should be called after
+        the MultiLayerGraph creation when no argument is passed to it.
+
+        Args:
+            -zones: list of zones to add to the service, if None, an automatic zoning
+             corresponding to Voronoi diagram of the depots is created
+        """
+        # We overwrite the current zoning
+        self._zones = {}
+        if zones is not None:
+            for zone in zones:
+                self.add_zone(zone)
         else:
-            return False
+            assert len(self.depots) > 1, f'There is strictly less than 2 depots in {self.id} service,'\
+                    ' cannot create an automatic zoning'
+            assert self.layer is not None, 'The add_zoning method should be called after the MultiLayerGraph creation, '\
+                'cannot create an automatic zoning'
+            depots_nodes = list(self.depots.keys())
+            depots_pos = np.array([self.graph.nodes[n].position for n in depots_nodes])
+            bbox = get_bounding_box(None, self.layer.graph)
+            vor_contours = voronoi_zones(depots_pos, bbox)
+            for i, vor_contour in enumerate(vor_contours):
+                vor_zone = construct_zone_from_contour(None, f'Zone_{self.id}_{depots_nodes[i]}',
+                    vor_contour, graph=self.layer.graph, zone_type='LayerZone')
+                self.add_zone(vor_zone)
+
+    def get_all_depots(self):
+        """Method that returns the array of all depots of this service.
+        """
+        return np.array(list(self.depots.values()))

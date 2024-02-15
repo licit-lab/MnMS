@@ -211,8 +211,14 @@ class VehicleActivityServing(VehicleActivity):
 
         self.user.remaining_link_length = 0
         upath = self.user.path.nodes
-        unode = veh._current_link[1] if veh._current_link is not None else veh._current_node
-        next_node_ind = self.user.get_node_index_in_path(unode) + 1
+        last_achieved = False
+        if veh._current_link is not None:
+            if veh._current_link[1] == veh._current_node and self.user.achieved_path and veh._current_node == self.user.achieved_path[-1]:
+                last_achieved = True
+            unode = veh._current_link[1]
+        else:
+            unode = veh._current_node
+        next_node_ind = self.user.get_node_index_in_path(unode, last_achieved=last_achieved) + 1
         self.user.set_position((unode, upath[next_node_ind]), unode, 0, veh.position, tcurrent)
         self.user.update_achieved_path_ms(veh.mobility_service)
         self.user.vehicle = None
@@ -287,6 +293,10 @@ class Vehicle(TimeDependentSubject):
     @property
     def is_full(self):
         return len(self.passengers) >= self._capacity
+
+    @property
+    def capacity(self):
+        return self._capacity
 
     @property
     def is_empty(self):
