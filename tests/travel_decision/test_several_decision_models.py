@@ -109,18 +109,18 @@ class TestMobilityServicesGraph(unittest.TestCase):
                             [["1_2", "2_3", "3_4", "4_5", "5_15"], ["5_15", "15_25"], ["15_25", "25_35"], ["25_35", "35_45"], ["35_45", "45_55"],
                             ["45_55", "55_65"], ["55_65", "65_75"], ["65_75", "75_85"], ["75_85", "85_95"],
                             ["85_95", "95_96"], ["95_96", "96_97", "97_98", "98_99"]],
-                            timetable=TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=10)))
+                            timetable=TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=1)))
         bus_layer.create_line("LSN",
                             ["SN-1", "SN0", "SN1", "SN2", "SN3", "SN4", "SN5", "SN6", "SN7", "SN8", "SN9", "SN10"],
                             [["10_20", "20_30", "30_40", "40_50", "50_51"], ["50_51", "51_52"], ["51_52", "52_53"], ["52_53", "53_54"], ["53_54", "54_55"],
                             ["54_55", "55_56"], ["55_56", "56_57"], ["56_57", "57_58"], ["57_58", "58_59"],
                             ["58_59", "59_69"], ["59_69", "69_79", "79_89", "89_99"]],
-                            timetable=TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=10)))
+                            timetable=TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=1)))
         bus_layer.create_line("EXP",
                             ["EXP0", "EXP1"],
                             [["50_60", "60_70", "70_80", "80_90",
                             "90_91", "91_92", "92_93", "93_94", "94_95"]],
-                            timetable=TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=10))) # we define this line because of ISSUE#152
+                            timetable=TimeTable.create_table_freq('07:00:00', '08:00:00', Dt(minutes=1))) # we define this line because of ISSUE#152
 
         odlayer = generate_matching_origin_destination_layer(roads)
 

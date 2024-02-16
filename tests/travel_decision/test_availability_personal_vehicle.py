@@ -119,6 +119,9 @@ class TestAvailabilityPersonalVehicle(unittest.TestCase):
         self.assertEqual(link_list0, ['ORIGIN_0 CAR_0', 'CAR_0 CAR_1', 'CAR_1 RIDEHAILING_1b', 'CAR_1 CAR_2', 'CAR_2 DESTINATION_2'])
         self.assertEqual(df0['STATE'].iloc[-1], 'ARRIVED')
         self.assertEqual(supervisor._demand._users[0]._parked_personal_vehicles, {'CAR': 'CAR_2'})
+        first_veh_id = df0[df0['STATE'] == 'INSIDE_VEHICLE']['VEHICLE'].iloc[0]
+        second_veh_id = df0[df0['STATE'] == 'INSIDE_VEHICLE']['VEHICLE'].iloc[-1]
+        self.assertEqual(first_veh_id, second_veh_id)
 
 
     def test_deadend_cause_no_teleport_possible(self):

@@ -19,15 +19,27 @@ class Zone(object):
         return points_in_polygon(self.contour, points)
 
 @dataclass
-class MLZone():
+class MLZone(object):
     id: str
     links: Set[str]
     contour: PointList
 
+@dataclass
+class LayerZone(object):
+    """Zone for the AbstractLayer objects : it gathers links belonging to the same
+    layer.
+    """
+    id: str
+    links: Set[str]
+    contour : PointList
+    detour_ratio : float = 1.343
 
-def construct_zone_from_contour(roads: "RoadDescriptor", _id: str, contour: PointList, mlgraph=None):
-    sections = roads.sections if mlgraph is None else mlgraph.graph.links
-    nodes = roads.nodes if mlgraph is None else mlgraph.graph.nodes
+    def is_inside(self, points: List[Point]):
+        return points_in_polygon(self.contour, points)
+
+def construct_zone_from_contour(roads: "RoadDescriptor", id: str, contour: PointList, graph=None, zone_type='Zone'):
+    sections = roads.sections if graph is None else graph.links
+    nodes = roads.nodes if graph is None else graph.nodes
     section_centers = [0 for _ in range(len(sections))]
     section_ids = np.array([s for s in sections])
 
@@ -41,10 +53,15 @@ def construct_zone_from_contour(roads: "RoadDescriptor", _id: str, contour: Poin
     contour_array = np.array(contour)
     mask = points_in_polygon(contour_array, section_centers)
     zone_links = section_ids[mask].tolist()
-    if mlgraph is None:
-        return Zone(_id, zone_links, contour)
+    if graph is None:
+        assert zone_type == 'Zone', 'Inconsistent arguments in construct_zone_from_contour function...'
+        return Zone(id, zone_links, contour)
     else:
-        return MLZone(_id, zone_links, contour)
+        assert zone_type in ['MLZone', 'LayerZone'], 'Unknown zone type argument in construct_zone_from_contour function...'
+        if zone_type == 'MLZone':
+            return MLZone(id, zone_links, contour)
+        else:
+            return LayerZone(id, zone_links, contour)
 
 
 def construct_zone_from_sections(roads: "RoadDescriptor", _id: str, sections: List[str]):

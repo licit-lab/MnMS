@@ -1,6 +1,7 @@
 import sys
 from abc import ABC, abstractmethod
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Callable
+from collections import defaultdict
 from enum import Enum
 import csv
 import multiprocessing
@@ -95,6 +96,8 @@ class AbstractDecisionModel(ABC):
 
         self._refused_user: List[User] = list()
         self._users_for_planning: List[Tuple[User, Event]] = list()
+        self._waiting_cost_functions = {'travel_time': lambda wt: wt}
+        self._additional_cost_functions = defaultdict(lambda: lambda p,u: 0)
 
         if outfile is None:
             self._write = False
@@ -130,6 +133,34 @@ class AbstractDecisionModel(ABC):
     @abstractmethod
     def path_choice(self, paths: List[Path]) -> Path:
         pass
+
+    @property
+    def waiting_cost_functions(self):
+        return self._waiting_cost_functions
+
+    @property
+    def additional_cost_functions(self):
+        return self._additional_cost_functions
+
+    def add_waiting_cost_function(self, cost_name: str, func: Callable):
+        """Method to add a waiting cost function to the decision model.
+
+        Args:
+            -cost_name: name of the cost
+            -func: Callable that takes as arg the total estimated waiting time for
+             a certain path and returns the cost computed from it
+        """
+        self._waiting_cost_functions[cost_name] = func
+
+    def add_additional_cost_function(self, cost_name: str, func: Callable):
+        """Method to add an additional cost function to the decision model.
+
+        Args:
+            -cost_name: name of the cost
+            -func: Callable that takes as arg the path and the user, and returns the
+             incremented path cost
+        """
+        self._additional_cost_functions[cost_name] = func
 
     def add_users_for_planning(self, users:List[User], events:List[Event]):
         """Add users in the list for (re)planning.
@@ -639,10 +670,15 @@ class AbstractDecisionModel(ABC):
                 if len(p[0]) >= 2:
                     # Path can be valid only if it does not pass several times per the same nodes
                     if (len(p[0]) == len(set(p[0]))):
-                        p = Path(p[1], p[0])
+                        p = Path(p[1], p[0]) # at this stage, p.path_cost contains the first stage cost
                         p.construct_layers_from_links(gnodes)
                         path_mobservices = [chosen_mservices[i][layer_id] for layer_id,_ in p.layers]
                         p.set_mobility_services(path_mobservices)
+                        # Second stage path cost computation = take into account waiting time
+                        estim_waiting_time = sum([self._mlgraph.layers[layer].mobility_services[service].estimate_pickup_time_for_planning(p.nodes[node_inds][0]) for (layer, node_inds), service in zip(p.layers, p.mobility_services) if service != 'WALK'])
+                        p.increment_path_cost(self.waiting_cost_functions[self._cost](estim_waiting_time))
+                        # Third stage path cost computation = eventually add additional cost
+                        p.increment_path_cost(self.additional_cost_functions[self._cost](p, user))
                         service_costs = sum_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services) if service != 'WALK'))
                         p.service_costs = service_costs
                         # NB: we save this path even if equal to an already saved path, it is useful for testing purposes

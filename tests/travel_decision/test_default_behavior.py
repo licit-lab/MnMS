@@ -107,6 +107,9 @@ class TestMobilityServicesGraph(unittest.TestCase):
         else:
             decision_model = DummyDecisionModel(mlgraph, outfile=dir_results / "paths.csv",
                 verbose_file=True, cost='travel_cost')
+        def gc_waiting(wt):
+            return 0
+        decision_model.add_waiting_cost_function('travel_cost', gc_waiting)
 
         def mfdspeed(dacc):
             dspeed = {'CAR': 10, 'BUS': 10}

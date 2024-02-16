@@ -211,16 +211,25 @@ class VehicleActivityServing(VehicleActivity):
 
         self.user.remaining_link_length = 0
         upath = self.user.path.nodes
-        unode = veh._current_link[1] if veh._current_link is not None else veh._current_node
-        next_node_ind = self.user.get_node_index_in_path(unode) + 1
+        last_achieved = False
+        if veh._current_link is not None:
+            if veh._current_link[1] == veh._current_node and self.user.achieved_path and veh._current_node == self.user.achieved_path[-1]:
+                last_achieved = True
+            unode = veh._current_link[1]
+        else:
+            unode = veh._current_node
+        next_node_ind = self.user.get_node_index_in_path(unode, last_achieved=last_achieved) + 1
         self.user.set_position((unode, upath[next_node_ind]), unode, 0, veh.position, tcurrent)
+        self.user.update_achieved_path_ms(veh.mobility_service)
         self.user.vehicle = None
         # self.user.notify(tcurrent)
         self.user.set_state_stop()
         # If this is user's personal vehicle, register location of parking and vehicle's mobility service
+        # on user's side and last dropped off user on vehicle's side to prevent deletion of personal vehicle
+        # before user's arrival at destination
         if veh._is_personal:
             self.user.park_personal_vehicle(veh.mobility_service, unode)
-
+            veh.last_dropped_off_user = self.user
 
 
 class Vehicle(TimeDependentSubject):
@@ -284,6 +293,10 @@ class Vehicle(TimeDependentSubject):
     @property
     def is_full(self):
         return len(self.passengers) >= self._capacity
+
+    @property
+    def capacity(self):
+        return self._capacity
 
     @property
     def is_empty(self):
@@ -441,7 +454,15 @@ class Car(Vehicle):
                  initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
         super(Car, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
+        self._last_dropped_off_user = None
 
+    @property
+    def last_dropped_off_user(self):
+        return self._last_dropped_off_user
+
+    @last_dropped_off_user.setter
+    def last_dropped_off_user(self, user):
+        self._last_dropped_off_user = user
 
 class Bus(Vehicle):
     def __init__(self,

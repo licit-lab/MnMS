@@ -11,6 +11,7 @@ from mnms.generation.layers import generate_layer_from_roads, generate_matching_
 from mnms.graph.layers import MultiLayerGraph, CarLayer, BusLayer
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.zone import construct_zone_from_sections
+from mnms.mobility_service.abstract import Request
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
 from mnms.mobility_service.on_demand import OnDemandMobilityService
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
@@ -98,8 +99,8 @@ class TestMFDFlow(unittest.TestCase):
         user = User('U0', '0', '4', Time('00:01:00'))
         user.set_path(Path(3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
-        self.personal_car.add_request(user, 'C2')
-        self.personal_car.matching(user, "C2")
+        self.personal_car.add_request(user, 'C2', Time('00:01:00'))
+        self.personal_car.matching(Request(user, "C2", Time('00:01:00')))
         self.flow.step(Dt(seconds=1))
         self.assertDictEqual({'CAR': 1, 'BUS': 0}, self.flow.dict_accumulations['res1'])
         self.assertDictEqual({'CAR': 0, 'BUS': 0}, self.flow.dict_accumulations['res2'])
@@ -114,8 +115,8 @@ class TestMFDFlow(unittest.TestCase):
         user = User('U0', '0', '4', Time('00:01:00'))
         user.set_path(Path(3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
-        self.personal_car.add_request(user, 'C2')
-        self.personal_car.matching(user, "C2")
+        self.personal_car.add_request(user, 'C2', Time('00:01:00'))
+        self.personal_car.matching(Request(user, "C2", Time('00:01:00')))
         self.flow.step(Dt(seconds=1))
         self.flow.step(Dt(seconds=1))
 
@@ -161,8 +162,8 @@ def test_move_veh_activity_change():
     user.set_path(Path(3400,
                        ['CarLayer_1', 'CarLayer_2']))
     on_demand.step_maintenance(Dt(seconds=1))
-    on_demand.request(user, "CarLayer_2")
-    on_demand.matching(user, "CarLayer_2")
+    on_demand.request_nearest_vehicle_in_radius_fifo(user, "CarLayer_2")
+    on_demand.matching(Request(user, "CarLayer_2", Time('09:00:00')))
     veh = on_demand.fleet.vehicles["0"]
     print(veh.activities)
 
@@ -208,8 +209,8 @@ def test_move_veh_res_change():
     user = User('U0', '0', '4', Time('09:00:00'))
     user.set_path(Path(3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
-    personal_car.add_request(user, 'C2')
-    personal_car.matching(user, "CarLayer_2")
+    personal_car.add_request(user, 'C2', Time('09:00:00'))
+    personal_car.matching(Request(user, "CarLayer_2", Time('09:00:00')))
     flow.step(Dt(seconds=1))
 
     veh = list(personal_car.fleet.vehicles.values())[0]

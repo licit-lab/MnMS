@@ -75,6 +75,7 @@ class User(TimeDependentSubject):
         self._remaining_link_length = None
         self._position = None
         self._achieved_path = list()
+        self._achieved_path_ms = list()
         self._vehicle = None
         self._waited_vehicle = None
         self._requested_service = None
@@ -133,6 +134,14 @@ class User(TimeDependentSubject):
     @achieved_path.setter
     def achieved_path(self, ap: List[str]):
         self._achieved_path = ap
+
+    @property
+    def achieved_path_ms(self):
+        return self._achieved_path
+
+    @achieved_path_ms.setter
+    def achieved_path_ms(self, ap_ms: List[str]):
+        self._achieved_path_ms = ap_ms
 
     @property
     def vehicle(self):
@@ -194,6 +203,11 @@ class User(TimeDependentSubject):
     def is_in_vehicle(self):
         return self.vehicle is not None
 
+    @property
+    def max_detour_ratio(self):
+        assert 'max_detour_ratio' in self.parameters.keys()
+        return self.parameters['max_detour_ratio']
+
     def get_current_node_index(self, path_nodes=None):
         """Method that returns the index of user's current node within a path.
         This method manages the case when user's path passes several times through
@@ -219,12 +233,14 @@ class User(TimeDependentSubject):
                 cnode_ind = cnode_ind[c-1]
         return cnode_ind
 
-    def get_node_index_in_path(self, node):
+    def get_node_index_in_path(self, node: str, last_achieved: bool = False) -> int:
         """Method that finds the index of a node in user's path considering the path
         already achieved. The index of node returned should not be already passed by user.
 
         Args:
             -node: the node to find the index of
+            -last_achieved: if True the index to find is the last achieved node,
+             if False it is the next to be achieved
 
         Returns:
             -ind: the index of the node in user's path, -1 if node has not been found
@@ -239,7 +255,33 @@ class User(TimeDependentSubject):
             if c == 0:
                 ind = node_inds[0]
             else:
-                ind = node_inds[c]
+                if last_achieved:
+                    ind = node_inds[c-1]
+                else:
+                    ind = node_inds[c]
+        return ind
+
+    def get_mobility_service_index_in_path(self, ms_id: str) -> int:
+        """Method that finds the index of a mobility service in user's path considering
+        the path already achieved.
+
+        Args:
+            -ms_id: id of the mobility service to find in user's path
+
+        Returns:
+            -ind: index of the mobility service, -1 if it has not been found
+        """
+        ms_inds = list(np.where(np.array(self.path.mobility_services) == ms_id)[0])
+        if len(ms_inds) == 0:
+            ind = -1
+        elif len(ms_inds) == 1:
+            ind = ms_inds[0]
+        else:
+            c = self.achieved_path_ms.count(ms_id)
+            if c == 0:
+                ind = ms_inds[0]
+            else:
+                ind = ms_inds[c]
         return ind
 
     def finish_trip(self, arrival_time:Time):
@@ -284,6 +326,36 @@ class User(TimeDependentSubject):
             veh_ms_obj.remove_user_activities(self)
         else:
             veh_ms_obj.remove_user_activities(self, mlgraph, cost)
+
+    def modify_path_leg(self, ms_id: str, new_nodes: list[str]):
+        """Method that modifies the nodes of one leg of user's path.
+
+        Args:
+            -ms_id: the id of the mobility service used on the leg to modify
+            -new_nodes: the new list of nodes for the leg
+        """
+        ## Find the leg concerned
+        modif = False
+        for i, (ms, (layer, sl)) in enumerate(zip(self.path.mobility_services, self.path.layers)):
+            if ms == ms_id and self.path.nodes[sl][-1] == new_nodes[-1]:
+                # Update nodes and slice of the leg
+                start_ind = sl.start
+                mid_ind = self.get_node_index_in_path(new_nodes[0], last_achieved=True)
+                stop_ind = sl.start + (mid_ind-start_ind) + len(new_nodes)
+                del self.path.nodes[mid_ind:sl.stop]
+                for n in reversed(new_nodes):
+                    self.path.nodes.insert(mid_ind, n)
+                self.path.layers[i] = (layer, slice(start_ind, stop_ind, 1))
+                modif = True
+            elif modif:
+                next_stop_ind = stop_ind-1 + (sl.stop - sl.start)
+                self.path.layers[i] = (layer, slice(stop_ind-1, next_stop_ind, 1))
+                stop_ind = next_stop_ind
+        if modif == False:
+            log.warning(f'Could not find the {ms_id} leg to modify in user path {self.path}...')
+        else:
+            ##TODO: Update path cost if it is used somehow after path leg modification because of ridesharing detour
+            pass
 
     def update_path(self, path: "Path", gnodes, mlgraph, cost: str, max_teleport_dist: float = None):
         """Method that updates the path of user.
@@ -407,7 +479,7 @@ class User(TimeDependentSubject):
             self.remaining_link_length = gnodes[self.path.nodes[current_node_ind]].adj[self.path.nodes[current_node_ind+1]].length
         else:
             # Find user former requested drop node
-            former_drop_node = self.requested_service.user_buffer[self.id][1]
+            former_drop_node = self.requested_service.user_buffer[self.id].drop_node
             if new_drop_node != former_drop_node:
                 # User maintains her request but changes the requested drop node
                 self.requested_service.update_request(self, new_drop_node)
@@ -568,6 +640,7 @@ class User(TimeDependentSubject):
             self.achieved_path = [dnode.id] # after teleportation, achieved_path is
                                             # reset and path does not contain the route
                                             # user has already passed through
+            self.achieved_path_ms = []
         return teleported
 
     def set_position(self, current_link:Tuple[str, str], current_node:str, remaining_length:float, position:np.ndarray, tcurrent: Time):
@@ -590,7 +663,7 @@ class User(TimeDependentSubject):
             self.set_state_deadend(tcurrent)
 
     def update_achieved_path(self, reached_node):
-        """Method that update user's achieved path with the new reached node.
+        """Method that updates user's achieved path with the new reached node.
 
         Args:
             -reached_node: node user has just reached
@@ -598,6 +671,14 @@ class User(TimeDependentSubject):
         if len(self.achieved_path) == 0 or reached_node != self.achieved_path[-1]:
             self.achieved_path.append(reached_node)
 
+    def update_achieved_path_ms(self, ms_id):
+        """Method that updates user's achieved path mobility services with a new
+        service user has just left.
+
+        Args:
+            -ms_id: the id of the mobility service user has just left
+        """
+        self.achieved_path_ms.append(ms_id)
 
     def update_distance(self, dist: float):
         """Method that increments the distance traveled by user.
@@ -758,3 +839,11 @@ class Path(object):
                 dn = self.nodes[j+1]
                 path_cost += mlgraph.graph.nodes[un].adj[dn].costs[ms][cost]
         self.path_cost = path_cost
+
+    def increment_path_cost(self, additional_cost):
+        """Method that adds an additional cost value to the current path cost.
+
+        Args:
+            -additional_cost: the cost to add
+        """
+        self.path_cost += additional_cost
