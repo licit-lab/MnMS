@@ -548,6 +548,9 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
         ## Update graph nodes
         self.gnodes = self.graph.nodes
 
+        # (Re)compute estimated pickup times
+        self.update_estimated_pickup_times(dt)
+
         ## Make stopped vehicles reposition toward the closest non full depot
         depots = self.get_all_depots()
         # For each stopped vehicle
@@ -560,9 +563,10 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
                     nearest_depot = depots[mask]
                     if len(nearest_depot) > 0:
                         # Get the shortest path till the nearest depot
+                        nearest_depot = nearest_depot[0]
                         veh_path, cost = dijkstra(self.graph,
                                                 veh._current_node,
-                                                nearest_depot,
+                                                nearest_depot.node,
                                                 'travel_time',
                                                 {self.layer.id: self.id,
                                                 "TRANSIT": "WALK"},
@@ -571,7 +575,7 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
                             raise PathNotFound(veh._current_node, depots)
                         # Make the vehicle reposition till the nearest depot
                         veh_path = self.construct_veh_path(veh_path)
-                        repositioning = VehicleActivityRepositioning(node=nearest_depot,
+                        repositioning = VehicleActivityRepositioning(node=nearest_depot.node,
                                                                  path=veh_path)
                         veh.activity.is_done = True
                         veh.add_activities([repositioning])
