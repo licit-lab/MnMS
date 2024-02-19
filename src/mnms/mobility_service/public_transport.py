@@ -221,7 +221,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 new_veh._current_link = veh_path[0][0]
                 new_veh._remaining_link_length = veh_path[0][1]
                 self._next_veh_departure[lid] = (self._current_time_table[lid], new_veh)
-                log.info(f"Vehicle {new_veh.id} of type {type(new_veh)} created for next departure on {self.id} line {lid}")
+                log.info(f"Vehicle {new_veh.id} of type {type(new_veh).__name__} created for next departure on {self.id} line {lid}")
             all_departures = list()
 
         if time > self._current_time_table[lid]:
@@ -235,7 +235,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         next_time = time.add_time(dt)
         if time <= self._current_time_table[lid] < next_time:
             start_veh = self._next_veh_departure[lid][1]
-            log.info(f"Vehicle {start_veh.id} of type {type(start_veh)} starts service on {self.id} line {lid}")
+            log.info(f"Vehicle {start_veh.id} of type {type(start_veh).__name__} starts service on {self.id} line {lid}")
             stop_activity = start_veh.activity
             repo_activity = VehicleActivityRepositioning(stop_activity.node,
                                                          stop_activity.path,
@@ -256,7 +256,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 new_veh._current_link = veh_path[0][0]
                 new_veh._remaining_link_length = veh_path[0][1]
                 self._next_veh_departure[lid] = (self._next_time_table[lid], new_veh)
-                log.info(f"Vehicle {new_veh.id} of type {type(new_veh)} created for next departure on {self.id} line {lid}")
+                log.info(f"Vehicle {new_veh.id} of type {type(new_veh).__name__} created for next departure on {self.id} line {lid}")
             except StopIteration:
                 self._next_veh_departure[lid] = None
                 return all_departures
