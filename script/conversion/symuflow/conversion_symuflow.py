@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from mnms.graph.road import RoadDescriptor
-from mnms.graph.abstract import MultiLayerGraph, CarLayer, PublicTransportLayer
+from mnms.graph.layers import MultiLayerGraph, CarLayer, PublicTransportLayer
 from mnms.graph.zone import construct_zone_from_contour
 from mnms.generation.layers import get_bounding_box
 from mnms.io.graph import save_graph
