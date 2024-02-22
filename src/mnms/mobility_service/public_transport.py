@@ -379,11 +379,12 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         return self.estimation_pickup_time_at_match(user, chosen_veh, user_line_id, departure_time)
 
-    def matching(self, request: Request):
+    def matching(self, request: Request, dt: Dt):
         """Method that matches a user with the proper vehicle.
 
         Args:
             -request: the request to match
+            -dt: the flow time step
         """
         user = request.user
         drop_node = request.drop_node

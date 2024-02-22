@@ -130,7 +130,7 @@ class UserFlow(object):
                                 else:
                                     # User stops walking
                                     user.set_state_stop()
-                                    finish_walk_and_request.append(user)
+                                    finish_walk_and_request.append((user, arrival_time))
                                     dist_travelled = 0
                     else:
                         # User did not arrived at the end of current link
@@ -146,22 +146,23 @@ class UserFlow(object):
         for user in finish_walk:
             del self._walking[user.id]
 
-        for user in finish_walk_and_request:
+        for user, request_time in finish_walk_and_request:
             del self._walking[user.id]
             log.info(f'User {user.id} is about to request a vehicle because he has finished walking')
             user.set_state_waiting_answer()
-            requested_mservice = self._request_user_vehicles(user)
+            requested_mservice = self._request_user_vehicles(user, request_time)
             self._waiting_answer.setdefault(user.id, (user.response_dt.copy(),requested_mservice))
 
         for user in finish_trip:
             del self.users[user.id]
             del self._walking[user.id]
 
-    def _request_user_vehicles(self, user):
+    def _request_user_vehicles(self, user, request_time):
         """Method that formulates user's request to the proper mobility service.
 
         Args:
             -user: user who is about to request a service
+            -request_time: time at which user requested the service
 
         Returns:
             -mservice: the mobility service to which the request was sent (None if
@@ -181,7 +182,7 @@ class UserFlow(object):
                     mservice_id = user.path.mobility_services[ilayer]
                     mservice = self._graph.layers[layer].mobility_services[mservice_id]
                     log.info(f"User {user.id} requests mobility service {mservice._id}")
-                    mservice.add_request(user, upath[slice_nodes][-1], self._tcurrent)
+                    mservice.add_request(user, upath[slice_nodes][-1], request_time)
                     user.requested_service = mservice
                     return mservice
             else:
@@ -244,7 +245,7 @@ class UserFlow(object):
                     self._walking.pop(u.id, None)
                     u.set_state_waiting_answer()
                     log.info(f'User {u.id} is about to request a vehicle because he is stopped')
-                    requested_mservice = self._request_user_vehicles(u)
+                    requested_mservice = self._request_user_vehicles(u, self._tcurrent)
                     self._waiting_answer.setdefault(u.id, (u.response_dt.copy(),requested_mservice))
 
                 u.notify(self._tcurrent)

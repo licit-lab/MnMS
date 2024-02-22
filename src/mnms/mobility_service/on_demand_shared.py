@@ -440,12 +440,13 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
 
         return plan
 
-    def matching(self, request: Request):
+    def matching(self, request: Request, dt: Dt):
         """Method that effectively matches a user with the identified vehicle of
         this service.
 
         Args:
             -request: request to be matched
+            -dt: flow time step
         """
         user = request.user
 
@@ -453,6 +454,12 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         veh.activities = deque(new_plan)
         veh.override_current_activity()
         user.set_state_waiting_vehicle(veh)
+        immediate_match = len(new_plan) > 1 \
+            and new_plan[0].user == request.user and new_plan[0].path == [] \
+            and new_plan[1].user == request.user and type(new_plan[1]).__name__ == 'VehicleActivityServing'\
+            and self._tcurrent - request.request_time <= dt
+        if immediate_match:
+            veh.dt_move = self._tcurrent - request.request_time
 
         ## Update user's and (future) passengers' paths' with regard to this match
         passengers = set([a.user for a in new_plan])

@@ -265,9 +265,9 @@ class AbstractMobilityService(ABC):
                         if type(self).__name__ == 'VehicleSharingMobilityService':
                             # Args user_flow and decision_model are useful for some types of mobility services, vehcile sharing for example
                             # where a match can lead to other user canceling their request
-                            users_canceling.extend(self.matching(req, new_users, user_flow, decision_model))
+                            users_canceling.extend(self.matching(req, new_users, user_flow, decision_model, dt))
                         else:
-                            self.matching(req)
+                            self.matching(req, dt)
                         # Remove user from list of users waiting to be matched
                         self.cancel_request(uid)
                     else:

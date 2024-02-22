@@ -202,9 +202,9 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             # Trigger a matching phase
             self._counter_matching = 0
             if self.matching_strategy in ['nearest_idle_vehicle_in_radius_fifo', 'nearest_vehicle_in_radius_fifo']:
-                self.launch_matching_fifo()
+                self.launch_matching_fifo(dt)
             elif self.matching_strategy in ['nearest_idle_vehicle_in_radius_batched', 'nearest_vehicle_in_radius_batched']:
-                self.launch_matching_batch()
+                self.launch_matching_batch(dt)
             else:
                 log.error(f'Matching strategy {self.matching_strategy} unknown for {self.id} mobility service')
                 sys.exit(-1)
@@ -214,9 +214,12 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             # Do not trigger a matching phase
             self._counter_matching += 1
 
-    def launch_matching_fifo(self):
+    def launch_matching_fifo(self, dt):
         """Method that launches the matching phase by treating the requests one by
         one in  order of arrival.
+
+        Args:
+            -dt: the flow time step
         """
         reqs = list(self.user_buffer.values())
         sorted_reqs = sorted(reqs)
@@ -233,15 +236,18 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             # Check pick-up time proposition compared with user waiting tolerance
             if user.pickup_dt[self.id] > service_dt:
                 # Match user with vehicle
-                self.matching(req)
+                self.matching(req, dt)
                 # Remove user from list of users waiting to be matched
                 self.cancel_request(user.id)
             else:
                 log.info(f"{user.id} refused {self.id} offer (predicted pickup time ({service_dt}) is too long, wait for better proposition...")
             self._cache_request_vehicles = dict()
 
-    def launch_matching_batch(self):
+    def launch_matching_batch(self, dt):
         """Method that launches the matching phase by treating the requests jointly.
+
+        Args:
+            -dt: the flow time step
         """
         ### Get the batches of requests and considered vehicles
         reqs = list(self.user_buffer.values())
@@ -325,7 +331,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             if pickup_times_matrix[req_ind][veh_ind] < inf:
                 veh_path = veh_paths_matrix[req_ind][veh_ind]
                 self._cache_request_vehicles[req.user.id] = veh, veh_path
-                self.matching(req)
+                self.matching(req, dt)
                 self.cancel_request(req.user.id)
                 self._cache_request_vehicles = dict()
 
@@ -471,12 +477,13 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
     #
     #     return service_dt
 
-    def matching(self, request: Request):
+    def matching(self, request: Request, dt: Dt):
         """Method that proceeds to the matching between a user and an already identified
         vehicle of this service.
 
         Args:
             -request: the request to match
+            -dt: the flow time step
         """
         user = request.user
         drop_node = request.drop_node
@@ -500,6 +507,12 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
 
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
+            immediate_match = len(veh.activities) == 2 and len(veh_path) == 0 \
+                and self._tcurrent - request.request_time <= dt
+            if immediate_match:
+                # This is an immediate match, take into account effective remaining
+                # duration to move during the current flow step
+                veh.dt_move = self._tcurrent - request.request_time
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
@@ -584,12 +597,13 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
                     if not self.depots[veh._current_node].contains(veh):
                         self.depots[veh._current_node].add_vehicle(veh, None)
 
-    def matching(self, request: Request):
+    def matching(self, request: Request, dt: Dt):
         """Method that matches a user with an already identified vehicle of this
         service.
 
         Args:
             -request: the request to match
+            -dt: flow time step
         """
         user = request.user
         drop_node = request.drop_node
@@ -623,6 +637,13 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
 
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
+            immediate_match = len(veh.activities) == 2 and len(veh_path) == 0 \
+                and self._tcurrent - request.request_time <= dt
+            if immediate_match:
+                # This is an immediate match , take into account effective remaining
+                # duration to move during the current flow step
+                veh.dt_move = self._tcurrent - request.request_time
+
             if veh._current_node in self.depots:
                 # Remove the vehicle from the depot
                 self.depots[veh._current_node].remove_vehicle(veh)

@@ -9,7 +9,7 @@ import numpy as np
 
 from mnms.tools.observer import TimeDependentSubject
 from mnms.log import create_logger
-from mnms.time import Time
+from mnms.time import Time, Dt
 
 log = create_logger(__name__)
 _norm = np.linalg.norm
@@ -271,6 +271,7 @@ class Vehicle(TimeDependentSubject):
         self._distance = 0                          # travelled distance ( reset to zero if other trip ?)
         self._iter_path = None
         self.speed = None                           # current speed
+        self._dt_move = None
 
         self.activities: Deque[VehicleActivity] = deque([])
         self.activity = None                        # current activity
@@ -331,6 +332,14 @@ class Vehicle(TimeDependentSubject):
     @property
     def is_moving(self) -> bool:
         return self.activity.is_moving if self.activity is not None else False
+
+    @property
+    def dt_move(self) -> Dt:
+        return self._dt_move
+
+    @dt_move.setter
+    def dt_move(self, dt):
+        self._dt_move = dt
 
     def add_activities(self, activities:List[VehicleActivity]):
         for a in activities:

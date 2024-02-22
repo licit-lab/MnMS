@@ -249,7 +249,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
         # Move the vehicles
         for veh_id, veh in current_vehicles.items():
-            veh_dt = dt.to_seconds()
+            veh_dt = veh.dt_move.to_seconds() if veh.dt_move is not None else dt.to_seconds()
+            veh.dt_move = None
             veh_type = veh.type.upper()
             while veh_dt > 0:
                 res_id = self.get_vehicle_zone(veh)

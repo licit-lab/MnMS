@@ -43,11 +43,12 @@ class PersonalMobilityService(AbstractMobilityService):
         pickup_time = Dt()
         return pickup_time
 
-    def matching(self, request: Request):
+    def matching(self, request: Request, dt: Dt):
         """Method that proceeds to the matching of a user with a personal vehicle.
 
         Args:
             -request: the request to match
+            -dt: the flow time step
         """
         user = request.user
         drop_node = request.drop_node
@@ -67,6 +68,11 @@ class PersonalMobilityService(AbstractMobilityService):
                 veh.add_activities(activities)
                 if veh.activity_type is ActivityType.STOP:
                     veh.activity.is_done = True
+                # For personal vehicle, this is always an immediate match because
+                # dt_matching is null, so take into account effective remaining
+                # duration to move during the current flow step
+                veh.dt_move = self._tcurrent - request.request_time
+                break
         if not found:
             # If not, create a new personal vehicle
             new_veh = self.fleet.create_vehicle(upath[0],
@@ -74,9 +80,11 @@ class PersonalMobilityService(AbstractMobilityService):
                                             activities=[VehicleActivityServing(node=upath[-1],
                                                                                path=veh_path,
                                                                                user=user)])
-
             if self._observer is not None:
                 new_veh.attach(self._observer)
+            # Take into account effective remaining duration to move during the
+            # current flow step
+            new_veh.dt_move = self._tcurrent - request.request_time if self._tcurrent is not None else None
 
     def replanning(self, veh: Vehicle, new_activities: List[VehicleActivity]) -> List[VehicleActivity]:
         pass
