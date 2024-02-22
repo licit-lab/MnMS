@@ -10,7 +10,7 @@ MnMS is an agent-based dynamic simulator for urban mobility. Travelers make mode
 
 MnMS relies on [HiPOP](https://github.com/licit-lab/HiPOP.git), make sure to clone it before going through the following installation guidelines.
 
-Using [conda](https://docs.conda.io/en/latest/miniconda.html), create and configure a new environment:
+Clone MnMS. Then, using [conda](https://docs.conda.io/en/latest/miniconda.html), create and configure a new environment:
 
 ````bash
 cd MnMS
@@ -26,9 +26,9 @@ Install the MnMS and HiPOP sources in the activated environment:
 
 ````bash
 python -m pip install -e .
-cd $path_to_HiPOP$/HiPOP/python
-python install_cpp.py
-python -m pip install .
+cd $path_to_HiPOP$/HiPOP
+python python/install_cpp.py
+python -m pip install python/
 ````
 
 ## Tutorials and examples
