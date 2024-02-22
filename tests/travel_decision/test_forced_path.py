@@ -27,7 +27,7 @@ class TestForcedPath(unittest.TestCase):
         """Initiates the test.
         """
         self.cwd = pathlib.Path(__file__).parent.resolve()
-        self.temp_dir_results = tempfile.TemporaryDirectory()
+        self.temp_dir_results = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.dir_results = pathlib.Path(self.temp_dir_results.name)
         self.file = self.cwd.joinpath("data/test_forced_path.csv")
         self.wrong_file = self.cwd.joinpath("data/test_wrong_forced_path.csv")

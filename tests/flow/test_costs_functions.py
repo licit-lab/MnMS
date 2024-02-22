@@ -21,8 +21,8 @@ class TestCostsFunctions(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
-        self.tempfile = TemporaryDirectory()
-        self.pathdir = self.tempfile.name+'/'
+        self.tempfile = TemporaryDirectory(ignore_cleanup_errors=True)
+        self.pathdir = self.tempfile.name + '/'
 
         roads = RoadDescriptor()
 
@@ -150,9 +150,9 @@ class TestCostsFunctions(unittest.TestCase):
 
     def test_cost_update(self):
         self.supervisor.run(Time("07:00:00"),
-                       Time("09:00:00"),
-                       Dt(seconds=1),
-                       10)
+                      Time("09:00:00"),
+                      Dt(seconds=1),
+                      10)
         self.assertIn("generalized_cost", self.mlgraph.transitlayer._costs_functions["WALK"])
         for lid, link in self.mlgraph.graph.links.items():
             for mservice, costs in link.costs.items():
