@@ -227,10 +227,29 @@ class MultiLayerGraph(object):
     def add_transit_links(self, transit_links):
 
         for tl in transit_links:
-            self.graph.add_link(tl['id'], tl['upstream_node'], tl['downstream_node'], tl['dist'],
-                                {"WALK": {'length': tl['dist']}}, "TRANSIT")
+            # Create the transit link with the official costs (only length if this
+            # mehtod is called before simulation initialization, all offical costs
+            # if this method is called during the simulation when new transit links
+            # are created dynamically)
+            if self.transitlayer.walk_speed is None:
+                costs = {"WALK": {'length': tl['dist']}}
+            else:
+                costs = {"WALK": {'length': tl['dist'],
+                                  'speed': self.transitlayer.walk_speed,
+                                  'travel_time': tl['dist']/self.transitlayer.walk_speed}}
+            self.graph.add_link(tl['id'], tl['upstream_node'], tl['downstream_node'],
+                tl['dist'], costs, "TRANSIT")
+
+            # Update the other costs within simulation
+            if self.transitlayer.walk_speed is not None:
+                link = self.graph.nodes[tl['upstream_node']].adj[tl['downstream_node']]
+                for mservice, cost_functions in self.transitlayer._costs_functions.items():
+                    for cost_name, cost_func in cost_functions.items():
+                        costs[mservice][cost_name] = cost_func(self, link, costs)
+                link.update_costs(costs)
+
+            # Add the transit link into the map_linkid_layerid and the transit layer
             self.map_linkid_layerid[tl['id']] = "TRANSIT"
-            # Add the transit link into the transit layer
             up_layer = self.graph.nodes[tl['upstream_node']].label
             down_layer = self.graph.nodes[tl['downstream_node']].label
             self.transitlayer.add_link(tl['id'], up_layer, down_layer)
@@ -404,17 +423,6 @@ class MultiLayerGraph(object):
             for mservice in mservices:
                 layer.add_cost_function(mservice, cost_name, cost_function)
 
-    def add_transit_links(self, transit_links):
-
-        for tl in transit_links:
-            self.graph.add_link(tl['id'], tl['upstream_node'], tl['downstream_node'], tl['dist'],
-                                {"WALK": {'length': tl['dist']}}, "TRANSIT")
-            self.map_linkid_layerid[tl['id']] = "TRANSIT"
-            # Add the transit link into the transit layer
-            up_layer = self.graph.nodes[tl['upstream_node']].label
-            down_layer = self.graph.nodes[tl['downstream_node']].label
-            self.transitlayer.add_link(tl['id'], up_layer, down_layer)
-
     def add_zone(self, zone: MLZone):
         if zone.id in self.zones.keys():
             print(f"Already defined zone {zone.id} is overwritten")
@@ -433,6 +441,15 @@ class TransitLayer(CostFunctionLayer):
     def __init__(self):
         super(TransitLayer, self).__init__()
         self.links: defaultdict[str, defaultdict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
+        self._walk_speed = None
+
+    @property
+    def walk_speed(self):
+        return self._walk_speed
+
+    @walk_speed.setter
+    def walk_speed(self, ws):
+        self._walk_speed = ws
 
     def add_link(self, lid, olayer, dlayer):
         """

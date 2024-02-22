@@ -34,12 +34,14 @@ class UserFlow(object):
         self._gnodes = None
 
     def set_graph(self, mlgraph:MultiLayerGraph):
-        """Method to associate a multi layer graph to a UserFlow object.
+        """Method to associate a multi layer graph to a UserFlow object and sets
+        the walking speed in the TransitLayer of this graph.
 
         Args:
             -mlgraph: multi layer graph on which users travel
         """
         self._graph = mlgraph
+        self._graph.transitlayer.walk_speed = self._walk_speed
 
     def set_time(self, time:Time):
         """Method to set current time for the UserFlow module.
