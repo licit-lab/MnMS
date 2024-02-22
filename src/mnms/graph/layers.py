@@ -227,6 +227,12 @@ class MultiLayerGraph(object):
     def add_transit_links(self, transit_links):
 
         for tl in transit_links:
+            # Check that this transit link does not already exist
+            if tl['upstream_node'] in self.graph.nodes and tl['downstream_node'] in self.graph.nodes[tl['upstream_node']].adj:
+                link = self.graph.nodes[tl['upstream_node']].adj[tl['downstream_node']]
+                log.warning(f"A transit link from {tl['upstream_node']} to {tl['downstream_node']} already exists (link id = {link.id})")
+                continue
+
             # Create the transit link with the official costs (only length if this
             # mehtod is called before simulation initialization, all offical costs
             # if this method is called during the simulation when new transit links
@@ -276,17 +282,14 @@ class MultiLayerGraph(object):
 
     def connect_intra_layer(self, layer_id: str, connection_distance: float):
         """
-                Connects by a transit link each node of a layer to the others within a predefined radius
-                Useful, for example, for a public transport layer to get to another stop
+        Connects by a transit link each node of a layer to the others within a predefined radius
+        Useful, for example, for a public transport layer to get to another stop
 
-                Args:
-                    connection_distance: each node  is connected to the nodes within a radius defined by
-                        connection_distance (m)
-
-                Returns:
-                    Nothing
-                """
-        assert self.odlayer is not None
+        Args:
+            -connection_distance: each node  is connected to the nodes within a radius defined by
+             connection_distance (m)
+        """
+        assert self.odlayer is not None #TODO: why this condition?
         _norm = np.linalg.norm
 
         graph_node_ids = np.array([nid for nid in self.layers[layer_id].graph.nodes])
@@ -301,29 +304,30 @@ class MultiLayerGraph(object):
             for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                 bool_connect = (layer_nid != nid)
                 if bool_connect:
+                    # Check if this transit link does not already exist
+                    if nid in self.graph.nodes and layer_nid in self.graph.nodes[nid].adj:
+                        link = self.graph.nodes[nid].adj[layer_nid]
+                        log.warning(f'A transit link already exist from {nid} to {layer_nid} (link id = {link.id})')
+                        continue
                     lid = f"{nid}_{layer_nid}"
                     self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
                     self.map_linkid_layerid[lid] = "TRANSIT"
                     # Add the transit link into the transit layer
                     self.transitlayer.add_link(lid, layer_id, layer_id)
 
-    def connect_inter_layers(self, layer_id_list, connection_distance: float, extend_connect=False,
-                                    max_connect_dist=100):
+    def connect_inter_layers(self, layer_id_list, connection_distance: float, extend_connect=False, max_connect_dist=100):
         """
-                Connect different layers with transit links. If no nodes are found within the connexion distance, the
-                nearest node within max_connect_dist is connected.
+        Connect different layers with transit links. If no nodes are found within the connexion distance, the
+        nearest node within max_connect_dist is connected.
 
-                Args:
-                    layer_id_list: list of layers to connect
-                    connection_distance: each node  is connected to the nodes within a radius defined by
-                        connection_distance (m)
-                    extend_connect: try to find one node if none are found within connection_distance
-                    max_connect_dist: max search distance for extend_connect
-                Returns:
-                    Nothing
+        Args:
+            -layer_id_list: list of layers to connect
+            -connection_distance: each node  is connected to the nodes within a radius defined by
+             connection_distance (m)
+            -extend_connect: try to find one node if none are found within connection_distance
+            -max_connect_dist: max search distance for extend_connect
         """
-
-        assert self.odlayer is not None
+        assert self.odlayer is not None #TODO: why this condition?
         _norm = np.linalg.norm
 
         for olayer_id in layer_id_list:
@@ -337,7 +341,7 @@ class MultiLayerGraph(object):
                     graph_dnode_pos = np.array([np.array([n['X'], n['Y']]) for n in dnodes])
 
                     for onid in graph_onode_ids:
-                        idxs = np.where(graph_onode_ids == onid)  # several is several shared vehicles at same node
+                        idxs = np.where(graph_onode_ids == onid)  # several if several shared vehicles at same node
                         for idx in idxs[0]:
                             onpos = graph_onode_pos[idx]
                             dist_nodes = _norm(graph_dnode_pos - onpos, axis=1)
@@ -346,7 +350,11 @@ class MultiLayerGraph(object):
                                 if dist_nodes.min() <= max_connect_dist:
                                     mask[np.argmin(dist_nodes)] = True
                             for layer_nid, dist in zip(graph_dnode_ids[mask], dist_nodes[mask]):
-                                idxd = np.where(graph_dnode_ids == layer_nid)
+                                # Check if this transit link already exist
+                                if onid in self.graph.nodes and layer_nid in self.graph.nodes[onid].adj:
+                                    link = self.graph.nodes[onid].adj[layer_nid]
+                                    log.warning(f'A transit link from {onid} to {layer_nid} already exists (link id = {link.id})')
+                                    continue
                                 lid = f"{onid}_{layer_nid}"
                                 self.graph.add_link(lid, onid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
                                 self.map_linkid_layerid[lid] = "TRANSIT"
@@ -359,14 +367,19 @@ class MultiLayerGraph(object):
                 self.mapping_layer_services[service] = layer
 
     def connect_layers(self, lid: str, upstream: str, downstream: str, length: float, costs: Dict[str, float]):
-        if "WALK" not in costs:
-            costs = {"WALK": costs}
-        self.graph.add_link(lid, upstream, downstream, length, costs, "TRANSIT")
-        self.map_linkid_layerid[lid]="TRANSIT"
-        # Add the transit link into the transit layer
-        link_olayer_id = self.graph.nodes[upstream].label
-        link_dlayer_id = self.graph.nodes[downstream].label
-        self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
+        # Check if this transit link does not already exist
+        if upstream in self.graph.nodes and downstream in self.graph.nodes[upstream].adj:
+            link = self.graph.nodes[upstream].adj[downstream]
+            log.warning(f'A transit link from {upstream} to {downstream} already exist (link id = {link.id})')
+        else:
+            if "WALK" not in costs:
+                costs = {"WALK": costs}
+            self.graph.add_link(lid, upstream, downstream, length, costs, "TRANSIT")
+            self.map_linkid_layerid[lid]="TRANSIT"
+            # Add the transit link into the transit layer
+            link_olayer_id = self.graph.nodes[upstream].label
+            link_dlayer_id = self.graph.nodes[downstream].label
+            self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
 
     def initialize_costs(self,walk_speed):
 
