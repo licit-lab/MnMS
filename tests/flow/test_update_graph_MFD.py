@@ -22,7 +22,7 @@ class TestCostsFunctions(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
-        self.tempfile = TemporaryDirectory()
+        self.tempfile = TemporaryDirectory(ignore_cleanup_errors=True)
         self.pathdir = self.tempfile.name+'/'
 
     def create_supervisor(self):
