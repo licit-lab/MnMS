@@ -1,3 +1,10 @@
+###############
+### Imports ###
+###############
+## Casuals
+import pathlib
+
+## MnMS
 from mnms import LOGLEVEL
 from mnms.demand import BaseDemandManager, User
 from mnms.flow.congested_MFD import CongestedMFDFlowMotor, CongestedReservoir
@@ -20,40 +27,20 @@ set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation',
                                       'mnms.travel_decision.model',
                                       'mnms.tools.observer'])
 
-
-roads = generate_line_road([0, 0], [0, 2000], 3)
-roads.add_zone(construct_zone_from_sections(roads, "LEFT", ["0_1"]))
-roads.add_zone(construct_zone_from_sections(roads, "RIGHT", ["1_2"]))
-
-personal_car = PersonalMobilityService()
-personal_car.attach_vehicle_observer(CSVVehicleObserver("veh_car.csv"))
-car_layer = CarLayer(roads, services=[personal_car])
-
-car_layer.create_node("CAR_0", "0")
-car_layer.create_node("CAR_1", "1")
-car_layer.create_node("CAR_2", "2")
-
-car_layer.create_link("CAR_0_1", "CAR_0", "CAR_1", {}, ["0_1"])
-car_layer.create_link("CAR_1_2", "CAR_1", "CAR_2", {}, ["1_2"])
-
-
-odlayer = generate_matching_origin_destination_layer(roads)
-
-mlgraph = MultiLayerGraph([car_layer],
-                          odlayer,
-                          1e-3)
-
-# Demand
-n_user = 2000
-dt_inter_user = 1
-demand = BaseDemandManager([User(f"U{i}", [0, 0], [0, 2000], Time("07:00:00").add_time(Dt(seconds=i*dt_inter_user))) for i in range(n_user)])
-demand.add_user_observer(CSVUserObserver('user.csv'))
-
-# Decison Model
-
-decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
-
-# Flow Motor
+##################
+### Parameters ###
+##################
+log_file = pathlib.Path(__file__).parent.joinpath('sim.log').resolve()
+roads_xmin = [0, 0]
+roads_xmax = [0, 2000]
+roads_n_nodes = 3
+odlayer_connection_dist = 1e-3 # m
+n_users = 2000
+dt_inter_users = 1
+users_origin = [0, 0]
+users_destination = [0, 2000]
+users_tstart = Time("07:00:00")
+n_car_max = 80
 
 def speed_MFD(acc, n_car_max):
     n_car = acc["CAR"]
@@ -69,18 +56,61 @@ def speed_MFD(acc, n_car_max):
 def entry_MFD(acc_car, n_car_max):
     return 1/max(acc_car, 1e-3)
 
+tstart = Time("07:00:00")
+tend = Time("09:10:00")
+dt_flow = Dt(seconds=1)
+affectation_factor = 10
 
+#########################
+### Scenario creation ###
+#########################
+
+#### RoadDescriptor ####
+roads = generate_line_road(roads_xmin, roads_xmax, roads_n_nodes)
+roads.add_zone(construct_zone_from_sections(roads, "LEFT", ["0_1"]))
+roads.add_zone(construct_zone_from_sections(roads, "RIGHT", ["1_2"]))
+
+#### MlGraph ####
+personal_car = PersonalMobilityService()
+personal_car.attach_vehicle_observer(CSVVehicleObserver("car_vehs.csv"))
+car_layer = CarLayer(roads, services=[personal_car])
+car_layer.create_node("CAR_0", "0")
+car_layer.create_node("CAR_1", "1")
+car_layer.create_node("CAR_2", "2")
+car_layer.create_link("CAR_0_1", "CAR_0", "CAR_1", {}, ["0_1"])
+car_layer.create_link("CAR_1_2", "CAR_1", "CAR_2", {}, ["1_2"])
+
+odlayer = generate_matching_origin_destination_layer(roads)
+
+mlgraph = MultiLayerGraph([car_layer],
+                          odlayer,
+                          odlayer_connection_dist)
+
+#### Demand ####
+demand = BaseDemandManager([User(f"U{i}", users_origin, users_destination, users_tstart.add_time(Dt(seconds=i*dt_inter_users))) for i in range(n_users)])
+demand.add_user_observer(CSVUserObserver('users.csv'))
+
+#### Decision model ####
+decision_model = DummyDecisionModel(mlgraph, outfile="paths.csv")
+
+#### Flow motor ####
 flow_motor = CongestedMFDFlowMotor(outfile="mfd.csv")
-flow_motor.add_reservoir(CongestedReservoir(roads.zones["LEFT"], ['CAR'], speed_MFD, entry_MFD, 80))
-flow_motor.add_reservoir(CongestedReservoir(roads.zones["RIGHT"], ['CAR'], speed_MFD, entry_MFD, 80))
+flow_motor.add_reservoir(CongestedReservoir(roads.zones["LEFT"], ['CAR'], speed_MFD, entry_MFD, n_car_max))
+flow_motor.add_reservoir(CongestedReservoir(roads.zones["RIGHT"], ['CAR'], speed_MFD, entry_MFD, n_car_max))
 
+#### Supervisor ####
 supervisor = Supervisor(mlgraph,
                         demand,
                         flow_motor,
-                        decision_model)
+                        decision_model,
+                        logfile=log_file,
+                        loglevel=LOGLEVEL.INFO)
 
-supervisor.run(Time("07:00:00"),
-               Time("09:10:00"),
-               Dt(seconds=1),
-               10)
+######################
+### Run simulation ###
+######################
 
+supervisor.run(tstart,
+               tend,
+               dt_flow,
+               affectation_factor)

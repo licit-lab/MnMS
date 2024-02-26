@@ -81,7 +81,7 @@ class TestFreeFloatingVehicleSharingInterruptionWithRH(unittest.TestCase):
             personal_car = PersonalMobilityService('CAR')
             car_layer = generate_layer_from_roads(roads, 'CAR', mobility_services=[personal_car])
 
-        ridehailing = OnDemandMobilityService('RIDEHAILING', 0, matching_strategy='nearest_vehicle_in_radius')
+        ridehailing = OnDemandMobilityService('RIDEHAILING', 0, matching_strategy='nearest_vehicle_in_radius_fifo')
         if sc in ['1', '2', '3']:
             ridehailing_layer = generate_layer_from_roads(roads, 'RIDEHAILING', mobility_services=[ridehailing])
         elif sc in ['4']:

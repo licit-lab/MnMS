@@ -28,7 +28,7 @@ class TestFreeFloatingVehicleSharingInterruptionWhileWalking(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
-        self.temp_dir_results = tempfile.TemporaryDirectory()
+        self.temp_dir_results = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.dir_results = Path(self.temp_dir_results.name)
 
     def tearDown(self):

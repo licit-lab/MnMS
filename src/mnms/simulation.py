@@ -215,18 +215,19 @@ class Supervisor(object):
         log.info(f' User flow step done [{end - start:.5} s]')
         return users_reach_dt_answer
 
-    def call_matching_mobility_services(self, new_users):
+    def call_matching_mobility_services(self, new_users, flow_dt):
         """Calls the matching for all mobility services and measures execution times.
 
         Args:
             -new_users: users who depart during this affectation step but have not
                         yet been taken into account by the UserFlow object
+            -flow_dt: the flow time step
         """
         for layer in self._mlgraph.layers.values():
             for ms in layer.mobility_services.values():
                 log.info(f' Perform matching for mobility service {ms.id}...')
                 start = time()
-                ms.launch_matching(new_users, self._user_flow, self._decision_model)
+                ms.launch_matching(new_users, self._user_flow, self._decision_model, flow_dt)
                 end = time()
                 log.info(f' Matching for mobility service {ms.id} done in [{end - start:.5} s]')
 
@@ -381,7 +382,7 @@ class Supervisor(object):
                 self.step_dynamic_space_sharing() # NB: really don't know if this still works
 
                 # Call matching for all mobility services
-                self.call_matching_mobility_services(new_users)
+                self.call_matching_mobility_services(new_users, flow_dt)
 
                 # Call flow motor step
                 self.call_flow_motor_step(flow_dt)

@@ -22,7 +22,7 @@ class TestCostsFunctions(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
         """
-        self.tempfile = TemporaryDirectory()
+        self.tempfile = TemporaryDirectory(ignore_cleanup_errors=True)
         self.pathdir = self.tempfile.name+'/'
 
     def create_supervisor(self):
@@ -85,6 +85,9 @@ class TestCostsFunctions(unittest.TestCase):
         self.demand = BaseDemandManager([User("U0", [-20, 0], [0, 5000], Time("07:00:00"))])
         self.demand.add_user_observer(CSVUserObserver(self.pathdir+'users.csv'))
         self.decision_model = DummyDecisionModel(mlgraph, cost='generalized_cost')
+        def gc_waiting(wt, vot=0.003):
+            return vot * wt
+        self.decision_model.add_waiting_cost_function('generalized_cost', gc_waiting)
 
         ## MFDFlowMotor
         self.flow = MFDFlowMotor(outfile=self.pathdir + 'flow_motor.csv')

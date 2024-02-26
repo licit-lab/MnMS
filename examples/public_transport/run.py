@@ -1,6 +1,11 @@
+###############
+### Imports ###
+###############
+## Casuals
 import pathlib
 
-from mnms import LOGLEVEL
+## MnMS
+from mnms.log import set_all_mnms_logger_level, LOGLEVEL
 from mnms.demand import CSVDemandManager
 from mnms.flow.MFD import Reservoir, MFDFlowMotor
 from mnms.generation.layers import generate_matching_origin_destination_layer, generate_layer_from_roads, \
@@ -16,68 +21,80 @@ from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 from mnms.travel_decision import DummyDecisionModel
 from mnms.vehicles.veh_type import Bus
 
-set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation',
-                                      'mnms.vehicles.veh_type',
-                                      # 'mnms.flow.user_flow',
-                                      'mnms.flow.MFD',
-                                      'mnms.layer.public_transport',
-                                      'mnms.mobility_service.public_transport',
-                                      # 'mnms.travel_decision.dummy',
-                                      'mnms.tools.observer'
-                                      ])
-attach_log_file('simulation.log')
+##################
+### Parameters ###
+##################
+demand_file = pathlib.Path(__file__).parent.joinpath('demand.csv').resolve()
+log_file = pathlib.Path(__file__).parent.joinpath('sim.log').resolve()
+roads_xmin = [0, 0]
+roads_xmax = [3000, 0]
+roads_nb_nodes = 2
+bus_default_speed = 10 # m/s
+bus_frequency = Dt(minutes=5)
+bus_tstart = '07:01:00'
+bus_tend = '08:01:00'
+odlayer_connection_dist = 301 # m
+def mfdspeed(dacc):
+    dacc['BUS'] = 5 # m/s
+    return dacc
+tstart = Time("07:00:00")
+tend = Time("08:30:00")
+dt_flow = Dt(minutes=1)
+affectation_factor = 10
 
-cwd = pathlib.Path(__file__).parent.joinpath('demand.csv').resolve()
+#########################
+### Scenario creation ###
+#########################
 
-# Graph
-
-roads = generate_line_road([0, 0], [0, 3000], 2)
+#### RoadDescriptor ####
+roads = generate_line_road(roads_xmin, roads_xmax, roads_nb_nodes)
 roads.register_stop('SO', '0_1', 0.1)
 roads.register_stop('S1', '0_1', 0.4)
 roads.register_stop('S2', '0_1', 0.6)
 roads.register_stop('SD', '0_1', 0.9)
 
-bus_service = PublicTransportMobilityService('B0')
+#### MlGraph ####
+bus_service = PublicTransportMobilityService('BUS')
+ptlayer = PublicTransportLayer(roads, 'BUS', Bus, bus_default_speed, services=[bus_service],
+    observer=CSVVehicleObserver("vehs.csv"))
 
-veh = pathlib.Path(__file__).parent.joinpath('veh.csv').resolve()
-pblayer = PublicTransportLayer(roads, 'BUS', Bus, 10, services=[bus_service], observer=CSVVehicleObserver(veh))
-
-pblayer.create_line('L0',
+ptlayer.create_line('L0',
                     ['SO', 'S1', 'S2','SD'],
                     [['0_1'], ['0_1'],['0_1']],
-                    TimeTable.create_table_freq('07:01:00', '08:01:00', Dt(minutes=5)))
+                    TimeTable.create_table_freq(bus_tstart, bus_tend, bus_frequency))
 
 odlayer = generate_matching_origin_destination_layer(roads)
 
-#road_db = generate_manhattan_road(10, 100)
-
-mlgraph = MultiLayerGraph([pblayer],
+mlgraph = MultiLayerGraph([ptlayer],
                           odlayer,
-                          200)
+                          odlayer_connection_dist)
 
-# Demand
-demand = CSVDemandManager(cwd)
-demand.add_user_observer(CSVUserObserver('user.csv'))
+#### Demand ####
+demand = CSVDemandManager(demand_file)
+demand.add_user_observer(CSVUserObserver('users.csv'))
 
-# Decison Model
+#### Decision model ####
+decision_model = DummyDecisionModel(mlgraph, outfile="paths.csv")
 
-decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
-
-# Flow Motor
-
-def mfdspeed(dacc):
-    dacc['BUS'] = 5
-    return dacc
-
+#### Flow motor ####
 flow_motor = MFDFlowMotor()
 flow_motor.add_reservoir(Reservoir(roads.zones['RES'], ['BUS'], mfdspeed))
 
+#### Supervisor ####
 supervisor = Supervisor(mlgraph,
                         demand,
                         flow_motor,
-                        decision_model)
+                        decision_model,
+                        logfile=log_file,
+                        loglevel=LOGLEVEL.INFO)
 
-supervisor.run(Time("07:00:00"),
-               Time("08:30:00"),
-               Dt(minutes=1),
-               10)
+######################
+### Run simulation ###
+######################
+
+set_all_mnms_logger_level(LOGLEVEL.INFO)
+
+supervisor.run(tstart,
+               tend,
+               dt_flow,
+               affectation_factor)

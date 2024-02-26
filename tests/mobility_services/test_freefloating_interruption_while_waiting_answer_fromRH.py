@@ -77,7 +77,7 @@ class TestFreeFloatingVehicleSharingInterruptionWhileWaitingAnswerFromRH(unittes
         roads.add_zone(construct_zone_from_sections(roads, "Z2", ["2_5"]))
         roads.add_zone(construct_zone_from_sections(roads, "Z3", ["3_5"]))
 
-        ridehailing = OnDemandMobilityService('RIDEHAILING', 3, matching_strategy='nearest_vehicle_in_radius')
+        ridehailing = OnDemandMobilityService('RIDEHAILING', 3, matching_strategy='nearest_vehicle_in_radius_fifo')
         if sc in ['1', '2', '3']:
             ridehailing_layer = generate_layer_from_roads(roads, 'RIDEHAILING', mobility_services=[ridehailing])
         elif sc in ['4']:

@@ -45,6 +45,65 @@ class TestMobilityServicesGraph(unittest.TestCase):
         self.temp_dir_results.cleanup()
         VehicleManager.empty()
 
+    def create_simple_supervisor(self, random_choice):
+        """Create supervisor for the test_random_choice_for_equal_costs.
+        """
+        roads = generate_line_road([0, 0], [0, 5000], 2)
+
+        personal_car = PersonalMobilityService('CAR')
+        car_layer = generate_layer_from_roads(roads, 'CAR', mobility_services=[personal_car])
+
+        ridehailing = OnDemandMobilityService('UBER', 0)
+        rh_layer = generate_layer_from_roads(roads, 'RIDEHAILING', mobility_services=[ridehailing])
+
+        odlayer = generate_matching_origin_destination_layer(roads)
+
+        mlgraph = MultiLayerGraph([car_layer, rh_layer],
+                                  odlayer,
+                                  1)
+
+        def gc_car(mlgraph, link, costs):
+            return 623
+
+        def gc_rh(mlgraph, link, costs):
+            return 623
+
+        def gc_transit(mlgraph, link, costs):
+            return 0
+
+        #def gc_waiting(wt):
+        #    return 0
+
+        mlgraph.add_cost_function('CAR', 'generalized_cost', gc_car)
+        mlgraph.add_cost_function('RIDEHAILING', 'generalized_cost', gc_rh)
+        mlgraph.add_cost_function('TRANSIT', 'generalized_cost', gc_transit)
+
+        demand = BaseDemandManager([User("U0", [0, 0], [0, 5000], Time("07:00:00")),
+            User("U1", [0, 0], [0, 5000], Time("07:00:00")),
+            User("U2", [0, 0], [0, 5000], Time("07:00:00")),
+            User("U3", [0, 0], [0, 5000], Time("07:00:00")),
+            User("U4", [0, 0], [0, 5000], Time("07:00:00")),
+            User("U5", [0, 0], [0, 5000], Time("07:00:00")),
+            User("U6", [0, 0], [0, 5000], Time("07:00:00"))])
+        demand.add_user_observer(CSVUserObserver(self.dir_results / 'users.csv'))
+        decision_model = DummyDecisionModel(mlgraph, random_choice_for_equal_costs=random_choice,
+            considered_modes=[({'CAR'},None,1), ({'RIDEHAILING'},None,1)],
+            outfile=self.dir_results / "paths.csv", verbose_file=True)
+        #decision_model.add_waiting_cost_function('generalized_cost', gc_waiting)
+
+        def mfdspeed(dacc):
+            dspeed = {'CAR': 10}
+            return dspeed
+        flow_motor = MFDFlowMotor()
+        flow_motor.add_reservoir(Reservoir(roads.zones["RES"], ['CAR'], mfdspeed))
+
+        supervisor = Supervisor(mlgraph,
+                                demand,
+                                flow_motor,
+                                decision_model)
+
+        return supervisor
+
     def create_supervisor(self):
         """Create supervisor common to the two tests in this file.
         """
@@ -265,3 +324,44 @@ class TestMobilityServicesGraph(unittest.TestCase):
             diff = firstcall_u.compare(secondcall_u)
             is_empty = diff.empty
             self.assertEqual(is_empty, 1)
+
+    def test_random_choice_for_equal_costs(self):
+        """Test the parameter random_choice_for_equal_costs of the DummyDecisionModel
+        with same and different seeds.
+        """
+        supervisor_r1 = self.create_simple_supervisor(True)
+        supervisor_r1.run(Time("06:55:00"),
+                       Time("07:20:00"),
+                       self.flow_dt,
+                       self.affectation_factor,
+                       seed=883)
+        with open(self.dir_results / "paths.csv") as f:
+            firstcall_paths = pd.read_csv(f, sep=";")
+
+        supervisor_r2 = self.create_simple_supervisor(True)
+        supervisor_r2.run(Time("06:55:00"),
+                       Time("07:20:00"),
+                       self.flow_dt,
+                       self.affectation_factor,
+                       seed=93654)
+        with open(self.dir_results / "paths.csv") as f:
+            secondcall_paths = pd.read_csv(f, sep=";")
+
+        supervisor_r3 = self.create_simple_supervisor(True)
+        supervisor_r3.run(Time("06:55:00"),
+                       Time("07:20:00"),
+                       self.flow_dt,
+                       self.affectation_factor,
+                       seed=883)
+        with open(self.dir_results / "paths.csv") as f:
+            thirdcall_paths = pd.read_csv(f, sep=";")
+
+        df1 = firstcall_paths[firstcall_paths['EVENT'] == 'DEPARTURE']
+        df2 = secondcall_paths[secondcall_paths['EVENT'] == 'DEPARTURE']
+        df3 = thirdcall_paths[thirdcall_paths['EVENT'] == 'DEPARTURE']
+        df1_sel = df1[df1['CHOSEN'] == 1]
+        df2_sel = df2[df2['CHOSEN'] == 1]
+        df3_sel = df3[df1['CHOSEN'] == 1]
+
+        self.assertEqual(list(df1_sel['SERVICES']), list(df3_sel['SERVICES']))
+        self.assertNotEqual(list(df1_sel['SERVICES']), list(df2_sel['SERVICES']))

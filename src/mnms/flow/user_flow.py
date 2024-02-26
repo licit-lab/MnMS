@@ -179,7 +179,7 @@ class UserFlow(object):
                     mservice_id = user.path.mobility_services[ilayer]
                     mservice = self._graph.layers[layer].mobility_services[mservice_id]
                     log.info(f"User {user.id} requests mobility service {mservice._id}")
-                    mservice.add_request(user, upath[slice_nodes][-1])
+                    mservice.add_request(user, upath[slice_nodes][-1], self._tcurrent)
                     user.requested_service = mservice
                     return mservice
             else:

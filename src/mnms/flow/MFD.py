@@ -308,7 +308,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             link_info = self._layer_link_length_mapping[lid]
             total_len = 0
             new_speed = 0
-            old_speed = link.costs[list(link.costs.keys())[0]]["speed"]
+            layer = self._graph.layers[link.label]
+            old_speed = link.costs[list(layer.mobility_services.keys())[0]]["speed"]
             for section, length in link_info.sections:
                 res_id = self._section_to_reservoir[section]
                 res = self.reservoirs[res_id]
@@ -329,7 +330,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                                        'length': total_len}
 
                 # The update the generalized one
-                layer=self._graph.layers[link.label]
                 costs_functions = layer._costs_functions
                 for mservice, cost_funcs in costs_functions.items():
                     for cost_name, cost_f in cost_funcs.items():
