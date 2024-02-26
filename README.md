@@ -61,4 +61,4 @@ mkdocs serve
 
 ### Detailed 
 
-The detailed documentation is available in the doc folder. 
+The detailed documentation is available [there](https://github.com/licit-lab/MnMS/blob/develop/doc/MnMS_detailed_documentation-26-02-24.pdf).
