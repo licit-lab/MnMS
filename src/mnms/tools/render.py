@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Patch
+import numpy as np
 
 from mnms.time import Time
 
@@ -130,3 +131,38 @@ def draw_veh_activity(ax, veh_result_file: str, veh_id: str):
     legend_elements = [Patch(facecolor=c_dict[i], label=i) for i in c_dict]
     plt.legend(handles=legend_elements)
     ax.xaxis.set_major_locator(plt.MaxNLocator(20))
+
+def draw_links_load(ax, graph, loads, n, linkwidth=1, lmin=None, lmax=None):
+    """Function to represent loads on the links of a graph with a colormap.
+    Only the links for which a load is specified are represented.
+
+    Args:
+        -graph: graph the links we want to represent belong to
+        -loads: dict with links ids and associated loads.
+        -n: granularity of the colormap
+    """
+    lines = list()
+    colors_load = list()
+    min_load = min(loads.values())
+    if lmin is not None:
+        min_load = min(lmin, min_load)
+    max_load = max(loads.values())
+    if lmax is not None:
+        max_load = max(lmax, max_load)
+    colors = plt.cm.cool(np.linspace(0, 1,n))
+    color_step = (max_load - min_load) / (n-1)
+    loads_sorted = [(lid,load) for lid,load in loads.items()]
+    loads_sorted = sorted(loads_sorted, key=lambda x:x[1])
+    for lid, load in loads_sorted:
+        assert lid in graph.links.keys(), f'Cannot find link {lid} in the graph provided...'
+        color_idx = int(divmod(load-min_load, color_step)[0])
+        colors_load.append(colors[color_idx])
+        unode = graph.links[lid].upstream
+        dnode = graph.links[lid].downstream
+        lines.append([graph.nodes[unode].position, graph.nodes[dnode].position])
+    line_segment = LineCollection(lines, linestyles='solid', colors=colors_load, linewidths=linkwidth)
+    ax.add_collection(line_segment)
+
+    ax.margins(0.05, 0.05)
+    ax.axis("equal")
+    plt.tight_layout()
