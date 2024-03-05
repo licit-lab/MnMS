@@ -287,13 +287,17 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
                 destinations.append(req.user.current_node)
 
         ## Call Dijkstra once
-        paths = parallel_dijkstra(self.graph,
-                                  origins,
-                                  destinations,
-                                  [{self.layer.id: self.id}]*len(origins),
-                                  'travel_time',
-                                  multiprocessing.cpu_count(),
-                                  [{self.layer.id}]*len(origins))
+        try:
+            paths = parallel_dijkstra(self.graph,
+                                    origins,
+                                    destinations,
+                                    [{self.layer.id: self.id}]*len(origins),
+                                    'travel_time',
+                                    multiprocessing.cpu_count(),
+                                    [{self.layer.id}]*len(origins))
+        except ValueError as ex:
+            log.error(f'HiPOP.Error: {ex}')
+            sys.exit(-1)
 
         ## Parse outputs and complete the pickup times and veh paths matrices
         for i in range(len(paths)):
@@ -360,7 +364,11 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
         candidates = []
         for veh in idle_vehs_in_radius:
             veh_node = veh.current_node
-            veh_path, tt = dijkstra(self.graph, veh_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+            try:
+                veh_path, tt = dijkstra(self.graph, veh_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
             if tt == float('inf'):
                 # This vehicle cannot reach user, skip and consider next vehicle
                 continue
@@ -403,7 +411,11 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
         for veh in vehs_in_radius:
             veh_last_node = veh.activity.node if not veh.activities else \
                     veh.activities[-1].node
-            veh_path, tt = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+            try:
+                veh_path, tt = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
             # If vehicle cannot reach user, skip and consider next vehicle
             if tt == float('inf'):
                 continue
@@ -465,7 +477,11 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
     #                 # Compute pick-up path and cost from end of current activity
     #                 veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
     #                 choosen_veh.activities[-1].node
-    #                 veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+    #                 try:
+    #                     veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+    #                 except ValueError as ex:
+    #                     log.error(f'HiPOP.Error: {ex}')
+    #                     sys.exit(-1)
     #                 # If vehicle cannot reach user, skip and consider next vehicle
     #                 if cost == float('inf'):
     #                     continue
@@ -577,13 +593,17 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
                     if len(nearest_depot) > 0:
                         # Get the shortest path till the nearest depot
                         nearest_depot = nearest_depot[0]
-                        veh_path, cost = dijkstra(self.graph,
-                                                veh._current_node,
-                                                nearest_depot.node,
-                                                'travel_time',
-                                                {self.layer.id: self.id,
-                                                "TRANSIT": "WALK"},
-                                                {self.layer.id})
+                        try:
+                            veh_path, cost = dijkstra(self.graph,
+                                                    veh._current_node,
+                                                    nearest_depot.node,
+                                                    'travel_time',
+                                                    {self.layer.id: self.id,
+                                                    "TRANSIT": "WALK"},
+                                                    {self.layer.id})
+                        except ValueError as ex:
+                            log.error(f'HiPOP.Error: {ex}')
+                            sys.exit(-1)
                         if cost == float('inf'):
                             raise PathNotFound(veh._current_node, depots)
                         # Make the vehicle reposition till the nearest depot

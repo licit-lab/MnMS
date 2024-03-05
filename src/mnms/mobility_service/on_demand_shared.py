@@ -384,12 +384,16 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
                 prev_node = forced_next_node
                 add_current_node = True
         if prev_node != activity.node:
-            path, cost = dijkstra(self.graph,
-                                  prev_node,
-                                  activity.node,
-                                  'travel_time',
-                                  {self.layer.id: self.id},
-                                  {self.layer.id})
+            try:
+                path, cost = dijkstra(self.graph,
+                                      prev_node,
+                                      activity.node,
+                                      'travel_time',
+                                      {self.layer.id: self.id},
+                                      {self.layer.id})
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
             if cost == float('inf'):
                 raise PathNotFound(prev_node, activity.node)
         else:
@@ -428,12 +432,16 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
             del plan[index+1]
             next_a = plan[index+1] if index+1 < len(plan) else None
         if next_a is not None:
-            path, cost = dijkstra(self.graph,
-                                  activity.node,
-                                  next_a.node,
-                                  'travel_time',
-                                  {self.layer.id: self.id},
-                                  {self.layer.id})
+            try:
+                path, cost = dijkstra(self.graph,
+                                      activity.node,
+                                      next_a.node,
+                                      'travel_time',
+                                      {self.layer.id: self.id},
+                                      {self.layer.id})
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
             if cost == float('inf'):
                 raise PathNotFound(activity.node, next_a.node)
             next_a.modify_path(self.construct_veh_path(path))

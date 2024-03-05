@@ -318,10 +318,14 @@ class AbstractMobilityService(ABC):
                 next_a = all_activities[1]
                 next_a_modified_path_cost_name = 'travel_time' if type(next_a).__name__ in ['VehicleActivityPickup', 'VehicleActivityRepositioning'] else cost
                 veh_layer = mlgraph.mapping_layer_services[self.id]
-                next_a_modified_path, cost_val = dijkstra(mlgraph.graph,
-                            veh.current_link[1],
-                            next_a.node,
-                            next_a_modified_path_cost_name, {veh_layer.id: self.id}, {veh_layer.id})
+                try:
+                    next_a_modified_path, cost_val = dijkstra(mlgraph.graph,
+                                veh.current_link[1],
+                                next_a.node,
+                                next_a_modified_path_cost_name, {veh_layer.id: self.id}, {veh_layer.id})
+                except ValueError as ex:
+                    log.error(f'HiPOP.Error: {ex}')
+                    sys.exit(-1)
                 assert cost_val != float('inf'), \
                         f'Path not found between {veh.current_link[1]} '\
                         f'and {next_a.node} on layer {veh_layer.id}'
@@ -346,10 +350,14 @@ class AbstractMobilityService(ABC):
                 else:
                     next_a_modified_path_cost_name = 'travel_time' if type(next_a).__name__ in ['VehicleActivityPickup', 'VehicleActivityRepositioning'] else cost
                     veh_layer = mlgraph.mapping_layer_services[self.id]
-                    next_a_modified_path, cost_val = dijkstra(mlgraph.graph,
-                                prev_a_dnode,
-                                next_a_dnode,
-                                next_a_modified_path_cost_name, {veh_layer.id: self.id}, {veh_layer.id})
+                    try:
+                        next_a_modified_path, cost_val = dijkstra(mlgraph.graph,
+                                    prev_a_dnode,
+                                    next_a_dnode,
+                                    next_a_modified_path_cost_name, {veh_layer.id: self.id}, {veh_layer.id})
+                    except ValueError as ex:
+                        log.error(f'HiPOP.Error: {ex}')
+                        sys.exit(-1)
                     assert cost_val != float('inf'), \
                             f'Path not found between {prev_a_dnode} '\
                             f'and {next_a_dnode} on layer {veh_layer.id}'
@@ -465,10 +473,14 @@ class AbstractMobilityService(ABC):
                         next_act_modified_path_cost_name = 'travel_time' if \
                             type(all_activities[user_serving_act_ind+1]).__name__ in ['VehicleActivityPickup', 'VehicleActivityRepositioning'] else cost
                         veh_layer = mlgraph.mapping_layer_services[self.id]
-                        next_act_modified_path, cost_val = dijkstra(mlgraph.graph,
-                            all_activities[user_serving_act_ind].path[-1][0][1],
-                            all_activities[user_serving_act_ind+1].node,
-                            next_act_modified_path_cost_name, {veh_layer.id: self.id}, {veh_layer.id})
+                        try:
+                            next_act_modified_path, cost_val = dijkstra(mlgraph.graph,
+                                all_activities[user_serving_act_ind].path[-1][0][1],
+                                all_activities[user_serving_act_ind+1].node,
+                                next_act_modified_path_cost_name, {veh_layer.id: self.id}, {veh_layer.id})
+                        except ValueError as ex:
+                            log.error(f'HiPOP.Error: {ex}')
+                            sys.exit(-1)
                         assert cost_val != float('inf'), \
                             f'Path not found between {all_activities[user_serving_act_ind].path[-1][0][1]} '\
                             f'and {all_activities[user_serving_act_ind+1].node} on layer {veh_layer.id}'

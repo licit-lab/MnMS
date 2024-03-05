@@ -24,6 +24,9 @@ class TestCostsFunctions(unittest.TestCase):
         self.tempfile = TemporaryDirectory(ignore_cleanup_errors=True)
         self.pathdir = self.tempfile.name + '/'
 
+    def create_supervisor(self, sc):
+        """Method to initiate a supervisor for the different tests of this class.
+        """
         roads = RoadDescriptor()
 
         roads.register_node('0', [0, 0])
@@ -79,22 +82,24 @@ class TestCostsFunctions(unittest.TestCase):
             return gc
 
         mlgraph.add_cost_function('BUS', 'generalized_cost', gc_bus)
-        # TRANSIT links
-        def gc_transit(mlgraph, link, costs, vot=0.003, transfer_penalty=1.44, parking_cost=3, bus_cost=2):
-            olabel = mlgraph.graph.nodes[link.upstream].label
-            dlabel = mlgraph.graph.nodes[link.downstream].label
-            speed_cost = costs["WALK"]['speed']
-            if olabel == 'CAR' and dlabel == 'BUS':
-                gc = vot * link.length / speed_cost + transfer_penalty + parking_cost + bus_cost
-            elif olabel == 'ODLAYER' and dlabel == 'CAR':
-                gc = vot * link.length / speed_cost
-            elif olabel == 'BUS' and dlabel == 'ODLAYER':
-                gc = vot * link.length / speed_cost
-            else:
-                raise ValueError(f'Cost not defined for transit link between layer {olabel} and layer {dlabel}')
-            return gc
 
-        mlgraph.add_cost_function('TRANSIT', 'generalized_cost', gc_transit)
+        if sc in ['1']:
+            # TRANSIT links
+            def gc_transit(mlgraph, link, costs, vot=0.003, transfer_penalty=1.44, parking_cost=3, bus_cost=2):
+                olabel = mlgraph.graph.nodes[link.upstream].label
+                dlabel = mlgraph.graph.nodes[link.downstream].label
+                speed_cost = costs["WALK"]['speed']
+                if olabel == 'CAR' and dlabel == 'BUS':
+                    gc = vot * link.length / speed_cost + transfer_penalty + parking_cost + bus_cost
+                elif olabel == 'ODLAYER' and dlabel == 'CAR':
+                    gc = vot * link.length / speed_cost
+                elif olabel == 'BUS' and dlabel == 'ODLAYER':
+                    gc = vot * link.length / speed_cost
+                else:
+                    raise ValueError(f'Cost not defined for transit link between layer {olabel} and layer {dlabel}')
+                return gc
+            mlgraph.add_cost_function('TRANSIT', 'generalized_cost', gc_transit)
+
         self.mlgraph = mlgraph
 
         ## Demand
@@ -115,10 +120,9 @@ class TestCostsFunctions(unittest.TestCase):
                                 self.demand,
                                 self.flow,
                                 self.decision_model,
-                                logfile=self.pathdir+'log.txt',
+                                logfile='log.txt',
                                 loglevel=LOGLEVEL.INFO)
         set_all_mnms_logger_level(LOGLEVEL.INFO)
-        self.flow.initialize(1.42)
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -128,6 +132,9 @@ class TestCostsFunctions(unittest.TestCase):
         Vehicle._counter = 0
 
     def test_init(self):
+        self.create_supervisor('1')
+        self.flow.initialize(1.42)
+
         self.assertIn("generalized_cost", self.mlgraph.transitlayer._costs_functions["WALK"])
         for lid, link in self.mlgraph.graph.links.items():
             for mservice, costs in link.costs.items():
@@ -149,10 +156,11 @@ class TestCostsFunctions(unittest.TestCase):
                     self.assertAlmostEqual(layer_link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 7)
 
     def test_cost_update(self):
+        self.create_supervisor('1')
         self.supervisor.run(Time("07:00:00"),
-                      Time("09:00:00"),
-                      Dt(seconds=1),
-                      10)
+                       Time("09:00:00"),
+                       Dt(seconds=1),
+                       10)
         self.assertIn("generalized_cost", self.mlgraph.transitlayer._costs_functions["WALK"])
         for lid, link in self.mlgraph.graph.links.items():
             for mservice, costs in link.costs.items():
@@ -174,7 +182,7 @@ class TestCostsFunctions(unittest.TestCase):
                         self.assertAlmostEqual(layer_link.costs["Bus"]['generalized_cost'], 0.003 * 1450 / 9)
 
     def test_waiting_cost(self):
-        self.setUp()
+        self.create_supervisor('1')
         self.supervisor.run(Time("07:00:00"),
                        Time("09:00:00"),
                        Dt(seconds=1),
@@ -186,7 +194,7 @@ class TestCostsFunctions(unittest.TestCase):
         self.assertAlmostEqual(dfp['COST'].iloc[0],cost)
 
     def test_additional_cost(self):
-        self.setUp()
+        self.create_supervisor('1')
         def gc_additional(path, user):
             mss = ','.join(path.mobility_services)
             if 'PersonalVehicle,WALK,Bus' in mss:
@@ -203,3 +211,14 @@ class TestCostsFunctions(unittest.TestCase):
         self.assertEqual(1, len(dfp))
         cost = 3 * 0.003 * 50 / 1.42 + 0.0005 * 2000 + 0.003 * 2000 / 8.33 + 6.44 + 0.003 * 2900 / 7 + 0.003 * 30 - 1
         self.assertAlmostEqual(dfp['COST'].iloc[0],cost)
+
+    def test_missing_cost_on_transit(self):
+        """Check that an error is triggered when the cost used by travel decision
+        model is not defined on the transit links.
+        """
+        self.create_supervisor('2')
+        with self.assertRaises(ValueError):
+            self.supervisor.run(Time("07:00:00"),
+                                Time("09:00:00"),
+                                Dt(seconds=1),
+                                10)

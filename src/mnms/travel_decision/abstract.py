@@ -713,7 +713,8 @@ class AbstractDecisionModel(ABC):
                 self._process_shortest_path_inputs(subgraph_layers, k, personal_ms_planning_origins)
 
             ## Compute the shorest paths in parallel
-            paths = parallel_k_shortest_path(self._mlgraph.graph,
+            try:
+                paths = parallel_k_shortest_path(self._mlgraph.graph,
                                              origins,
                                              destinations,
                                              self._cost,
@@ -725,6 +726,9 @@ class AbstractDecisionModel(ABC):
                                              self._max_retry_to_find_k_paths,
                                              nb_paths,
                                              self._thread_number)
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
 
             ## Parse the outputs of HiPOP and proceed to path selection
             users_paths = self.parse_paths(paths, uids, chosen_mservices, nb_paths, users_paths)
@@ -743,32 +747,40 @@ class AbstractDecisionModel(ABC):
 
                 ## Compute the shorest paths in parallel with the proper method
                 if considered_mode[1] is None:
-                    paths = parallel_k_shortest_path(self._mlgraph.graph,
-                                                     origins,
-                                                     destinations,
-                                                     self._cost,
-                                                     chosen_mservices,
-                                                     available_layers,
-                                                     self._max_diff_cost,
-                                                     self._max_dist_in_common,
-                                                     self._cost_multiplier_to_find_k_paths,
-                                                     self._max_retry_to_find_k_paths,
-                                                     nb_paths,
-                                                     self._thread_number)
+                    try:
+                        paths = parallel_k_shortest_path(self._mlgraph.graph,
+                                                        origins,
+                                                        destinations,
+                                                        self._cost,
+                                                        chosen_mservices,
+                                                        available_layers,
+                                                        self._max_diff_cost,
+                                                        self._max_dist_in_common,
+                                                        self._cost_multiplier_to_find_k_paths,
+                                                        self._max_retry_to_find_k_paths,
+                                                        nb_paths,
+                                                        self._thread_number)
+                    except ValueError as ex:
+                        log.error(f'HiPOP.Error: {ex}')
+                        sys.exit(-1)
                 else:
-                    paths = parallel_k_intermodal_shortest_path(self._mlgraph.graph,
-                                                                origins,
-                                                                destinations,
-                                                                chosen_mservices,
-                                                                self._cost,
-                                                                self._thread_number,
-                                                                considered_mode[1],
-                                                                self._max_diff_cost,
-                                                                self._max_dist_in_common,
-                                                                self._cost_multiplier_to_find_k_paths,
-                                                                self._max_retry_to_find_k_paths,
-                                                                nb_paths,
-                                                                available_layers)
+                    try:
+                        paths = parallel_k_intermodal_shortest_path(self._mlgraph.graph,
+                                                                    origins,
+                                                                    destinations,
+                                                                    chosen_mservices,
+                                                                    self._cost,
+                                                                    self._thread_number,
+                                                                    considered_mode[1],
+                                                                    self._max_diff_cost,
+                                                                    self._max_dist_in_common,
+                                                                    self._cost_multiplier_to_find_k_paths,
+                                                                    self._max_retry_to_find_k_paths,
+                                                                    nb_paths,
+                                                                    available_layers)
+                    except ValueError as ex:
+                        log.error(f'HiPOP.Error: {ex}')
+                        sys.exit(-1)
                 ## Parse the outputs of HiPOP and proceed to path selection
                 users_paths = self.parse_paths(paths, uids, chosen_mservices, nb_paths, users_paths)
 
@@ -777,9 +789,13 @@ class AbstractDecisionModel(ABC):
         self.path_selection(users_paths, tcurrent)
 
     def compute_path(self, origin: str, destination: str, accessible_layers: Set[str], chosen_services: Dict[str, str]):
-        return dijkstra(self._mlgraph.graph,
-                        origin,
-                        destination,
-                        self._cost,
-                        chosen_services,
-                        accessible_layers)
+        try:
+            return dijkstra(self._mlgraph.graph,
+                            origin,
+                            destination,
+                            self._cost,
+                            chosen_services,
+                            accessible_layers)
+        except ValueError as ex:
+            log.error(f'HiPOP.Error: {ex}')
+            sys.exit(-1)
