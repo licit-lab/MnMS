@@ -61,6 +61,7 @@ class AbstractLayer(CostFunctionLayer):
 
         self.map_reference_links: Dict[str, List[str]] = dict()
         self.map_reference_nodes: Dict[str, str] = dict()
+        self.map_links_classes: Dict[str, str] = dict()
 
         # self._costs_functions: Dict[Dict[str, Callable]] = defaultdict(dict)
 
@@ -534,6 +535,18 @@ class SimpleLayer(AbstractLayer):
 
         self.map_reference_links[lid] = road_links
 
+    def add_links_classes(self, links_classes: Dict[str, List[str]]):
+        # Check that the links belong to this layer graph and build the map
+        map_links_classes = {}
+        for clas in links_classes.keys():
+            for class_link in links_classes[clas]:
+                self.add_class_to_link(class_link, clas)
+
+    def add_class_to_link(self, lid, class_id):
+        assert lid in self.graph.links, f'Link {lid} not in layer {self._id} graph...'
+        assert lid not in self.map_links_classes, f'Link {lid} already has a class...'
+        self.map_links_classes[lid] = class_id
+
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescriptor):
         new_obj = cls(roads,
@@ -549,6 +562,8 @@ class SimpleLayer(AbstractLayer):
         for ldata in data['LINKS']:
             new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], {},
                                 link_ref[ldata["ID"]])
+            if 'CLASS' in ldata and ldata['CLASS'] != '':
+                new_obj.add_class_to_link(ldata['ID'], ldata['CLASS'])
 
         for sdata in data['SERVICES']:
             serv_type = load_class_by_module_name(sdata['TYPE'])
@@ -563,7 +578,7 @@ class SimpleLayer(AbstractLayer):
                 'DEFAULT_SPEED': self.default_speed,
                 'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
                 'NODES': [node_to_dict(n) for n in self.graph.nodes.values()],
-                'LINKS': [link_to_dict(l) for l in self.graph.links.values()],
+                'LINKS': [link_to_dict(l) | {'CLASS': self.map_links_classes[lid] if lid in self.map_links_classes else ''} for lid,l in self.graph.links.items()],
                 'MAP_ROADDB': {"NODES": self.map_reference_nodes,
                                "LINKS": self.map_reference_links}}
 
@@ -590,6 +605,8 @@ class CarLayer(SimpleLayer):
         for ldata in data['LINKS']:
             new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], {},
                                 link_ref[ldata["ID"]])
+            if 'CLASS' in ldata and ldata['CLASS'] != '':
+                new_obj.add_class_to_link(ldata['ID'], ldata['CLASS'])
 
         for sdata in data['SERVICES']:
             serv_type = load_class_by_module_name(sdata['TYPE'])
@@ -890,6 +907,18 @@ class SharedVehicleLayer(AbstractLayer):
                 return [(onid,dnid) for _,_,onid,dnid in to_delete]
         return []
 
+    def add_links_classes(self, links_classes: Dict[str, List[str]]):
+        # Check that the links belong to this layer graph and build the map
+        map_links_classes = {}
+        for clas in links_classes.keys():
+            for class_link in links_classes[clas]:
+                self.add_class_to_link(class_link, clas)
+
+    def add_class_to_link(self, lid, class_id):
+        assert lid in self.graph.links, f'Link {lid} not in layer {self._id} graph...'
+        assert lid not in self.map_links_classes, f'Link {lid} already has a class...'
+        self.map_links_classes[lid] = class_id
+
     def __dump__(self):
         return {'ID': self.id,
                 'TYPE': ".".join([self.__class__.__module__, self.__class__.__name__]),
@@ -897,7 +926,7 @@ class SharedVehicleLayer(AbstractLayer):
                 'DEFAULT_SPEED': self.default_speed,
                 'SERVICES': [s.__dump__() for s in self.mobility_services.values()],
                 'NODES': [node_to_dict(n) for n in self.graph.nodes.values()],
-                'LINKS': [link_to_dict(l) for l in self.graph.links.values()],
+                'LINKS': [link_to_dict(l) | {'CLASS': self.map_links_classes[lid] if lid in self.map_links_classes else ''} for lid,l in self.graph.links.items()],
                 'MAP_ROADDB': {"NODES": self.map_reference_nodes,
                                "LINKS": self.map_reference_links}}
 
@@ -925,6 +954,8 @@ class SharedVehicleLayer(AbstractLayer):
         for ldata in data['LINKS']:
             new_obj.create_link(ldata['ID'], ldata['UPSTREAM'], ldata['DOWNSTREAM'], {},
                                 link_ref[ldata["ID"]])
+            if 'CLASS' in ldata and ldata['CLASS'] != '':
+                self.add_class_to_link(ldata['ID'], ldata['CLASS'])
 
         for sdata in data['SERVICES']:
             serv_type = load_class_by_module_name(sdata['TYPE'])

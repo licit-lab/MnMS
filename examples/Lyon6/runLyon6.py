@@ -3,7 +3,7 @@ from mnms.demand import CSVDemandManager
 from mnms.flow.MFD import Reservoir, MFDFlowMotor
 from mnms.log import attach_log_file, LOGLEVEL, get_logger, set_all_mnms_logger_level, set_mnms_logger_level
 from mnms.time import Time, Dt
-from mnms.io.graph import load_graph
+from mnms.io.graph import load_graph, save_graph
 from mnms.travel_decision.logit import LogitDecisionModel
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
@@ -35,6 +35,7 @@ param_file.close()
 # inputs
 indir = input_params['indir'] # name of input folder, ex: "INPUTS"
 network_file = input_params['network_file'] # path to json network file, ex: "/Lyon_symuviainput.json"
+network_file_with_roadstypo = input_params['network_file'][:-5]+'_roadstypo.json'
 demand_file = input_params['demand_file'] # path to csv demand file
 mfd_file = input_params['mfd_file'] # path to csv MFD file
 # outputs
@@ -56,10 +57,6 @@ affectation_factor = supervisor_params['affectation_factor'] # affectation/calcu
 
 # graph
 roads_typo = graph_params['roads_typo'] # dict specifying the roads classification, if empty dict, no classification of roads
-roads_typo_map = {}
-for typo, lids in roads_typo.items():
-    for lid in lids:
-        roads_typo_map[lid] = typo
 
 #cost
 roads_typo_cost_multipliers = cost_params['roads_typo_cost_multipliers'] # dict specifying the multiplier to apply to the cost on a link depending on its typology
@@ -97,10 +94,10 @@ def calculate_V_MFD(acc):
     V = max(V, 0.001)  # min speed to avoid gridlock
     return {"CAR": V}
 
-def weighted_travel_time_car(mlgraph, link, costs, roads_typo_map=roads_typo_map, roads_typo_cost_multipliers=roads_typo_cost_multipliers):
-    if roads_typo_map and roads_typo_cost_multipliers:
-        link_typo = roads_typo_map[link.id]
-        return costs['PersonalVehicle']['travel_time'] * roads_typo_cost_multipliers[link_typo]
+def weighted_travel_time_car(mlgraph, link, costs, roads_typo_cost_multipliers=roads_typo_cost_multipliers):
+    links_classes = mlgraph.layers[link.label].map_links_classes
+    if link.id in links_classes and links_classes[link.id] in roads_typo_cost_multipliers:
+        return costs['PersonalVehicle']['travel_time'] * roads_typo_cost_multipliers[links_classes[link.id]]
     else:
         return costs['PersonalVehicle']['travel_time']
 
@@ -109,6 +106,9 @@ def weighted_travel_time_transit(mlgraph, link, costs):
 
 if __name__ == '__main__':
     mmgraph = load_graph(indir+network_file)
+    if mmgraph.layers["CAR"].map_links_classes == {}:
+        mmgraph.layers["CAR"].add_links_classes(roads_typo)
+        save_graph(mmgraph, indir+network_file_with_roadstypo)
 
     odlayer = generate_matching_origin_destination_layer(mmgraph.roads)
     mmgraph.add_origin_destination_layer(odlayer)
