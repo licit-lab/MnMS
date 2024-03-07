@@ -2,11 +2,28 @@ import os
 import argparse
 import math
 import pandas as pd
+import csv
 import mpl_scatter_density
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from datetime import datetime, timedelta
+
+
+def validate_demand_lines(file):
+    valid = True
+
+    with open(file, 'r') as f:
+        r = csv.reader(f)
+        demand = list(r)
+        i = 1
+        for d in demand:
+            if(len(d) == 0):
+                print(f"Empty demand line at line: {i}")
+                valid = False
+            i = i + 1
+
+    return valid
 
 
 def validate_demand_columns(df_users):
@@ -66,7 +83,6 @@ def validate_user_id(user):
         if not (isinstance(user_id, int) or isinstance(user_id, str)):
             print(f"Invalid user id for user: {user_id}")
             valid = False
-            
     else:
         print(f"No id found for user: {user}")
         valid = False
@@ -221,6 +237,22 @@ def validate_user_journey(user, radius):
     return valid, warning
 
 
+def validate_user_mobility_services(user):
+
+    valid = True
+
+    user_id = user["ID"]
+    user_ms = user["MOBILITY SERVICES"]
+
+    mobility_services = user_ms.split(' ')
+    for mobility_service in mobility_services:
+        if mobility_service == "":
+            print(f"Empty mobility service detected for user {user_id}, please check for blank spaces.")
+            valid = False
+
+    return valid
+
+
 def check_user_ms_defined(user):
 
     ms_defined = False
@@ -293,40 +325,53 @@ def scatter_density(fig, x, y, title):
     fig.colorbar(density, label="Number of points per pixel")
 
 
-def validate_demand(df_users, radius):
+def validate_demand(file, df_users, radius):
     invalid_users_count = 0
     warning_users_count = 0
 
-    check_user_id_duplicates(df_users)
+    file_valid = True
 
-    for index, user in df_users.iterrows():
-        user_valid = True
-        user_warning = False
+    file_valid = validate_demand_columns(df_users)
+    if file_valid:
+        file_valid = validate_demand_lines(file)
 
-        user_valid = validate_user_id(user)
-        if user_valid:
-            user_valid = validate_user_departure_time(user)
+    if file_valid:
+        check_user_id_duplicates(df_users)
+
+        for index, user in df_users.iterrows():
+            user_valid = True
+            user_warning = False
+
+            user_valid = validate_user_id(user)
             if user_valid:
-                user_valid = validate_user_origin(user)
+                user_valid = validate_user_departure_time(user)
                 if user_valid:
-                    user_valid = validate_user_destination(user)
+                    user_valid = validate_user_origin(user)
                     if user_valid:
-                        user_valid, user_warning = validate_user_journey(user, radius)
+                        user_valid = validate_user_destination(user)
+                        if user_valid:
+                            user_valid, user_warning = validate_user_journey(user, radius)
 
-        if not user_valid:
-            print(f"User: {user} invalid")
-            invalid_users_count = invalid_users_count + 1
+            if user_valid and check_user_ms_defined(user):
+                user_valid = validate_user_mobility_services(user)
 
-        if user_warning:
-            warning_users_count = warning_users_count + 1
+            if not user_valid:
+                print(f"User: {user} invalid")
+                invalid_users_count = invalid_users_count + 1
 
-    total_users = len(df_users)
-    validation = 100 - invalid_users_count * 100 / total_users
+            if user_warning:
+                warning_users_count = warning_users_count + 1
 
-    print(f"Total number of users: {len(df_users)}")
-    print(f"Number of invalid users: {invalid_users_count}")
-    print(f"Number of warning users: {warning_users_count}")
-    print(f"Validation : {validation}%")
+        total_users = len(df_users)
+        validation = 100 - invalid_users_count * 100 / total_users
+
+        print(f"Total number of users: {len(df_users)}")
+        print(f"Number of invalid users: {invalid_users_count}")
+        print(f"Number of warning users: {warning_users_count}")
+        print(f"Validation : {validation}%")
+
+    if not file_valid:
+        print(f"Csv file invalid")
 
 
 def analyze_demand(df_users):
@@ -422,7 +467,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     df_users = extract_file(args.demand_file)
-    validate_demand(df_users, args.radius)
+    validate_demand(args.demand_file, df_users, args.radius)
     analyze_demand(df_users)
 
     if args.visualize:
