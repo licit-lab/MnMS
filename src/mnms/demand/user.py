@@ -137,7 +137,7 @@ class User(TimeDependentSubject):
 
     @property
     def achieved_path_ms(self):
-        return self._achieved_path
+        return self._achieved_path_ms
 
     @achieved_path_ms.setter
     def achieved_path_ms(self, ap_ms: List[str]):
@@ -668,7 +668,9 @@ class User(TimeDependentSubject):
         Args:
             -reached_node: node user has just reached
         """
-        if len(self.achieved_path) == 0 or reached_node != self.achieved_path[-1]:
+        if len(self.achieved_path) == 0:
+            self.achieved_path.append(self.current_node)
+        if reached_node != self.achieved_path[-1]:
             self.achieved_path.append(reached_node)
 
     def update_achieved_path_ms(self, ms_id):
