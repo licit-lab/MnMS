@@ -3,6 +3,7 @@ import pandas as pd
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Patch
 import numpy as np
+import seaborn as sns
 
 from mnms.time import Time
 
@@ -78,10 +79,10 @@ def draw_line(ax, mlgraph, line, color='green', linkwidth=6, stopmarkeredgewidth
             fillstyle='full', markersize=nodesize, markeredgewidth=stopmarkeredgewidth)
 
 
-def draw_odlayer(ax, mlgraph, color='blue', nodesize=2, node_label=True, label_size=5):
+def draw_odlayer(ax, mlgraph, color='blue', nodesize=2, node_label=True, label_size=5, markeredgewidth=1):
     ods = list(mlgraph.odlayer.origins.items()) + list(mlgraph.odlayer.destinations.items())
     for odid, od in ods:
-        ax.plot(od[0], od[1], 'o', markerfacecolor=color, markeredgecolor='black',
+        ax.plot(od[0], od[1], 'o', markerfacecolor=color, markeredgecolor='black', markeredgewidth=markeredgewidth,
             fillstyle='full', markersize=nodesize)
 
     if node_label:
@@ -137,6 +138,7 @@ def draw_links_load(ax, graph, loads, n, linkwidth=1, lmin=None, lmax=None):
     Only the links for which a load is specified are represented.
 
     Args:
+        -ax: matplotlib axes
         -graph: graph the links we want to represent belong to
         -loads: dict with links ids and associated loads.
         -n: granularity of the colormap
@@ -162,6 +164,76 @@ def draw_links_load(ax, graph, loads, n, linkwidth=1, lmin=None, lmax=None):
         lines.append([graph.nodes[unode].position, graph.nodes[dnode].position])
     line_segment = LineCollection(lines, linestyles='solid', colors=colors_load, linewidths=linkwidth)
     ax.add_collection(line_segment)
+
+    ax.margins(0.05, 0.05)
+    ax.axis("equal")
+    plt.tight_layout()
+
+def draw_layer(ax, layer, color='black', linkwidth=1, nodesize=2, node_label=True, label_size=5):
+    """Method that plots the graph of one layer.
+
+    Args:
+        -ax: matplotlib axes
+        -layer: the layer which graph should be plotted
+        -color: color in which the links should be represented
+        -linkwidth: representation width of the links
+        -nodesize: representation size of the nodes
+        -node_label: annotate the graph if True with nodes IDs
+        -label_size: applied if node_label is True
+    """
+    lines = list()
+    lnodes = layer.graph.nodes
+
+    for link_data in layer.graph.links.values():
+        unode = link_data.upstream
+        dnode = link_data.downstream
+        lines.append([lnodes[unode].position, lnodes[dnode].position])
+    line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
+    ax.add_collection(line_segment)
+
+    x, y = zip(*[n.position for n in lnodes.values()])
+    ax.plot(x, y, 'o', markerfacecolor='white', markeredgecolor=color, fillstyle='full', markersize=nodesize)
+
+    if node_label:
+        [ax.annotate(nid, n.position, size=label_size) for nid, n in lnodes.items()]
+
+    ax.margins(0.05, 0.05)
+    ax.axis("equal")
+    plt.tight_layout()
+
+def draw_reservoirs(ax, roads, linkwidth=1, colors=None, label_size=3):
+    """Function to represent the reservoirs of a RoadDescriptor object.
+
+    Args:
+        -ax: matplotlib axes
+        -roads: the RoadDescriptor object
+        -linkwidth: width of the link represented
+        -colors: as many different colors as the number of reservoirs
+        -label_size: size of reservoir IDs labels
+    """
+    nb_res = len(roads.zones)
+    if colors is None:
+        if nb_res <= 10:
+            colors = sns.color_palette(n_colors=nb_res)
+        else:
+            raise ValueError('Cannot generate more than 10 different colors automatically, provide a color list...')
+    else:
+        assert len(colors) == nb_res, f'Provide the same number of colors than the number of reservoirs ({len(roads.zone)})'
+
+    for i,(resid,res) in enumerate(roads.zones.items()):
+        lines = list()
+        color = colors[i]
+        res_sections = [s for sid,s in roads.sections.items() if sid in res.sections]
+        for section_data in res_sections:
+            unode = section_data.upstream
+            dnode = section_data.downstream
+            lines.append([roads.nodes[unode].position, roads.nodes[dnode].position])
+        line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
+        ax.add_collection(line_segment)
+
+    for i, (zid, z) in enumerate(roads.zones.items()):
+        t = ax.annotate(zid,z.centroid(), size=label_size, color=colors[i])
+        t.set_bbox(dict(facecolor='white', alpha=1, edgecolor=colors[i]))
 
     ax.margins(0.05, 0.05)
     ax.axis("equal")
