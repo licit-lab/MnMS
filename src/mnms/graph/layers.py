@@ -82,16 +82,18 @@ class AbstractLayer(CostFunctionLayer):
     # def add_cost_function(self, mobility_service: str, cost_name: str, cost_function: Callable[[Dict[str, float]], float]):
     #     self._costs_functions[mobility_service][cost_name] = cost_function
 
-    def connect_origindestination(self, odlayer:OriginDestinationLayer, connection_distance: float):
+    def connect_origindestination(self, odlayer:OriginDestinationLayer, connection_distance: float, secure_connection_distance: float = None):
         """
         Connects the origin destination layer to a layer
 
         Args:
-            odlayer: Origin destination layer to connect
-            connection_distance: Each node of the origin destination layer is connected to the nodes of the current layer
+            -odlayer: Origin destination layer to connect
+            -connection_distance: Each node of the origin destination layer is connected to the nodes of the current layer
             within a radius defined by connection_distance (m)
+            -secure_connection_distance: if it is not None, specifies a higher connection distance to
+            connect the nodes which are isolated from the graph with the original connection distance
         Return:
-            transit_links: List of transit link to add
+            -transit_links: List of transit link to add
         """
         transit_links=[]
 
@@ -108,15 +110,24 @@ class AbstractLayer(CostFunctionLayer):
         graph_node_pos = np.array([n.position for n in graph_nodes.values()])
 
         for nid in odlayer.origins:
+            connected = False
             npos = np.array(odlayer.origins[nid])
             dist_nodes = _norm(graph_node_pos - npos, axis=1)
             mask = dist_nodes < connection_distance
             for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                 if layer_nid not in odlayer_nodes:
                     lid = f"{nid}_{layer_nid}"
-                    transit_links.append({'id': lid,'upstream_node':nid,'downstream_node':layer_nid,'dist':dist})
+                    transit_links.append({'id': lid,'upstream_node': nid,'downstream_node': layer_nid,'dist': dist})
+                    connected = True
+            if not connected and secure_connection_distance is not None:
+                secure_mask = dist_nodes < secure_connection_distance
+                for layer_nid, dist in zip(graph_node_ids[secure_mask], dist_nodes[secure_mask]):
+                    if layer_nid not in odlayer_nodes:
+                        lid = f"{nid}_{layer_nid}"
+                        transit_links.append({'id': lid,'upstream_node': nid,'downstream_node': layer_nid,'dist': dist})
 
         for nid in odlayer.destinations:
+            connected = False
             npos = np.array(odlayer.destinations[nid])
             dist_nodes = _norm(graph_node_pos - npos, axis=1)
             mask = dist_nodes < connection_distance
@@ -124,6 +135,13 @@ class AbstractLayer(CostFunctionLayer):
                 if layer_nid not in odlayer_nodes:
                     lid = f"{layer_nid}_{nid}"
                     transit_links.append({'id': lid, 'upstream_node': layer_nid, 'downstream_node': nid, 'dist': dist})
+                    connected = True
+            if not connected and secure_connection_distance is not None:
+                secure_mask = dist_nodes < secure_connection_distance
+                for layer_nid, dist in zip(graph_node_ids[secure_mask], dist_nodes[secure_mask]):
+                    if layer_nid not in odlayer_nodes:
+                        lid = f"{nid}_{layer_nid}"
+                        transit_links.append({'id': lid,'upstream_node': layer_nid,'downstream_node': nid,'dist': dist})
 
         return transit_links
 
@@ -267,18 +285,21 @@ class MultiLayerGraph(object):
         [self.graph.add_node(nid, pos[0], pos[1], odlayer.id) for nid, pos in odlayer.origins.items()]
         [self.graph.add_node(nid, pos[0], pos[1], odlayer.id) for nid, pos  in odlayer.destinations.items()]
 
-    def connect_origindestination_layers(self, connection_distance: float):
+    def connect_origindestination_layers(self, connection_distance: float, secure_connection_distance: float = None):
         """
         Connects the origin destination layer to the other layers
 
         Args:
-            connection_distance: Each node of the origin destination layer is connected to the nodes of all other layers
+            -connection_distance: Each node of the origin destination layer is connected to the nodes of all other layers
             within a radius defined by connection_distance (m)
+            -secure_connection_distance: if it is not None, specifies a higher connection distance to
+            connect the nodes which are isolated from the graph with the original connection distance
         """
 
         for l in self.layers:
             if self.layers[l].graph.nodes:
-                transit_links = self.layers[l].connect_origindestination(self.odlayer, connection_distance)
+                transit_links = self.layers[l].connect_origindestination(self.odlayer,
+                    connection_distance, secure_connection_distance=secure_connection_distance)
                 self.add_transit_links(transit_links)
 
     def connect_intra_layer(self, layer_id: str, connection_distance: float):
@@ -758,17 +779,19 @@ class SharedVehicleLayer(AbstractLayer):
 
         self.map_reference_links[lid] = road_links
 
-    def connect_origindestination(self, odlayer: OriginDestinationLayer, connection_distance: float):
+    def connect_origindestination(self, odlayer: OriginDestinationLayer, connection_distance: float, secure_connection_distance: float = None):
         """
         Connects the origin destination layer to a shared vehicle layer (only the stations are linked to the origin
         destination nodes
 
         Args:
-            odlayer: Origin destination layer to connect
-            connection_distance: Each node of the origin destination layer is connected to the nodes of the current layer
+            -odlayer: Origin destination layer to connect
+            -connection_distance: Each node of the origin destination layer is connected to the nodes of the current layer
             within a radius defined by connection_distance (m)
+            -secure_connection_distance: if it is not None, specifies a higher connection distance to
+            connect the nodes which are isolated from the graph with the original connection distance
         Return:
-            transit_links: List of transit link to add
+            -transit_links: List of transit link to add
         """
         transit_links = []
 
@@ -788,6 +811,7 @@ class SharedVehicleLayer(AbstractLayer):
         graph_node_pos = np.array([s['position'] for s in self.stations])
 
         for nid in odlayer.origins:
+            connected = False
             npos = np.array(odlayer.origins[nid])
             dist_nodes = _norm(graph_node_pos - npos, axis=1)
             mask = dist_nodes < connection_distance
@@ -796,6 +820,14 @@ class SharedVehicleLayer(AbstractLayer):
                     lid = f"{nid}_{layer_nid}"
                     transit_links.append(
                         {'id': lid, 'upstream_node': nid, 'downstream_node': layer_nid, 'dist': dist})
+                    connected = True
+            if not connected and secure_connection_distance is not None:
+                secure_mask = dist_nodes < secure_connection_distance
+                for layer_nid, dist in zip(graph_node_ids[secure_mask], dist_nodes[secure_mask]):
+                    if layer_nid not in odlayer_nodes:
+                        lid = f"{nid}_{layer_nid}"
+                        transit_links.append(
+                            {'id': lid, 'upstream_node': nid, 'downstream_node': layer_nid, 'dist': dist})
 
         # Destinations to link to the stations or to all the nodes
         if list(self.mobility_services.values())[0].free_floating_possible:   # each node must be considered
@@ -804,6 +836,7 @@ class SharedVehicleLayer(AbstractLayer):
             graph_node_pos = np.array([n.position for n in graph_nodes.values()])
 
         for nid in odlayer.destinations:
+            connected = False
             npos = np.array(odlayer.destinations[nid])
             dist_nodes = _norm(graph_node_pos - npos, axis=1)
             mask = dist_nodes < connection_distance
@@ -812,6 +845,14 @@ class SharedVehicleLayer(AbstractLayer):
                     lid = f"{layer_nid}_{nid}"
                     transit_links.append(
                         {'id': lid, 'upstream_node': layer_nid, 'downstream_node': nid, 'dist': dist})
+                    connected = True
+            if not connected and secure_connection_distance is not None:
+                secure_mask = dist_nodes < secure_connection_distance
+                for layer_nid, dist in zip(graph_node_ids[secure_mask], dist_nodes[secure_mask]):
+                    if layer_nid not in odlayer_nodes:
+                        lid = f"{layer_nid}_{nid}"
+                        transit_links.append(
+                            {'id': lid, 'upstream_node': layer_nid, 'downstream_node': nid, 'dist': dist})
 
         return transit_links
 
