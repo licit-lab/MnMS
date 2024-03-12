@@ -36,7 +36,7 @@ class AbstractDecisionModel(ABC):
                  n_shortest_path: int = 3,
                  max_diff_cost: float = 0.25,
                  max_dist_in_common: float = 0.95,
-                 cost_multiplier_to_find_k_paths: int = 10,
+                 cost_multiplier_to_find_k_paths: float = 10,
                  max_retry_to_find_k_paths: int = 50,
                  personal_mob_service_park_radius: float = 100,
                  outfile: str = None,
@@ -110,6 +110,12 @@ class AbstractDecisionModel(ABC):
             # user id, event which triggered planning, path cost, path list of nodes, path length,
             # path list of mob services, bool specifying if path has been chosen or not
             self._csvhandler.writerow(['ID', 'EVENT', 'TIME', 'COST', 'PATH', 'LENGTH', 'SERVICES', 'CHOSEN'])
+
+    def update_k_shortest_paths_finding_parameters(self, max_diff_cost: float, max_dist_in_common: float, cost_multiplier_to_find_k_paths: float, max_retry_to_find_k_paths: int):
+        self._max_diff_cost = max_diff_cost
+        self._max_dist_in_common = max_dist_in_common
+        self._cost_multiplier_to_find_k_paths = cost_multiplier_to_find_k_paths
+        self._max_retry_to_find_k_paths = max_retry_to_find_k_paths
 
     def load_mobility_services_graphs_from_file(self, file):
         with open(file, 'r') as f:
