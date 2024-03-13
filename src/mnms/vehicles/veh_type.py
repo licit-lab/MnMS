@@ -269,6 +269,7 @@ class Vehicle(TimeDependentSubject):
         self._remaining_link_length = None
         self._position = None                       # current vehicle coordinates
         self._distance = 0                          # travelled distance ( reset to zero if other trip ?)
+        self._distance_at_last_res_change = 0       # distance this vehicle has traveled since it enters current reservoir
         self._iter_path = None
         self.speed = None                           # current speed
         self._dt_move = None
@@ -288,6 +289,14 @@ class Vehicle(TimeDependentSubject):
     @property
     def distance(self):
         return self._distance
+
+    @property
+    def distance_at_last_res_change(self):
+        return self._distance_at_last_res_change
+
+    @distance_at_last_res_change.setter
+    def distance_at_last_res_change(self, d):
+        self._distance_at_last_res_change = d
 
     @property
     def is_full(self):
