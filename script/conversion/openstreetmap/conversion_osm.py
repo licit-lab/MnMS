@@ -29,11 +29,12 @@ _veh_type_convertor = {'METRO': Metro,
                        'TRAM': Tram}
 
 
+# This script needs osmnx to run, if not installed please run command: pip install osmnx
+
+
 def convert_osm_to_mnms(osm_query, output_dir, zone_dict: Dict[str, List[str]]=None, car_only=False, mono_res: Optional[str] = None):
     edges = dict()
     nodes = defaultdict(list)
-    adjacency = defaultdict(set)
-    junctions = dict()
 
     node_car = set()
     link_car = set()
@@ -48,8 +49,11 @@ def convert_osm_to_mnms(osm_query, output_dir, zone_dict: Dict[str, List[str]]=N
         down_nid = iedge[1]
         length = edge["length"]
 
-        amont_utm = wgs_to_utm(osm_graph.nodes[up_nid]["y"], osm_graph.nodes[up_nid]["x"])
-        aval_utm = wgs_to_utm(osm_graph.nodes[down_nid]["y"], osm_graph.nodes[down_nid]["x"])
+        up_node = osm_graph.nodes[up_nid]
+        down_node = osm_graph.nodes[down_nid]
+
+        amont_utm = wgs_to_utm(up_node["y"], up_node["x"])
+        aval_utm = wgs_to_utm(down_node["y"], down_node["x"])
 
         coords_amont = np.array(amont_utm)
         coords_aval = np.array(aval_utm)
@@ -58,7 +62,6 @@ def convert_osm_to_mnms(osm_query, output_dir, zone_dict: Dict[str, List[str]]=N
         nodes[down_nid].append(coords_aval)
 
         edges[lid] = {"up": up_nid, "down": down_nid, "length": length}
-        adjacency[up_nid].add(down_nid)
 
         link_car.add(lid)
         node_car.add(up_nid)
