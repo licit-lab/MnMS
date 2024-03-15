@@ -50,6 +50,8 @@ class DummyDecisionModel(AbstractDecisionModel):
             -paths: list of paths to consider for the choice
         """
         # Sort paths by ascending cost before returning the best path
+        paths.sort(key=lambda p: ' '.join(p.mobility_services)) # to prevent different results between
+                                                                # two executions if several equal path costs
         paths.sort(key=lambda p: p.path_cost)
         if self.random_choice_for_equal_costs:
             min_cost = paths[0].path_cost
