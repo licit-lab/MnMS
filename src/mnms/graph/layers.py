@@ -397,7 +397,7 @@ class MultiLayerGraph(object):
                 speed = walk_speed
                 costs["WALK"] = {"speed": speed,
                                  "travel_time": link.length / speed,
-                                 "distance": link.length}
+                                 "length": link.length}
                 # NB: travel_time could be defined as a cost_function
                 for mservice, cost_functions in layer._costs_functions.items():
                     for cost_name, cost_func in cost_functions.items():
@@ -408,7 +408,7 @@ class MultiLayerGraph(object):
                 for mservice in layer.mobility_services.keys():
                     costs[mservice] = {"speed": speed,
                                        "travel_time": link.length / speed,
-                                       "distance": link.length}
+                                       "length": link.length}
                 # NB: travel_time could be defined as a cost_function
                 for mservice, cost_functions in layer._costs_functions.items():
                     for cost_name, cost_func in cost_functions.items():
