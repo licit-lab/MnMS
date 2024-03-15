@@ -533,7 +533,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
                 "DT_MATCHING": self.dt_matching,
-                "DT_PERIODIC_MAINTENANCE": self.dt_periodic_maintenance,
+                "DT_PERIODIC_MAINTENANCE": self._dt_periodic_maintenance,
                 "ID": self.id,
                 "DEFAULT_WAITING_TIME": self.default_waiting_time,
                 "MATCHING_STRATEGY": self.matching_strategy,
@@ -671,7 +671,7 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
                 "DT_MATCHING": self.dt_matching,
-                "DT_PERIODIC_MAINTENANCE": self.dt_periodic_maintenance,
+                "DT_PERIODIC_MAINTENANCE": self._dt_periodic_maintenance,
                 "ID": self.id,
                 "DEFAULT_WAITING_TIME": self.default_waiting_time,
                 "MATCHING_STRATEGY": self.matching_strategy,

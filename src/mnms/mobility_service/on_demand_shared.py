@@ -718,20 +718,21 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
                 w = self.default_waiting_time
             self._estimated_pickup_times['default'] = w
 
+    def __dump__(self) -> dict:
+        return {"TYPE": ".".join([OnDemandSharedMobilityService.__module__, OnDemandSharedMobilityService.__name__]),
+                "VEH_CAPACITY": self.veh_capacity,
+                "DT_MATCHING": self.dt_matching,
+                "DT_PERIODIC_MAINTENANCE": self._dt_periodic_maintenance,
+                "ID": self.id,
+                "DEFAULT_WAITING_TIME": self.default_waiting_time,
+                "MATCHING_STRATEGY": self.matching_strategy,
+                "REPLANNING_STRATEGY": self.replanning_strategy,
+                "RADIUS": self.radius}
+
+    @classmethod
     def __load__(cls, data):
         new_obj = cls(data['ID'], data["VEH_CAPACITY"], data["DT_MATCHING"],
             data["DT_PERIODIC_MAINTENANCE"], data['DEFAULT_WAITING_TIME'],
             data['MATCHING_STRATEGY'], data['REPLANNING_STRATEGY'],
             data['RADIUS'])
         return new_obj
-
-    def __dump__(self) -> dict:
-        return {"TYPE": ".".join([OnDemandSharedMobilityService.__module__, OnDemandSharedMobilityService.__name__]),
-                "VEH_CAPACITY": self.veh_capacity,
-                "DT_MATCHING": self.dt_matching,
-                "DT_PERIODIC_MAINTENANCE": self.dt_periodic_maintenance,
-                "ID": self.id,
-                "DEFAULT_WAITING_TIME": self.default_waiting_time,
-                "MATCHING_STRATEGY": self.matching_strategy,
-                "REPLANNING_STRATEGY": self.replanning_strategy,
-                "RADIUS": self.radius}
