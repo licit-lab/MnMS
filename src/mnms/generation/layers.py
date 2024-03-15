@@ -1,6 +1,12 @@
 from typing import Optional, Type, List, Annotated
 
 import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 
 from mnms.graph.abstract import AbstractLayer
 from mnms.graph.layers import OriginDestinationLayer, SimpleLayer
@@ -141,3 +147,51 @@ def generate_bbox_origin_destination_layer(roads: RoadDescriptor, nx: int, ny: O
     """
     bbox = get_bounding_box(roads)
     return generate_grid_origin_destination_layer(bbox.xmin - 1, bbox.ymin - 1, bbox.xmax + 1, bbox.ymax + 1, nx, ny, polygon=polygon)
+
+
+# WIP
+def generate_cluster_origin_destination_layer(roads: RoadDescriptor, max_clusters: int):
+
+    odlayer = OriginDestinationLayer()
+
+    df_nodes = pd.DataFrame(columns=["id", "x", "y"])
+
+    for node in roads.nodes.values():
+        new_node = {"id": node.id, "x": node.position[0], "y": node.position[1]}
+        df_nodes = df_nodes.append(new_node, ignore_index=True)
+
+    # X_train and y_train : features and target values for training set
+    # X_test and y_test : features and target values for testing test
+    # 33% of the data will be used for testing and 67% will be used for training.
+    X_train, X_test, y_train, y_test = train_test_split(df_nodes[["x", "y"]], test_size=0.33, random_state=0)
+
+    X_train_norm = preprocessing.normalize(X_train)
+    X_test_norm = preprocessing.normalize(X_test)
+
+    kmeans = KMeans(n_clusters=3, random_state=0, n_init='auto')
+    kmeans.fit(X_train_norm)
+
+    silhouette_score(X_train_norm, kmeans.labels_, metric='euclidean')
+
+    K = range(2, max_clusters) #number of clusters, 2 to int specified in parameter
+    fits = []
+    score = []
+
+    for k in K:
+        # train the model for current value of k on training data
+        model = KMeans(n_clusters=k, random_state=0, n_init='auto').fit(X_train_norm)
+        # append the model to fits
+        fits.append(model)
+        # Append the silhouette score to scores
+        score.append(silhouette_score(X_train_norm, model.labels_, metric='euclidean'))
+
+    centroids = kmeans.cluster_centers_
+
+    id_centroid = 0
+    for centroid in centroids:
+        pos_centroid = np.ndarray((centroid[0], centroid[1]))
+        odlayer.create_origin_node(f"ORIGIN_{id_centroid}", pos_centroid)
+        odlayer.create_destination_node(f"DESTINATION_{id_centroid}", pos_centroid)
+        id_centroid = id_centroid + 1
+
+    return odlayer
