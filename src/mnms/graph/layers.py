@@ -244,6 +244,7 @@ class MultiLayerGraph(object):
                 self.connect_origindestination_layers(connection_distance)
 
     def add_transit_links(self, transit_links):
+        gnodes = self.graph.nodes
 
         for tl in transit_links:
             # Check that this transit link does not already exist
@@ -270,7 +271,7 @@ class MultiLayerGraph(object):
                 link = self.graph.nodes[tl['upstream_node']].adj[tl['downstream_node']]
                 for mservice, cost_functions in self.transitlayer._costs_functions.items():
                     for cost_name, cost_func in cost_functions.items():
-                        costs[mservice][cost_name] = cost_func(self, link, costs)
+                        costs[mservice][cost_name] = cost_func(gnodes, self.transitlayer, link, costs)
                 link.update_costs(costs)
 
             # Add the transit link into the map_linkid_layerid and the transit layer
@@ -404,6 +405,7 @@ class MultiLayerGraph(object):
             self.transitlayer.add_link(lid, link_olayer_id, link_dlayer_id)
 
     def initialize_costs(self,walk_speed):
+        gnodes = self.graph.nodes
 
         # Initialize costs on links
         link_layers = list()
@@ -422,7 +424,7 @@ class MultiLayerGraph(object):
                 # NB: travel_time could be defined as a cost_function
                 for mservice, cost_functions in layer._costs_functions.items():
                     for cost_name, cost_func in cost_functions.items():
-                        costs[mservice][cost_name] = cost_func(self, link, costs)
+                        costs[mservice][cost_name] = cost_func(gnodes, layer, link, costs)
             else:
                 layer = self.layers[link.label]
                 speed = layer.default_speed
@@ -433,7 +435,7 @@ class MultiLayerGraph(object):
                 # NB: travel_time could be defined as a cost_function
                 for mservice, cost_functions in layer._costs_functions.items():
                     for cost_name, cost_func in cost_functions.items():
-                        costs[mservice][cost_name] = cost_func(self, link, costs)
+                        costs[mservice][cost_name] = cost_func(gnodes, layer, link, costs)
 
             link.update_costs(costs)
 

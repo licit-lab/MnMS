@@ -55,19 +55,19 @@ class TestMobilityServicesGraph(unittest.TestCase):
                                   odlayer,
                                   1e-3)
 
-        def gc_car(mlgraph, link, costs):
+        def gc_car(gnodes, layer, link, costs):
             gc = costs['CAR']['travel_time'] + 3
             return gc
 
-        def gc_ridehailing1(mlgraph, link, costs):
+        def gc_ridehailing1(gnodes, layer, link, costs):
             gc = costs['RIDEHAILING1']['travel_time'] + 1
             return gc
 
-        def gc_ridehailing2(mlgraph, link, costs):
+        def gc_ridehailing2(gnodes, layer, link, costs):
             gc = costs['RIDEHAILING2']['travel_time'] + 2
             return gc
 
-        def gc_transit(mlgraph, link, costs):
+        def gc_transit(gnodes, layer, link, costs):
             gc = costs['WALK']['travel_time']
             return gc
 

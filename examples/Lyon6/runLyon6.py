@@ -94,14 +94,14 @@ def calculate_V_MFD(acc):
     V = max(V, 0.001)  # min speed to avoid gridlock
     return {"CAR": V}
 
-def weighted_travel_time_car(mlgraph, link, costs, roads_typo_cost_multipliers=roads_typo_cost_multipliers):
-    links_classes = mlgraph.layers[link.label].map_links_classes
+def weighted_travel_time_car(gnodes, layer, link, costs, roads_typo_cost_multipliers=roads_typo_cost_multipliers):
+    links_classes = layer.map_links_classes
     if link.id in links_classes and links_classes[link.id] in roads_typo_cost_multipliers:
         return costs['PersonalVehicle']['travel_time'] * roads_typo_cost_multipliers[links_classes[link.id]]
     else:
         return costs['PersonalVehicle']['travel_time']
 
-def weighted_travel_time_transit(mlgraph, link, costs):
+def weighted_travel_time_transit(gnodes, layer, link, costs):
     return costs['WALK']['travel_time']
 
 if __name__ == '__main__':

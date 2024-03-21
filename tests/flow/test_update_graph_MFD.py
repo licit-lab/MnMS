@@ -60,14 +60,14 @@ class TestCostsFunctions(unittest.TestCase):
 
         mlgraph = MultiLayerGraph([bus_layer], odlayer, 1)
 
-        def gc_bus(mlgraph, link, costs, vot=0.003):
+        def gc_bus(gnodes, layer, link, costs, vot=0.003):
             gc = vot * link.length / costs['Bus']['speed']
             return gc
         mlgraph.add_cost_function('BUS', 'generalized_cost', gc_bus)
 
-        def gc_transit(mlgraph, link, costs, vot=0.003, bus_cost=2):
-            olabel = mlgraph.graph.nodes[link.upstream].label
-            dlabel = mlgraph.graph.nodes[link.downstream].label
+        def gc_transit(gnodes, layer, link, costs, vot=0.003, bus_cost=2):
+            olabel = gnodes[link.upstream].label
+            dlabel = gnodes[link.downstream].label
             speed_cost = costs["WALK"]['speed']
             if olabel == 'ODLAYER' and dlabel == 'BUS':
                 gc = vot * link.length / speed_cost + bus_cost

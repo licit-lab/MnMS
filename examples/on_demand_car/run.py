@@ -34,13 +34,13 @@ odlayer_ymin = 0
 odlayer_xmax = 300 # m
 odlayer_ymax = 300 # m
 odlayer_connection_dist = 1e-3 # m
-def gc_pv(mlgraph, link, costs, car_kmcost=0.0005, vot=0.003):
+def gc_pv(gnodes, layer, link, costs, car_kmcost=0.0005, vot=0.003):
     gc = link.length * car_kmcost + vot * link.length / costs["PV"]['speed']
     return gc
-def gc_uber(mlgraph, link, costs, uber_kmcost=0.0001, vot=0.003):
+def gc_uber(gnodes, layer, link, costs, uber_kmcost=0.0001, vot=0.003):
     gc = link.length * uber_kmcost + vot * link.length / costs["UBER"]['speed']
     return gc
-def gc_transit(mlgraph, link, costs, vot=0.003):
+def gc_transit(gnodes, layer, link, costs, vot=0.003):
     gc = vot * link.length / costs["WALK"]['speed']
     return gc
 def gc_waiting(wt, vot=0.003):

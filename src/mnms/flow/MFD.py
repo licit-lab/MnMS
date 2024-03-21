@@ -288,6 +288,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         """
 
         graph = self._graph.graph
+        gnodes = graph.nodes
         banned_links = self._graph.dynamic_space_sharing.banned_links
         banned_cost = self._graph.dynamic_space_sharing.cost
 
@@ -328,7 +329,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 costs_functions = layer._costs_functions
                 for mservice, cost_funcs in costs_functions.items():
                     for cost_name, cost_f in cost_funcs.items():
-                        costs[mservice][cost_name] = cost_f(self._graph, link, costs)
+                        costs[mservice][cost_name] = cost_f(gnodes, layer, link, costs)
 
                 # Test if link is banned, if yes do not update the cost for the banned mobility service
                 if lid in banned_links:
