@@ -87,7 +87,7 @@ class UserFlow(object):
         finish_walk_and_request = list()
         finish_walk = list()
         finish_trip = list()
-        graph = self._graph.graph
+        gnodes = self._graph.graph.nodes
         for uid in self._walking.keys():
             user = self.users[uid]
             if user.state == UserState.WALKING:
@@ -102,6 +102,7 @@ class UserFlow(object):
                         user.remaining_link_length = 0
                         arrival_time = arrival_time.add_time(Dt(seconds=remaining_length / self._walk_speed))
                         next_node = upath[user.get_current_node_index()+1]
+                        user.update_achieved_path(next_node)
                         user.current_node = next_node
                         self.set_user_position(user)
                         user.notify(arrival_time.time)
@@ -120,7 +121,7 @@ class UserFlow(object):
                             else:
                                 cnode_ind = user.get_current_node_index()
                                 next_next_node = upath[cnode_ind + 1]
-                                next_link = graph.nodes[user.current_node].adj[next_next_node]
+                                next_link = gnodes[user.current_node].adj[next_next_node]
                                 if next_link.label == 'TRANSIT':
                                     # User keeps walking
                                     log.info(f"User {uid} enters connection on {next_link.id}")

@@ -80,6 +80,7 @@ class User(TimeDependentSubject):
         self._waited_vehicle = None
         self._requested_service = None
         self._parked_personal_vehicles = dict()
+        self._personal_vehicles = dict()
         self._distance = 0
         self._interrupted_path = None
         self._state = UserState.STOP
@@ -170,6 +171,10 @@ class User(TimeDependentSubject):
     @property
     def parked_personal_vehicles(self):
         return self._parked_personal_vehicles
+
+    @property
+    def personal_vehicles(self):
+        return self._personal_vehicles
 
     @property
     def distance(self):
@@ -743,6 +748,17 @@ class User(TimeDependentSubject):
                 return failed_mservice
         log.error(f'Could not find back the mobility service for which user {self.id} undergone a match failure')
         sys.exit(-1)
+
+    def add_personal_vehicle(self, mid, veh):
+        """Method to add a personal vehicle to this user.
+
+        Args:
+            -mid: mobility service id the vehicle belongs to
+            -veh: the personal vehicle of this user
+        """
+        assert mid not in self.personal_vehicles, f'Try to add a personal vehicle '\
+            f'for user {self.id} and service {mid} but one already exists...'
+        self._personal_vehicles[mid] = veh
 
     def park_personal_vehicle(self, ms, node):
         """Method that registers the mobility service and the parking location of user's

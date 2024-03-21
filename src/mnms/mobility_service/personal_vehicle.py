@@ -56,30 +56,28 @@ class PersonalMobilityService(AbstractMobilityService):
         upath = upath[user.get_current_node_index():user.get_node_index_in_path(drop_node) + 1]
         veh_path = self.construct_veh_path(upath)
         # Check if user has already used her personal vehicle
-        found = False
-        for veh in list(self.fleet.vehicles.values()):
-            if veh.activity_type is ActivityType.STOP and veh.last_dropped_off_user == user:
-                found = True
-                # If so, match her with her own vehicle
-                assert veh.current_node == upath[0], f'User {user.id} tried to take her personal vehcile back at the wrong node ({veh.current_node} != {upath[0]})'
-                activities = [VehicleActivityServing(node=upath[-1],
-                                                   path=veh_path,
-                                                   user=user)]
-                veh.add_activities(activities)
-                if veh.activity_type is ActivityType.STOP:
-                    veh.activity.is_done = True
-                # For personal vehicle, this is always an immediate match because
-                # dt_matching is null, so take into account effective remaining
-                # duration to move during the current flow step
-                veh.dt_move = self._tcurrent - request.request_time
-                break
-        if not found:
+        if self.id in user.personal_vehicles:
+            # If so, match her with her own vehicle
+            veh = user.personal_vehicles[self.id]
+            assert veh.activity_type is ActivityType.STOP, f'Personal vehicle of user {user.id} is not stopped...'
+            assert veh.current_node == upath[0], f'User {user.id} tried to take her personal vehcile back at the wrong node ({veh.current_node} != {upath[0]})'
+            activities = [VehicleActivityServing(node=upath[-1],
+                                                 path=veh_path,
+                                                 user=user)]
+            veh.add_activities(activities)
+            veh.activity.is_done = True
+            # For personal vehicle, this is always an immediate match because
+            # dt_matching is null, so take into account effective remaining
+            # duration to move during the current flow step
+            veh.dt_move = self._tcurrent - request.request_time
+        else:
             # If not, create a new personal vehicle
             new_veh = self.fleet.create_vehicle(upath[0],
                                             capacity=self._veh_capacity,
                                             activities=[VehicleActivityServing(node=upath[-1],
                                                                                path=veh_path,
                                                                                user=user)])
+            user.add_personal_vehicle(self.id, new_veh)
             if self._observer is not None:
                 new_veh.attach(self._observer)
             # Take into account effective remaining duration to move during the

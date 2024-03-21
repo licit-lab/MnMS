@@ -79,21 +79,23 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
     def _reset_mapping(self):
         graph = self._graph.graph
+        gnodes = graph.nodes
         roads = self._graph.roads
+        rnodes = roads.nodes
         for lid, link in graph.links.items():
             if link.label != "TRANSIT":
                 sections_length = list()
                 link_layer = self._graph.layers[link.label]
                 if isinstance(link_layer, PublicTransportLayer):
-                    unode_pos = np.array(graph.nodes[link.upstream].position)
-                    dnode_pos = np.array(graph.nodes[link.downstream].position)
+                    unode_pos = np.array(gnodes[link.upstream].position)
+                    dnode_pos = np.array(gnodes[link.downstream].position)
                     if len(self._graph.map_reference_links[lid]) > 1:
                         for i, section in enumerate(self._graph.map_reference_links[lid]):
                             if i == 0:
-                                l_dnode_pos = roads.nodes[roads.sections[section].downstream].position
+                                l_dnode_pos = rnodes[roads.sections[section].downstream].position
                                 sections_length.append((section, _dist(unode_pos - l_dnode_pos)))
                             elif i == len(self._graph.map_reference_links[lid])-1:
-                                l_unode_pos = roads.nodes[roads.sections[section].upstream].position
+                                l_unode_pos = rnodes[roads.sections[section].upstream].position
                                 sections_length.append((section, _dist(l_unode_pos - dnode_pos)))
                             else:
                                 sections_length.append((section, roads.sections[section].length))
@@ -288,7 +290,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         """
 
         graph = self._graph.graph
-        gnodes = graph.nodes
         banned_links = self._graph.dynamic_space_sharing.banned_links
         banned_cost = self._graph.dynamic_space_sharing.cost
 
@@ -329,7 +330,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 costs_functions = layer._costs_functions
                 for mservice, cost_funcs in costs_functions.items():
                     for cost_name, cost_f in cost_funcs.items():
-                        costs[mservice][cost_name] = cost_f(gnodes, layer, link, costs)
+                        costs[mservice][cost_name] = cost_f(self.graph_nodes, layer, link, costs)
 
                 # Test if link is banned, if yes do not update the cost for the banned mobility service
                 if lid in banned_links:
