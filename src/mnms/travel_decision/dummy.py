@@ -8,7 +8,8 @@ from mnms.travel_decision.abstract import AbstractDecisionModel
 
 class DummyDecisionModel(AbstractDecisionModel):
     def __init__(self, mmgraph: MultiLayerGraph, considered_modes=None, cost='travel_time', outfile:str=None,
-        verbose_file=False, personal_mob_service_park_radius:float=100, random_choice_for_equal_costs:bool=False):
+        verbose_file=False, personal_mob_service_park_radius:float=100, random_choice_for_equal_costs:bool=False,
+        save_routes_dynamically_and_reapply: bool = False):
         """
         Deterministic decision model: the path with the lowest cost is chosen.
 
@@ -23,11 +24,16 @@ class DummyDecisionModel(AbstractDecisionModel):
                                                she can still have access to her vehicle
             -random_choice_for_equal_costs: boolean specifying if the choice among paths with
                                             equal costs should be random or deterministic
+            -save_routes_dynamically_and_reapply: boolean specifying if the k shortest paths computed
+                                                  for an origin, destination, and mode should be saved
+                                                  dynamically and reapply for next departing users with
+                                                  the same origin, destination and mode
         """
         super(DummyDecisionModel, self).__init__(mmgraph, considered_modes=considered_modes,
                                                  n_shortest_path=1, outfile=outfile,
                                                  verbose_file=verbose_file,
-                                                 cost=cost, personal_mob_service_park_radius=personal_mob_service_park_radius)
+                                                 cost=cost, personal_mob_service_park_radius=personal_mob_service_park_radius,
+                                                 save_routes_dynamically_and_reapply=save_routes_dynamically_and_reapply)
         self.random_choice_for_equal_costs = random_choice_for_equal_costs
         self._seed = None
         self._rng = None
