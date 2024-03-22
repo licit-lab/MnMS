@@ -304,6 +304,8 @@ class TimeTable(object):
         else:
             log.warning("TimeTable has no Time and cant compute a frequency")
             return None
+    def __add__(self, other):
+        return TimeTable(self.table + other.table)
 
     def __dump__(self):
         return [time.time for time in self.table]
