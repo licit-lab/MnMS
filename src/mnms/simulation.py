@@ -131,8 +131,10 @@ class Supervisor(object):
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
 
+        self._mlgraph.initialize_costs(self._user_flow._walk_speed)
+
         self._flow_motor.set_time(tstart)
-        self._flow_motor.initialize(self._user_flow._walk_speed)
+        self._flow_motor.initialize()
 
         self._user_flow.set_time(tstart)
 

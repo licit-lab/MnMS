@@ -97,6 +97,8 @@ class TestCostsFunctions(unittest.TestCase):
         mlgraph.add_cost_function('TRANSIT', 'generalized_cost', gc_transit)
         self.mlgraph = mlgraph
 
+        self.mlgraph.initialize_costs(1.42)
+
         ## Demand
         self.demand = BaseDemandManager([User("U0", [-20, 0], [0, 5000], Time("07:00:00"))])
         self.demand.add_user_observer(CSVUserObserver(self.pathdir+'myuser.csv'))
@@ -118,13 +120,14 @@ class TestCostsFunctions(unittest.TestCase):
                                 logfile=self.pathdir+'log.txt',
                                 loglevel=LOGLEVEL.INFO)
         set_all_mnms_logger_level(LOGLEVEL.INFO)
-        self.flow.initialize(1.42)
 
     def tearDown(self):
         """Concludes and closes the test.
         """
         self.tempfile.cleanup()
-        self.flow.veh_manager.empty()
+
+        if self.flow.veh_manager is not None:
+            self.flow.veh_manager.empty()
         Vehicle._counter = 0
 
     def test_init(self):
