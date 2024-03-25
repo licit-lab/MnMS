@@ -53,8 +53,16 @@ class CongestedReservoir(AbstractReservoir):
     def compute_time_interval(self, entrance_time: Time):
         """Method that update the time at which the next vehicle entry can occur.
         """
-        self.time_interval = entrance_time.add_time(
-            Dt(seconds=1/self.f_entry(self.dict_accumulations["CAR"], self.n_car_max)))
+        try:
+            if entrance_time <= self.time_interval:
+                self.time_interval = self.time_interval.add_time(
+                    Dt(seconds=1/self.f_entry(self.dict_accumulations["CAR"], self.n_car_max)))
+            else:
+                self.time_interval = entrance_time.add_time(
+                    Dt(seconds=1/self.f_entry(self.dict_accumulations["CAR"], self.n_car_max)))
+        except AssertionError:
+            log.warning(f'No more car vehicle entry is possible in reservoir {self.id}, set time_interval to 23:59:59...')
+            self.time_interval = Time('23:59:59')
 
     def update_speeds(self):
         """Method that updates the dict of speeds based on the dict of accumulations
@@ -116,7 +124,7 @@ class CongestedMFDFlowMotor(MFDFlowMotor):
             car_queue = res.car_queue
             to_pop = 0
             for queued_car in car_queue:
-                if queued_car.entrance_time < self._tcurrent:
+                if queued_car.entrance_time <= self._tcurrent:
                     speed = self.dict_speeds[res_id]["CAR"]
                     queued_car.veh.speed = speed
                     self.move_veh(queued_car.veh, self._tcurrent, dt.to_seconds(), speed)
@@ -155,7 +163,7 @@ class CongestedMFDFlowMotor(MFDFlowMotor):
                 new_res.compute_time_interval(entrance_time)
                 if entrance_time <= res_time_interval:
                     # Add vehicle in the queue for entering this reservoir
-                    new_res.car_queue.append(QueuedVehicle(veh, entrance_time, previous_veh_zone))
+                    new_res.car_queue.append(QueuedVehicle(veh, new_res.time_interval.copy(), previous_veh_zone))
                     upnode, downode = veh.current_link
                     link = self.graph_nodes[upnode].adj[downode]
 
@@ -181,8 +189,8 @@ class CongestedMFDFlowMotor(MFDFlowMotor):
     def add_reservoir(self, res: CongestedReservoir):
         self.reservoirs[res.id] = res
 
-    def write_result(self, step_affectation: int, step_flow:int):
-        tcurrent = self._tcurrent.time
+    def write_result(self, step_affectation: int, step_flow:int, flow_dt: Dt):
+        tcurrent = self._tcurrent.copy().remove_time(flow_dt).time
         for resid, res in self.reservoirs.items():
             resid = res.id
             for mode in res.modes:

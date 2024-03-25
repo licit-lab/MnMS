@@ -387,7 +387,7 @@ class Supervisor(object):
                 # Call flow motor step
                 self.call_flow_motor_step(flow_dt)
                 if self._flow_motor._write:
-                    self._flow_motor.write_result(affectation_step, flow_step)
+                    self._flow_motor.write_result(affectation_step, flow_step, flow_dt)
 
                 # Update current time and current flow step number
                 self.tcurrent = self.tcurrent.add_time(flow_dt)

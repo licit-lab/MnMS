@@ -347,8 +347,8 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         if len(linkcosts) > 0:
             graph.update_costs(linkcosts)
 
-    def write_result(self, step_affectation: int, step_flow:int):
-        tcurrent = self._tcurrent.time
+    def write_result(self, step_affectation: int, step_flow:int, flow_dt: Dt):
+        tcurrent = self._tcurrent.copy().remove_time(flow_dt).time
         for resid, res in self.reservoirs.items():
             resid = res.id
             for mode in res.modes:
