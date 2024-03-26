@@ -141,7 +141,7 @@ class Supervisor(object):
 
         self._user_flow.set_time(tstart)
 
-        self._mlgraph.dynamic_space_sharing.cost = self._decision_model._cost
+        self._mlgraph.dynamic_space_sharing.set_cost(self._decision_model._cost)
 
     def finalize(self):
         """Method that finalizes the simulation by closing open files, and cleaning
@@ -252,8 +252,14 @@ class Supervisor(object):
         log.info(f' Flow motor step done in [{end - start:.5} s]')
 
     def step_dynamic_space_sharing(self):
+        """Calls the dynamic space sharing update and reroutes vehicles impacted by
+        the modification of available links.
+        """
+        # Call the dynamic space sharing update to unban and ban links when relevant
         veh_to_reroute = self._mlgraph.dynamic_space_sharing.update(self.tcurrent,
                                                                     list(VehicleManager._vehicles.values()))
+        # Reroute vehicles with an activity impacted by the banning
+        # NB: unbanning does not lead to rerouting, only banning
         for veh, activity in veh_to_reroute:
             origin = activity.path[0][0][0]
             dest = activity.path[-1][0][1]
@@ -274,8 +280,12 @@ class Supervisor(object):
                         if old_link != new_link:
                             new_veh_path = new_veh_path[i:]
                             break
-
+                log.info(f'DynamicSpaceSharing: Vehicle {veh.id} modified path of activity {activity} to {new_veh_path}')
                 activity.modify_path(new_veh_path)
+                # TODO: should we also modify user path??
+            else:
+                log.warning(f'DynamicSpaceSharing: cannot find an alternative route '\
+                    f'for vehicle {veh.id} and activity {activity}...')
 
     def get_new_users(self, principal_dt):
         """Gathers/Creates the users who depart during the coming affectation step.
