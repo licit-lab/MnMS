@@ -164,7 +164,8 @@ class UserFlow(object):
             self._waiting_answer.setdefault(user.id, (user.response_dt.copy(),requested_mservice))
 
         for user in finish_trip:
-            self.write_result(user=user)
+            if self._write:
+                self.write_result(user=user)
             del self.users[user.id]
             del self._walking[user.id]
 
@@ -262,7 +263,8 @@ class UserFlow(object):
                 u.notify(self._tcurrent)
 
         for uid in to_del:
-            self.write_result(user=self.users[uid])
+            if self._write:
+                self.write_result(user=self.users[uid])
             self.users.pop(uid)
 
     def check_user_waiting_answers(self, dt: Dt):
