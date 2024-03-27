@@ -35,11 +35,11 @@ def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=Tru
     plt.tight_layout()
 
 
-def draw_path(ax, mlgraph, path, color='red', linkwidth=2, alpha=1):
+def draw_path(ax, mlgraph, path, color='orange', linkwidth=2, alpha=1, nodes=False, markersize=10, label_size=5):
     lines = list()
     gnodes = mlgraph.graph.nodes
     if path is not None:
-        pnodes = path.nodes
+        pnodes = path.nodes if not nodes else path
         for ni in range(len(pnodes) - 1):
             nj = ni + 1
             unode = gnodes[pnodes[ni]].position
@@ -48,6 +48,12 @@ def draw_path(ax, mlgraph, path, color='red', linkwidth=2, alpha=1):
 
         line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth, alpha=alpha)
         ax.add_collection(line_segment)
+
+    on_pos = gnodes[path.nodes[0]].position if not nodes else gnodes[path[0]].position
+    ax.scatter([on_pos[0]], [on_pos[1]], color='blue', s=markersize, label='Origin')
+    dn_pos = gnodes[path.nodes[-1]].position if not nodes else gnodes[path[-1]].position
+    ax.scatter([dn_pos[0]], [dn_pos[1]], color='red', s=markersize, label='Destination')
+
 
 def draw_line(ax, mlgraph, line, color='green', linkwidth=6, stopmarkeredgewidth=1, alpha=0.6, draw_stops=True,
     nodesize=6, line_label='', label_size=5):
@@ -146,6 +152,8 @@ def draw_links_load(ax, graph, loads, n, linkwidth=1, lmin=None, lmax=None):
     lines = list()
     colors_load = list()
     min_load = min(loads.values())
+    gnodes = graph.nodes
+    glinks = graph.links
     if lmin is not None:
         min_load = min(lmin, min_load)
     max_load = max(loads.values())
@@ -156,12 +164,12 @@ def draw_links_load(ax, graph, loads, n, linkwidth=1, lmin=None, lmax=None):
     loads_sorted = [(lid,load) for lid,load in loads.items()]
     loads_sorted = sorted(loads_sorted, key=lambda x:x[1])
     for lid, load in loads_sorted:
-        assert lid in graph.links.keys(), f'Cannot find link {lid} in the graph provided...'
+        assert lid in glinks.keys(), f'Cannot find link {lid} in the graph provided...'
         color_idx = int(divmod(load-min_load, color_step)[0])
         colors_load.append(colors[color_idx])
-        unode = graph.links[lid].upstream
-        dnode = graph.links[lid].downstream
-        lines.append([graph.nodes[unode].position, graph.nodes[dnode].position])
+        unode = glinks[lid].upstream
+        dnode = glinks[lid].downstream
+        lines.append([gnodes[unode].position, gnodes[dnode].position])
     line_segment = LineCollection(lines, linestyles='solid', colors=colors_load, linewidths=linkwidth)
     ax.add_collection(line_segment)
 
