@@ -30,6 +30,7 @@ class Supervisor(object):
                  demand: AbstractDemandManager,
                  flow_motor: AbstractMFDFlowMotor,
                  decision_model: AbstractDecisionModel,
+                 user_flow: UserFlow = None,
                  outfile: Optional[str] = None,
                  logfile: Optional[str] = None,
                  loglevel: LOGLEVEL = LOGLEVEL.WARNING):
@@ -41,6 +42,7 @@ class Supervisor(object):
             -demand: The demand manager
             -flow_motor: The flow motor
             -decision_model: The decision model
+            -user_flow: The user flow motor
             -outfile: If not None write in the outfile at each time step the cost
                       of each link in the multi layer graph
             -logfile: file where simulation log should be printed
@@ -52,8 +54,11 @@ class Supervisor(object):
         self._flow_motor: AbstractMFDFlowMotor = flow_motor
 
         self._decision_model:AbstractDecisionModel = decision_model
-        self._user_flow: UserFlow = UserFlow()
-
+        if user_flow is None:
+            self._user_flow: UserFlow = UserFlow()
+        else:
+            self._user_flow = user_flow
+            
         self.add_graph(graph)
         self._flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)
@@ -143,6 +148,8 @@ class Supervisor(object):
         class attributes.
         """
         self._flow_motor.finalize()
+
+        self._user_flow.finalize()
 
         if self._decision_model._write:
             self._decision_model._outfile.close()
@@ -411,6 +418,8 @@ class Supervisor(object):
             affectation_step += 1
 
         ### Finalize simulation
+        if self._user_flow._write:
+            self._user_flow.write_result()
         self.finalize()
         progress.update()
         progress.show()

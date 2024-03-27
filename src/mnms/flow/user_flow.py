@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import sys
+import csv
 
 
 from mnms.graph.layers import MultiLayerGraph
@@ -16,7 +17,7 @@ log = create_logger(__name__)
 
 
 class UserFlow(object):
-    def __init__(self, walk_speed=1.42):
+    def __init__(self, walk_speed: float=1.42, outfile: str=None):
         """
         Manage the motion and state update of users.
 
@@ -32,6 +33,14 @@ class UserFlow(object):
         self._waiting_answer: Dict[str, tuple[Time, AbstractMobilityService]] = dict()
 
         self._gnodes = None
+
+        if outfile is None:
+            self._write = False
+        else:
+            self._write = True
+            self._outfile = open(outfile, "w")
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+            self._csvhandler.writerow(['ID', 'TRAVELED_NODES', 'TRAVELED_LINKS', 'TRAVELED_SERVICES'])
 
     def set_graph(self, mlgraph:MultiLayerGraph):
         """Method to associate a multi layer graph to a UserFlow object and sets
@@ -155,6 +164,7 @@ class UserFlow(object):
             self._waiting_answer.setdefault(user.id, (user.response_dt.copy(),requested_mservice))
 
         for user in finish_trip:
+            self.write_result(user=user)
             del self.users[user.id]
             del self._walking[user.id]
 
@@ -252,6 +262,7 @@ class UserFlow(object):
                 u.notify(self._tcurrent)
 
         for uid in to_del:
+            self.write_result(user=self.users[uid])
             self.users.pop(uid)
 
     def check_user_waiting_answers(self, dt: Dt):
@@ -325,3 +336,39 @@ class UserFlow(object):
             decision_model.add_users_for_planning(interrupted_users, [Event.INTERRUPTION]*len(interrupted_users))
             # NB: the planning will be called before the next user flow step so no need to interrupt user path now
         return users_canceling
+
+    def write_result(self, user: User=None):
+        """Method writing the results regarding users achieved path.
+
+        Args:
+            -user: user for which the achieved path should be written, if None,
+             results are written for all users currently in the user flow.
+        """
+        if user is None:
+            for uid,u in self.users.items():
+                self._csvhandler.writerow([uid, " ".join(u.achieved_path),
+                    " ".join(self.build_achieved_path_links(u.achieved_path)),
+                    " ".join(u.achieved_path_ms)])
+        else:
+            self._csvhandler.writerow([user.id, " ".join(user.achieved_path),
+                " ".join(self.build_achieved_path_links(user.achieved_path)),
+                " ".join(user.achieved_path_ms)])
+
+    def build_achieved_path_links(self, path_nodes):
+        """Method to convert a list of nodes into a list of links.
+
+        Args:
+            -path_nodes: the list of nodes
+        """
+        links = []
+        for i in range(len(path_nodes)-1):
+            try:
+                link = self._gnodes[path_nodes[i]].adj[path_nodes[i+1]]
+                links.append(link.id)
+            except:
+                log.error(f'Cannot find link between {path_nodes[i]} and {path_nodes[i+1]}...')
+        return links
+
+    def finalize(self):
+        if self._write:
+            self._outfile.close()
