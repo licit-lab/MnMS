@@ -563,11 +563,12 @@ class SimpleLayer(AbstractLayer):
         map_links_classes = {}
         for clas in links_classes.keys():
             for class_link in links_classes[clas]:
-                self.add_class_to_link(class_link, clas)
+                self.add_class_to_link(class_link, clas, check=True)
 
-    def add_class_to_link(self, lid, class_id):
-        assert lid in self.graph.links, f'Link {lid} not in layer {self._id} graph...'
-        assert lid not in self.map_links_classes, f'Link {lid} already has a class...'
+    def add_class_to_link(self, lid, class_id, check=False):
+        if check:
+            assert lid in self.graph.links, f'Link {lid} not in layer {self._id} graph...'
+            assert lid not in self.map_links_classes, f'Link {lid} already has a class...'
         self.map_links_classes[lid] = class_id
 
     @classmethod
