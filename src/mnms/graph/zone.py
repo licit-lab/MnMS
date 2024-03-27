@@ -18,6 +18,13 @@ class Zone(object):
     def is_inside(self, points: List[Point]):
         return points_in_polygon(self.contour, points)
 
+    def centroid(self):
+        arr = np.array(self.contour)
+        length = arr.shape[0]
+        sum_x = np.sum(arr[:, 0])
+        sum_y = np.sum(arr[:, 1])
+        return np.array([sum_x/length, sum_y/length])
+
 @dataclass
 class MLZone(object):
     id: str
