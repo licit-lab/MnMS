@@ -182,6 +182,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             elapsed_time = dist_travelled / speed
             veh.update_distance(dist_travelled)
             veh._remaining_link_length = 0
+            veh.update_achieved_path()
             self.set_vehicle_position(veh)
             try:
                 current_link, remaining_link_length = next(veh.activity.iter_path)

@@ -2,8 +2,12 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Callable, List, Tuple
 
 from mnms.time import Time
-from mnms.vehicles.veh_type import Vehicle, VehicleActivity
+from mnms.vehicles.veh_type import Vehicle, VehicleActivity, ActivityType
+from mnms.log import create_logger
 
+from hipop.shortest_path import parallel_dijkstra, dijkstra
+
+log = create_logger(__name__)
 
 @dataclass
 class BannedLink:
@@ -40,14 +44,11 @@ class DynamicSpaceSharing(object):
         self._dt = dt
 
     def set_cost(self, cost: str):
-        """Method to define the cost impacted by the banning.
+        """Method to define the cost impacted by the banning on top of travel time.
 
         Args:
             -cost: name of the cost
         """
-        # TODO: depending on vehicle activity, the relevant cost may be different,
-        #       e.g., for a serving activity the cost is the same as the one used in
-        #       the decision model, but for a pickup activity the cost is the travel time
         self.cost = cost
 
     def ban_link(self, lid: str, mobility_service: str, period: int, vehicles: List[Vehicle]) -> List[Tuple[Vehicle, VehicleActivity]]:
@@ -77,6 +78,8 @@ class DynamicSpaceSharing(object):
         layer.graph.links[lid].update_costs(costs)
 
         # Gather the vehicles impacted by this banning
+        # NB: a vehicle is considered to be impacted by the banning if it has the banned
+        #     link in its plan, has not yet passed it, and is not currently on it
         vehicles_to_reroute = []
         link_border = (link.upstream, link.downstream)
         for veh in vehicles:
@@ -86,14 +89,14 @@ class DynamicSpaceSharing(object):
             try:
                 ind_veh_link = path.index(current_link) # NB: works only when activity path does not pass through the same link several times
                 ind_banned_link = path.index(link_border) # NB: works only when activity path does not pass through the same link several times
+                if ind_banned_link > ind_veh_link:
+                    vehicles_to_reroute.append((veh, current_act))
             except ValueError:
-                for act in veh.activities:
-                    path = {p[0] for p in act.path}
-                    if link_border in path:
-                        vehicles_to_reroute.append((veh, act))
-                continue
-            if ind_banned_link > ind_veh_link:
-                vehicles_to_reroute.append((veh, current_act))
+                pass
+            for act in veh.activities:
+                path = [p[0] for p in act.path]
+                if link_border in path:
+                    vehicles_to_reroute.append((veh, act))
 
         return vehicles_to_reroute
 
@@ -113,16 +116,13 @@ class DynamicSpaceSharing(object):
         layer = self.graph.mapping_layer_services[self.banned_links[lid].mobility_service]
         layer.graph.links[lid].update_costs(costs)
 
-    def update(self, tcurrent: Time, vehicles: List[Vehicle]) -> List[Tuple[Vehicle, VehicleActivity]]:
+    def update(self, tcurrent: Time, vehicles: List[Vehicle], mlgraph: "MultiLayerGraph") -> List[Tuple[Vehicle, VehicleActivity]]:
         """Method that updates the banned links every _dt.
 
         Args:
             -tcurrent: current simulation time
             -vehicles: list of all vehicles involved in the simulation
-
-        Returns:
-            -vehicle_to_reroute: the list of vehicles that should reroute after this
-             update
+            -mlgraph: the multi layer graph
         """
         self._flow_step_counter += 1
 
@@ -134,10 +134,11 @@ class DynamicSpaceSharing(object):
                 to_del.append(lid)
         for lid in to_del:
             self.unban_link(lid)
+            log.info(f'Unban {lid} at {tcurrent}')
             del self.banned_links[lid]
 
         # Get the links to ban and apply the banning if it is time to
-        vehicle_to_reroute = []
+        vehicles_to_reroute = []
         if self._flow_step_counter >= self._dt:
             self._flow_step_counter = 0
             new_banned_links = self._dynamic(self.graph, tcurrent)
@@ -145,9 +146,68 @@ class DynamicSpaceSharing(object):
             for lid, mobility_service, period in new_banned_links:
                 if lid not in self.banned_links:
                     ms_vehicles = [veh for veh in vehicles if veh.mobility_service == mobility_service]
-                    vehicle_to_reroute.extend(self.ban_link(lid, mobility_service, period, ms_vehicles))
+                    vehicles_to_reroute.extend(self.ban_link(lid, mobility_service, period, ms_vehicles))
+            # Keep only unique veh, activity pairs
+            unique_indices = []
+            unique_vehicles_to_retoute = []
+            for i, (veh, activity) in enumerate(vehicles_to_reroute):
+                veh_act_str = f'{veh.id}-{type(activity).__name__}-{activity.user.id}-{activity.node}'
+                if veh_act_str not in unique_vehicles_to_retoute:
+                    unique_vehicles_to_retoute.append(veh_act_str)
+                    unique_indices.append(i)
+            vehicles_to_reroute = [vehicles_to_reroute[i] for i in unique_indices]
+            if new_banned_links:
+                log.info(f'Ban links {new_banned_links} at {tcurrent} and reroute {vehicles_to_reroute}')
 
-        return vehicle_to_reroute
+        self.reroute_vehicles(vehicles_to_reroute, mlgraph)
+
+    def reroute_vehicles(self, vehs, mlgraph):
+        """Method that reroutes the vehicles impacted by links banning.
+
+        Args:
+            -vehs: the list of vehs and activity impacted by the links banning
+            -mlgraph: the multi layer graph
+        """
+        # NB: unbanning does not lead to rerouting, only banning
+        for veh, activity in vehs:
+            if activity == veh.activity:
+                origin = veh.current_link[1]
+            else:
+                origin = activity.path[0][0][0]
+            destination = activity.path[-1][0][1]
+            mservice_id = veh.mobility_service
+            layer = mlgraph.mapping_layer_services[mservice_id]
+            cost = self.cost if activity.activity_type is ActivityType.SERVING else 'travel_time'
+            # TODO: call dijkstra in parallel
+            try:
+                new_path, _ = dijkstra(mlgraph.graph,
+                                origin,
+                                destination,
+                                cost,
+                                {layer.id: mservice_id},
+                                {layer.id})
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
+
+            if new_path:
+                mservice = layer.mobility_services[mservice_id]
+                new_veh_path = mservice.construct_veh_path(new_path)
+
+                if activity == veh.activity:
+                    new_veh_path = [(veh.current_link, veh.remaining_link_length)] + new_veh_path
+                    activity.modify_path_and_next(new_veh_path)
+                else:
+                    activity.modify_path(new_veh_path)
+                log.info(f'Vehicle {veh.id} modified path of activity {activity} to {new_veh_path}')
+
+
+                # TODO: should we also modify user path??
+                if activity.activity_type is ActivityType.SERVING:
+                    log.warning(f'User path now is {activity.user.path}')
+            else:
+                log.warning(f'Cannot find an alternative route '\
+                    f'for vehicle {veh.id} and activity {activity}...')
 
     def set_dynamic(self, dynamic: Callable[["MultiLayerGraph", Time], List[Tuple[str, str, int]]], call_every: int):
         """Method to define the banning strategy.

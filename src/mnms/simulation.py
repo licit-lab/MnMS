@@ -256,36 +256,7 @@ class Supervisor(object):
         the modification of available links.
         """
         # Call the dynamic space sharing update to unban and ban links when relevant
-        veh_to_reroute = self._mlgraph.dynamic_space_sharing.update(self.tcurrent,
-                                                                    list(VehicleManager._vehicles.values()))
-        # Reroute vehicles with an activity impacted by the banning
-        # NB: unbanning does not lead to rerouting, only banning
-        for veh, activity in veh_to_reroute:
-            origin = activity.path[0][0][0]
-            dest = activity.path[-1][0][1]
-            mservice_id = veh.mobility_service
-
-            layer = self._mlgraph.mapping_layer_services[mservice_id]
-            new_path, _ = self._decision_model.compute_path(origin,
-                                                            dest,
-                                                            {layer.id},
-                                                            {layer.id: mservice_id})
-
-            if new_path:
-                mservice = layer.mobility_services[mservice_id]
-                new_veh_path = mservice.construct_veh_path(new_path)
-
-                if activity is veh.activity:
-                    for i, (old_link, new_link) in enumerate(zip(activity.path, new_veh_path)):
-                        if old_link != new_link:
-                            new_veh_path = new_veh_path[i:]
-                            break
-                log.info(f'DynamicSpaceSharing: Vehicle {veh.id} modified path of activity {activity} to {new_veh_path}')
-                activity.modify_path(new_veh_path)
-                # TODO: should we also modify user path??
-            else:
-                log.warning(f'DynamicSpaceSharing: cannot find an alternative route '\
-                    f'for vehicle {veh.id} and activity {activity}...')
+        self._mlgraph.dynamic_space_sharing.update(self.tcurrent, list(VehicleManager._vehicles.values()), self._mlgraph)
 
     def get_new_users(self, principal_dt):
         """Gathers/Creates the users who depart during the coming affectation step.

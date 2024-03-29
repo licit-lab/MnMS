@@ -273,6 +273,8 @@ class Vehicle(TimeDependentSubject):
         self._iter_path = None
         self.speed = None                           # current speed
         self._dt_move = None
+        self._achieved_path = []
+        self._achieved_path_since_last_notify = []
 
         self.activities: Deque[VehicleActivity] = deque([])
         self.activity = None                        # current activity
@@ -349,6 +351,15 @@ class Vehicle(TimeDependentSubject):
     @dt_move.setter
     def dt_move(self, dt):
         self._dt_move = dt
+
+    def update_achieved_path(self):
+        if self.id == '4':
+            print(self.current_node)
+        self._achieved_path.append(self.current_node)
+        self._achieved_path_since_last_notify.append(self.current_node)
+
+    def flush_achieved_path_since_last_notify(self):
+        self._achieved_path_since_last_notify = []
 
     def add_activities(self, activities:List[VehicleActivity]):
         for a in activities:
