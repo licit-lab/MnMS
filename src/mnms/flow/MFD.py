@@ -347,11 +347,13 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     for cost_name, cost_f in cost_funcs.items():
                         costs[mservice][cost_name] = cost_f(self.graph_nodes, layer, link, costs)
 
-                # Test if link is banned, if yes do not update the cost for the banned mobility service
+                # Test if link is banned, if yes do not update the travel time and dynamic
+                # space sharing cost for the banned mobility service, but only the speed
                 if lid in banned_links:
                     mservice = banned_links[lid].mobility_service
                     costs[mservice].pop(banned_cost, None)
-
+                    if banned_cost != 'travel_time':
+                        costs[mservice].pop('travel_time', None)
                 linkcosts[lid]=costs
 
                 # Update of the cost in the corresponding graph layer

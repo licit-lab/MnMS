@@ -255,8 +255,9 @@ class Supervisor(object):
         """Calls the dynamic space sharing update and reroutes vehicles impacted by
         the modification of available links.
         """
-        # Call the dynamic space sharing update to unban and ban links when relevant
-        self._mlgraph.dynamic_space_sharing.update(self.tcurrent, list(VehicleManager._vehicles.values()), self._mlgraph)
+        # Call the dynamic space sharing update to unban and ban links when relevant, and reroute
+        # vehicles consequently
+        self._mlgraph.dynamic_space_sharing.update(self.tcurrent, list(VehicleManager._vehicles.values()))
 
     def get_new_users(self, principal_dt):
         """Gathers/Creates the users who depart during the coming affectation step.
@@ -367,7 +368,7 @@ class Supervisor(object):
                 self._decision_model.add_users_for_planning(users_reach_dt_answer, [Event.MATCH_FAILURE]*len(users_reach_dt_answer))
 
                 # Call dynamic space sharing step
-                self.step_dynamic_space_sharing() # NB: really don't know if this still works
+                self.step_dynamic_space_sharing()
 
                 # Call matching for all mobility services
                 self.call_matching_mobility_services(new_users, flow_dt)

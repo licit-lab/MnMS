@@ -352,11 +352,14 @@ class Vehicle(TimeDependentSubject):
     def dt_move(self, dt):
         self._dt_move = dt
 
+    @property
+    def achieved_path(self):
+        return self._achieved_path
+
     def update_achieved_path(self):
-        if self.id == '4':
-            print(self.current_node)
-        self._achieved_path.append(self.current_node)
-        self._achieved_path_since_last_notify.append(self.current_node)
+        if len(self.achieved_path) == 0 or self.current_node != self.achieved_path[-1]:
+            self._achieved_path.append(self.current_node)
+            self._achieved_path_since_last_notify.append(self.current_node)
 
     def flush_achieved_path_since_last_notify(self):
         self._achieved_path_since_last_notify = []

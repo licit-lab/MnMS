@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, Dict, Callable, List, Tuple
+import sys
 
 from mnms.time import Time
 from mnms.vehicles.veh_type import Vehicle, VehicleActivity, ActivityType
@@ -8,6 +9,21 @@ from mnms.log import create_logger
 from hipop.shortest_path import parallel_dijkstra, dijkstra
 
 log = create_logger(__name__)
+
+def path_to_nodes(path) -> List[str]:
+    """Method that converts a built path into a list of nodes.
+
+    Args:
+        -path: path to convert
+
+    Returns:
+        -path_nodes: the converted path
+    """
+    if len(path) > 0:
+        path_nodes = [l[0][0] for l in path] + [path[-1][0][1]]
+    else:
+        path_nodes = []
+    return path_nodes
 
 @dataclass
 class BannedLink:
@@ -30,7 +46,6 @@ class DynamicSpaceSharing(object):
         self.cost: Optional[str] = None
         self.banned_links: Dict[str, BannedLink] = dict()
         self._dt = 0
-
         self._flow_step_counter = 0
         self._dynamic: Callable[["MultiLayerGraph", Time], List[Tuple[str, str, int]]] = lambda x, tcurrent: list()
 
@@ -71,8 +86,10 @@ class DynamicSpaceSharing(object):
         assert lid not in self.banned_links, f'Try to ban an already banned link {lid}...'
         self.banned_links[lid] = banned_link
 
-        # Update its cost to infinity
+        # Update its cost and travel time to infinity
         costs[mobility_service][self.cost] = float("inf")
+        if self.cost != 'travel_time':
+            costs[mobility_service]['travel_time'] = float("inf")
         self.graph.graph.update_link_costs(lid, costs)
         layer = self.graph.mapping_layer_services[mobility_service]
         layer.graph.links[lid].update_costs(costs)
@@ -100,31 +117,43 @@ class DynamicSpaceSharing(object):
 
         return vehicles_to_reroute
 
-    def unban_link(self, lid: str):
+    def unban_link(self, lid: str, gnodes: List["Nodes"]):
         """Method to unban a banned link for a specific mobility service.
-        It reapplies previous cost on that link.
+        It recomputes the travel time and cost on that link.
 
         Args:
             -lid: id of the link to unban
+            -gnodes: the multi layer graph nodes
         """
         assert lid in self.banned_links, f'Try to unban a non banned link {lid}...'
+
+        # Recompute the cost and travel time based on current speed
+        banned_ms = self.banned_links[lid].mobility_service
         link = self.graph.graph.links[lid]
         costs = link.costs
-        costs[self.banned_links[lid].mobility_service][self.cost] = self.banned_links[lid].previous_cost
-        # TODO: instead of applying the previous cost which may be outdated recompute the cost
+        layer = self.graph.layers[link.label]
+
+        # Travel time
+        costs[banned_ms]['travel_time'] = link.length / costs[banned_ms]['speed']
+        # Other cost
+        if self.cost != 'travel_time' and banned_ms in costs_functions:
+            costs_functions = layer._costs_functions
+            assert self.cost in costs_functions[banned_ms], f'Cannot find cost {self.cost} in cost funtions of {banned_ms} service...'
+            costs[banned_ms][self.cost] = costs_functions[banned_ms][self.cost](gnodes, layer, link, costs)
+
+        # Update link cost
         self.graph.graph.update_link_costs(lid, costs)
-        layer = self.graph.mapping_layer_services[self.banned_links[lid].mobility_service]
         layer.graph.links[lid].update_costs(costs)
 
-    def update(self, tcurrent: Time, vehicles: List[Vehicle], mlgraph: "MultiLayerGraph") -> List[Tuple[Vehicle, VehicleActivity]]:
+    def update(self, tcurrent: Time, vehicles: List[Vehicle]) -> List[Tuple[Vehicle, VehicleActivity]]:
         """Method that updates the banned links every _dt.
 
         Args:
             -tcurrent: current simulation time
             -vehicles: list of all vehicles involved in the simulation
-            -mlgraph: the multi layer graph
         """
         self._flow_step_counter += 1
+        gnodes = self.graph.graph.nodes
 
         # Unban links for which the banning period elapsed
         to_del = list()
@@ -133,7 +162,7 @@ class DynamicSpaceSharing(object):
             if banned_link.period <= 0:
                 to_del.append(lid)
         for lid in to_del:
-            self.unban_link(lid)
+            self.unban_link(lid, gnodes)
             log.info(f'Unban {lid} at {tcurrent}')
             del self.banned_links[lid]
 
@@ -159,14 +188,14 @@ class DynamicSpaceSharing(object):
             if new_banned_links:
                 log.info(f'Ban links {new_banned_links} at {tcurrent} and reroute {vehicles_to_reroute}')
 
-        self.reroute_vehicles(vehicles_to_reroute, mlgraph)
+        self.reroute_vehicles(vehicles_to_reroute, gnodes)
 
-    def reroute_vehicles(self, vehs, mlgraph):
+    def reroute_vehicles(self, vehs, gnodes):
         """Method that reroutes the vehicles impacted by links banning.
 
         Args:
             -vehs: the list of vehs and activity impacted by the links banning
-            -mlgraph: the multi layer graph
+            -gnodes: nodes of the multi layer graph
         """
         # NB: unbanning does not lead to rerouting, only banning
         for veh, activity in vehs:
@@ -176,11 +205,11 @@ class DynamicSpaceSharing(object):
                 origin = activity.path[0][0][0]
             destination = activity.path[-1][0][1]
             mservice_id = veh.mobility_service
-            layer = mlgraph.mapping_layer_services[mservice_id]
+            layer = self.graph.mapping_layer_services[mservice_id]
             cost = self.cost if activity.activity_type is ActivityType.SERVING else 'travel_time'
             # TODO: call dijkstra in parallel
             try:
-                new_path, _ = dijkstra(mlgraph.graph,
+                new_path, _ = dijkstra(self.graph.graph,
                                 origin,
                                 destination,
                                 cost,
@@ -193,18 +222,37 @@ class DynamicSpaceSharing(object):
             if new_path:
                 mservice = layer.mobility_services[mservice_id]
                 new_veh_path = mservice.construct_veh_path(new_path)
+                old_veh_path = activity.path
 
                 if activity == veh.activity:
                     new_veh_path = [(veh.current_link, veh.remaining_link_length)] + new_veh_path
                     activity.modify_path_and_next(new_veh_path)
                 else:
                     activity.modify_path(new_veh_path)
-                log.info(f'Vehicle {veh.id} modified path of activity {activity} to {new_veh_path}')
+                log.info(f'Vehicle {veh.id} modified path of activity {old_veh_path} to {activity} following a banning')
 
-
-                # TODO: should we also modify user path??
-                if activity.activity_type is ActivityType.SERVING:
-                    log.warning(f'User path now is {activity.user.path}')
+                # Find all users concerned by this rerouting
+                all_activities = [veh.activity] + list(veh.activities)
+                act_ind = [i for i in range(len(all_activities)) if all_activities[i] == activity][0]
+                users_potentially_impacted = [a.user for i,a in enumerate(all_activities) if i < act_ind and type(a).__name__=='VehicleActivityPickup']
+                users_impacted = []
+                for puser in list(veh.passengers.values()) + users_potentially_impacted:
+                    puser_serving_act_ind = [i for i,a in enumerate(all_activities) if a.user == puser and type(a).__name__=='VehicleActivityServing'][0]
+                    if puser_serving_act_ind >= act_ind:
+                        users_impacted.append(puser)
+                # Modify their path
+                for passenger in users_impacted:
+                    old_veh_path_nodes = path_to_nodes(old_veh_path)
+                    if activity == veh.activity:
+                        # Find part to effectively modify (remove the part of old path already achieved)
+                        try:
+                            idx = old_veh_path_nodes.index(new_path[0])
+                        except:
+                            log.error(f'Cannot find new path first node {new_path[0]} into old path {old_veh_path_nodes}...')
+                            sys.exit(-1)
+                        old_veh_path_nodes = old_veh_path_nodes[idx:]
+                    passenger.modify_part_of_path(old_veh_path_nodes, new_path, gnodes, self.graph, self.cost)
+                    log.info(f'User {passenger.id} updated her path consequently: {passenger.path}')
             else:
                 log.warning(f'Cannot find an alternative route '\
                     f'for vehicle {veh.id} and activity {activity}...')
