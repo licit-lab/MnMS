@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from typing import Optional, Dict, Callable, List, Tuple
 import sys
+import multiprocessing
 
 from mnms.time import Time
 from mnms.vehicles.veh_type import Vehicle, VehicleActivity, ActivityType
 from mnms.log import create_logger
 
-from hipop.shortest_path import parallel_dijkstra, dijkstra
+from hipop.shortest_path import parallel_dijkstra_heterogeneous_costs
 
 log = create_logger(__name__)
 
@@ -198,30 +199,49 @@ class DynamicSpaceSharing(object):
             -gnodes: nodes of the multi layer graph
         """
         # NB: unbanning does not lead to rerouting, only banning
+
+        # Gather inputs for parallel dijkstra call
+        origins = []
+        destinations = []
+        mservices = []
+        layers = []
+        map_layers_services = []
+        layersids = []
+        costs = []
         for veh, activity in vehs:
             if activity == veh.activity:
-                origin = veh.current_link[1]
+                origins.append(veh.current_link[1])
             else:
-                origin = activity.path[0][0][0]
-            destination = activity.path[-1][0][1]
-            mservice_id = veh.mobility_service
-            layer = self.graph.mapping_layer_services[mservice_id]
+                origins.append(activity.path[0][0][0])
+            destinations.append(activity.path[-1][0][1])
+            mservices.append(veh.mobility_service)
+            layers.append(self.graph.mapping_layer_services[mservices[-1]])
+            map_layers_services.append({layers[-1].id: mservices[-1]})
+            layersids.append({layers[-1].id})
             cost = self.cost if activity.activity_type is ActivityType.SERVING else 'travel_time'
-            # TODO: call dijkstra in parallel
-            try:
-                new_path, _ = dijkstra(self.graph.graph,
-                                origin,
-                                destination,
-                                cost,
-                                {layer.id: mservice_id},
-                                {layer.id})
-            except ValueError as ex:
-                log.error(f'HiPOP.Error: {ex}')
-                sys.exit(-1)
+            costs.append(cost)
 
+        # Call parallel dijkstra
+        try:
+            new_paths = parallel_dijkstra_heterogeneous_costs(self.graph.graph,
+                                    origins,
+                                    destinations,
+                                    map_layers_services,
+                                    costs,
+                                    multiprocessing.cpu_count(),
+                                    layersids)
+        except ValueError as ex:
+            log.error(f'HiPOP.Error: {ex}')
+            sys.exit(-1)
+
+        # Parse new paths computed
+        for i in range(len(new_paths)):
+            new_path, _ = new_paths[i]
             if new_path:
-                mservice = layer.mobility_services[mservice_id]
+                mservice = layers[i].mobility_services[mservices[i]]
                 new_veh_path = mservice.construct_veh_path(new_path)
+                veh = vehs[i][0]
+                activity = vehs[i][1]
                 old_veh_path = activity.path
 
                 if activity == veh.activity:
