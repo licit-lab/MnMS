@@ -133,6 +133,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
         self.veh_manager = VehicleManager()
         self.graph_nodes = self._graph.graph.nodes
+        self.roads_sections = self._graph.roads.sections
 
         self._reset_mapping()
 
@@ -205,11 +206,24 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
     def get_vehicle_zone(self, veh):
         try:
+            # Find the section where vehicle is currently
             unode, dnode = veh.current_link
             curr_link = self.graph_nodes[unode].adj[dnode]
-            lid = self._graph.map_reference_links[curr_link.id][0]  # take reservoir of first part of trip
-            res_id = self._graph.roads.sections[lid].zone
+            sids = self._graph.map_reference_links[curr_link.id]
+            if len(sids) == 1:
+                sid = sids[0]
+            else:
+                slengths = [self.roads_sections[sid].length for sid in sids]
+                l = 0
+                for i in range(len(slengths)-1, -1, -1):
+                    l += slengths[i]
+                    if l >= veh.remaining_link_length:
+                        sid = sids[i]
+                        break
+            # Get section zone
+            res_id = self._graph.roads.sections[sid].zone
         except:
+            log.warning(f'Could not find zone of vehicle {veh.id} (current link = {veh.current_link}) with direct method...')
             pos = veh.position
             res_id = None
             for res in self.reservoirs.values():
