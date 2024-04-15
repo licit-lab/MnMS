@@ -70,5 +70,5 @@ def generate_grid_zones(zid_prefix: str, roads: RoadDescriptor, Nx: int, Ny: int
                              [startx + (nx+1) * dx, starty + ny * dy],
                              [startx + (nx+1) * dx, starty + (ny+1) * dy],
                              [startx + nx * dx, starty + (ny+1) * dy]]
-            zones.append(construct_zone_from_contour(roads, zid_prefix+str(nx)+'-'+str(ny), c, mlgraph=mlgraph))
+            zones.append(construct_zone_from_contour(roads, zid_prefix+str(nx)+'-'+str(ny), c, graph=mlgraph))
     return zones
