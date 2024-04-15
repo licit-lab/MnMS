@@ -8,13 +8,17 @@ import seaborn as sns
 from mnms.time import Time
 
 
-def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=True, draw_stops=True, label_size=5):
+def draw_roads(ax, roads, color='black', linkwidth=1, nodesize=2, node_label=True, draw_stops=True, label_size=5, highlight_section=None):
     lines = list()
 
     for section_data in roads.sections.values():
         unode = section_data.upstream
         dnode = section_data.downstream
         lines.append([roads.nodes[unode].position, roads.nodes[dnode].position])
+        if section_data.id == highlight_section:
+            line_highlight = [roads.nodes[unode].position, roads.nodes[dnode].position]
+            line_segment_highlight = LineCollection([line_highlight], linestyles='solid', colors='orange', linewidths=linkwidth*3)
+            ax.add_collection(line_segment_highlight)
     line_segment = LineCollection(lines, linestyles='solid', colors=color, linewidths=linkwidth)
     ax.add_collection(line_segment)
 
@@ -92,7 +96,7 @@ def draw_odlayer(ax, mlgraph, color='blue', nodesize=2, node_label=True, label_s
             fillstyle='full', markersize=nodesize)
 
     if node_label:
-        [ax.annotate(od,mlgraph.graph.nodes[od].position, size=label_size) for odid, od in ods]
+        [ax.annotate(odid,mlgraph.graph.nodes[odid].position, size=label_size) for odid, od in ods if 'ORIGIN' in odid]
 
 def draw_veh_activity(ax, veh_result_file: str, veh_id: str):
     c_dict = {'STOP': '#E64646', 'PICKUP': '#E69646', 'SERVING': '#34D05C',
