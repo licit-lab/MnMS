@@ -314,6 +314,7 @@ class MultiLayerGraph(object):
         """
         assert self.odlayer is not None #TODO: why this condition?
         _norm = np.linalg.norm
+        gnodes = self.graph.nodes
 
         graph_node_ids = np.array([nid for nid in self.layers[layer_id].graph.nodes])
         graph_node_pos = np.array([n.position for n in self.layers[layer_id].graph.nodes.values()])
@@ -327,11 +328,12 @@ class MultiLayerGraph(object):
             for layer_nid, dist in zip(graph_node_ids[mask], dist_nodes[mask]):
                 bool_connect = (layer_nid != nid)
                 if bool_connect:
-                    # Check if this transit link does not already exist
-                    if nid in self.graph.nodes and layer_nid in self.graph.nodes[nid].adj:
-                        link = self.graph.nodes[nid].adj[layer_nid]
-                        log.warning(f'A transit link already exist from {nid} to {layer_nid} (link id = {link.id})')
-                        continue
+                    # Check if a link does not already exist between these two nodes
+                    if nid in gnodes and layer_nid in self.graph.nodes[nid].adj:
+                        link = gnodes[nid].adj[layer_nid]
+                        if link.label == 'TRANSIT':
+                            log.warning(f'A transit link already exist from {nid} to {layer_nid} (link id = {link.id})')
+                            continue
                     lid = f"{nid}_{layer_nid}"
                     self.graph.add_link(lid, nid, layer_nid, dist, {"WALK": {'length': dist}}, "TRANSIT")
                     self.map_linkid_layerid[lid] = "TRANSIT"
