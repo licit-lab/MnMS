@@ -633,6 +633,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         Args:
             -dt: time elapsed since the previous maintenance phase
         """
+        glinks = self.graph.links
         # Treat zone per zone when they are defined
         count_links_treated = 0
         for zid, z in self._zones.items():
@@ -650,7 +651,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
             open_reqs_in_z = np.array(open_reqs)[mask]
 
             area = polygon_area(z.contour)
-            mean_speed = np.mean([self.graph.links[lid].costs[self.id]['speed'] for lid in z.links])
+            mean_speed = np.mean([glinks[lid].costs[self.id]['speed'] for lid in z.links])
             tau = (self.dt_matching+1) * dt.to_seconds()
 
             # Oversupply mode
@@ -678,12 +679,12 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
                 w = self.default_waiting_time
             self._estimated_pickup_times[zid] = w
         # Check that all links of this service's layer have been treated
-        if len(self.zones) > 0 and count_links_treated < len(self.graph.links):
+        if len(self.zones) > 0 and count_links_treated < len(glinks):
             log.warning(f'Incomplete zoning defined for {self.id} service, we compute '\
                 'the estimated waiting time on remaining links considering the whole network...')
 
         # Treat links all together when no zone is defined
-        if len(self.zones) == 0 or (len(self.zones) > 0 and count_links_treated < len(self.graph.links)):
+        if len(self.zones) == 0 or (len(self.zones) > 0 and count_links_treated < len(glinks)):
             # Count the nb of idle vehicles on the whole network
             idle_vehs = self.get_idle_vehicles()
 
@@ -693,7 +694,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
             tau = (self.dt_matching+1) * dt.to_seconds()
             bbox = get_bounding_box(None, graph=self.graph)
             area = max(1, (bbox.xmax - bbox.xmin)) * max(1,(bbox.ymax - bbox.ymin)) # max(1,-) for flat networks
-            mean_speed = np.mean([self.graph.links[lid].costs[self.id]['speed'] for lid in self.graph.links])
+            mean_speed = np.mean([glinks[lid].costs[self.id]['speed'] for lid in glinks])
             delta_t = (max(open_reqs).request_time - min(open_reqs).request_time).to_seconds() if open_reqs else np.nan
             if delta_t == 0:
                 delta_t = dt.to_seconds() # dt is the smallest time step
