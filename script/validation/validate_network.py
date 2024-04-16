@@ -203,6 +203,6 @@ if __name__ == "__main__":
         print(list(isolates))
 
         if args.visualize:
-            #vizualize_nodes(roads)
+            vizualize_nodes(roads)
             vizualize_stops(roads)
 
