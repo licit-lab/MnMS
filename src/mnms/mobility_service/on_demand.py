@@ -132,7 +132,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             elif (len(idle_vehs_in_z) < len(open_reqs_in_z)) or (len(idle_vehs_in_z) == len(open_reqs_in_z) and len(open_reqs_in_z) > 0):
                 open_reqs_density_in_z = len(open_reqs_in_z) / area
                 # Compute mean requests arrival rate in this zone
-                reqs_hist_pos = [self.graph.nodes[req.pickup_node].position for req in self.requests_history]
+                reqs_hist_pos = [self.gnodes[req.pickup_node].position for req in self.requests_history]
                 mask = z.is_inside(reqs_hist_pos)
                 reqs_hist_in_z = np.array(self.requests_history)[mask]
                 if len(reqs_hist_in_z) == 0:
@@ -315,7 +315,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
                 veh_curr_act_path_nodes = veh.path_to_nodes(veh.activity.path)
                 veh_curr_node_ind_in_path = veh_curr_act_path_nodes.index(veh.current_node) # NB: works only when an acticity path does not contain several times the same node
                 service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.graph, self.id))
-                current_link = self.graph.nodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
+                current_link = self.gnodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
                 service_dt += Dt(seconds=veh.remaining_link_length / current_link.costs[self.id]['speed'])
             for a in veh.activities:
                 service_dt += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
@@ -427,7 +427,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
                 veh_curr_act_path_nodes = veh.path_to_nodes(veh.activity.path)
                 veh_curr_node_ind_in_path = veh_curr_act_path_nodes.index(veh.current_node) # NB: works only when an acticity path does not contain several times the same node
                 service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.graph, self.id))
-                current_link = self.graph.nodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
+                current_link = self.gnodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
                 service_dt += Dt(seconds=veh.remaining_link_length / current_link.costs[self.id]['speed'])
             for a in veh.activities:
                 service_dt += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
