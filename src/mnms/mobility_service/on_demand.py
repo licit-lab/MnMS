@@ -362,17 +362,26 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             return Dt(hours=24)
 
         # Compute service time for the idle vehs in radius
+        origins = [veh.current_node for veh in idle_vehs_in_radius]
+        destinations = [user.current_node] * len(idle_vehs_in_radius)
+        try:
+            paths = parallel_dijkstra(self.graph,
+                                    origins,
+                                    destinations,
+                                    [{self.layer.id: self.id}]*len(origins),
+                                    'travel_time',
+                                    multiprocessing.cpu_count(),
+                                    [{self.layer.id}]*len(origins))
+        except ValueError as ex:
+            log.error(f'HiPOP.Error: {ex}')
+            sys.exit(-1)
+
         candidates = []
-        for veh in idle_vehs_in_radius:
-            veh_node = veh.current_node
-            try:
-                veh_path, tt = dijkstra(self.graph, veh_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
-            except ValueError as ex:
-                log.error(f'HiPOP.Error: {ex}')
-                sys.exit(-1)
+        for i, (veh_path, tt) in enumerate(paths):
             if tt == float('inf'):
                 # This vehicle cannot reach user, skip and consider next vehicle
                 continue
+            veh = idle_vehs_in_radius[i]
             service_dt = Dt(seconds=tt)
             candidates.append((veh, service_dt, veh_path))
 
