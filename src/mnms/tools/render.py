@@ -181,6 +181,44 @@ def draw_links_load(ax, graph, loads, n, linkwidth=1, lmin=None, lmax=None):
     ax.axis("equal")
     plt.tight_layout()
 
+def draw_sections_load(ax, mlgraph, loads, n, linkwidth=1, lmin=None, lmax=None):
+    """Function to represent loads on the sections of roads with a colormap.
+    Only the roads for which a load is specified are represented.
+
+    Args:
+        -ax: matplotlib axes
+        -mlgraph: the multi lauer graph
+        -loads: dict with sections ids and associated loads
+        -n: granularity of the colormap
+    """
+    lines = list()
+    colors_load = list()
+    min_load = min(loads.values())
+    gnodes = mlgraph.roads.nodes
+    gsections = mlgraph.roads.sections
+    if lmin is not None:
+        min_load = min(lmin, min_load)
+    max_load = max(loads.values())
+    if lmax is not None:
+        max_load = max(lmax, max_load)
+    colors = plt.cm.cool(np.linspace(0, 1,n))
+    color_step = (max_load - min_load) / (n-1)
+    loads_sorted = [(sid,load) for sid,load in loads.items()]
+    loads_sorted = sorted(loads_sorted, key=lambda x:x[1])
+    for sid, load in loads_sorted:
+        assert sid in gsections.keys(), f'Cannot find section {sid} in the graph provided...'
+        color_idx = int(divmod(load-min_load, color_step)[0])
+        colors_load.append(colors[color_idx])
+        unode = gsections[sid].upstream
+        dnode = gsections[sid].downstream
+        lines.append([gnodes[unode].position, gnodes[dnode].position])
+    line_segment = LineCollection(lines, linestyles='solid', colors=colors_load, linewidths=linkwidth)
+    ax.add_collection(line_segment)
+
+    ax.margins(0.05, 0.05)
+    ax.axis("equal")
+    plt.tight_layout()
+
 def draw_layer(ax, layer, color='black', linkwidth=1, nodesize=2, node_label=True, label_size=5):
     """Method that plots the graph of one layer.
 
