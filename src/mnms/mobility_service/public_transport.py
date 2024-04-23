@@ -195,7 +195,84 @@ class PublicTransportMobilityService(AbstractMobilityService):
             veh_path.append((key, link.length))
         return veh_path
 
-    def new_departures(self, time, dt, lid: str, all_departures=None):
+    def new_departures(self, time, dt, lid: str):
+        """Returns all the departures of a public transport line during the current time step.
+
+        Args:
+            -time: The current time
+            -dt: The time step
+            -lid: line id
+
+        Returns:
+            -all_departures: lists of vehicles that are about to start service on the line
+        """
+        ## Go to proper departure in time tables
+        while self._current_time_table[lid] is not None and self._current_time_table[lid] < time:
+            self._current_time_table[lid] = self._next_time_table[lid]
+            try:
+                self._next_time_table[lid] = next(self._timetable_iter[lid])
+            except StopIteration:
+                self._next_time_table[lid] = None
+
+        ## Create vehicle that will depart next if not already exist
+        if self._next_veh_departure[lid] is None and self._current_time_table[lid] is not None:
+            veh_path = self.construct_public_transport_path(lid)
+            end_node = self.lines[lid]['nodes'][-1]
+            start_node = self.lines[lid]['nodes'][0]
+            new_veh = self.fleet.create_vehicle(start_node,
+                                                capacity=self._veh_capacity,
+                                                activities=[VehicleActivityStop(node=end_node,
+                                                                                path=veh_path)])
+            new_veh._current_link = veh_path[0][0]
+            new_veh._remaining_link_length = veh_path[0][1]
+            self._next_veh_departure[lid] = (self._current_time_table[lid], new_veh)
+            log.info(f"Vehicle {new_veh.id} of type {type(new_veh).__name__} created for next departure on {self.id} line {lid}")
+
+        ## Launch the departures and create vehicle that will depart next
+        all_departures = list()
+        next_time = time.add_time(dt)
+        while (self._current_time_table[lid] is not None) and (time <= self._current_time_table[lid] < next_time):
+            # Proceed to the departure
+            start_veh = self._next_veh_departure[lid][1]
+            log.info(f"Vehicle {start_veh.id} of type {type(start_veh).__name__} starts service on {self.id} line {lid}")
+            stop_activity = start_veh.activity
+            repo_activity = VehicleActivityRepositioning(stop_activity.node,
+                                                         stop_activity.path,
+                                                         stop_activity.user)
+            start_veh.add_activities([repo_activity])
+            start_veh.next_activity(time)
+
+            all_departures.append(start_veh)
+            self.vehicles[lid].appendleft(start_veh)
+
+            # Manage next departure
+            self._current_time_table[lid] = self._next_time_table[lid]
+            if self._current_time_table[lid] is not None:
+                try:
+                    veh_path
+                except NameError:
+                    veh_path = self.construct_public_transport_path(lid)
+                    end_node = self.lines[lid]['nodes'][-1]
+                    start_node = self.lines[lid]['nodes'][0]
+                new_veh = self.fleet.create_vehicle(start_node,
+                                                    capacity=self._veh_capacity,
+                                                    activities=[VehicleActivityStop(node=end_node,
+                                                                                    path=veh_path)])
+                new_veh._current_link = veh_path[0][0]
+                new_veh._remaining_link_length = veh_path[0][1]
+                self._next_veh_departure[lid] = (self._current_time_table[lid], new_veh)
+                log.info(f"Vehicle {new_veh.id} of type {type(new_veh).__name__} created for next departure on {self.id} line {lid}")
+            else:
+                self._next_veh_departure[lid] = None
+
+            try:
+                self._next_time_table[lid] = next(self._timetable_iter[lid])
+            except StopIteration:
+                self._next_time_table[lid] = None
+
+        return all_departures
+
+    def new_departures_recursive(self, time, dt, lid: str, all_departures=None):
         """Recursive function returning all the departures of a public transport
         line during the current time step.
 
@@ -212,8 +289,9 @@ class PublicTransportMobilityService(AbstractMobilityService):
         end_node = self.lines[lid]['nodes'][-1]
         start_node = self.lines[lid]['nodes'][0]
 
+        # At first call in the recursive process, create the next veh to depart
         if all_departures is None:
-            if self._next_veh_departure[lid] is None:
+            if self._next_veh_departure[lid] is None and self._current_time_table[lid] is not None:
                 new_veh = self.fleet.create_vehicle(start_node,
                                                     capacity=self._veh_capacity,
                                                     activities=[VehicleActivityStop(node=end_node,
@@ -221,19 +299,22 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 new_veh._current_link = veh_path[0][0]
                 new_veh._remaining_link_length = veh_path[0][1]
                 self._next_veh_departure[lid] = (self._current_time_table[lid], new_veh)
-                log.info(f"Vehicle {new_veh.id} of type {type(new_veh).__name__} created for next departure on {self.id} line {lid}")
+                log.info(f"Vehicle {new_veh.id} of type {type(new_veh).__name__} created for next departure on {self.id} line {lid} (1)")
             all_departures = list()
 
-        if time > self._current_time_table[lid]:
+        # Go to the proper departure time
+        if self._current_time_table[lid] is not None and time > self._current_time_table[lid]:
             self._current_time_table[lid] = self._next_time_table[lid]
             try:
                 self._next_time_table[lid] = next(self._timetable_iter[lid])
             except StopIteration:
-                return all_departures
-            self.new_departures(time, dt, lid, all_departures)
+                self._next_time_table[lid] = None
+                #return all_departures
+            self.new_departures_recursive(time, dt, lid, all_departures)
 
+        # Launch the departures and create next vehicle to depart
         next_time = time.add_time(dt)
-        if time <= self._current_time_table[lid] < next_time:
+        if self._current_time_table[lid] is not None and (time <= self._current_time_table[lid] < next_time):
             start_veh = self._next_veh_departure[lid][1]
             log.info(f"Vehicle {start_veh.id} of type {type(start_veh).__name__} starts service on {self.id} line {lid}")
             stop_activity = start_veh.activity
@@ -256,11 +337,12 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 new_veh._current_link = veh_path[0][0]
                 new_veh._remaining_link_length = veh_path[0][1]
                 self._next_veh_departure[lid] = (self._next_time_table[lid], new_veh)
-                log.info(f"Vehicle {new_veh.id} of type {type(new_veh).__name__} created for next departure on {self.id} line {lid}")
+                log.info(f"Vehicle {new_veh.id} of type {type(new_veh).__name__} created for next departure on {self.id} line {lid} (2)")
             except StopIteration:
                 self._next_veh_departure[lid] = None
-                return all_departures
-            self.new_departures(time, dt, lid, all_departures)
+                self._next_time_table[lid] = None
+                #return all_departures
+            self.new_departures_recursive(time, dt, lid, all_departures)
 
         return all_departures
 
@@ -361,6 +443,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
         user_line_id, chosen_line = self.find_line(start)
 
         if not self.gnodes[start].radj:
+            if self._next_veh_departure[user_line_id] is None:
+                return Dt(hours=24)
             departure_time, waiting_veh = self._next_veh_departure[user_line_id]
             chosen_veh = waiting_veh
         else:
@@ -372,6 +456,8 @@ class PublicTransportMobilityService(AbstractMobilityService):
                     departure_time = None
                     break
             else:
+                if self._next_veh_departure[user_line_id] is None:
+                    return Dt(hours=24)
                 departure_time, waiting_veh = self._next_veh_departure[user_line_id]
                 chosen_veh = waiting_veh
 

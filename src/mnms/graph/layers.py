@@ -656,7 +656,7 @@ class PublicTransportLayer(AbstractLayer):
         self.lines = dict()
 
     def _create_stop(self, sid, dbnode):
-        assert dbnode in self.roads.stops
+        assert dbnode in self.roads.stops, f'Node {dbnode} not in roads stops...'
 
         node_pos = self.roads.stops[dbnode].absolute_position
         self.graph.add_node(sid, node_pos[0], node_pos[1], self.id)
@@ -722,7 +722,10 @@ class PublicTransportLayer(AbstractLayer):
                 timetable_iter = iter(timetable.table)
                 service._timetable_iter[lid] = timetable_iter
                 service._current_time_table[lid] = next(timetable_iter)
-                service._next_time_table[lid] = next(timetable_iter)
+                try:
+                    service._next_time_table[lid] = next(timetable_iter)
+                except StopIteration:
+                    service._next_time_table[lid] = None
 
     def __dump__(self):
         return {'ID': self.id,
