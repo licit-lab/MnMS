@@ -172,6 +172,8 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         self._users: Dict[str, UserInfo] = dict()
         self._requests_history = []
 
+        self.gnodes = None
+
     @property
     def users(self):
         return self._users
@@ -278,7 +280,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         """
         pickup_time = Dt()
         for a in plan:
-            pickup_time += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
+            pickup_time += Dt(seconds=compute_path_travel_time(a.path, self.gnodes, self.id))
             if isinstance(a, VehicleActivityPickup) and a.user == user:
                 break
         return pickup_time
@@ -509,6 +511,8 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         Args:
             -dt: time elapsed since the previous maintenance phase
         """
+        self.gnodes = self.graph.nodes
+
         ## Manage users info
         users_info_to_del = []
         for uid in self.users:

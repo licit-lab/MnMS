@@ -17,12 +17,12 @@ from mnms.graph.zone import LayerZone, construct_zone_from_contour
 
 log = create_logger(__name__)
 
-def compute_path_travel_time(path, graph, ms_id):
+def compute_path_travel_time(path, gnodes, ms_id):
     """Method that computes the travel time of a VehicleActivity path.
 
     Args:
         -path: VehicleActivity path
-        -graph: graph where path is defined
+        -gnodes: nodes of the graph where path is defined
         -ms_id: id of the mobility service the path concerns
 
     Returns:
@@ -31,7 +31,7 @@ def compute_path_travel_time(path, graph, ms_id):
     tt = 0
     for leg in path:
         leg_link = leg[0]
-        leg_link = graph.nodes[leg_link[0]].adj[leg_link[1]]
+        leg_link = gnodes[leg_link[0]].adj[leg_link[1]]
         leg_dist = leg[1]
         if leg_dist == leg_link.costs[ms_id]['length']:
             tt += leg_link.costs[ms_id]['travel_time']
@@ -39,6 +39,26 @@ def compute_path_travel_time(path, graph, ms_id):
             # Path starts in the middle of one link
             tt += leg_dist / leg_link.costs[ms_id]['speed']
     return tt
+
+def compute_path_nodes_travel_time(path_nodes, gnodes, ms_id):
+    """Method that computes the travel time of a VehicleActivity path.
+
+    Args:
+        -path_nodes: the list of nodes defining a path
+        -gnodes: nodes of the graph where path is defined
+        -ms_id: id of the mobility service the path concerns
+
+    Returns:
+        -tt: the path travel time
+    """
+    tt = 0
+    for i in range(len(path_nodes)-1):
+        un = path_nodes[i]
+        dn = path_nodes[i+1]
+        link = gnodes[un].adj[dn]
+        tt += link.costs[ms_id]['travel_time']
+    return tt
+
 
 class Request(object):
 

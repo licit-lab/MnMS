@@ -10,7 +10,7 @@ from hipop.shortest_path import dijkstra, parallel_dijkstra
 
 from mnms import create_logger
 from mnms.demand import User
-from mnms.mobility_service.abstract import AbstractOnDemandMobilityService, AbstractOnDemandDepotMobilityService, Request, compute_path_travel_time
+from mnms.mobility_service.abstract import AbstractOnDemandMobilityService, AbstractOnDemandDepotMobilityService, Request, compute_path_travel_time, compute_path_nodes_travel_time
 from mnms.mobility_service.filters import PlanEndsInRadiusFilter, IsIdle, InRadiusFilter, DepotIsNotFull, IsNearestDepotFilter
 from mnms.time import Dt, Time
 from mnms.tools.exceptions import PathNotFound
@@ -18,6 +18,7 @@ from mnms.vehicles.veh_type import ActivityType, VehicleActivityServing, Vehicle
     VehicleActivityPickup, VehicleActivityRepositioning, Vehicle, VehicleActivity
 from mnms.tools.cost import create_service_costs
 from mnms.tools.geometry import polygon_area, get_bounding_box
+from mnms.tools.preprocessing import decode_shortest_path_tree
 
 log = create_logger(__name__)
 
@@ -314,11 +315,11 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
                 veh_curr_act_path_nodes = veh.path_to_nodes(veh.activity.path)
                 veh_curr_node_ind_in_path = veh_curr_act_path_nodes.index(veh.current_node) # NB: works only when an acticity path does not contain several times the same node
-                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.graph, self.id))
+                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.gnodes, self.id))
                 current_link = self.gnodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
                 service_dt += Dt(seconds=veh.remaining_link_length / current_link.costs[self.id]['speed'])
             for a in veh.activities:
-                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
+                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.gnodes, self.id))
             # Apply user's waiting tolerance
             if service_dt < req.user.pickup_dt[self.id]:
                 pickup_times_matrix[ridx][vidx] = service_dt.to_seconds()
@@ -364,18 +365,35 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
         # Compute service time for the idle vehs in radius
         origins = [veh.current_node for veh in idle_vehs_in_radius]
         destinations = [user.current_node] * len(idle_vehs_in_radius)
-        try:
-            paths = parallel_dijkstra(self.graph,
-                                    origins,
-                                    destinations,
-                                    [{self.layer.id: self.id}]*len(origins),
-                                    'travel_time',
-                                    multiprocessing.cpu_count(),
-                                    [{self.layer.id}]*len(origins))
-        except ValueError as ex:
-            log.error(f'HiPOP.Error: {ex}')
-            sys.exit(-1)
+        if self.layer.shortest_paths is not None:
+            # Let's read the shortest paths
+            paths = []
+            for o,d in zip(origins, destinations):
+                veh_path = decode_shortest_path_tree(self.layer.shortest_paths, o, d)
+                if o != d and len(veh_path) > 1:
+                    # Compute the travel time
+                    tt = compute_path_nodes_travel_time(veh_path, self.gnodes, self.id)
+                elif o == d:
+                    veh_path = []
+                    tt = 0
+                else:
+                    tt = float('inf')
+                paths.append((veh_path, tt))
+        else:
+            # Let's compute the shortest paths
+            try:
+                paths = parallel_dijkstra(self.graph,
+                                        origins,
+                                        destinations,
+                                        [{self.layer.id: self.id}]*len(origins),
+                                        'travel_time',
+                                        multiprocessing.cpu_count(),
+                                        [{self.layer.id}]*len(origins))
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
 
+        # Gather valid candidates
         candidates = []
         for i, (veh_path, tt) in enumerate(paths):
             if tt == float('inf'):
@@ -435,11 +453,11 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
                 veh_curr_act_path_nodes = veh.path_to_nodes(veh.activity.path)
                 veh_curr_node_ind_in_path = veh_curr_act_path_nodes.index(veh.current_node) # NB: works only when an acticity path does not contain several times the same node
-                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.graph, self.id))
+                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.gnodes, self.id))
                 current_link = self.gnodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
                 service_dt += Dt(seconds=veh.remaining_link_length / current_link.costs[self.id]['speed'])
             for a in veh.activities:
-                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
+                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.gnodes, self.id))
             candidates.append((veh, service_dt, veh_path))
 
         # Select the veh with the smallest service time
