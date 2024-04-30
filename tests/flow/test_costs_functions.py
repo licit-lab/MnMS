@@ -138,7 +138,7 @@ class TestCostsFunctions(unittest.TestCase):
 
     def test_init(self):
         self.create_supervisor('1')
-        self.flow.initialize(1.42)
+        self.flow.initialize()
 
         self.assertIn("generalized_cost", self.mlgraph.transitlayer._costs_functions["WALK"])
         for lid, link in self.mlgraph.graph.links.items():
@@ -223,5 +223,5 @@ class TestCostsFunctions(unittest.TestCase):
         """
         self.create_supervisor('2')
 
-        self.assertEqual(self.supervisor._mlgraph.graph.get_links_without_cost('generalized_cost',{'CAR':'PersonalVehicle','BUS':'Bus', 'TRANSIT': 'WALK'}),
-            ['CAR_BUS', 'ORIGIN_C0', 'L1_B3_DESTINATION', 'C0_C1', 'L1_B2_B3', 'L1_B1_B2'])
+        self.assertEqual(set(self.supervisor._mlgraph.graph.get_links_without_cost('generalized_cost',{'CAR':'PersonalVehicle','BUS':'Bus', 'TRANSIT': 'WALK'})),
+            {'CAR_BUS', 'ORIGIN_C0', 'L1_B3_DESTINATION'})
