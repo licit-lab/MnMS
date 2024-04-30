@@ -75,6 +75,8 @@ class TestMFDFlow(unittest.TestCase):
 
         self.mlgraph = mlgraph
 
+        self.mlgraph.initialize_costs(1.42)
+
         self.flow = MFDFlowMotor()
         self.flow.set_graph(mlgraph)
 
@@ -85,7 +87,7 @@ class TestMFDFlow(unittest.TestCase):
         self.flow.add_reservoir(res2)
         self.flow.set_time(Time('09:00:00'))
 
-        self.flow.initialize(1.42)
+        self.flow.initialize()
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -205,6 +207,8 @@ def test_move_veh_activity_change():
                               odlayer,
                               1e-3)
 
+    mlgraph.initialize_costs(1.42)
+
     on_demand.create_waiting_vehicle("CarLayer_0")
 
     flow = MFDFlowMotor()
@@ -217,7 +221,7 @@ def test_move_veh_activity_change():
     flow.add_reservoir(res2)
     flow.set_time(Time('09:00:00'))
 
-    flow.initialize(1.42)
+    flow.initialize()
 
     user = User('U0', 'CarLayer_1', 'CarLayer_2', Time('09:00:00'))
     user._position = np.array([0, 10])
@@ -266,7 +270,7 @@ def test_move_veh_res_change():
     flow.add_reservoir(res2)
     flow.set_time(Time('09:00:00'))
 
-    flow.initialize(1.42)
+    flow.initialize()
 
     user = User('U0', '0', '4', Time('09:00:00'))
     user.set_path(Path(3400,

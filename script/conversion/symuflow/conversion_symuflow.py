@@ -248,12 +248,13 @@ def convert_symuflow_to_mnms(file, output_dir, zone_dict: Dict[str, List[str]]=N
                             line_stops.append(map_tr_stops[tr]['stop'])
                             break
 
-                    for tr in line_tr[i:]:
+                    for tr in line_tr[i+1:]:
                         sec_buffer.append(tr)
                         if tr in map_tr_stops and line_id in map_tr_stops[tr]['lines']:
                             sections.append(sec_buffer)
                             line_stops.append(map_tr_stops[tr]['stop'])
                             sec_buffer = []
+                            sec_buffer.append(tr)
 
                     public_transport.create_line(line_id, line_stops, sections, line_timetable, bidirectional=False)
 

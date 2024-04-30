@@ -103,6 +103,8 @@ class TestCostsFunctions(unittest.TestCase):
 
         self.mlgraph = mlgraph
 
+        self.mlgraph.initialize_costs(1.42)
+
         ## Demand
         self.demand = BaseDemandManager([User("U0", [-20, 0], [0, 5000], Time("07:00:00"))])
         self.demand.add_user_observer(CSVUserObserver(self.pathdir+'myuser.csv'))
@@ -129,10 +131,9 @@ class TestCostsFunctions(unittest.TestCase):
         """Concludes and closes the test.
         """
         self.tempfile.cleanup()
-        try:
+
+        if self.flow.veh_manager is not None:
             self.flow.veh_manager.empty()
-        except AttributeError:
-            pass
         Vehicle._counter = 0
 
     def test_init(self):

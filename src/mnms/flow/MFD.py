@@ -118,9 +118,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     self._section_to_reservoir[section] = res.id
                     break
 
-    def initialize(self, walk_speed):
-
-        self._graph.initialize_costs(walk_speed)
+    def initialize(self):
 
         # Other initializations
         self.dict_accumulations = {}

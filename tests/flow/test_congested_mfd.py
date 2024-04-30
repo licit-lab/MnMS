@@ -137,6 +137,8 @@ def test_congested_mfd_no_congestion():
                               odlayer,
                               1e-3)
 
+    mlgraph.initialize_costs(1.42)
+
     flow = CongestedMFDFlowMotor()
     flow.set_graph(mlgraph)
 
@@ -155,7 +157,7 @@ def test_congested_mfd_no_congestion():
     flow.add_reservoir(res2)
     flow.set_time(Time('09:00:00'))
 
-    flow.initialize(1.42)
+    flow.initialize()
 
     user = User('U0', '0', '4', Time('00:01:00'))
     user.set_path(Path(3400,
@@ -190,6 +192,8 @@ def test_congested_mfd_congestion():
                               odlayer,
                               1e-3)
 
+    mlgraph.initialize_costs(1.42)
+
     flow = CongestedMFDFlowMotor()
     flow.set_graph(mlgraph)
 
@@ -208,7 +212,7 @@ def test_congested_mfd_congestion():
     flow.add_reservoir(res2)
     flow.set_time(Time('09:00:00'))
 
-    flow.initialize(1.42)
+    flow.initialize()
 
     user = User('U0', '0', '4', Time('00:01:00'))
     user.set_path(Path(3400,
