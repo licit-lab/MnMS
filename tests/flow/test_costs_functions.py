@@ -17,6 +17,7 @@ from mnms.vehicles.veh_type import Vehicle
 from mnms.log import set_all_mnms_logger_level, LOGLEVEL
 
 
+
 class TestCostsFunctions(unittest.TestCase):
     def setUp(self):
         """Initiates the test.
@@ -128,7 +129,10 @@ class TestCostsFunctions(unittest.TestCase):
         """Concludes and closes the test.
         """
         self.tempfile.cleanup()
-        self.flow.veh_manager.empty()
+        try:
+            self.flow.veh_manager.empty()
+        except AttributeError:
+            pass
         Vehicle._counter = 0
 
     def test_init(self):
@@ -217,8 +221,6 @@ class TestCostsFunctions(unittest.TestCase):
         model is not defined on the transit links.
         """
         self.create_supervisor('2')
-        with self.assertRaises(ValueError):
-            self.supervisor.run(Time("07:00:00"),
-                                Time("09:00:00"),
-                                Dt(seconds=1),
-                                10)
+
+        self.assertEqual(self.supervisor._mlgraph.graph.get_links_without_cost('generalized_cost',{'CAR':'PersonalVehicle','BUS':'Bus', 'TRANSIT': 'WALK'}),
+            ['CAR_BUS', 'ORIGIN_C0', 'L1_B3_DESTINATION', 'C0_C1', 'L1_B2_B3', 'L1_B1_B2'])
