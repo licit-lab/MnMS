@@ -425,7 +425,11 @@ def generate_demand_scenario(mlgraph, dep_rates, tstart, tend, proba, stats, dem
 if __name__ == '__main__':
     set_all_mnms_logger_level(LOGLEVEL.INFO)
 
-    supervisor = create_supervisor() # Do not forget to create inputs and outputs dir and
+
+    supervisor = create_supervisor(observers=True, generate_ridehailing_vehicles_init_pos=True, generate_zones=True,
+                          generate_demand=True, generate_demand_graph=False)
+
+    #supervisor = create_supervisor() # Do not forget to create inputs and outputs dir and
                                      # generate the inputs first time you lanch this script !
     st = time.time()
     supervisor.run(tstart, tend, flow_dt, affectation_factor, seed=seed)
