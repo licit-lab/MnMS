@@ -24,19 +24,23 @@ from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 demand_file = pathlib.Path(__file__).parent.joinpath('demand.csv').resolve()
 log_file = pathlib.Path(__file__).parent.joinpath('sim.log').resolve()
 n_nodes_per_dir = 3
-mesh_size = 100 # m
+mesh_size = 100  # m
 n_odnodes_x = 3
 n_odnodes_y = 3
 odlayer_xmin = 0
 odlayer_ymin = 0
-odlayer_xmax = 300 # m
-odlayer_ymax = 300 # m
-odlayer_connection_dist = 1e-3 # m
+odlayer_xmax = 300  # m
+odlayer_ymax = 300  # m
+odlayer_connection_dist = 1e-3  # m
+
+
 def mfdspeed(dacc):
-    dspeed = {'CAR': 3} # m/s
+    dspeed = {'CAR': 3}  # m/s
     return dspeed
+
+
 tstart = Time("07:00:00")
-tend = Time("07:03:03")
+tend = Time("07:10:00")
 dt_flow = Dt(seconds=10)
 affectation_factor = 10
 
@@ -45,7 +49,7 @@ affectation_factor = 10
 #########################
 
 #### RoadDescriptor ####
-road_db = generate_manhattan_road(n_nodes_per_dir, mesh_size) # one zone automatically generated
+road_db = generate_manhattan_road(n_nodes_per_dir, mesh_size)  # one zone automatically generated
 
 #### MlGraph ####
 personal_car = PersonalMobilityService()
@@ -55,7 +59,7 @@ car_layer = generate_layer_from_roads(road_db,
                                       mobility_services=[personal_car])
 
 odlayer = generate_grid_origin_destination_layer(odlayer_xmin, odlayer_ymin, odlayer_xmax,
-    odlayer_ymax, n_odnodes_x, n_odnodes_y)
+                                                 odlayer_ymax, n_odnodes_x, n_odnodes_y)
 
 mlgraph = MultiLayerGraph([car_layer],
                           odlayer,
@@ -74,7 +78,7 @@ demand.add_user_observer(CSVUserObserver('user.csv'))
 decision_model = DummyDecisionModel(mlgraph, outfile="path.csv")
 
 #### Flow motor ####
-flow_motor = MFDFlowMotor()
+flow_motor = MFDFlowMotor('flow.csv')
 flow_motor.add_reservoir(Reservoir(road_db.zones["RES"], 'CAR', mfdspeed))
 
 #### Supervisor ####
@@ -91,7 +95,17 @@ supervisor = Supervisor(mlgraph,
 
 set_all_mnms_logger_level(LOGLEVEL.INFO)
 
-supervisor.run(tstart,
-               tend,
-               dt_flow,
-               affectation_factor)
+opti = True
+opti_factor = 5
+
+if opti == True:
+    supervisor.run_optimization(tstart,
+                   tend,
+                   dt_flow,
+                   affectation_factor,
+                   opti_factor)
+else:
+    supervisor.run(tstart,
+                   tend,
+                   dt_flow,
+                   affectation_factor)
