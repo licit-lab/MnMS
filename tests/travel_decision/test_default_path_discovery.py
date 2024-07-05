@@ -62,13 +62,13 @@ class TestMobilityServicesGraph(unittest.TestCase):
                                   odlayer,
                                   1)
 
-        def gc_car(mlgraph, link, costs):
+        def gc_car(gnodes, layer, link, costs):
             return 623
 
-        def gc_rh(mlgraph, link, costs):
+        def gc_rh(gnodes, layer, link, costs):
             return 623
 
-        def gc_transit(mlgraph, link, costs):
+        def gc_transit(gnodes, layer, link, costs):
             return 0
 
         #def gc_waiting(wt):

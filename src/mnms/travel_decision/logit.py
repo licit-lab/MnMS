@@ -14,7 +14,8 @@ log = create_logger(__name__)
 
 
 class LogitDecisionModel(AbstractDecisionModel):
-    def __init__(self, mmgraph: MultiLayerGraph, theta=0.01, considered_modes=None, n_shortest_path=3, cost='travel_time', outfile:str=None, verbose_file=False, personal_mob_service_park_radius:float=100):
+    def __init__(self, mmgraph: MultiLayerGraph, theta=0.01, considered_modes=None, n_shortest_path=3, cost='travel_time', outfile:str=None, verbose_file=False,
+        personal_mob_service_park_radius:float=100, save_routes_dynamically_and_reapply:bool=False):
         """Logit decision model for the path of a user.
         All routes computed are considered on an equal footing for the choice.
 
@@ -30,6 +31,10 @@ class LogitDecisionModel(AbstractDecisionModel):
             -verbose_file: If True write all the computed shortest path, not only the one that is selected
             -personal_mob_service_park_radius: radius around user's personal veh parking location in which
                                                she can still have access to her vehicle
+            -save_routes_dynamically_and_reapply: boolean specifying if the k shortest paths computed
+                                                  for an origin, destination, and mode should be saved
+                                                  dynamically and reapply for next departing users with
+                                                  the same origin, destination and mode
         """
         super(LogitDecisionModel, self).__init__(mmgraph,
                                                  considered_modes=considered_modes,
@@ -37,7 +42,8 @@ class LogitDecisionModel(AbstractDecisionModel):
                                                  outfile=outfile,
                                                  verbose_file=verbose_file,
                                                  cost=cost,
-                                                 personal_mob_service_park_radius=personal_mob_service_park_radius)
+                                                 personal_mob_service_park_radius=personal_mob_service_park_radius,
+                                                 save_routes_dynamically_and_reapply=save_routes_dynamically_and_reapply)
         self._theta = theta
         self._seed = None
         self._rng = None
@@ -79,7 +85,8 @@ class LogitDecisionModel(AbstractDecisionModel):
         return path_selected
 
 class ModeCentricLogitDecisionModel(AbstractDecisionModel):
-    def __init__(self, mmgraph: MultiLayerGraph, considered_modes, theta=0.01, cost='travel_time', outfile:str=None, verbose_file=False, personal_mob_service_park_radius:float=100):
+    def __init__(self, mmgraph: MultiLayerGraph, considered_modes, theta=0.01, cost='travel_time', outfile:str=None, verbose_file=False,
+        personal_mob_service_park_radius:float=100, save_routes_dynamically_and_reapply:bool=False):
         """Mode centric logit decision model for the path selection of a user.
         In this decision model, the choice for a mode route is deterministic, the choice
         for a mode is logit. This model requires to define the modes by the considered_modes argument.
@@ -93,13 +100,18 @@ class ModeCentricLogitDecisionModel(AbstractDecisionModel):
             -verbose_file: If True write all the computed shortest path, not only the one that is selected
             -personal_mob_service_park_radius: radius around user's personal veh parking location in which
                                                she can still have access to her vehicle
+            -save_routes_dynamically_and_reapply: boolean specifying if the k shortest paths computed
+                                                  for an origin, destination, and mode should be saved
+                                                  dynamically and reapply for next departing users with
+                                                  the same origin, destination and mode
         """
         super(ModeCentricLogitDecisionModel, self).__init__(mmgraph,
                                                             considered_modes=considered_modes,
                                                             outfile=outfile,
                                                             verbose_file=verbose_file,
                                                             cost=cost,
-                                                            personal_mob_service_park_radius=personal_mob_service_park_radius)
+                                                            personal_mob_service_park_radius=personal_mob_service_park_radius,
+                                                            save_routes_dynamically_and_reapply=save_routes_dynamically_and_reapply)
         self._theta = theta
         self._seed = None
         self._rng = None

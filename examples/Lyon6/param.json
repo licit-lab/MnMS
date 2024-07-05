@@ -6,7 +6,7 @@
     "mfd_file": "/MFD_10_201802.csv"
   },
   "OUTPUT": {
-    "output_dir": ".",
+    "output_dir": "./OUTPUTS/no_roads_typo/",
     "log_file": "/simulation.log",
     "path_file": "/path.csv",
     "user_file": "/user.csv",
@@ -21,7 +21,13 @@
     "end_time": "01:00:00",
     "flow_dt": 1,
     "unit_flow_dt": "minutes",
-    "affectation_factor": 10
+    "affectation_factor": 10},
+  "GRAPH": {
+    "roads_typo": {}
+  },
+  "COSTS": {
+    "roads_typo_cost_multipliers": {},
+    "cost": "travel_time"
   },
   "RESERVOIRS": [
     {
@@ -42,7 +48,7 @@
     "walk_speed": 1.4,
     "scale_factor_sp": 10,
     "algorithm": "astar",
-    "decision_model": "LogitDecisionModel",
+    "decision_model": "DummyDecisionModel",
     "available_mobility_services": [
      "WALK",
      "PersonalCar"

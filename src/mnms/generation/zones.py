@@ -42,6 +42,8 @@ def generate_grid_zones(zid_prefix: str, roads: RoadDescriptor, Nx: int, Ny: int
         The generated zones (Zone objects are built on RoadDescriptor, MLZone objects are
         built on the MultiLayerGraph)
     """
+    if mlgraph is not None:
+        roads = mlgraph.roads
     bbox = get_bounding_box(roads) if mlgraph is None else get_bounding_box(mlgraph.roads)
     dx = (bbox.xmax - bbox.xmin) / Nx
     dy = (bbox.ymax - bbox.ymin) / Ny
@@ -70,5 +72,7 @@ def generate_grid_zones(zid_prefix: str, roads: RoadDescriptor, Nx: int, Ny: int
                              [startx + (nx+1) * dx, starty + ny * dy],
                              [startx + (nx+1) * dx, starty + (ny+1) * dy],
                              [startx + nx * dx, starty + (ny+1) * dy]]
-            zones.append(construct_zone_from_contour(roads, zid_prefix+str(nx)+'-'+str(ny), c, mlgraph=mlgraph))
+            graph = None if mlgraph is None else mlgraph.graph
+            zone_type = 'Zone' if mlgraph is None else 'MLZone'
+            zones.append(construct_zone_from_contour(roads, zid_prefix+str(nx)+'-'+str(ny), c, graph=graph, zone_type=zone_type))
     return zones

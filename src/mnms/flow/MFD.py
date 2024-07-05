@@ -47,27 +47,29 @@ class Reservoir(AbstractReservoir):
         self.update_speeds()
 
     def update_accumulations(self, dict_accumulations):
+        """Method that updates the dict of accumulation of this reservoir.
+        """
         for mode in dict_accumulations.keys():
             if mode in self.modes:
                 self.dict_accumulations[mode] = dict_accumulations[mode]
 
     def update_speeds(self):
+        """Method that updates the dict of speeds based on the dict of accumulations.
+        """
         self.dict_speeds.update(self.f_speed(self.dict_accumulations))
         return self.dict_speeds
 
 
 class MFDFlowMotor(AbstractMFDFlowMotor):
-    def __init__(self, outfile: str = None):
+    def __init__(self, outfile: str = None, writeheader: bool = True):
         super(MFDFlowMotor, self).__init__(outfile=outfile)
-        if outfile is not None:
-            self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'VEHICLE_TYPE', 'SPEED', 'ACCUMULATION'])
+        if outfile is not None and writeheader:
+            self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'VEHICLE_TYPE', 'SPEED', 'ACCUMULATION', 'TRIP_LENGTHS'])
 
         self.reservoirs: Dict[str, Reservoir] = dict()
-        self.users: Optional[Dict[str, User]] = dict()
 
         self.dict_accumulations: Optional[Dict] = None
         self.dict_speeds: Optional[Dict] = None
-        self.remaining_length: Optional[Dict] = None
 
         self.veh_manager: Optional[VehicleManager] = None
         self.graph_nodes: Optional[Dict] = None
@@ -77,21 +79,23 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
     def _reset_mapping(self):
         graph = self._graph.graph
+        gnodes = graph.nodes
         roads = self._graph.roads
+        rnodes = roads.nodes
         for lid, link in graph.links.items():
             if link.label != "TRANSIT":
                 sections_length = list()
                 link_layer = self._graph.layers[link.label]
                 if isinstance(link_layer, PublicTransportLayer):
-                    unode_pos = np.array(graph.nodes[link.upstream].position)
-                    dnode_pos = np.array(graph.nodes[link.downstream].position)
+                    unode_pos = np.array(gnodes[link.upstream].position)
+                    dnode_pos = np.array(gnodes[link.downstream].position)
                     if len(self._graph.map_reference_links[lid]) > 1:
                         for i, section in enumerate(self._graph.map_reference_links[lid]):
                             if i == 0:
-                                l_dnode_pos = roads.nodes[roads.sections[section].downstream].position
+                                l_dnode_pos = rnodes[roads.sections[section].downstream].position
                                 sections_length.append((section, _dist(unode_pos - l_dnode_pos)))
                             elif i == len(self._graph.map_reference_links[lid])-1:
-                                l_unode_pos = roads.nodes[roads.sections[section].upstream].position
+                                l_unode_pos = rnodes[roads.sections[section].upstream].position
                                 sections_length.append((section, _dist(l_unode_pos - dnode_pos)))
                             else:
                                 sections_length.append((section, roads.sections[section].length))
@@ -114,9 +118,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                     self._section_to_reservoir[section] = res.id
                     break
 
-    def initialize(self, walk_speed):
-
-        self._graph.initialize_costs(walk_speed)
+    def initialize(self):
 
         # Other initializations
         self.dict_accumulations = {}
@@ -126,10 +128,10 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             self.dict_speeds[res.id] = res.dict_speeds
         self.dict_accumulations[None] = {m: 0 for r in self.reservoirs.values() for m in r.modes} | {None: 0}
         self.dict_speeds[None] = {m: 0 for r in self.reservoirs.values() for m in r.modes} | {None: 0}
-        self.remaining_length = dict()
 
         self.veh_manager = VehicleManager()
         self.graph_nodes = self._graph.graph.nodes
+        self.roads_sections = self._graph.roads.sections
 
         self._reset_mapping()
 
@@ -178,6 +180,7 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             elapsed_time = dist_travelled / speed
             veh.update_distance(dist_travelled)
             veh._remaining_link_length = 0
+            veh.update_achieved_path()
             self.set_vehicle_position(veh)
             try:
                 current_link, remaining_link_length = next(veh.activity.iter_path)
@@ -202,11 +205,24 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
     def get_vehicle_zone(self, veh):
         try:
+            # Find the section where vehicle is currently
             unode, dnode = veh.current_link
             curr_link = self.graph_nodes[unode].adj[dnode]
-            lid = self._graph.map_reference_links[curr_link.id][0]  # take reservoir of first part of trip
-            res_id = self._graph.roads.sections[lid].zone
+            sids = self._graph.map_reference_links[curr_link.id]
+            if len(sids) == 1:
+                sid = sids[0]
+            else:
+                slengths = [self.roads_sections[sid].length for sid in sids]
+                l = 0
+                for i in range(len(slengths)-1, -1, -1):
+                    l += slengths[i]
+                    if l >= veh.remaining_link_length:
+                        sid = sids[i]
+                        break
+            # Get section zone
+            res_id = self._graph.roads.sections[sid].zone
         except:
+            log.warning(f'Could not find zone of vehicle {veh.id} (current link = {veh.current_link}) with direct method...')
             pos = veh.position
             res_id = None
             for res in self.reservoirs.values():
@@ -249,13 +265,19 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
         # Move the vehicles
         for veh_id, veh in current_vehicles.items():
-            veh_dt = dt.to_seconds()
+            veh_dt = veh.dt_move.to_seconds() if veh.dt_move is not None else dt.to_seconds()
+            veh.dt_move = None
             veh_type = veh.type.upper()
             while veh_dt > 0:
                 res_id = self.get_vehicle_zone(veh)
                 speed = self.dict_speeds[res_id][veh_type]
                 veh.speed = speed
                 elapsed_time = self.move_veh(veh, self._tcurrent, veh_dt, speed)
+                next_res_id = self.get_vehicle_zone(veh)
+                if next_res_id != res_id:
+                    # Vehicle exited the reservoir, register a new trip length in the left reservoir
+                    self.reservoirs[res_id].add_trip_length(veh.distance - veh.distance_at_last_res_change, veh_type)
+                    veh.distance_at_last_res_change = veh.distance
                 veh_dt -= elapsed_time
             new_time = self._tcurrent.add_time(dt)
             veh.notify(new_time)
@@ -271,18 +293,6 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         veh_type = veh.type.upper()
         self.dict_accumulations[res_id][veh_type] += 1
         current_vehicles[veh.id] = veh
-
-    def finish_vehicle_activities(self, veh: Vehicle):
-        elapsed_time = Dt(seconds=veh.remaining_link_length / veh.speed)
-        log.info(f"{veh} finished its activity {veh.activity_type}")
-        veh.update_distance(veh.remaining_link_length)
-        veh._remaining_link_length = 0
-        veh._current_node = veh._current_link[1]
-        self.set_vehicle_position(veh)
-        new_time = self._tcurrent.add_time(elapsed_time)
-        veh.next_activity(new_time)
-        veh.notify(new_time)
-        veh.notify_passengers(new_time)
 
     def update_graph(self, threshold):
         """Method that updates the costs on links of the transportation graph.
@@ -333,13 +343,15 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
                 costs_functions = layer._costs_functions
                 for mservice, cost_funcs in costs_functions.items():
                     for cost_name, cost_f in cost_funcs.items():
-                        costs[mservice][cost_name] = cost_f(self._graph, link, costs)
+                        costs[mservice][cost_name] = cost_f(self.graph_nodes, layer, link, costs)
 
-                # Test if link is banned, if yes do not update the cost for the banned mobility service
+                # Test if link is banned, if yes do not update the travel time and dynamic
+                # space sharing cost for the banned mobility service, but only the speed
                 if lid in banned_links:
                     mservice = banned_links[lid].mobility_service
                     costs[mservice].pop(banned_cost, None)
-
+                    if banned_cost != 'travel_time':
+                        costs[mservice].pop('travel_time', None)
                 linkcosts[lid]=costs
 
                 # Update of the cost in the corresponding graph layer
@@ -350,14 +362,19 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         if len(linkcosts) > 0:
             graph.update_costs(linkcosts)
 
-    def write_result(self, step_affectation: int, step_flow:int):
-        tcurrent = self._tcurrent.time
+    def write_result(self, step_affectation: int, step_flow:int, flow_dt: Dt):
+        tcurrent = self._tcurrent.copy().remove_time(flow_dt).time
         for resid, res in self.reservoirs.items():
             resid = res.id
             for mode in res.modes:
-                self._csvhandler.writerow([str(step_affectation), str(step_flow), tcurrent, resid, mode, res.dict_speeds[mode], res.dict_accumulations[mode]])
-
-    def finalize(self):
-        super(MFDFlowMotor, self).finalize()
-        for u in self.users.values():
-            u.finish_trip(None)
+                trip_lengths = res.trip_lengths[mode] if mode in res.trip_lengths else None
+                trip_lengths = ' '.join([str(round(l,2)) for l in trip_lengths]) if trip_lengths is not None else None
+                self._csvhandler.writerow([str(step_affectation),
+                    str(step_flow),
+                    tcurrent,
+                    resid,
+                    mode,
+                    res.dict_speeds[mode],
+                    res.dict_accumulations[mode],
+                    trip_lengths])
+            res.flush_trip_lengths()

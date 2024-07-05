@@ -172,6 +172,8 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         self._users: Dict[str, UserInfo] = dict()
         self._requests_history = []
 
+        self.gnodes = None
+
     @property
     def users(self):
         return self._users
@@ -278,7 +280,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         """
         pickup_time = Dt()
         for a in plan:
-            pickup_time += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
+            pickup_time += Dt(seconds=compute_path_travel_time(a.path, self.gnodes, self.id))
             if isinstance(a, VehicleActivityPickup) and a.user == user:
                 break
         return pickup_time
@@ -384,12 +386,16 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
                 prev_node = forced_next_node
                 add_current_node = True
         if prev_node != activity.node:
-            path, cost = dijkstra(self.graph,
-                                  prev_node,
-                                  activity.node,
-                                  'travel_time',
-                                  {self.layer.id: self.id},
-                                  {self.layer.id})
+            try:
+                path, cost = dijkstra(self.graph,
+                                      prev_node,
+                                      activity.node,
+                                      'travel_time',
+                                      {self.layer.id: self.id},
+                                      {self.layer.id})
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
             if cost == float('inf'):
                 raise PathNotFound(prev_node, activity.node)
         else:
@@ -428,24 +434,29 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
             del plan[index+1]
             next_a = plan[index+1] if index+1 < len(plan) else None
         if next_a is not None:
-            path, cost = dijkstra(self.graph,
-                                  activity.node,
-                                  next_a.node,
-                                  'travel_time',
-                                  {self.layer.id: self.id},
-                                  {self.layer.id})
+            try:
+                path, cost = dijkstra(self.graph,
+                                      activity.node,
+                                      next_a.node,
+                                      'travel_time',
+                                      {self.layer.id: self.id},
+                                      {self.layer.id})
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
             if cost == float('inf'):
                 raise PathNotFound(activity.node, next_a.node)
             next_a.modify_path(self.construct_veh_path(path))
 
         return plan
 
-    def matching(self, request: Request):
+    def matching(self, request: Request, dt: Dt):
         """Method that effectively matches a user with the identified vehicle of
         this service.
 
         Args:
             -request: request to be matched
+            -dt: flow time step
         """
         user = request.user
 
@@ -453,6 +464,12 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         veh.activities = deque(new_plan)
         veh.override_current_activity()
         user.set_state_waiting_vehicle(veh)
+        immediate_match = len(new_plan) > 1 \
+            and new_plan[0].user == request.user and new_plan[0].path == [] \
+            and new_plan[1].user == request.user and type(new_plan[1]).__name__ == 'VehicleActivityServing'\
+            and self._tcurrent - request.request_time <= dt
+        if immediate_match:
+            veh.dt_move = self._tcurrent - request.request_time
 
         ## Update user's and (future) passengers' paths' with regard to this match
         passengers = set([a.user for a in new_plan])
@@ -494,6 +511,8 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         Args:
             -dt: time elapsed since the previous maintenance phase
         """
+        self.gnodes = self.graph.nodes
+
         ## Manage users info
         users_info_to_del = []
         for uid in self.users:
@@ -618,6 +637,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
         Args:
             -dt: time elapsed since the previous maintenance phase
         """
+        glinks = self.graph.links
         # Treat zone per zone when they are defined
         count_links_treated = 0
         for zid, z in self._zones.items():
@@ -635,7 +655,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
             open_reqs_in_z = np.array(open_reqs)[mask]
 
             area = polygon_area(z.contour)
-            mean_speed = np.mean([self.graph.links[lid].costs[self.id]['speed'] for lid in z.links])
+            mean_speed = np.mean([glinks[lid].costs[self.id]['speed'] for lid in z.links])
             tau = (self.dt_matching+1) * dt.to_seconds()
 
             # Oversupply mode
@@ -663,12 +683,12 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
                 w = self.default_waiting_time
             self._estimated_pickup_times[zid] = w
         # Check that all links of this service's layer have been treated
-        if len(self.zones) > 0 and count_links_treated < len(self.graph.links):
+        if len(self.zones) > 0 and count_links_treated < len(glinks):
             log.warning(f'Incomplete zoning defined for {self.id} service, we compute '\
                 'the estimated waiting time on remaining links considering the whole network...')
 
         # Treat links all together when no zone is defined
-        if len(self.zones) == 0 or (len(self.zones) > 0 and count_links_treated < len(self.graph.links)):
+        if len(self.zones) == 0 or (len(self.zones) > 0 and count_links_treated < len(glinks)):
             # Count the nb of idle vehicles on the whole network
             idle_vehs = self.get_idle_vehicles()
 
@@ -678,7 +698,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
             tau = (self.dt_matching+1) * dt.to_seconds()
             bbox = get_bounding_box(None, graph=self.graph)
             area = max(1, (bbox.xmax - bbox.xmin)) * max(1,(bbox.ymax - bbox.ymin)) # max(1,-) for flat networks
-            mean_speed = np.mean([self.graph.links[lid].costs[self.id]['speed'] for lid in self.graph.links])
+            mean_speed = np.mean([glinks[lid].costs[self.id]['speed'] for lid in glinks])
             delta_t = (max(open_reqs).request_time - min(open_reqs).request_time).to_seconds() if open_reqs else np.nan
             if delta_t == 0:
                 delta_t = dt.to_seconds() # dt is the smallest time step
@@ -703,20 +723,21 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
                 w = self.default_waiting_time
             self._estimated_pickup_times['default'] = w
 
+    def __dump__(self) -> dict:
+        return {"TYPE": ".".join([OnDemandSharedMobilityService.__module__, OnDemandSharedMobilityService.__name__]),
+                "VEH_CAPACITY": self.veh_capacity,
+                "DT_MATCHING": self.dt_matching,
+                "DT_PERIODIC_MAINTENANCE": self._dt_periodic_maintenance,
+                "ID": self.id,
+                "DEFAULT_WAITING_TIME": self.default_waiting_time,
+                "MATCHING_STRATEGY": self.matching_strategy,
+                "REPLANNING_STRATEGY": self.replanning_strategy,
+                "RADIUS": self.radius}
+
+    @classmethod
     def __load__(cls, data):
         new_obj = cls(data['ID'], data["VEH_CAPACITY"], data["DT_MATCHING"],
             data["DT_PERIODIC_MAINTENANCE"], data['DEFAULT_WAITING_TIME'],
             data['MATCHING_STRATEGY'], data['REPLANNING_STRATEGY'],
             data['RADIUS'])
         return new_obj
-
-    def __dump__(self) -> dict:
-        return {"TYPE": ".".join([OnDemandSharedMobilityService.__module__, OnDemandSharedMobilityService.__name__]),
-                "VEH_CAPACITY": self.veh_capacity,
-                "DT_MATCHING": self.dt_matching,
-                "DT_PERIODIC_MAINTENANCE": self.dt_periodic_maintenance,
-                "ID": self.id,
-                "DEFAULT_WAITING_TIME": self.default_waiting_time,
-                "MATCHING_STRATEGY": self.matching_strategy,
-                "REPLANNING_STRATEGY": self.replanning_strategy,
-                "RADIUS": self.radius}

@@ -36,14 +36,15 @@ class AbstractDecisionModel(ABC):
                  n_shortest_path: int = 3,
                  max_diff_cost: float = 0.25,
                  max_dist_in_common: float = 0.95,
-                 cost_multiplier_to_find_k_paths: int = 10,
+                 cost_multiplier_to_find_k_paths: float = 10,
                  max_retry_to_find_k_paths: int = 50,
                  personal_mob_service_park_radius: float = 100,
                  outfile: str = None,
                  verbose_file: bool = False,
                  cost: str = 'travel_time',
                  thread_number: int = multiprocessing.cpu_count(),
-                 mobility_services_graphs = None):
+                 mobility_services_graphs = None,
+                 save_routes_dynamically_and_reapply: bool = False):
 
         """
         Base class for a travel decision model.
@@ -79,6 +80,10 @@ class AbstractDecisionModel(ABC):
             -thread_number: The number of thread to user fot parallel shortest path computation
             -mobility_services_graphs: Dict gathering the graphs that determine how to update available
                                        mobility services following an event
+            -save_routes_dynamically_and_reapply: boolean specifying if the k shortest paths computed
+                                                  for an origin, destination, and mode should be saved
+                                                  dynamically and reapply for next departing users with
+                                                  the same origin, destination and mode
         """
         self._considered_modes = considered_modes
         self._n_shortest_path = n_shortest_path
@@ -89,6 +94,9 @@ class AbstractDecisionModel(ABC):
         self.personal_mob_service_park_radius = personal_mob_service_park_radius
         self._thread_number = thread_number
         self.mobility_services_graphs = mobility_services_graphs
+        self.save_routes_dynamically_and_reapply = save_routes_dynamically_and_reapply
+        if self.save_routes_dynamically_and_reapply:
+            self.saved_routes = {}
 
         self._mlgraph = mlgraph
         self._cost = cost
@@ -110,6 +118,12 @@ class AbstractDecisionModel(ABC):
             # user id, event which triggered planning, path cost, path list of nodes, path length,
             # path list of mob services, bool specifying if path has been chosen or not
             self._csvhandler.writerow(['ID', 'EVENT', 'TIME', 'COST', 'PATH', 'LENGTH', 'SERVICES', 'CHOSEN'])
+
+    def update_k_shortest_paths_finding_parameters(self, max_diff_cost: float, max_dist_in_common: float, cost_multiplier_to_find_k_paths: float, max_retry_to_find_k_paths: int):
+        self._max_diff_cost = max_diff_cost
+        self._max_dist_in_common = max_dist_in_common
+        self._cost_multiplier_to_find_k_paths = cost_multiplier_to_find_k_paths
+        self._max_retry_to_find_k_paths = max_retry_to_find_k_paths
 
     def load_mobility_services_graphs_from_file(self, file):
         with open(file, 'r') as f:
@@ -641,7 +655,7 @@ class AbstractDecisionModel(ABC):
             log.error(f'Case not yet developped')
             sys.exit(-1)
 
-    def parse_paths(self, paths, uids, chosen_mservices, nb_paths, users_paths):
+    def parse_paths(self, paths, uids, chosen_mservices, nb_paths, users_paths, intermodality=None):
         """Method that parsed HiPOP outputs.
 
         Args:
@@ -650,6 +664,7 @@ class AbstractDecisionModel(ABC):
             -chosen_mservices: list of map between available layer and chosen mob service
             -nb_paths: nb of paths requested
             -users_paths: list of saved shortest paths for users who are (re)planning
+            -intermodality: specifies if specific layers must be passed through
 
         Return:
             -users_paths: updated list of saved shortest paths
@@ -670,17 +685,10 @@ class AbstractDecisionModel(ABC):
                 if len(p[0]) >= 2:
                     # Path can be valid only if it does not pass several times per the same nodes
                     if (len(p[0]) == len(set(p[0]))):
+                        if self.save_routes_dynamically_and_reapply:
+                            self.save_computed_route(p[0], chosen_mservices[i], intermodality)
                         p = Path(p[1], p[0]) # at this stage, p.path_cost contains the first stage cost
-                        p.construct_layers_from_links(gnodes)
-                        path_mobservices = [chosen_mservices[i][layer_id] for layer_id,_ in p.layers]
-                        p.set_mobility_services(path_mobservices)
-                        # Second stage path cost computation = take into account waiting time
-                        estim_waiting_time = sum([self._mlgraph.layers[layer].mobility_services[service].estimate_pickup_time_for_planning(p.nodes[node_inds][0]) for (layer, node_inds), service in zip(p.layers, p.mobility_services) if service != 'WALK'])
-                        p.increment_path_cost(self.waiting_cost_functions[self._cost](estim_waiting_time))
-                        # Third stage path cost computation = eventually add additional cost
-                        p.increment_path_cost(self.additional_cost_functions[self._cost](p, user))
-                        service_costs = sum_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services) if service != 'WALK'))
-                        p.service_costs = service_costs
+                        self.treat_path(p, chosen_mservices[i], user, gnodes)
                         # NB: we save this path even if equal to an already saved path, it is useful for testing purposes
                         user_paths.append(p)
                     else:
@@ -691,6 +699,26 @@ class AbstractDecisionModel(ABC):
             if len(kpath) == 0:
                 log.warning(f'Zero path computed for user {user_id} for mode combination {chosen_mservices[i]}, {kpath}')
         return users_paths
+
+    def treat_path(self, p, chosen_mservice, user, gnodes):
+        """Method that achieves the building of a path.
+
+        Args:
+            -p: path with first stage path cost and path nodes
+            -chosen_mservice: the dict specifying which mobility service is used on which layer
+            -user: the user who is considering this path
+            -gnodes: the graph nodes
+        """
+        p.construct_layers_from_links(gnodes)
+        path_mobservices = [chosen_mservice[layer_id] for layer_id,_ in p.layers]
+        p.set_mobility_services(path_mobservices)
+        # Second stage path cost computation = take into account waiting time
+        estim_waiting_time = sum([self._mlgraph.layers[layer].mobility_services[service].estimate_pickup_time_for_planning(p.nodes[node_inds][0]) for (layer, node_inds), service in zip(p.layers, p.mobility_services) if service != 'WALK'])
+        p.increment_path_cost(self.waiting_cost_functions[self._cost](estim_waiting_time))
+        # Third stage path cost computation = eventually add additional cost
+        p.increment_path_cost(self.additional_cost_functions[self._cost](p, user))
+        service_costs = sum_dict(*(self._mlgraph.layers[layer].mobility_services[service].service_level_costs(p.nodes[node_inds]) for (layer, node_inds), service in zip(p.layers, p.mobility_services) if service != 'WALK'))
+        p.service_costs = service_costs
 
     def __call__(self, tcurrent: Time):
         ### If no user require a (re)planning, do nothing
@@ -712,8 +740,14 @@ class AbstractDecisionModel(ABC):
             uids, origins, destinations, available_layers, chosen_mservices, nb_paths = \
                 self._process_shortest_path_inputs(subgraph_layers, k, personal_ms_planning_origins)
 
+            ## Check if some shortest paths can be read instead of being computed
+            if self.save_routes_dynamically_and_reapply:
+                uids, origins, destinations, available_layers, chosen_mservices, nb_paths, users_paths = self.reapply_saved_routes(
+                    uids, origins, destinations, available_layers, chosen_mservices, nb_paths, users_paths)
+
             ## Compute the shorest paths in parallel
-            paths = parallel_k_shortest_path(self._mlgraph.graph,
+            try:
+                paths = parallel_k_shortest_path(self._mlgraph.graph,
                                              origins,
                                              destinations,
                                              self._cost,
@@ -725,6 +759,9 @@ class AbstractDecisionModel(ABC):
                                              self._max_retry_to_find_k_paths,
                                              nb_paths,
                                              self._thread_number)
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
 
             ## Parse the outputs of HiPOP and proceed to path selection
             users_paths = self.parse_paths(paths, uids, chosen_mservices, nb_paths, users_paths)
@@ -741,45 +778,172 @@ class AbstractDecisionModel(ABC):
                     self._process_shortest_path_inputs(subgraph_layers, k, personal_ms_planning_origins,
                         intermodality=considered_mode[1], saved_paths=users_paths)
 
+                ## Check if some shortest paths can be read instead of being computed
+                if self.save_routes_dynamically_and_reapply:
+                    uids, origins, destinations, available_layers, chosen_mservices, nb_paths, users_paths = self.reapply_saved_routes(
+                        uids, origins, destinations, available_layers, chosen_mservices, nb_paths, users_paths, intermodality=considered_mode[1])
+
                 ## Compute the shorest paths in parallel with the proper method
                 if considered_mode[1] is None:
-                    paths = parallel_k_shortest_path(self._mlgraph.graph,
-                                                     origins,
-                                                     destinations,
-                                                     self._cost,
-                                                     chosen_mservices,
-                                                     available_layers,
-                                                     self._max_diff_cost,
-                                                     self._max_dist_in_common,
-                                                     self._cost_multiplier_to_find_k_paths,
-                                                     self._max_retry_to_find_k_paths,
-                                                     nb_paths,
-                                                     self._thread_number)
+                    try:
+                        paths = parallel_k_shortest_path(self._mlgraph.graph,
+                                                        origins,
+                                                        destinations,
+                                                        self._cost,
+                                                        chosen_mservices,
+                                                        available_layers,
+                                                        self._max_diff_cost,
+                                                        self._max_dist_in_common,
+                                                        self._cost_multiplier_to_find_k_paths,
+                                                        self._max_retry_to_find_k_paths,
+                                                        nb_paths,
+                                                        self._thread_number)
+                    except ValueError as ex:
+                        log.error(f'HiPOP.Error: {ex}')
+                        sys.exit(-1)
                 else:
-                    paths = parallel_k_intermodal_shortest_path(self._mlgraph.graph,
-                                                                origins,
-                                                                destinations,
-                                                                chosen_mservices,
-                                                                self._cost,
-                                                                self._thread_number,
-                                                                considered_mode[1],
-                                                                self._max_diff_cost,
-                                                                self._max_dist_in_common,
-                                                                self._cost_multiplier_to_find_k_paths,
-                                                                self._max_retry_to_find_k_paths,
-                                                                nb_paths,
-                                                                available_layers)
+                    try:
+                        paths = parallel_k_intermodal_shortest_path(self._mlgraph.graph,
+                                                                    origins,
+                                                                    destinations,
+                                                                    chosen_mservices,
+                                                                    self._cost,
+                                                                    self._thread_number,
+                                                                    considered_mode[1],
+                                                                    self._max_diff_cost,
+                                                                    self._max_dist_in_common,
+                                                                    self._cost_multiplier_to_find_k_paths,
+                                                                    self._max_retry_to_find_k_paths,
+                                                                    nb_paths,
+                                                                    available_layers)
+                    except ValueError as ex:
+                        log.error(f'HiPOP.Error: {ex}')
+                        sys.exit(-1)
                 ## Parse the outputs of HiPOP and proceed to path selection
-                users_paths = self.parse_paths(paths, uids, chosen_mservices, nb_paths, users_paths)
+                users_paths = self.parse_paths(paths, uids, chosen_mservices, nb_paths, users_paths, intermodality=considered_mode[1])
 
 
         ### Path selection
         self.path_selection(users_paths, tcurrent)
 
     def compute_path(self, origin: str, destination: str, accessible_layers: Set[str], chosen_services: Dict[str, str]):
-        return dijkstra(self._mlgraph.graph,
-                        origin,
-                        destination,
-                        self._cost,
-                        chosen_services,
-                        accessible_layers)
+        try:
+            return dijkstra(self._mlgraph.graph,
+                            origin,
+                            destination,
+                            self._cost,
+                            chosen_services,
+                            accessible_layers)
+        except ValueError as ex:
+            log.error(f'HiPOP.Error: {ex}')
+            sys.exit(-1)
+
+    def reapply_saved_routes(self, uids, origins, destinations, available_layers, chosen_mservices, nb_paths, users_paths, intermodality=None):
+        """Method that reapplies the saved routes and modifies the inputs of HiPOP functions consequently.
+
+        Args:
+            -origins: the list of origins to treat during this call
+            -destinations: the list of destinations to treat during this call
+            -available_layers: the list of available layers to treat during this call
+            -chosen_mservices: the list of chosen mobility services to treat during this call
+            -nb_paths: the list of number of paths to find to treat during this call
+            -users_paths: the disctionary maping the uids, event and paths found
+            -intermodality: specifies the groups of layers that must be passed through
+
+        Returns:
+            -new_origins: the list of origins for which the path should effectively be computed
+            -new_destinations: the list of destinations for which the path should effectively be computed
+            -new_available_layers: the list of available layers for which the path should effectively be computed
+            -new_chosen_mservices: the list of chosen mobility services for which the path should effectively be computed
+            -new_nb_paths: the list of number of paths to find for which the path should effectively be computed
+            -users_paths: the updated users_paths
+        """
+        gnodes = self._mlgraph.graph.nodes
+        new_uids = []
+        new_origins = []
+        new_destinations = []
+        new_available_layers = []
+        new_chosen_mservices = []
+        new_nb_paths = []
+        for i in range(len(origins)):
+            uid = uids[i]
+            user = users_paths[uid]['user']
+            o = origins[i]
+            d = destinations[i]
+            mss = chosen_mservices[i]
+            mss_str = self.cast_chosen_mservice_intermodality_to_str(mss, intermodality)
+            k = nb_paths[i]
+            if o in self.saved_routes and d in self.saved_routes[o] and mss_str in self.saved_routes[o][d] and len(self.saved_routes[o][d][mss_str]) >= k:
+                    # Recompute path cost with current costs
+                    candidates_paths = [Path(self.compute_path_cost(pnodes, mss, gnodes), pnodes) for pnodes in self.saved_routes[o][d][mss_str]]
+                    # Select the k bests
+                    candidates_paths = sorted(candidates_paths, key=lambda p: p.path_cost)
+                    candidates_paths = candidates_paths[:k]
+                    # Assign them to the user
+                    for p in candidates_paths:
+                        self.treat_path(p, mss, user, gnodes)
+                        users_paths[uid]['paths'].append(p)
+            else:
+                # The k shortest paths will be recomputed
+                new_uids.append(uid)
+                new_origins.append(o)
+                new_destinations.append(d)
+                new_available_layers.append(available_layers[i])
+                new_chosen_mservices.append(mss)
+                new_nb_paths.append(k)
+        log.info(f'{len(uids)-len(new_uids)} / {len(uids)} are reapplied from saved routes')
+        return new_uids, new_origins, new_destinations, new_available_layers, new_chosen_mservices, new_nb_paths, users_paths
+
+    def save_computed_route(self, path_nodes, chosen_mservices, intermodality):
+        """Method that saves a path computed for a certain set of mobility services.
+
+        Args:
+            -path_nodes: the list of nodes constituting the path to save
+            -chosen_mservices: the dictionnary indicating the available layers and
+             the mobility service chosen for each of them
+            -intemrodality: specifies if specific layers must be passed through
+        """
+        o = path_nodes[0]
+        d = path_nodes[-1]
+        if o in self.saved_routes:
+            if d in self.saved_routes[o]:
+                chosen_mservices_str = self.cast_chosen_mservice_intermodality_to_str(chosen_mservices, intermodality)
+                if chosen_mservices_str in self.saved_routes[o][d]:
+                    if path_nodes not in self.saved_routes[o][d][chosen_mservices_str]:
+                        self.saved_routes[o][d][chosen_mservices_str].append(path_nodes)
+                else:
+                    self.saved_routes[o][d][chosen_mservices_str] = [path_nodes]
+            else:
+                self.saved_routes[o][d] = {self.cast_chosen_mservice_intermodality_to_str(chosen_mservices, intermodality): [path_nodes]}
+        else:
+            self.saved_routes[o] = {d: {self.cast_chosen_mservice_intermodality_to_str(chosen_mservices, intermodality): [path_nodes]}}
+
+    def cast_chosen_mservice_intermodality_to_str(self, mss, intermodality):
+        """Method that casts a dict of chosen mobility service per layer and an intermodality
+        information into a string.
+        """
+        mss_list = [(l,ms) for l,ms in mss.items()]
+        mss_list = sorted(mss_list, key=lambda x: x[0])
+        mss_list = [l + ':' + ms for (l,ms) in mss_list]
+        casted = ','.join(mss_list)
+        if intermodality is not None:
+            intermod_list = sorted(['+'.join(sorted(list(s))) for s in intermodality])
+            casted = casted + '__' + '-INTERMODAL-'.join(intermod_list)
+
+        return casted
+
+    def compute_path_cost(self, path_nodes, chosen_mservices, gnodes):
+        """Method that computes the cost of a path.
+
+        Args:
+            -path_nodes: the list of nodes constituting the path
+            -chosen_mservices: the dict specifying which mobility service is used on each layer
+            -gnodes: the dict of nodes of the multi layer graph
+        """
+        path_cost = 0
+        for i in range(len(path_nodes)-1):
+            un = path_nodes[i]
+            dn = path_nodes[i+1]
+            l = gnodes[un].adj[dn]
+            path_cost += l.costs[chosen_mservices[l.label]][self._cost]
+        return path_cost

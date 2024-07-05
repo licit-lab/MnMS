@@ -1,8 +1,9 @@
 import unittest
 from tempfile import TemporaryDirectory
-
 import numpy as np
 import pytest
+import pandas as pd
+
 from mnms.demand import User
 from mnms.demand.user import Path
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
@@ -18,6 +19,10 @@ from mnms.mobility_service.public_transport import PublicTransportMobilityServic
 from mnms.time import Dt, TimeTable, Time
 from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Vehicle
+from mnms.tools.observer import CSVVehicleObserver
+from mnms.demand import BaseDemandManager, User
+from mnms.travel_decision.dummy import DummyDecisionModel
+from mnms.simulation import Supervisor
 
 
 class TestMFDFlow(unittest.TestCase):
@@ -70,6 +75,8 @@ class TestMFDFlow(unittest.TestCase):
 
         self.mlgraph = mlgraph
 
+        self.mlgraph.initialize_costs(1.42)
+
         self.flow = MFDFlowMotor()
         self.flow.set_graph(mlgraph)
 
@@ -80,7 +87,7 @@ class TestMFDFlow(unittest.TestCase):
         self.flow.add_reservoir(res2)
         self.flow.set_time(Time('09:00:00'))
 
-        self.flow.initialize(1.42)
+        self.flow.initialize()
 
     def tearDown(self):
         """Concludes and closes the test.
@@ -100,7 +107,7 @@ class TestMFDFlow(unittest.TestCase):
         user.set_path(Path(3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
         self.personal_car.add_request(user, 'C2', Time('00:01:00'))
-        self.personal_car.matching(Request(user, "C2", Time('00:01:00')))
+        self.personal_car.matching(Request(user, "C2", Time('00:01:00')), Dt(seconds=1))
         self.flow.step(Dt(seconds=1))
         self.assertDictEqual({'CAR': 1, 'BUS': 0}, self.flow.dict_accumulations['res1'])
         self.assertDictEqual({'CAR': 0, 'BUS': 0}, self.flow.dict_accumulations['res2'])
@@ -116,7 +123,7 @@ class TestMFDFlow(unittest.TestCase):
         user.set_path(Path(3400,
                            ['C0', 'C2', 'B2', 'B3', 'B4']))
         self.personal_car.add_request(user, 'C2', Time('00:01:00'))
-        self.personal_car.matching(Request(user, "C2", Time('00:01:00')))
+        self.personal_car.matching(Request(user, "C2", Time('00:01:00')), Dt(seconds=1))
         self.flow.step(Dt(seconds=1))
         self.flow.step(Dt(seconds=1))
 
@@ -125,6 +132,63 @@ class TestMFDFlow(unittest.TestCase):
         self.assertEqual(self.flow.reservoirs["res1"].dict_accumulations["CAR"], 22)
         self.assertEqual(self.flow.dict_accumulations["res1"]["BUS"], 0)
         self.assertEqual(self.flow.dict_accumulations["res2"]["BUS"], 3)
+
+    def test_accumulation_count(self):
+        roads = generate_line_road([0, 0], [0, 400], 5)
+        roads.add_zone(construct_zone_from_sections(roads, "LEFT", ["0_1", "1_2"]))
+        roads.add_zone(construct_zone_from_sections(roads, "RIGHT", ["2_3", "3_4"]))
+
+        personal_car = PersonalMobilityService('CAR')
+        personal_car.attach_vehicle_observer(CSVVehicleObserver(self.pathdir + "vehs.csv"))
+        car_layer = CarLayer(roads, services=[personal_car])
+        car_layer.create_node("C0", "0")
+        car_layer.create_node("C4", "4")
+        car_layer.create_link("C0_C4", "C0", "C4", {}, ["0_1", "1_2", "2_3", "3_4"])
+
+        odlayer = generate_matching_origin_destination_layer(roads)
+
+        mlgraph = MultiLayerGraph([car_layer],
+                                  odlayer,
+                                  1)
+        demand = BaseDemandManager([User("U0", [0, 0], [0, 400], Time("07:00:00")),
+            User("U1", [0, 0], [0, 400], Time("07:01:00"))])
+
+        decision_model = DummyDecisionModel(mlgraph)
+
+        def mfdspeed(dacc):
+            dspeed = {'CAR': 2}
+            return dspeed
+
+        flow_motor = MFDFlowMotor(outfile=self.pathdir + 'flow_motor.csv')
+        flow_motor.add_reservoir(Reservoir(roads.zones["LEFT"], ['CAR'], mfdspeed))
+        flow_motor.add_reservoir(Reservoir(roads.zones["RIGHT"], ['CAR'], mfdspeed))
+
+        supervisor = Supervisor(mlgraph,
+                                demand,
+                                flow_motor,
+                                decision_model)
+
+        ## Run
+        flow_dt = Dt(seconds=30)
+        affectation_factor = 10
+        supervisor.run(Time("06:55:00"),
+                       Time("07:05:00"),
+                       flow_dt,
+                       affectation_factor)
+
+        ## Get and check result
+        with open(self.pathdir + "vehs.csv") as f:
+            df = pd.read_csv(f, sep=';')
+
+        with open(self.pathdir + "flow_motor.csv") as f:
+            dfres = pd.read_csv(f, sep=';')
+        dfl = dfres[dfres['RESERVOIR'] == 'LEFT']
+        dfr = dfres[dfres['RESERVOIR'] == 'RIGHT']
+
+        self.assertEqual(dfl['ACCUMULATION'].tolist(), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 1, 1, 0, 0, 0, 0])
+        self.assertEqual(dfr['ACCUMULATION'].tolist(), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 1, 1, 0])
+
+
 
 
 def test_move_veh_activity_change():
@@ -143,6 +207,8 @@ def test_move_veh_activity_change():
                               odlayer,
                               1e-3)
 
+    mlgraph.initialize_costs(1.42)
+
     on_demand.create_waiting_vehicle("CarLayer_0")
 
     flow = MFDFlowMotor()
@@ -155,7 +221,7 @@ def test_move_veh_activity_change():
     flow.add_reservoir(res2)
     flow.set_time(Time('09:00:00'))
 
-    flow.initialize(1.42)
+    flow.initialize()
 
     user = User('U0', 'CarLayer_1', 'CarLayer_2', Time('09:00:00'))
     user._position = np.array([0, 10])
@@ -163,7 +229,7 @@ def test_move_veh_activity_change():
                        ['CarLayer_1', 'CarLayer_2']))
     on_demand.step_maintenance(Dt(seconds=1))
     on_demand.request_nearest_vehicle_in_radius_fifo(user, "CarLayer_2")
-    on_demand.matching(Request(user, "CarLayer_2", Time('09:00:00')))
+    on_demand.matching(Request(user, "CarLayer_2", Time('09:00:00')), Dt(seconds=1))
     veh = on_demand.fleet.vehicles["0"]
     print(veh.activities)
 
@@ -204,13 +270,13 @@ def test_move_veh_res_change():
     flow.add_reservoir(res2)
     flow.set_time(Time('09:00:00'))
 
-    flow.initialize(1.42)
+    flow.initialize()
 
     user = User('U0', '0', '4', Time('09:00:00'))
     user.set_path(Path(3400,
                        ['CarLayer_0', 'CarLayer_1', 'CarLayer_2']))
     personal_car.add_request(user, 'C2', Time('09:00:00'))
-    personal_car.matching(Request(user, "CarLayer_2", Time('09:00:00')))
+    personal_car.matching(Request(user, "CarLayer_2", Time('09:00:00')), Dt(seconds=1))
     flow.step(Dt(seconds=1))
 
     veh = list(personal_car.fleet.vehicles.values())[0]

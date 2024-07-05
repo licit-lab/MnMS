@@ -58,8 +58,11 @@ def generate_random_demand(mlgraph: "MultiLayerGraph",
     while user_count <= nb_user:
         unode = choice(origins)
         dnode = choice(destinations)
-
-        _, path_cost = dijkstra(graph, unode, dnode, cost_path, map_layer_services)
+        try:
+            _, path_cost = dijkstra(graph, unode, dnode, cost_path, map_layer_services)
+        except ValueError as ex:
+            log.error(f'HiPOP.Error: {ex}')
+            sys.exit(-1)
         if min_cost <= path_cost < float('inf'):
             demand.extend([User(str(next(uid)), unode, dnode, Time.from_seconds(distrib_time(tstart, tend))) for _ in
                            range(repeat)])

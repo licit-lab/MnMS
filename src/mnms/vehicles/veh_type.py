@@ -9,7 +9,7 @@ import numpy as np
 
 from mnms.tools.observer import TimeDependentSubject
 from mnms.log import create_logger
-from mnms.time import Time
+from mnms.time import Time, Dt
 
 log = create_logger(__name__)
 _norm = np.linalg.norm
@@ -241,7 +241,6 @@ class Vehicle(TimeDependentSubject):
                  capacity: int,
                  mobility_service: str,
                  is_personal: bool,
-                 initial_speed: float = 13.8,
                  activities: Optional[List[VehicleActivity]] = None):
         """
         Class representing a vehicle in the simulation
@@ -250,7 +249,6 @@ class Vehicle(TimeDependentSubject):
             node: The node where the Vehicle is created
             capacity: the capacity of the Vehicle
             mobility_service: The associated mobility service
-            initial_speed: the initial speed of the Vehicle
             activities: The initial activities of the Vehicle
             is_personal: Boolean specifying if the vehicle is personal or not
         """
@@ -271,8 +269,12 @@ class Vehicle(TimeDependentSubject):
         self._remaining_link_length = None
         self._position = None                       # current vehicle coordinates
         self._distance = 0                          # travelled distance ( reset to zero if other trip ?)
+        self._distance_at_last_res_change = 0       # distance this vehicle has traveled since it enters current reservoir
         self._iter_path = None
-        self.speed = initial_speed                  # current speed
+        self.speed = None                           # current speed
+        self._dt_move = None
+        self._achieved_path = []
+        self._achieved_path_since_last_notify = []
 
         self.activities: Deque[VehicleActivity] = deque([])
         self.activity = None                        # current activity
@@ -289,6 +291,14 @@ class Vehicle(TimeDependentSubject):
     @property
     def distance(self):
         return self._distance
+
+    @property
+    def distance_at_last_res_change(self):
+        return self._distance_at_last_res_change
+
+    @distance_at_last_res_change.setter
+    def distance_at_last_res_change(self, d):
+        self._distance_at_last_res_change = d
 
     @property
     def is_full(self):
@@ -333,6 +343,26 @@ class Vehicle(TimeDependentSubject):
     @property
     def is_moving(self) -> bool:
         return self.activity.is_moving if self.activity is not None else False
+
+    @property
+    def dt_move(self) -> Dt:
+        return self._dt_move
+
+    @dt_move.setter
+    def dt_move(self, dt):
+        self._dt_move = dt
+
+    @property
+    def achieved_path(self):
+        return self._achieved_path
+
+    def update_achieved_path(self):
+        if len(self.achieved_path) == 0 or self.current_node != self.achieved_path[-1]:
+            self._achieved_path.append(self.current_node)
+            self._achieved_path_since_last_notify.append(self.current_node)
+
+    def flush_achieved_path_since_last_notify(self):
+        self._achieved_path_since_last_notify = []
 
     def add_activities(self, activities:List[VehicleActivity]):
         for a in activities:
@@ -451,9 +481,8 @@ class Car(Vehicle):
                  capacity: int,
                  mobility_service: str,
                  is_personal: bool,
-                 initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Car, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
+        super(Car, self).__init__(node, capacity, mobility_service, is_personal, activities)
         self._last_dropped_off_user = None
 
     @property
@@ -470,9 +499,8 @@ class Bus(Vehicle):
                  capacity: int,
                  mobility_service: str,
                  is_personal: bool = False,
-                 initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Bus, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
+        super(Bus, self).__init__(node, capacity, mobility_service, is_personal, activities)
 
 
 class Tram(Vehicle):
@@ -481,9 +509,8 @@ class Tram(Vehicle):
                  capacity: int,
                  mobility_service: str,
                  is_personal: bool = False,
-                 initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Tram, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
+        super(Tram, self).__init__(node, capacity, mobility_service, is_personal, activities)
 
 
 class Metro(Vehicle):
@@ -492,9 +519,8 @@ class Metro(Vehicle):
                  capacity: int,
                  mobility_service: str,
                  is_personal: bool = False,
-                 initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Metro, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
+        super(Metro, self).__init__(node, capacity, mobility_service, is_personal, activities)
 
 
 class Bike(Vehicle):
@@ -503,9 +529,8 @@ class Bike(Vehicle):
                  capacity: int,
                  mobility_service: str,
                  is_personal: bool,
-                 initial_speed=5.5,
                  activities: Optional[VehicleActivity] = None):
-        super(Bike, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
+        super(Bike, self).__init__(node, capacity, mobility_service, is_personal, activities)
 
 class Train(Vehicle):
     def __init__(self,
@@ -513,6 +538,5 @@ class Train(Vehicle):
                  capacity: int,
                  mobility_service: str,
                  is_personal: bool = False,
-                 initial_speed=13.8,
                  activities: Optional[VehicleActivity] = None):
-        super(Train, self).__init__(node, capacity, mobility_service, is_personal, initial_speed, activities)
+        super(Train, self).__init__(node, capacity, mobility_service, is_personal, activities)

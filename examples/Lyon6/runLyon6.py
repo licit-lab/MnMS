@@ -3,8 +3,9 @@ from mnms.demand import CSVDemandManager
 from mnms.flow.MFD import Reservoir, MFDFlowMotor
 from mnms.log import attach_log_file, LOGLEVEL, get_logger, set_all_mnms_logger_level, set_mnms_logger_level
 from mnms.time import Time, Dt
-from mnms.io.graph import load_graph
+from mnms.io.graph import load_graph, save_graph
 from mnms.travel_decision.logit import LogitDecisionModel
+from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 from mnms.generation.layers import generate_matching_origin_destination_layer
 from mnms.mobility_service.personal_vehicle import PersonalMobilityService
@@ -14,6 +15,7 @@ import os
 import json
 
 param_file_path = "/param.json"
+#param_file_path = "/param_roadstypo.json"
 param_file = open(os.getcwd() + param_file_path, 'r')
 param_json = json.load(param_file)
 
@@ -23,6 +25,8 @@ output_params = param_json['OUTPUT'] # bloc with output parameters
 supervisor_params = param_json['SUPERVISOR'] # bloc with supervisor parameters
 reservoirs_params = param_json['RESERVOIRS'] # bloc with reservoirs parameters
 travel_decision_params = param_json['TRAVEL_DECISION'] # bloc with travel decision parameters
+graph_params = param_json['GRAPH']
+cost_params = param_json['COSTS']
 
 param_file.close()
 
@@ -31,6 +35,7 @@ param_file.close()
 # inputs
 indir = input_params['indir'] # name of input folder, ex: "INPUTS"
 network_file = input_params['network_file'] # path to json network file, ex: "/Lyon_symuviainput.json"
+network_file_with_roadstypo = input_params['network_file'][:-5]+'_roadstypo.json'
 demand_file = input_params['demand_file'] # path to csv demand file
 mfd_file = input_params['mfd_file'] # path to csv MFD file
 # outputs
@@ -49,6 +54,14 @@ end_time = supervisor_params['end_time'] # end time in the simulation, ex: "14:0
 flow_dt = supervisor_params['flow_dt'] # simulation step, ex: 1 (unit in unit_flow_dt parameter)
 unit_flow_dt = supervisor_params['unit_flow_dt'] # unit of the simulation step, ex: "minutes"
 affectation_factor = supervisor_params['affectation_factor'] # affectation/calculation factor, ex: 10, 10 means 10 * flow_dt so 10 minutes
+
+# graph
+roads_typo = graph_params['roads_typo'] # dict specifying the roads classification, if empty dict, no classification of roads
+
+#cost
+roads_typo_cost_multipliers = cost_params['roads_typo_cost_multipliers'] # dict specifying the multiplier to apply to the cost on a link depending on its typology
+cost_name = cost_params['cost']
+
 # reservoirs
 
 # travel_decision
@@ -81,9 +94,21 @@ def calculate_V_MFD(acc):
     V = max(V, 0.001)  # min speed to avoid gridlock
     return {"CAR": V}
 
+def weighted_travel_time_car(gnodes, layer, link, costs, roads_typo_cost_multipliers=roads_typo_cost_multipliers):
+    links_classes = layer.map_links_classes
+    if link.id in links_classes and links_classes[link.id] in roads_typo_cost_multipliers:
+        return costs['PersonalVehicle']['travel_time'] * roads_typo_cost_multipliers[links_classes[link.id]]
+    else:
+        return costs['PersonalVehicle']['travel_time']
+
+def weighted_travel_time_transit(gnodes, layer, link, costs):
+    return costs['WALK']['travel_time']
 
 if __name__ == '__main__':
     mmgraph = load_graph(indir+network_file)
+    if mmgraph.layers["CAR"].map_links_classes == {}:
+        mmgraph.layers["CAR"].add_links_classes(roads_typo)
+        save_graph(mmgraph, indir+network_file_with_roadstypo)
 
     odlayer = generate_matching_origin_destination_layer(mmgraph.roads)
     mmgraph.add_origin_destination_layer(odlayer)
@@ -93,6 +118,9 @@ if __name__ == '__main__':
     personal_car.attach_vehicle_observer(CSVVehicleObserver(outdir+vehicle_file))
     mmgraph.layers["CAR"].add_mobility_service(personal_car)
 
+    mmgraph.add_cost_function('CAR', cost_name, weighted_travel_time_car, mobility_service='PersonalVehicle')
+    mmgraph.add_cost_function('TRANSIT', cost_name, weighted_travel_time_transit)
+
     demand_file_name = indir + demand_file
     demand = CSVDemandManager(demand_file_name)
     demand.add_user_observer(CSVUserObserver(outdir+user_file), user_ids="all")
@@ -100,7 +128,15 @@ if __name__ == '__main__':
     flow_motor = MFDFlowMotor(outfile=outdir + flow_file)
     flow_motor.add_reservoir(Reservoir(mmgraph.roads.zones["RES"], ["CAR"], calculate_V_MFD))
 
-    travel_decision = LogitDecisionModel(mmgraph, outfile=outdir+path_file)
+    if decision_model == 'LogitDecisionModel':
+        travel_decision = LogitDecisionModel(mmgraph, cost=cost_name, outfile=outdir+path_file, verbose_file=True)
+    elif decision_model == 'DummyDecisionModel':
+        travel_decision = DummyDecisionModel(mmgraph, cost=cost_name, outfile=outdir+path_file, verbose_file=True)
+    else:
+        raise ValueError(f'Unknown decision model {decision_model}')
+    def weighted_waiting_time(wt):
+        return wt
+    travel_decision.add_waiting_cost_function(cost_name, weighted_waiting_time)
 
     supervisor = Supervisor(graph=mmgraph,
                             flow_motor=flow_motor,

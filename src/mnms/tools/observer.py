@@ -125,7 +125,7 @@ class CSVVehicleObserver(TimeDependentObserver):
             filename: The name of the file
             prec: The precision for floating point number
         """
-        self._header = ["TIME", "ID", "TYPE", "LINK", "POSITION", "SPEED", "STATE", "DISTANCE", "PASSENGERS"]
+        self._header = ["TIME", "ID", "TYPE", "LINK", "POSITION", "SPEED", "STATE", "DISTANCE", "PASSENGERS", "TRAVELED_NODES"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -142,9 +142,11 @@ class CSVVehicleObserver(TimeDependentObserver):
                subject.type,
                f"{subject.current_link[0]} {subject.current_link[1]}" if subject.current_link is not None else None,
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
-               f"{subject.speed:.{self._prec}f}",
+               f"{subject.speed:.{self._prec}f}" if subject.speed is not None else None,
                subject.activity_type.name if subject.activity_type is not None else None,
                f"{subject.distance:.{self._prec}f}",
-               ' '.join(p for p in subject.passengers)]
+               ' '.join(p for p in subject.passengers),
+               ' '.join(subject._achieved_path_since_last_notify)]
+        subject.flush_achieved_path_since_last_notify()
         # log.info(f"OBS {time}: {row}")
         self._csvhandler.writerow(row)

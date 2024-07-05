@@ -10,7 +10,7 @@ from hipop.shortest_path import dijkstra, parallel_dijkstra
 
 from mnms import create_logger
 from mnms.demand import User
-from mnms.mobility_service.abstract import AbstractOnDemandMobilityService, AbstractOnDemandDepotMobilityService, Request, compute_path_travel_time
+from mnms.mobility_service.abstract import AbstractOnDemandMobilityService, AbstractOnDemandDepotMobilityService, Request, compute_path_travel_time, compute_path_nodes_travel_time
 from mnms.mobility_service.filters import PlanEndsInRadiusFilter, IsIdle, InRadiusFilter, DepotIsNotFull, IsNearestDepotFilter
 from mnms.time import Dt, Time
 from mnms.tools.exceptions import PathNotFound
@@ -18,6 +18,7 @@ from mnms.vehicles.veh_type import ActivityType, VehicleActivityServing, Vehicle
     VehicleActivityPickup, VehicleActivityRepositioning, Vehicle, VehicleActivity
 from mnms.tools.cost import create_service_costs
 from mnms.tools.geometry import polygon_area, get_bounding_box
+from mnms.tools.preprocessing import decode_shortest_path_tree
 
 log = create_logger(__name__)
 
@@ -104,6 +105,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             -dt: time elapsed since the previous maintenance phase
         """
         # Treat zone per zone when they are defined
+        glinks = self.graph.links
         count_links_treated = 0
         for zid, z in self._zones.items():
             count_links_treated += len(z.links)
@@ -120,7 +122,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             open_reqs_in_z = np.array(open_reqs)[mask]
 
             area = polygon_area(z.contour)
-            mean_speed = np.mean([self.graph.links[lid].costs[self.id]['speed'] for lid in z.links])
+            mean_speed = np.mean([glinks[lid].costs[self.id]['speed'] for lid in z.links])
             tau = (self.dt_matching+1) * dt.to_seconds()
 
             # Oversupply mode
@@ -131,7 +133,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             elif (len(idle_vehs_in_z) < len(open_reqs_in_z)) or (len(idle_vehs_in_z) == len(open_reqs_in_z) and len(open_reqs_in_z) > 0):
                 open_reqs_density_in_z = len(open_reqs_in_z) / area
                 # Compute mean requests arrival rate in this zone
-                reqs_hist_pos = [self.graph.nodes[req.pickup_node].position for req in self.requests_history]
+                reqs_hist_pos = [self.gnodes[req.pickup_node].position for req in self.requests_history]
                 mask = z.is_inside(reqs_hist_pos)
                 reqs_hist_in_z = np.array(self.requests_history)[mask]
                 if len(reqs_hist_in_z) == 0:
@@ -148,12 +150,12 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
                 w = self.default_waiting_time
             self._estimated_pickup_times[zid] = w
         # Check that all links of this service's layer have been treated
-        if len(self.zones) > 0 and count_links_treated < len(self.graph.links):
+        if len(self.zones) > 0 and count_links_treated < len(glinks):
             log.warning(f'Incomplete zoning defined for {self.id} service, we compute '\
                 'the estimated waiting time on remaining links considering the whole network...')
 
         # Treat links all together when no zone is defined
-        if len(self.zones) == 0 or (len(self.zones) > 0 and count_links_treated < len(self.graph.links)):
+        if len(self.zones) == 0 or (len(self.zones) > 0 and count_links_treated < len(glinks)):
             # Count the nb of idle vehicles on the whole network
             idle_vehs = self.get_idle_vehicles()
 
@@ -163,7 +165,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             tau = (self.dt_matching+1) * dt.to_seconds()
             bbox = get_bounding_box(None, graph=self.graph)
             area = max(1, (bbox.xmax - bbox.xmin)) * max(1,(bbox.ymax - bbox.ymin)) # max(1,-) for flat networks
-            mean_speed = np.mean([self.graph.links[lid].costs[self.id]['speed'] for lid in self.graph.links])
+            mean_speed = np.mean([glinks[lid].costs[self.id]['speed'] for lid in glinks])
             delta_t = (max(open_reqs).request_time - min(open_reqs).request_time).to_seconds() if open_reqs else np.nan
             if delta_t == 0:
                 delta_t = dt.to_seconds() # dt is the smallest time step
@@ -202,9 +204,9 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             # Trigger a matching phase
             self._counter_matching = 0
             if self.matching_strategy in ['nearest_idle_vehicle_in_radius_fifo', 'nearest_vehicle_in_radius_fifo']:
-                self.launch_matching_fifo()
+                self.launch_matching_fifo(dt)
             elif self.matching_strategy in ['nearest_idle_vehicle_in_radius_batched', 'nearest_vehicle_in_radius_batched']:
-                self.launch_matching_batch()
+                self.launch_matching_batch(dt)
             else:
                 log.error(f'Matching strategy {self.matching_strategy} unknown for {self.id} mobility service')
                 sys.exit(-1)
@@ -214,9 +216,12 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             # Do not trigger a matching phase
             self._counter_matching += 1
 
-    def launch_matching_fifo(self):
+    def launch_matching_fifo(self, dt):
         """Method that launches the matching phase by treating the requests one by
         one in  order of arrival.
+
+        Args:
+            -dt: the flow time step
         """
         reqs = list(self.user_buffer.values())
         sorted_reqs = sorted(reqs)
@@ -233,15 +238,18 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             # Check pick-up time proposition compared with user waiting tolerance
             if user.pickup_dt[self.id] > service_dt:
                 # Match user with vehicle
-                self.matching(req)
+                self.matching(req, dt)
                 # Remove user from list of users waiting to be matched
                 self.cancel_request(user.id)
             else:
                 log.info(f"{user.id} refused {self.id} offer (predicted pickup time ({service_dt}) is too long, wait for better proposition...")
             self._cache_request_vehicles = dict()
 
-    def launch_matching_batch(self):
+    def launch_matching_batch(self, dt):
         """Method that launches the matching phase by treating the requests jointly.
+
+        Args:
+            -dt: the flow time step
         """
         ### Get the batches of requests and considered vehicles
         reqs = list(self.user_buffer.values())
@@ -281,13 +289,17 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
                 destinations.append(req.user.current_node)
 
         ## Call Dijkstra once
-        paths = parallel_dijkstra(self.graph,
-                                  origins,
-                                  destinations,
-                                  [{self.layer.id: self.id}]*len(origins),
-                                  'travel_time',
-                                  multiprocessing.cpu_count(),
-                                  [{self.layer.id}]*len(origins))
+        try:
+            paths = parallel_dijkstra(self.graph,
+                                    origins,
+                                    destinations,
+                                    [{self.layer.id: self.id}]*len(origins),
+                                    'travel_time',
+                                    multiprocessing.cpu_count(),
+                                    [{self.layer.id}]*len(origins))
+        except ValueError as ex:
+            log.error(f'HiPOP.Error: {ex}')
+            sys.exit(-1)
 
         ## Parse outputs and complete the pickup times and veh paths matrices
         for i in range(len(paths)):
@@ -303,11 +315,11 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
                 veh_curr_act_path_nodes = veh.path_to_nodes(veh.activity.path)
                 veh_curr_node_ind_in_path = veh_curr_act_path_nodes.index(veh.current_node) # NB: works only when an acticity path does not contain several times the same node
-                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.graph, self.id))
-                current_link = self.graph.nodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
+                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.gnodes, self.id))
+                current_link = self.gnodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
                 service_dt += Dt(seconds=veh.remaining_link_length / current_link.costs[self.id]['speed'])
             for a in veh.activities:
-                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
+                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.gnodes, self.id))
             # Apply user's waiting tolerance
             if service_dt < req.user.pickup_dt[self.id]:
                 pickup_times_matrix[ridx][vidx] = service_dt.to_seconds()
@@ -325,7 +337,7 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             if pickup_times_matrix[req_ind][veh_ind] < inf:
                 veh_path = veh_paths_matrix[req_ind][veh_ind]
                 self._cache_request_vehicles[req.user.id] = veh, veh_path
-                self.matching(req)
+                self.matching(req, dt)
                 self.cancel_request(req.user.id)
                 self._cache_request_vehicles = dict()
 
@@ -351,13 +363,43 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             return Dt(hours=24)
 
         # Compute service time for the idle vehs in radius
+        origins = [veh.current_node for veh in idle_vehs_in_radius]
+        destinations = [user.current_node] * len(idle_vehs_in_radius)
+        if self.layer.shortest_paths is not None:
+            # Let's read the shortest paths
+            paths = []
+            for o,d in zip(origins, destinations):
+                veh_path = decode_shortest_path_tree(self.layer.shortest_paths, o, d)
+                if o != d and len(veh_path) > 1:
+                    # Compute the travel time
+                    tt = compute_path_nodes_travel_time(veh_path, self.gnodes, self.id)
+                elif o == d:
+                    veh_path = []
+                    tt = 0
+                else:
+                    tt = float('inf')
+                paths.append((veh_path, tt))
+        else:
+            # Let's compute the shortest paths
+            try:
+                paths = parallel_dijkstra(self.graph,
+                                        origins,
+                                        destinations,
+                                        [{self.layer.id: self.id}]*len(origins),
+                                        'travel_time',
+                                        multiprocessing.cpu_count(),
+                                        [{self.layer.id}]*len(origins))
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
+
+        # Gather valid candidates
         candidates = []
-        for veh in idle_vehs_in_radius:
-            veh_node = veh.current_node
-            veh_path, tt = dijkstra(self.graph, veh_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+        for i, (veh_path, tt) in enumerate(paths):
             if tt == float('inf'):
                 # This vehicle cannot reach user, skip and consider next vehicle
                 continue
+            veh = idle_vehs_in_radius[i]
             service_dt = Dt(seconds=tt)
             candidates.append((veh, service_dt, veh_path))
 
@@ -397,7 +439,11 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
         for veh in vehs_in_radius:
             veh_last_node = veh.activity.node if not veh.activities else \
                     veh.activities[-1].node
-            veh_path, tt = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+            try:
+                veh_path, tt = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+            except ValueError as ex:
+                log.error(f'HiPOP.Error: {ex}')
+                sys.exit(-1)
             # If vehicle cannot reach user, skip and consider next vehicle
             if tt == float('inf'):
                 continue
@@ -407,11 +453,11 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
             if veh.activity is not None and veh.activity.activity_type is not ActivityType.STOP:
                 veh_curr_act_path_nodes = veh.path_to_nodes(veh.activity.path)
                 veh_curr_node_ind_in_path = veh_curr_act_path_nodes.index(veh.current_node) # NB: works only when an acticity path does not contain several times the same node
-                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.graph, self.id))
-                current_link = self.graph.nodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
+                service_dt += Dt(seconds=compute_path_travel_time(veh.activity.path[veh_curr_node_ind_in_path+1:], self.gnodes, self.id))
+                current_link = self.gnodes[veh.current_node].adj[veh_curr_act_path_nodes[veh_curr_node_ind_in_path+1]]
                 service_dt += Dt(seconds=veh.remaining_link_length / current_link.costs[self.id]['speed'])
             for a in veh.activities:
-                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.graph, self.id))
+                service_dt += Dt(seconds=compute_path_travel_time(a.path, self.gnodes, self.id))
             candidates.append((veh, service_dt, veh_path))
 
         # Select the veh with the smallest service time
@@ -459,7 +505,11 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
     #                 # Compute pick-up path and cost from end of current activity
     #                 veh_last_node = choosen_veh.activity.node if not choosen_veh.activities else \
     #                 choosen_veh.activities[-1].node
-    #                 veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+    #                 try:
+    #                     veh_path, cost = dijkstra(self.graph, veh_last_node, user.current_node, 'travel_time', {self.layer.id: self.id}, {self.layer.id})
+    #                 except ValueError as ex:
+    #                     log.error(f'HiPOP.Error: {ex}')
+    #                     sys.exit(-1)
     #                 # If vehicle cannot reach user, skip and consider next vehicle
     #                 if cost == float('inf'):
     #                     continue
@@ -471,12 +521,13 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
     #
     #     return service_dt
 
-    def matching(self, request: Request):
+    def matching(self, request: Request, dt: Dt):
         """Method that proceeds to the matching between a user and an already identified
         vehicle of this service.
 
         Args:
             -request: the request to match
+            -dt: the flow time step
         """
         user = request.user
         drop_node = request.drop_node
@@ -500,11 +551,17 @@ class OnDemandMobilityService(AbstractOnDemandMobilityService):
 
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
+            immediate_match = len(veh.activities) == 2 and len(veh_path) == 0 \
+                and self._tcurrent - request.request_time <= dt
+            if immediate_match:
+                # This is an immediate match, take into account effective remaining
+                # duration to move during the current flow step
+                veh.dt_move = self._tcurrent - request.request_time
 
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
                 "DT_MATCHING": self.dt_matching,
-                "DT_PERIODIC_MAINTENANCE": self.dt_periodic_maintenance,
+                "DT_PERIODIC_MAINTENANCE": self._dt_periodic_maintenance,
                 "ID": self.id,
                 "DEFAULT_WAITING_TIME": self.default_waiting_time,
                 "MATCHING_STRATEGY": self.matching_strategy,
@@ -564,13 +621,17 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
                     if len(nearest_depot) > 0:
                         # Get the shortest path till the nearest depot
                         nearest_depot = nearest_depot[0]
-                        veh_path, cost = dijkstra(self.graph,
-                                                veh._current_node,
-                                                nearest_depot.node,
-                                                'travel_time',
-                                                {self.layer.id: self.id,
-                                                "TRANSIT": "WALK"},
-                                                {self.layer.id})
+                        try:
+                            veh_path, cost = dijkstra(self.graph,
+                                                    veh._current_node,
+                                                    nearest_depot.node,
+                                                    'travel_time',
+                                                    {self.layer.id: self.id,
+                                                    "TRANSIT": "WALK"},
+                                                    {self.layer.id})
+                        except ValueError as ex:
+                            log.error(f'HiPOP.Error: {ex}')
+                            sys.exit(-1)
                         if cost == float('inf'):
                             raise PathNotFound(veh._current_node, depots)
                         # Make the vehicle reposition till the nearest depot
@@ -584,12 +645,13 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
                     if not self.depots[veh._current_node].contains(veh):
                         self.depots[veh._current_node].add_vehicle(veh, None)
 
-    def matching(self, request: Request):
+    def matching(self, request: Request, dt: Dt):
         """Method that matches a user with an already identified vehicle of this
         service.
 
         Args:
             -request: the request to match
+            -dt: flow time step
         """
         user = request.user
         drop_node = request.drop_node
@@ -623,6 +685,13 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
 
         if veh.activity_type is ActivityType.STOP:
             veh.activity.is_done = True
+            immediate_match = len(veh.activities) == 2 and len(veh_path) == 0 \
+                and self._tcurrent - request.request_time <= dt
+            if immediate_match:
+                # This is an immediate match , take into account effective remaining
+                # duration to move during the current flow step
+                veh.dt_move = self._tcurrent - request.request_time
+
             if veh._current_node in self.depots:
                 # Remove the vehicle from the depot
                 self.depots[veh._current_node].remove_vehicle(veh)
@@ -630,7 +699,7 @@ class OnDemandDepotMobilityService(OnDemandMobilityService, AbstractOnDemandDepo
     def __dump__(self):
         return {"TYPE": ".".join([OnDemandMobilityService.__module__, OnDemandMobilityService.__name__]),
                 "DT_MATCHING": self.dt_matching,
-                "DT_PERIODIC_MAINTENANCE": self.dt_periodic_maintenance,
+                "DT_PERIODIC_MAINTENANCE": self._dt_periodic_maintenance,
                 "ID": self.id,
                 "DEFAULT_WAITING_TIME": self.default_waiting_time,
                 "MATCHING_STRATEGY": self.matching_strategy,

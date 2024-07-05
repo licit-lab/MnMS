@@ -13,6 +13,13 @@ from numpy.linalg import norm as _norm
 
 log = create_logger(__name__)
 
+def find_sublist_in_list(sl,l):
+    results=[]
+    sll=len(sl)
+    for ind in (i for i,e in enumerate(l) if e==sl[0]):
+        if l[ind:ind+sll]==sl:
+            results.append((ind,ind+sll-1))
+    return results
 
 class UserState(Enum):
     ARRIVED = 0
@@ -80,6 +87,7 @@ class User(TimeDependentSubject):
         self._waited_vehicle = None
         self._requested_service = None
         self._parked_personal_vehicles = dict()
+        self._personal_vehicles = dict()
         self._distance = 0
         self._interrupted_path = None
         self._state = UserState.STOP
@@ -137,7 +145,7 @@ class User(TimeDependentSubject):
 
     @property
     def achieved_path_ms(self):
-        return self._achieved_path
+        return self._achieved_path_ms
 
     @achieved_path_ms.setter
     def achieved_path_ms(self, ap_ms: List[str]):
@@ -170,6 +178,10 @@ class User(TimeDependentSubject):
     @property
     def parked_personal_vehicles(self):
         return self._parked_personal_vehicles
+
+    @property
+    def personal_vehicles(self):
+        return self._personal_vehicles
 
     @property
     def distance(self):
@@ -326,6 +338,35 @@ class User(TimeDependentSubject):
             veh_ms_obj.remove_user_activities(self)
         else:
             veh_ms_obj.remove_user_activities(self, mlgraph, cost)
+
+    def modify_part_of_path(self, old_part, new_part, gnodes, mlgraph, cost):
+        """Method that modifies a part of user's path.
+        NB: used after vehicle reroute due to banning, the mobility services do
+            not change
+
+        Args:
+            -old_part: the old pat of user's path to override
+            -new_part: the new part of user's path replacing the old one
+            -gnodes: the multi layer graph nodes
+            -mlgraph: the multi layer graph
+        """
+        # Find old part in user's path
+        st_end_indices = find_sublist_in_list(old_part, self.path.nodes)
+        if len(st_end_indices) != 1:
+            log.error(f'Cannot find or found several times old part {old_part} of user {self.id} path {self.path.nodes}...')
+            sys.exit(-1)
+        # Override this old part
+        start_idx, end_idx = st_end_indices[0]
+        new_path_nodes = self.path.nodes[:start_idx] + new_part + self.path.nodes[end_idx+1:]
+        new_path = Path(None, new_path_nodes)
+        new_path.construct_layers_from_links(gnodes)
+        new_path.set_mobility_services(self.path.mobility_services) # Hyp = mobility services do not change
+        new_path.update_path_cost(mlgraph, cost)
+        service_costs = sum_dict(*(mlgraph.layers[layer].mobility_services[service].service_level_costs(new_path.nodes[node_inds]) \
+            for (layer, node_inds), service in zip(new_path.layers, new_path.mobility_services) if service != 'WALK'))
+        new_path.service_costs = service_costs
+        # Set user's new path
+        self.path = new_path
 
     def modify_path_leg(self, ms_id: str, new_nodes: list[str]):
         """Method that modifies the nodes of one leg of user's path.
@@ -668,7 +709,9 @@ class User(TimeDependentSubject):
         Args:
             -reached_node: node user has just reached
         """
-        if len(self.achieved_path) == 0 or reached_node != self.achieved_path[-1]:
+        if len(self.achieved_path) == 0:
+            self.achieved_path.append(self.current_node)
+        if reached_node != self.achieved_path[-1]:
             self.achieved_path.append(reached_node)
 
     def update_achieved_path_ms(self, ms_id):
@@ -741,6 +784,17 @@ class User(TimeDependentSubject):
                 return failed_mservice
         log.error(f'Could not find back the mobility service for which user {self.id} undergone a match failure')
         sys.exit(-1)
+
+    def add_personal_vehicle(self, mid, veh):
+        """Method to add a personal vehicle to this user.
+
+        Args:
+            -mid: mobility service id the vehicle belongs to
+            -veh: the personal vehicle of this user
+        """
+        assert mid not in self.personal_vehicles, f'Try to add a personal vehicle '\
+            f'for user {self.id} and service {mid} but one already exists...'
+        self._personal_vehicles[mid] = veh
 
     def park_personal_vehicle(self, ms, node):
         """Method that registers the mobility service and the parking location of user's

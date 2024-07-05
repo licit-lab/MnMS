@@ -1,3 +1,8 @@
+'''
+Validation of a json MnMS file
+
+WARNING: the notion of spring, dead-end and isolated node is incorrect if  the network is made up of several sub-graphs such as the metro (disjoint network)
+'''
 import os
 import argparse
 import json
@@ -34,8 +39,14 @@ def analyze_network(roads):
 
     sections_length = []
 
+    for id , node in nodes.items():
+        node['upstream']= []
+        node['downstream'] = []
+
     for id, section in sections.items():
         sections_length.append(section["length"])
+        nodes[section['upstream']]['downstream'].append(id)
+        nodes[section['downstream']]['upstream'].append(id)
 
     print(f"Number of nodes : {len(nodes)}")
     print(f"Number of stops : {len(stops)}")
@@ -50,6 +61,15 @@ def analyze_network(roads):
 
     print(f"Connectivity index : {len(sections) / len(nodes)}")
 
+    # Useless nodes
+    n =0
+    useless_nodes=[]
+    for id, node in nodes.items():
+        if len(node['upstream'])==1 and len(node['downstream'])==1:
+            n=n+1
+            useless_nodes.append(id)
+    print(f"Number of useless nodes : {n}")
+    print(useless_nodes)
 
 def vizualize_nodes(roads):
     nodes = roads.get("NODES")
@@ -129,6 +149,8 @@ def identify_deadends(df_adj):
     df_adj_de = df_adj.copy()
     s_deadEnds = (df_adj_de == 0).all(axis=1)
     ls_deadEnds = s_deadEnds[s_deadEnds].index
+
+    # Search for upstream nodes that may be also considered as dead-end nodes (unless there are disjoint networks)
     while True:
         df_adj_de.loc[:, ls_deadEnds] = 0
         s_deadEnds = (df_adj_de == 0).all(axis=1)
@@ -146,6 +168,8 @@ def identify_springs(df_adj):
     df_adj_sp = df_adj.copy()
     s_springs = (df_adj_sp == 0).all(axis=0)
     ls_springs = s_springs[s_springs].index
+
+    # Search for downstream nodes that may be also considered as springs nodes (unless there are disjoint networks)
     while True:
         df_adj_sp.loc[s_springs, :] = 0
         s_springs = (df_adj_sp == 0).all(axis=0)
@@ -157,7 +181,6 @@ def identify_springs(df_adj):
     ls_springs = new_springs
 
     return ls_springs
-
 
 def _path_file_type(path):
     if os.path.isfile(path):
@@ -203,6 +226,6 @@ if __name__ == "__main__":
         print(list(isolates))
 
         if args.visualize:
-            #vizualize_nodes(roads)
+            vizualize_nodes(roads)
             vizualize_stops(roads)
 

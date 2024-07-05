@@ -30,6 +30,7 @@ class Supervisor(object):
                  demand: AbstractDemandManager,
                  flow_motor: AbstractMFDFlowMotor,
                  decision_model: AbstractDecisionModel,
+                 user_flow: UserFlow = None,
                  outfile: Optional[str] = None,
                  logfile: Optional[str] = None,
                  loglevel: LOGLEVEL = LOGLEVEL.WARNING):
@@ -41,6 +42,7 @@ class Supervisor(object):
             -demand: The demand manager
             -flow_motor: The flow motor
             -decision_model: The decision model
+            -user_flow: The user flow motor
             -outfile: If not None write in the outfile at each time step the cost
                       of each link in the multi layer graph
             -logfile: file where simulation log should be printed
@@ -52,8 +54,11 @@ class Supervisor(object):
         self._flow_motor: AbstractMFDFlowMotor = flow_motor
 
         self._decision_model:AbstractDecisionModel = decision_model
-        self._user_flow: UserFlow = UserFlow()
-
+        if user_flow is None:
+            self._user_flow: UserFlow = UserFlow()
+        else:
+            self._user_flow = user_flow
+            
         self.add_graph(graph)
         self._flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)
@@ -131,18 +136,22 @@ class Supervisor(object):
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
 
+        self._mlgraph.initialize_costs(self._user_flow._walk_speed)
+
         self._flow_motor.set_time(tstart)
-        self._flow_motor.initialize(self._user_flow._walk_speed)
+        self._flow_motor.initialize()
 
         self._user_flow.set_time(tstart)
 
-        self._mlgraph.dynamic_space_sharing.cost = self._decision_model._cost
+        self._mlgraph.dynamic_space_sharing.set_cost(self._decision_model._cost)
 
     def finalize(self):
         """Method that finalizes the simulation by closing open files, and cleaning
         class attributes.
         """
         self._flow_motor.finalize()
+
+        self._user_flow.finalize()
 
         if self._decision_model._write:
             self._decision_model._outfile.close()
@@ -245,30 +254,12 @@ class Supervisor(object):
         log.info(f' Flow motor step done in [{end - start:.5} s]')
 
     def step_dynamic_space_sharing(self):
-        veh_to_reroute = self._mlgraph.dynamic_space_sharing.update(self.tcurrent,
-                                                                    list(VehicleManager._vehicles.values()))
-        for veh, activity in veh_to_reroute:
-            origin = activity.path[0][0][0]
-            dest = activity.path[-1][0][1]
-            mservice_id = veh.mobility_service
-
-            layer = self._mlgraph.mapping_layer_services[mservice_id]
-            new_path, _ = self._decision_model.compute_path(origin,
-                                                            dest,
-                                                            {layer.id},
-                                                            {layer.id: mservice_id})
-
-            if new_path:
-                mservice = layer.mobility_services[mservice_id]
-                new_veh_path = mservice.construct_veh_path(new_path)
-
-                if activity is veh.activity:
-                    for i, (old_link, new_link) in enumerate(zip(activity.path, new_veh_path)):
-                        if old_link != new_link:
-                            new_veh_path = new_veh_path[i:]
-                            break
-
-                activity.modify_path(new_veh_path)
+        """Calls the dynamic space sharing update and reroutes vehicles impacted by
+        the modification of available links.
+        """
+        # Call the dynamic space sharing update to unban and ban links when relevant, and reroute
+        # vehicles consequently
+        self._mlgraph.dynamic_space_sharing.update(self.tcurrent, list(VehicleManager._vehicles.values()))
 
     def get_new_users(self, principal_dt):
         """Gathers/Creates the users who depart during the coming affectation step.
@@ -379,7 +370,7 @@ class Supervisor(object):
                 self._decision_model.add_users_for_planning(users_reach_dt_answer, [Event.MATCH_FAILURE]*len(users_reach_dt_answer))
 
                 # Call dynamic space sharing step
-                self.step_dynamic_space_sharing() # NB: really don't know if this still works
+                self.step_dynamic_space_sharing()
 
                 # Call matching for all mobility services
                 self.call_matching_mobility_services(new_users, flow_dt)
@@ -387,7 +378,7 @@ class Supervisor(object):
                 # Call flow motor step
                 self.call_flow_motor_step(flow_dt)
                 if self._flow_motor._write:
-                    self._flow_motor.write_result(affectation_step, flow_step)
+                    self._flow_motor.write_result(affectation_step, flow_step, flow_dt)
 
                 # Update current time and current flow step number
                 self.tcurrent = self.tcurrent.add_time(flow_dt)
@@ -411,6 +402,8 @@ class Supervisor(object):
             affectation_step += 1
 
         ### Finalize simulation
+        if self._user_flow._write:
+            self._user_flow.write_result()
         self.finalize()
         progress.update()
         progress.show()

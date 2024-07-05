@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import sys
+import csv
 
 
 from mnms.graph.layers import MultiLayerGraph
@@ -16,7 +17,7 @@ log = create_logger(__name__)
 
 
 class UserFlow(object):
-    def __init__(self, walk_speed=1.42):
+    def __init__(self, walk_speed: float=1.42, outfile: str=None):
         """
         Manage the motion and state update of users.
 
@@ -33,13 +34,23 @@ class UserFlow(object):
 
         self._gnodes = None
 
+        if outfile is None:
+            self._write = False
+        else:
+            self._write = True
+            self._outfile = open(outfile, "w")
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+            self._csvhandler.writerow(['ID', 'TRAVELED_NODES', 'TRAVELED_LINKS', 'TRAVELED_SERVICES'])
+
     def set_graph(self, mlgraph:MultiLayerGraph):
-        """Method to associate a multi layer graph to a UserFlow object.
+        """Method to associate a multi layer graph to a UserFlow object and sets
+        the walking speed in the TransitLayer of this graph.
 
         Args:
             -mlgraph: multi layer graph on which users travel
         """
         self._graph = mlgraph
+        self._graph.transitlayer.walk_speed = self._walk_speed
 
     def set_time(self, time:Time):
         """Method to set current time for the UserFlow module.
@@ -85,7 +96,7 @@ class UserFlow(object):
         finish_walk_and_request = list()
         finish_walk = list()
         finish_trip = list()
-        graph = self._graph.graph
+        gnodes = self._graph.graph.nodes
         for uid in self._walking.keys():
             user = self.users[uid]
             if user.state == UserState.WALKING:
@@ -100,6 +111,7 @@ class UserFlow(object):
                         user.remaining_link_length = 0
                         arrival_time = arrival_time.add_time(Dt(seconds=remaining_length / self._walk_speed))
                         next_node = upath[user.get_current_node_index()+1]
+                        user.update_achieved_path(next_node)
                         user.current_node = next_node
                         self.set_user_position(user)
                         user.notify(arrival_time.time)
@@ -118,7 +130,7 @@ class UserFlow(object):
                             else:
                                 cnode_ind = user.get_current_node_index()
                                 next_next_node = upath[cnode_ind + 1]
-                                next_link = graph.nodes[user.current_node].adj[next_next_node]
+                                next_link = gnodes[user.current_node].adj[next_next_node]
                                 if next_link.label == 'TRANSIT':
                                     # User keeps walking
                                     log.info(f"User {uid} enters connection on {next_link.id}")
@@ -128,7 +140,7 @@ class UserFlow(object):
                                 else:
                                     # User stops walking
                                     user.set_state_stop()
-                                    finish_walk_and_request.append(user)
+                                    finish_walk_and_request.append((user, arrival_time))
                                     dist_travelled = 0
                     else:
                         # User did not arrived at the end of current link
@@ -144,22 +156,25 @@ class UserFlow(object):
         for user in finish_walk:
             del self._walking[user.id]
 
-        for user in finish_walk_and_request:
+        for user, request_time in finish_walk_and_request:
             del self._walking[user.id]
             log.info(f'User {user.id} is about to request a vehicle because he has finished walking')
             user.set_state_waiting_answer()
-            requested_mservice = self._request_user_vehicles(user)
+            requested_mservice = self._request_user_vehicles(user, request_time)
             self._waiting_answer.setdefault(user.id, (user.response_dt.copy(),requested_mservice))
 
         for user in finish_trip:
+            if self._write:
+                self.write_result(user=user)
             del self.users[user.id]
             del self._walking[user.id]
 
-    def _request_user_vehicles(self, user):
+    def _request_user_vehicles(self, user, request_time):
         """Method that formulates user's request to the proper mobility service.
 
         Args:
             -user: user who is about to request a service
+            -request_time: time at which user requested the service
 
         Returns:
             -mservice: the mobility service to which the request was sent (None if
@@ -179,7 +194,7 @@ class UserFlow(object):
                     mservice_id = user.path.mobility_services[ilayer]
                     mservice = self._graph.layers[layer].mobility_services[mservice_id]
                     log.info(f"User {user.id} requests mobility service {mservice._id}")
-                    mservice.add_request(user, upath[slice_nodes][-1], self._tcurrent)
+                    mservice.add_request(user, upath[slice_nodes][-1], request_time)
                     user.requested_service = mservice
                     return mservice
             else:
@@ -242,12 +257,14 @@ class UserFlow(object):
                     self._walking.pop(u.id, None)
                     u.set_state_waiting_answer()
                     log.info(f'User {u.id} is about to request a vehicle because he is stopped')
-                    requested_mservice = self._request_user_vehicles(u)
+                    requested_mservice = self._request_user_vehicles(u, self._tcurrent)
                     self._waiting_answer.setdefault(u.id, (u.response_dt.copy(),requested_mservice))
 
                 u.notify(self._tcurrent)
 
         for uid in to_del:
+            if self._write:
+                self.write_result(user=self.users[uid])
             self.users.pop(uid)
 
     def check_user_waiting_answers(self, dt: Dt):
@@ -321,3 +338,39 @@ class UserFlow(object):
             decision_model.add_users_for_planning(interrupted_users, [Event.INTERRUPTION]*len(interrupted_users))
             # NB: the planning will be called before the next user flow step so no need to interrupt user path now
         return users_canceling
+
+    def write_result(self, user: User=None):
+        """Method writing the results regarding users achieved path.
+
+        Args:
+            -user: user for which the achieved path should be written, if None,
+             results are written for all users currently in the user flow.
+        """
+        if user is None:
+            for uid,u in self.users.items():
+                self._csvhandler.writerow([uid, " ".join(u.achieved_path),
+                    " ".join(self.build_achieved_path_links(u.achieved_path)),
+                    " ".join(u.achieved_path_ms)])
+        else:
+            self._csvhandler.writerow([user.id, " ".join(user.achieved_path),
+                " ".join(self.build_achieved_path_links(user.achieved_path)),
+                " ".join(user.achieved_path_ms)])
+
+    def build_achieved_path_links(self, path_nodes):
+        """Method to convert a list of nodes into a list of links.
+
+        Args:
+            -path_nodes: the list of nodes
+        """
+        links = []
+        for i in range(len(path_nodes)-1):
+            try:
+                link = self._gnodes[path_nodes[i]].adj[path_nodes[i+1]]
+                links.append(link.id)
+            except:
+                log.error(f'Cannot find link between {path_nodes[i]} and {path_nodes[i+1]}...')
+        return links
+
+    def finalize(self):
+        if self._write:
+            self._outfile.close()

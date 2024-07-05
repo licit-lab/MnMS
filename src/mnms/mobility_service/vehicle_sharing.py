@@ -263,7 +263,7 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
         return service_dt
 
-    def matching(self, request: Request, new_users: List[User], user_flow: UserFlow, decision_model: AbstractDecisionModel):
+    def matching(self, request: Request, new_users: List[User], user_flow: UserFlow, decision_model: AbstractDecisionModel, dt: Dt):
         """Method that proceeds to the matching between a requesting user and an identified vehicle.
 
         Args:
@@ -272,6 +272,7 @@ class VehicleSharingMobilityService(AbstractMobilityService):
              yet considered in the user flow
             -user_flow: the simulation user flow module
             -decision_model: the simulation decision model
+            -dt: the flow time step
 
         Returns:
             -users_canceling: the list of users who should cancel their request for
@@ -294,8 +295,14 @@ class VehicleSharingMobilityService(AbstractMobilityService):
 
         veh=self.fleet.vehicles[veh_id]
         veh.add_activities(activities)
-        veh.next_activity(self._tcurrent)
+        immediate_match = self._tcurrent - request.request_time <= dt
+        act_start_time = request.request_time if immediate_match else self._tcurrent
+        veh.next_activity(act_start_time)
         user.set_state_inside_vehicle()
+        # Take into account effective remaining duration to move during the current flow step
+        # if match has been immediate
+        if immediate_match:
+            veh.dt_move = self._tcurrent - request.request_time
 
         station = self.stations[self.map_node_station[user.current_node]]
         # Delete the vehicle from the waiting vehicle list

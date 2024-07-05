@@ -24,6 +24,8 @@ class AbstractReservoir(ABC):
 
         self.ghost_accumulation: Callable[[Time], Dict[str, float]] = lambda x: {}
 
+        self.trip_lengths = {}
+
     @abstractmethod
     def update_accumulations(self, dict_accumulations: Dict[str, int]):
         """
@@ -52,6 +54,22 @@ class AbstractReservoir(ABC):
     def set_ghost_accumulation(self, f_acc: Callable[[Time], Dict[str, float]]):
         self.ghost_accumulation = f_acc
 
+    def add_trip_length(self, l, mode):
+        """Method that registers a new trip length in this reservoir.
+
+        Args:
+            -l: the trip length
+            -mode: the vehicle type that achieved this trip
+        """
+        if mode in self.trip_lengths:
+            self.trip_lengths[mode].append(l)
+        else:
+            self.trip_lengths[mode] = [l]
+
+    def flush_trip_lengths(self):
+        """Method that clean all trip lengths registered in this reservoir.
+        """
+        self.trip_lengths = {}
 
 class AbstractMFDFlowMotor(ABC):
     def __init__(self, outfile:str=None):
@@ -62,10 +80,7 @@ class AbstractMFDFlowMotor(ABC):
             outfile: If not `None` store the `User` position at each `step`
         """
         self._graph: MultiLayerGraph = None
-        self._mobility_nodes = None
-        self._flow_nodes = None
 
-        self._demand = dict()
         self._tcurrent: Time = Time()
 
         if outfile is None:
