@@ -179,6 +179,9 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
             dist_travelled = veh.remaining_link_length
             elapsed_time = dist_travelled / speed
             veh.update_distance(dist_travelled)
+            veh.update_pickup_distance(dist_travelled)
+            veh.update_service_distance(dist_travelled)
+            veh.update_repositioning_distance(dist_travelled)
             veh._remaining_link_length = 0
             veh.update_achieved_path()
             self.set_vehicle_position(veh)
@@ -198,6 +201,9 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
         else:
             veh._remaining_link_length -= dist_travelled
             veh.update_distance(dist_travelled)
+            veh.update_pickup_distance(dist_travelled)
+            veh.update_service_distance(dist_travelled)
+            veh.update_repositioning_distance(dist_travelled)
             self.set_vehicle_position(veh)
             for passenger_id, passenger in veh.passengers.items():
                 passenger.set_position(veh._current_link, veh._current_node, veh.remaining_link_length, veh.position, tcurrent)

@@ -279,6 +279,12 @@ class Vehicle(TimeDependentSubject):
         self.activities: Deque[VehicleActivity] = deque([])
         self.activity = None                        # current activity
 
+        self._pickup_distance = 0
+        self._service_distance = 0
+        self._repositioning_distance = 0
+        self._trip_counter = 0
+        self._driver_profit = 0
+
         if activities is not None:
             self.add_activities(activities)
             self.next_activity(None)
@@ -355,6 +361,26 @@ class Vehicle(TimeDependentSubject):
     @property
     def achieved_path(self):
         return self._achieved_path
+
+    @property
+    def pickup_distance(self):
+        return self._pickup_distance
+
+    @property
+    def service_distance(self):
+        return self._service_distance
+
+    @property
+    def repositioning_distance(self):
+        return self._repositioning_distance
+
+    @property
+    def trip_counter(self):
+        return self._trip_counter
+
+    @property
+    def driver_profit(self):
+        return self._driver_profit
 
     def update_achieved_path(self):
         if len(self.achieved_path) == 0 or self.current_node != self.achieved_path[-1]:
@@ -473,6 +499,36 @@ class Vehicle(TimeDependentSubject):
     @classmethod
     def reset_counter(cls):
         cls._counter = 0
+
+    def update_distance(self, dist: float):
+        self._distance += dist
+        for user in self.passengers.values():
+            user.update_distance(dist)
+
+    def trip_counter_update(self):
+        self._trip_counter = self._trip_counter + 1
+        return self._trip_counter
+
+    def driver_profit_update(self, trip_profit: float):
+        self._driver_profit = self._driver_profit + trip_profit
+
+    def update_pickup_distance(self, dist: float):
+        if self.activity_type is ActivityType.PICKUP:
+            self._pickup_distance += dist
+        else:
+            pass
+
+    def update_service_distance(self, dist: float):
+        if self.activity_type is ActivityType.SERVING:
+            self._service_distance += dist
+        else:
+            pass
+
+    def update_repositioning_distance(self, dist: float):
+        if self.activity_type is ActivityType.REPOSITIONING:
+            self._repositioning_distance += dist
+        else:
+            pass
 
 
 class Car(Vehicle):

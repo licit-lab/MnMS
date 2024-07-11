@@ -1,0 +1,30 @@
+{
+  "PV": {
+    "None": {
+      "DEPARTURE": ["PV"]
+    }
+  },
+  "UBER": {
+    "None": {
+      "DEPARTURE": ["UBER"]
+    },
+    "UBER": {
+      "UBER": ["LYFT"]
+    },
+    "LYFT": {
+      "LYFT": []
+    }
+  },
+  "LYFT": {
+    "None": {
+      "DEPARTURE": ["LYFT"]
+    },
+    "LYFT": {
+      "LYFT": ["UBER"]
+    },
+    "UBER": {
+      "UBER": []
+    }
+  }
+
+}

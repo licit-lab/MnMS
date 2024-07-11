@@ -262,6 +262,18 @@ class UserFlow(object):
 
                 u.notify(self._tcurrent)
 
+            if u.state is UserState.WAITING_ANSWER:
+                self._waiting_answer.setdefault(u.id, u.response_dt.copy())
+
+            if u.state is u.state.WAITING_VEHICLE and u.matched_time is None:
+                u.matched(self._tcurrent)
+
+            if u.state is u.state.INSIDE_VEHICLE and u.matched_time is None:    # if user is in the same node as the vehicle, matching is performed at the same time as the pickup
+                u.matched(self._tcurrent)
+
+            if u.state is u.state.INSIDE_VEHICLE and u.picked_up_time is None:
+                u.picked_up(self._tcurrent)
+
         for uid in to_del:
             if self._write:
                 self.write_result(user=self.users[uid])

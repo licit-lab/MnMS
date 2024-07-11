@@ -74,6 +74,9 @@ class User(TimeDependentSubject):
         self.mobility_services_graph = mobility_services_graph
         self.response_dt = User.default_response_dt.copy() if response_dt is None else response_dt
         self.pickup_dt = defaultdict(lambda: User.default_pickup_dt.copy()) if pickup_dt is None else defaultdict(lambda: pickup_dt)
+        self.matched_time = None
+        self.picked_up_time = None
+        self.refused = 1
 
         self.parameters: Dict = dict()
 
@@ -295,6 +298,12 @@ class User(TimeDependentSubject):
             else:
                 ind = ms_inds[c]
         return ind
+
+    def matched(self, matched_time: Time):
+        self.matched_time = matched_time
+
+    def picked_up(self, picked_up_time: Time):
+        self.picked_up_time = picked_up_time
 
     def finish_trip(self, arrival_time:Time):
         """Method that updates user's attributes when she arrives at her final destination.
@@ -739,6 +748,7 @@ class User(TimeDependentSubject):
 
     def set_state_inside_vehicle(self):
         self.state = UserState.INSIDE_VEHICLE
+        self.refused = 0
 
     def set_state_waiting_vehicle(self, veh):
         """Method that updates the user state into WAITING_VEHICLE and identifies
@@ -749,6 +759,7 @@ class User(TimeDependentSubject):
         """
         self.state = UserState.WAITING_VEHICLE
         self.waited_vehicle = veh
+        self.refused = 0
 
     def set_state_waiting_answer(self):
         self.state = UserState.WAITING_ANSWER

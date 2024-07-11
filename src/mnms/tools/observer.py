@@ -93,7 +93,7 @@ class CSVUserObserver(TimeDependentObserver):
             filename: The name of the file
             prec: The precision for floating point number
         """
-        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "STATE", "VEHICLE"]
+        self._header = ["TIME", "ID", "LINK", "POSITION", "DISTANCE", "STATE", "VEHICLE",  "NOT_MATCHED", "MATCHING_TIME", "PICKUP_TIME", "ARRIVAL_TIME"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -110,7 +110,11 @@ class CSVUserObserver(TimeDependentObserver):
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
                f"{subject.distance:.{self._prec}f}",
                subject.state.name,
-               str(subject.vehicle.id) if subject.vehicle is not None else None]
+               str(subject.vehicle.id) if subject.vehicle is not None else None,
+               subject.refused,
+               subject.matched_time,
+               subject.picked_up_time,
+               subject.arrival_time]
         # log.info(f"OBS {time}: {row}")
 
         self._csvhandler.writerow(row)
@@ -125,7 +129,7 @@ class CSVVehicleObserver(TimeDependentObserver):
             filename: The name of the file
             prec: The precision for floating point number
         """
-        self._header = ["TIME", "ID", "TYPE", "LINK", "POSITION", "SPEED", "STATE", "DISTANCE", "PASSENGERS", "TRAVELED_NODES"]
+        self._header = ["TIME", "ID", "TYPE", "LINK", "POSITION", "SPEED", "STATE", "DISTANCE", "PASSENGERS", "TRAVELED_NODES", "PICKUP_DIST", "SERVICE_DIST", "PROFIT"]
         self._filename = filename
         self._file = open(self._filename, "w")
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
@@ -146,7 +150,10 @@ class CSVVehicleObserver(TimeDependentObserver):
                subject.activity_type.name if subject.activity_type is not None else None,
                f"{subject.distance:.{self._prec}f}",
                ' '.join(p for p in subject.passengers),
-               ' '.join(subject._achieved_path_since_last_notify)]
+               ' '.join(subject._achieved_path_since_last_notify),
+               f"{subject.pickup_distance:.{self._prec}f}",
+               f"{subject.service_distance:.{self._prec}f}",
+               f"{subject.driver_profit:.{self._prec}f}"]
         subject.flush_achieved_path_since_last_notify()
         # log.info(f"OBS {time}: {row}")
         self._csvhandler.writerow(row)
