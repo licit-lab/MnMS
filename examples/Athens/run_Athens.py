@@ -16,9 +16,6 @@ from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
-from mnms.mobility_service.public_transport import PublicTransportMobilityService
-from mnms.mobility_service.personal_vehicle import PersonalMobilityService
-from mnms.vehicles.veh_type import Tram, Metro, Car
 from mnms.graph.layers import MultiLayerGraph
 
 import numpy as np
@@ -43,7 +40,8 @@ set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation',
 #cwd = pathlib.Path(__file__).parent.joinpath('in_files/demand7h9h_1000m.csv').resolve()
 
 # import of the network file
-loaded_mlgraph = load_graph(indir+"mlgraph_PT_CAR.json")
+#loaded_mlgraph = load_graph(indir+"mlgraph_PT_CAR.json")
+loaded_mlgraph = load_graph(indir+"mlgraph_tc_car.json")
 
 # creation and connection of the odlayer
 odlayer = load_odlayer(indir+"odlayer_clustered")
@@ -66,7 +64,8 @@ mlgraph = MultiLayerGraph([car_layer, tram_layer, metro_layer],
                           odlayer, connection_distance=500)
 
 # import of the demand file
-demand = CSVDemandManager(indir+"demand_7h9h_1000m.csv")
+#demand = CSVDemandManager(indir+"demand_7h9h_1000m.csv")
+demand = CSVDemandManager(indir+"demand_filtered.csv")
 decision_model = DummyDecisionModel(mlgraph, outfile=outdir+"path.csv")
 #decision_model = LogitDecisionModel(mlgraph, theta=1, n_shortest_path=5, outfile=outdir+"path.csv")
 
