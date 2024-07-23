@@ -1,19 +1,15 @@
 ### WORK IN PROGRESS ###
-# NOTE: All lines are considered as buses
 
 ###############
 ### Imports ###
 ###############
 
-import os
 import numpy as np
-import pandas as pd
 
 from gtfs_functions import Feed
-
+from unidecode import unidecode
 from coordinates import wgs_to_utm
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
-from mnms.generation.roads import generate_pt_line_road, generate_one_zone
 from mnms.vehicles.veh_type import Tram, Metro, Bus
 from mnms.generation.zones import generate_one_zone
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
@@ -25,10 +21,10 @@ from mnms.io.graph import load_graph, save_graph
 ### Parameters ###
 ##################
 
-gtfs_path = "gtfs-nl.zip" # gtfs zip folder
-mnms_json_filepath = ".json" # mlgraph with the road network only
+gtfs_path = "lyon_tcl.zip" # gtfs zip folder
+mnms_json_filepath = "Lyon_empty.json" # mlgraph with the road network only
 
-mlgraph_dump_file = ".json"
+mlgraph_dump_file = "lyon_mnms_gtfs.json"
 
 # Default speeds
 traditional_vehs_default_speed = 13.8 # m/s
@@ -49,46 +45,75 @@ operation_end_time = '23:00:00'
 
 _norm = np.linalg.norm
 
-def extract_gtfs_stops(feed):
+
+def cleanString(string):
+
+    clean_str = unidecode(str(''.join(i for i in string if i.isalnum())))
+
+    return clean_str
+
+
+def getLongestTripStops(route_merged_data):
+
+    # Select the longest trip in route
+    longest_trip_id = ""
+    longest_stops_count = 0
+
+    for index, md in route_merged_data.iterrows():
+        trip_id = md["trip_id"]
+        stops_count = route_merged_data["trip_id"].value_counts()[trip_id]
+        if stops_count > longest_stops_count:
+            longest_trip_id = trip_id
+            longest_stops_count = stops_count
+
+    # Selecting distinct stop_id and stop_name
+    merged_stops = route_merged_data[
+        ['stop_id', 'stop_name_y', 'trip_id', 'stop_sequence', 'stop_lat_y', 'stop_lon_y', 'geometry_y']]
+    distinct_stops = merged_stops.loc[merged_stops["trip_id"] == longest_trip_id]
+    distinct_stops = distinct_stops.sort_values(["stop_sequence"])
+    distinct_stops = distinct_stops.reset_index()
+
+    return distinct_stops
+
+
+def extract_gtfs_stops(feed, route_type):
 
     routes = feed.routes
     stops = feed.stops
     stop_times = feed.stop_times
     trips = feed.trips
-    shapes = feed.shapes
 
     # Init the list of lines
     list_lines = []
 
-    for route in routes:
-        line_stops = []
+    for index, route in routes.iterrows():
 
+        route_type_ = route["route_type"]
         route_id = route["route_id"]
+        route_short_name = cleanString(route["route_short_name"])
 
-        filtered_trips = trips.loc[trips['route_id'] == route_id]
+        if route_type_ == route_type:
+            ftrips = trips.loc[trips["route_id"] == route_id]
 
-        # Performing the equivalent of INNER JOINs
-        merged_data = filtered_trips.merge(stop_times, on='trip_id').merge(stops, on='stop_id')
+            # Performing the equivalent of INNER JOINs on trips with stop_times and stops
+            route_merged_data = ftrips.merge(stop_times, on='trip_id').merge(stops, on='stop_id')
 
-        # Selecting distinct stop_id and stop_name
-        distinct_stops = merged_data[['route_id', 'stop_id', 'stop_name_y', 'stop_lat_y', 'stop_lon_y', 'geometry_y']].drop_duplicates(
-            subset="stop_name_y", keep="first")
+            # Selecting distinct stop_id and stop_name
+            distinct_stops = getLongestTripStops(route_merged_data)
+            distinct_stops["route_short_name"] = route_short_name
 
-        # Seperate the two directions of this line
-        # NB: this part of the code supposes that the second stop in one direction and the penultimate stop in the other direction are the same !
-        for i in range(1, len(distinct_stops) - 1):
-            if distinct_stops.iloc[i - 1]['stop_name_y'] == distinct_stops.iloc[i + 1]['stop_name_y']:
-                df_line_dir1 = distinct_stops.iloc[:i + 1]
-                df_line_dir1 = df_line_dir1.assign(LINE_ID=df_line_dir1.iloc[0]['route_id'] + '_DIR1')
-                df_line_dir1.reset_index(drop=True, inplace=True)
-                df_line_dir2 = distinct_stops.iloc[i:]
-                df_line_dir2 = df_line_dir2.assign(LINE_ID=df_line_dir2.iloc[0]['route_id'] + '_DIR2')
-                df_line_dir2.reset_index(drop=True, inplace=True)
+            # Seperate the two directions of this line
+            # NB: this part of the code supposes that the second stop in one direction and the penultimate stop in the other direction are the same !
+            df_line_dir1 = distinct_stops.copy()
+            df_line_dir1["route_short_name"] = df_line_dir1["route_short_name"].astype(str) + "_DIR1"
 
+            df_line_dir2 = distinct_stops.sort_values(["stop_sequence"], ascending=False)
+            df_line_dir2["route_short_name"] = df_line_dir2["route_short_name"].astype(str) + "_DIR2"
+            df_line_dir2 = df_line_dir2.reset_index()
 
-    # Append two lines, one per direction
-    list_lines.append(df_line_dir1)
-    list_lines.append(df_line_dir2)
+            # Append two lines, one per direction
+            list_lines.append(df_line_dir1)
+            list_lines.append(df_line_dir2)
 
     return list_lines
 
@@ -108,11 +133,14 @@ def generate_public_transportation_lines(layer, list_lines, freq, operation_star
     None
     """
     for line in list_lines:
-        line_id = line.iloc[0]['LINE_ID']
-        line_name = prefix_line_name + line_id
-        stops = [line_name + f'_{ind}' for ind in line.index]
-        sections = [[line_name + f'_{ind}_{ind+1}', line_name + f'_{ind+1}_{ind+2}'] for ind in list(line.index)[:-2]] + [[line_name + f'_{line.index[-2]}_{line.index[-1]}']]
-        layer.create_line(line_name, stops, sections, TimeTable.create_table_freq(operation_start_time, operation_end_time, freq))
+        if not line.empty:
+            line_id = line.iloc[0]['route_short_name']
+            line_name = prefix_line_name + line_id
+            stops = [line_name + '_' + cleanString(stp) for stp in list(line["stop_name_y"])]
+            sections = [[line_name + f'_{ind}_{ind+1}', line_name + f'_{ind+1}_{ind+2}'] for ind in list(line.index)[:-2]] + [[line_name + f'_{line.index[-2]}_{line.index[-1]}']]
+            layer.create_line(line_name, stops, sections, TimeTable.create_table_freq(operation_start_time, operation_end_time, freq))
+        else:
+            pass
 
 
 #################
@@ -121,31 +149,38 @@ def generate_public_transportation_lines(layer, list_lines, freq, operation_star
 
 feed = Feed(gtfs_path)
 
-lines = extract_gtfs_stops(feed)
+# Tram = 0, Subway = 1, Bus = 3
+list_tram_lines = extract_gtfs_stops(feed, 0)
+list_metro_lines = extract_gtfs_stops(feed, 1)
+list_bus_lines = extract_gtfs_stops(feed, 3)
 
 ### Get the MLGraph without TCs
 mnms_graph = load_graph(mnms_json_filepath)
 roads = mnms_graph.roads
 
 ### Add the nodes, sections, and stops related to each PT line to the roadDescriptor
-pt_lines = lines
-pt_lines_types = ['BUS'] * len(lines)
+pt_lines = list_tram_lines + list_metro_lines + list_bus_lines
+pt_lines_types = ['TRAM'] * len(list_tram_lines) + ['METRO'] * len(list_metro_lines) + ['BUS'] * len(list_bus_lines)
 pt_nodes = {}
+
 for line, line_type in zip(pt_lines, pt_lines_types):
     for ind, stop in line.iterrows():
-        lat = float(stop["stop_lat_y"]) # TODO: Convert to MnMS coordinates
-        lon = float(stop["stop_lon_y"]) # TODO: Convert to MnMS coordinates
+        lat = float(stop["stop_lat_y"])
+        lon = float(stop["stop_lon_y"])
         x_utm, y_utm = wgs_to_utm(lat, lon)
-        node_id = line_type + '_' + stop['route_id'] + '_' + str(ind)
-        pt_nodes[node_id] = [x_utm,y_utm]
+
+        node_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(stop['stop_name_y'])
+        pt_nodes[node_id] = [x_utm, y_utm]
         roads.register_node(node_id, [x_utm, y_utm])
+
         if ind > 0:
-            onode_id = line_type + '_' + stop['route_id'] + '_' + str(ind-1)
+            onode_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(line.loc[ind-1, 'stop_name_y'])
             dnode_id = node_id
-            section_id = line_type + '_' + stop['route_id'] + '_' + str(ind-1) + '_' + str(ind)
+            section_id = line_type + '_' + stop['route_short_name'] + '_' + str(ind-1) + '_' + str(ind)
             section_length = _norm(np.array(pt_nodes[onode_id]) - np.array(pt_nodes[dnode_id]))
             roads.register_section(section_id, onode_id, dnode_id, section_length)
             roads.register_stop(onode_id, section_id, 0.)
+
         if ind == max(line.index):
             roads.register_stop(dnode_id, section_id, 1.)
 
@@ -153,8 +188,27 @@ for line, line_type in zip(pt_lines, pt_lines_types):
 roads.add_zone(generate_one_zone("RES", roads))
 
 ### Create the PT layers, mob services and lines
+
+# Tram
+tram_service = PublicTransportMobilityService('TRAM')
+tram_layer = PublicTransportLayer(roads, 'TRAMLayer', Tram, tram_default_speed,
+        services=[tram_service])
+generate_public_transportation_lines(tram_layer, list_tram_lines, tram_freq, operation_start_time, operation_end_time, 'TRAM_')
+
+# Metro
+metro_service = PublicTransportMobilityService('METRO')
+metro_layer = PublicTransportLayer(roads, 'METROLayer', Metro, metro_default_speed,
+        services=[metro_service])
+generate_public_transportation_lines(metro_layer, list_metro_lines, metro_freq,operation_start_time, operation_end_time, 'METRO_')
+
 # Bus
 bus_service = PublicTransportMobilityService('BUS')
 bus_layer = PublicTransportLayer(roads, 'BUSLayer', Bus, traditional_vehs_default_speed,
         services=[bus_service])
-generate_public_transportation_lines(bus_layer, lines, bus_freq, operation_start_time, operation_end_time, 'BUS_')
+generate_public_transportation_lines(bus_layer, list_bus_lines, bus_freq, operation_start_time, operation_end_time, 'BUS_')
+
+### Create the MLGraph with PT
+mlgraph = MultiLayerGraph([tram_layer, metro_layer, bus_layer], None, None)
+
+### Save the graph
+save_graph(mlgraph, mlgraph_dump_file)
