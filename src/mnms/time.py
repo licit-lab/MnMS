@@ -144,6 +144,30 @@ class Time(object):
         return time
 
     @classmethod
+    def from_seconds_24h(cls, seconds: float) -> "Time":
+        """
+        Build a Time within 24h (00:00 to 23:59) instance from seconds
+        Args:
+            seconds: The number of seconds
+
+        Returns:
+            Time instance
+
+        """
+        time = cls('')
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+
+        if h > 23:
+            h = h - 24
+
+        time._seconds = int(s)
+        time._minutes = int(m)
+        time._hours = int(h)
+
+        return time
+
+    @classmethod
     def from_dt(cls, dt: Dt) -> "Time":
         """
         Create Time instance from Dt instance

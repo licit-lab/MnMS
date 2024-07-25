@@ -9,11 +9,12 @@ import numpy as np
 from gtfs_functions import Feed
 from unidecode import unidecode
 from coordinates import wgs_to_utm
+
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
 from mnms.vehicles.veh_type import Tram, Metro, Bus
 from mnms.generation.zones import generate_one_zone
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
-from mnms.time import TimeTable, Dt, Time
+from mnms.time import TimeTable, Time
 from mnms.io.graph import load_graph, save_graph
 
 
@@ -31,13 +32,6 @@ traditional_vehs_default_speed = 13.8 # m/s
 metro_default_speed = 15 # m/s
 tram_default_speed = 18 # m/s
 
-# PT operation parameters
-bus_freq = Dt(minutes=8)
-metro_freq = Dt(minutes=4)
-tram_freq = Dt(minutes=10)
-operation_start_time = '05:00:00'
-operation_end_time = '23:00:00'
-
 
 #################
 ### Functions ###
@@ -51,6 +45,13 @@ def cleanString(string):
     clean_str = unidecode(str(''.join(i for i in string if i.isalnum())))
 
     return clean_str
+
+
+def secondsToMnMsTime(seconds):
+
+    mnms_time = Time.from_seconds_24h(seconds)
+
+    return mnms_time
 
 
 def getLongestTripStops(route_merged_data):
@@ -76,27 +77,22 @@ def getLongestTripStops(route_merged_data):
     return distinct_stops
 
 
-def extract_gtfs_stops(feed, route_type):
-
-    routes = feed.routes
-    stops = feed.stops
-    stop_times = feed.stop_times
-    trips = feed.trips
+def extract_gtfs_stops(routes_, stops_, stop_times_, trips_, route_type):
 
     # Init the list of lines
     list_lines = []
 
-    for index, route in routes.iterrows():
+    for index, route in routes_.iterrows():
 
         route_type_ = route["route_type"]
         route_id = route["route_id"]
         route_short_name = cleanString(route["route_short_name"])
 
         if route_type_ == route_type:
-            ftrips = trips.loc[trips["route_id"] == route_id]
+            ftrips = trips_.loc[trips_["route_id"] == route_id]
 
             # Performing the equivalent of INNER JOINs on trips with stop_times and stops
-            route_merged_data = ftrips.merge(stop_times, on='trip_id').merge(stops, on='stop_id')
+            route_merged_data = ftrips.merge(stop_times_, on='trip_id').merge(stops_, on='stop_id')
 
             # Selecting distinct stop_id and stop_name
             distinct_stops = getLongestTripStops(route_merged_data)
@@ -118,7 +114,7 @@ def extract_gtfs_stops(feed, route_type):
     return list_lines
 
 
-def generate_public_transportation_lines(layer, list_lines, freq, operation_start_time, operation_end_time, prefix_line_name):
+def generate_public_transportation_lines(stop_times_, layer, list_lines, prefix_line_name):
     """Function that generates public transportation lines on a layer with a certain frequency.
 
     Args:
@@ -132,13 +128,23 @@ def generate_public_transportation_lines(layer, list_lines, freq, operation_star
     Returns:
     None
     """
+
     for line in list_lines:
         if not line.empty:
             line_id = line.iloc[0]['route_short_name']
             line_name = prefix_line_name + line_id
+
             stops = [line_name + '_' + cleanString(stp) for stp in list(line["stop_name_y"])]
             sections = [[line_name + f'_{ind}_{ind+1}', line_name + f'_{ind+1}_{ind+2}'] for ind in list(line.index)[:-2]] + [[line_name + f'_{line.index[-2]}_{line.index[-1]}']]
-            layer.create_line(line_name, stops, sections, TimeTable.create_table_freq(operation_start_time, operation_end_time, freq))
+
+            first_stop_id = line.iloc[0]['stop_id']
+
+            departure_times = stop_times_[stop_times_["stop_id"] == first_stop_id]
+
+            time_list = [secondsToMnMsTime(departure) for departure in list(departure_times["departure_time"])]
+
+            timetable = TimeTable(time_list)
+            layer.create_line(line_name, stops, sections, timetable)
         else:
             pass
 
@@ -149,10 +155,15 @@ def generate_public_transportation_lines(layer, list_lines, freq, operation_star
 
 feed = Feed(gtfs_path)
 
+feed_routes = feed.routes
+feed_stops = feed.stops
+feed_stop_times = feed.stop_times
+feed_trips = feed.trips
+
 # Tram = 0, Subway = 1, Bus = 3
-list_tram_lines = extract_gtfs_stops(feed, 0)
-list_metro_lines = extract_gtfs_stops(feed, 1)
-list_bus_lines = extract_gtfs_stops(feed, 3)
+list_tram_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, feed_trips, 0)
+list_metro_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, feed_trips, 1)
+list_bus_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, feed_trips, 3)
 
 ### Get the MLGraph without TCs
 mnms_graph = load_graph(mnms_json_filepath)
@@ -193,19 +204,19 @@ roads.add_zone(generate_one_zone("RES", roads))
 tram_service = PublicTransportMobilityService('TRAM')
 tram_layer = PublicTransportLayer(roads, 'TRAMLayer', Tram, tram_default_speed,
         services=[tram_service])
-generate_public_transportation_lines(tram_layer, list_tram_lines, tram_freq, operation_start_time, operation_end_time, 'TRAM_')
+generate_public_transportation_lines(feed_stop_times, tram_layer, list_tram_lines, 'TRAM_')
 
 # Metro
 metro_service = PublicTransportMobilityService('METRO')
 metro_layer = PublicTransportLayer(roads, 'METROLayer', Metro, metro_default_speed,
         services=[metro_service])
-generate_public_transportation_lines(metro_layer, list_metro_lines, metro_freq,operation_start_time, operation_end_time, 'METRO_')
+generate_public_transportation_lines(feed_stop_times, metro_layer, list_metro_lines, 'METRO_')
 
 # Bus
 bus_service = PublicTransportMobilityService('BUS')
 bus_layer = PublicTransportLayer(roads, 'BUSLayer', Bus, traditional_vehs_default_speed,
         services=[bus_service])
-generate_public_transportation_lines(bus_layer, list_bus_lines, bus_freq, operation_start_time, operation_end_time, 'BUS_')
+generate_public_transportation_lines(feed_stop_times, bus_layer, list_bus_lines, 'BUS_')
 
 ### Create the MLGraph with PT
 mlgraph = MultiLayerGraph([tram_layer, metro_layer, bus_layer], None, None)
