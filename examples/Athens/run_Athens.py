@@ -1,33 +1,20 @@
-######################################################
-#   Python file created by Arthur Labbaye (intern)
-#
-#   Creation date: November 2023
-#
-#   Description: Program allowing you to launch the
-#   MnMs simulation for the city of Athens.
-######################################################
-from mnms.generation.layers import generate_matching_origin_destination_layer, generate_grid_origin_destination_layer
+# Run Athens simulation
+
 from mnms.io.graph import load_graph, load_odlayer
 from mnms.demand.manager import CSVDemandManager
 from mnms.log import set_mnms_logger_level, LOGLEVEL
 from mnms.travel_decision.dummy import DummyDecisionModel
-from mnms.travel_decision.logit import LogitDecisionModel
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
 from mnms.time import Time, Dt
-from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
+from mnms.tools.observer import CSVVehicleObserver
 from mnms.graph.layers import MultiLayerGraph
 
 import numpy as np
-import pathlib
 
 # parameters
 indir = 'inputs/'
 outdir = 'outputs/'
-
-
-
-
 
 set_mnms_logger_level(LOGLEVEL.INFO, ['mnms.simulation',
                                       'mnms.vehicles.veh_type',
@@ -64,10 +51,8 @@ mlgraph = MultiLayerGraph([car_layer, tram_layer, metro_layer],
                           odlayer, connection_distance=500)
 
 # import of the demand file
-#demand = CSVDemandManager(indir+"demand_7h9h_1000m.csv")
 demand = CSVDemandManager(indir+"demand_filtered.csv")
 decision_model = DummyDecisionModel(mlgraph, outfile=outdir+"path.csv")
-#decision_model = LogitDecisionModel(mlgraph, theta=1, n_shortest_path=5, outfile=outdir+"path.csv")
 
 # definition of the MFD function
 # MFD based on the network length, not on traffic measurements, see Arthur's report

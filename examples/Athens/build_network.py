@@ -1,13 +1,4 @@
-############################################################
-#   Python file created by Arthur Labbaye (intern)
-#
-#   Creation date : octobre 2023
-#
-#   Description: This program has the function of
-#   recovering road network data from
-#   shapefiles and use them to build the network
-#   json adapt with the use of MnMs.
-############################################################
+# Build MnMS network/graph based on road network and metro/tram data
 
 from mnms.graph.road import RoadDescriptor
 from mnms.graph.layers import MultiLayerGraph
@@ -38,10 +29,10 @@ data_nodes = gpd.read_file(fd+"nodes.shp")
 data_sections = gpd.read_file(fd+"sections.shp")
 
 # removal of dead end nodes to resolve 'path not found' issues
-#deadEnds = pd.read_csv("../deadEnds/all.csv", header=None, names=['val'])
-#data_nodes = data_nodes[~data_nodes['id'].isin(deadEnds['val'])]
-#data_sections = data_sections[~data_sections['fnode'].isin(deadEnds['val'])]
-#data_sections = data_sections[~data_sections['tnode'].isin(deadEnds['val'])]
+deadEnds = pd.read_csv(fd+"useless_nodes.csv", header=None, names=['val'])
+data_nodes = data_nodes[~data_nodes['id'].isin(deadEnds['val'])]
+data_sections = data_sections[~data_sections['fnode'].isin(deadEnds['val'])]
+data_sections = data_sections[~data_sections['tnode'].isin(deadEnds['val'])]
 
 # removal of sections that used these nodes (dead end)
 for index, row in data_sections.iterrows():

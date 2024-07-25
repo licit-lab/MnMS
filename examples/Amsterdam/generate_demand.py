@@ -12,7 +12,7 @@ params = json.load(f)
 
 fname_in = 'inputs/demand_city_hex_9.csv'
 fname_out = 'inputs/demand.csv'
-T_START = 16*3600
+T_START = 16*3600 # has to be consistent with the PEAK choice
 T_END = 18*3600
 PEAK = 'AS' # OS, AS, RD -> 7-9/16-18/off
 MODES = ['OV'] # PA, OV, FI -> car, PT, bike

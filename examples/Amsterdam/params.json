@@ -1,0 +1,34 @@
+{
+    "indir": "INPUTS/",
+    "outdir": "OUTPUTS/",
+    "figdir": "figures/",
+    "fn_network": "network_lite_pt.json",
+    "fn_odlayer": "od_layer.json",
+    "fn_transit": "",
+    "fn_demand": "demand_sample.csv",
+    "V_BUS": 5,
+    "V_TRAM": 8,
+    "V_METRO": 10,
+    "DIST_MAX": 500,
+    "DIST_CONNECTION_OD": 300,
+    "DIST_CONNECTION_PT": 300,
+    "DIST_CONNECTION_MIX": 300,
+    "polygon_demand": [
+        [
+            615000,
+            5813000.0
+        ],
+        [
+            638000,
+            5813000.0
+        ],
+        [
+            638000,
+            5793000.0
+        ],
+        [
+            615000,
+            5793000.0
+        ]
+    ]
+}

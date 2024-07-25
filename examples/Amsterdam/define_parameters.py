@@ -1,6 +1,6 @@
-import json
+# Define parameters for the Amsterdam simulation
 
-# Define parameters for the Amsterdam emoped simulation
+import json
 
 params = {
 # Filenames

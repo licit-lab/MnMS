@@ -1,16 +1,13 @@
-######################################################
-#   Python file created par Arthur Labbaye (intern)
-#
-#   Creation date : octobre 2023
-#
-#   Description: This program aims to filter
-#   requests stored in a CSV file to avoid
-#   keep only relevant trips.
-######################################################
+# Filter demand to keep OD with minimum distance and departure times within desired interval
 
 import pandas as pd
 import math
 import geopandas as gpd
+
+# Parameters
+t_min = 7*3600
+t_max = 9*3600
+distance_minimum = 1000
 
 fd = "inputs/"
 demand = pd.read_csv(fd+"demand.csv", sep=";")
@@ -21,7 +18,6 @@ nodes = gpd.read_file(fd+"network_data/nodes.shp")
 #================================filter short trips================================
 #it is useless to keep trips that are too short
 
-distance_minimum = 1000
 def calculate_distance(row):
     xo = float(row['ORIGIN'].split()[0])
     yo = float(row['ORIGIN'].split()[1])
@@ -33,6 +29,13 @@ print(len(demand))
 demand["distance"] = demand.apply(calculate_distance, axis=1)
 demand = demand[demand['distance'] > distance_minimum]
 demand = demand.drop('distance', axis=1)
+print(len(demand))
+
+# Departure times
+
+times = demand.DEPARTURE.apply(lambda x: sum([float(s)*60**(2-i) for (i,s) in enumerate(x.split(':'))]))
+mask = [t>=t_min and t<=t_max for t in times]
+demand = demand[mask]
 print(len(demand))
 
 """

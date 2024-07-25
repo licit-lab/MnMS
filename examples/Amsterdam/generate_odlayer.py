@@ -1,3 +1,5 @@
+# Generate an od layer matching the OD of the demand
+
 ### Imports
 import os
 import sys
