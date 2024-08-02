@@ -314,18 +314,32 @@ class TimeTable(object):
             table.append(ntime)
         return cls(table)
 
+    def normalize_table_freq(self, desired_freq):
+        normalize_table = []
+        if len(self.table) > 1:
+            for i in range(len(self.table)-1):
+                if self.table[i+1].to_seconds()-self.table[i].to_seconds() < desired_freq:
+                    pass
+                else:
+                    normalize_table.append(self.table[i])
+            return TimeTable(normalize_table)
+        else:
+            log.warning("TimeTable has no Time and cant compute a normalization of frequencies")
+            return TimeTable(normalize_table)
+
     def get_next_departure(self, date):
         for d in self.table:
             if date < d:
                 return d
 
     def get_freq(self):
+        freq = 0
         if len(self.table) > 1:
-            waiting_times_seconds = [self.table[i+1].to_seconds()-self.table[i].to_seconds() for i in range(len(self.table)-1)]
-            return np.mean(waiting_times_seconds)
+            waiting_times_seconds = [self.table[i+1].to_seconds() - self.table[i].to_seconds() for i in range(len(self.table)-1)]
+            freq = np.mean(waiting_times_seconds)
         else:
             log.warning("TimeTable has no Time and cant compute a frequency")
-            return None
+        return freq
 
     def __dump__(self):
         return [time.time for time in self.table]

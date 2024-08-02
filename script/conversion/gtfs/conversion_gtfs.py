@@ -22,10 +22,10 @@ from mnms.io.graph import load_graph, save_graph
 ### Parameters ###
 ##################
 
-gtfs_path = "lyon_tcl.zip" # gtfs zip folder
-mnms_json_filepath = "Lyon_empty.json" # mlgraph with the road network only
+gtfs_path = "athens-gtfs.zip" # gtfs zip folder
+mnms_json_filepath = "athens_empty.json" # mlgraph with the road network only
 
-mlgraph_dump_file = "lyon_mnms_gtfs.json"
+mlgraph_dump_file = "athens_mnms_gtfs.json"
 
 # Default speeds
 traditional_vehs_default_speed = 13.8 # m/s
@@ -140,11 +140,22 @@ def generate_public_transportation_lines(stop_times_, layer, list_lines, prefix_
             first_stop_id = line.iloc[0]['stop_id']
 
             departure_times = stop_times_[stop_times_["stop_id"] == first_stop_id]
+            departure_list = list(departure_times["departure_time"])
 
-            time_list = [secondsToMnMsTime(departure) for departure in list(departure_times["departure_time"])]
+            time_list = [secondsToMnMsTime(departure) for departure in departure_list]
+            sorted_time_list = [secondsToMnMsTime(departure) for departure in sorted(departure_list)]
 
             timetable = TimeTable(time_list)
-            layer.create_line(line_name, stops, sections, timetable)
+            sorted_timetable = TimeTable(sorted_time_list)
+
+            mean_freq_unsorted = timetable.get_freq()
+            mean_freq_sorted = sorted_timetable.get_freq()
+
+            final_freq = (mean_freq_unsorted + mean_freq_sorted) / 2
+
+            final_timetable = sorted_timetable.normalize_table_freq(final_freq)
+            layer.create_line(line_name, stops, sections, final_timetable)
+
         else:
             pass
 
