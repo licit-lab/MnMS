@@ -8,8 +8,7 @@ import numpy as np
 
 from gtfs_functions import Feed
 from unidecode import unidecode
-from coordinates import wgs_to_utm
-
+from coordinates import gps_to_lambert93
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
 from mnms.vehicles.veh_type import Tram, Metro, Bus
 from mnms.generation.zones import generate_one_zone
@@ -22,10 +21,10 @@ from mnms.io.graph import load_graph, save_graph
 ### Parameters ###
 ##################
 
-gtfs_path = "athens-gtfs.zip" # gtfs zip folder
-mnms_json_filepath = "athens_empty.json" # mlgraph with the road network only
+gtfs_path = "lyon_tcl.zip" # gtfs zip folder
+mnms_json_filepath = "lyon_roads.json" # mlgraph with the road network only
 
-mlgraph_dump_file = "athens_mnms_gtfs.json"
+mlgraph_dump_file = "lyon_mnms_gtfs.json"
 
 # Default speeds
 traditional_vehs_default_speed = 13.8 # m/s
@@ -189,11 +188,11 @@ for line, line_type in zip(pt_lines, pt_lines_types):
     for ind, stop in line.iterrows():
         lat = float(stop["stop_lat_y"])
         lon = float(stop["stop_lon_y"])
-        x_utm, y_utm = wgs_to_utm(lat, lon)
+        x_lam, y_lam = gps_to_lambert93(lat, lon)
 
         node_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(stop['stop_name_y'])
-        pt_nodes[node_id] = [x_utm, y_utm]
-        roads.register_node(node_id, [x_utm, y_utm])
+        pt_nodes[node_id] = [x_lam, y_lam]
+        roads.register_node(node_id, [x_lam, y_lam])
 
         if ind > 0:
             onode_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(line.loc[ind-1, 'stop_name_y'])
