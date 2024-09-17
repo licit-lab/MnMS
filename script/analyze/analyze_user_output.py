@@ -1,17 +1,40 @@
 import os
 import argparse
 import pandas as pd
-import csv
 
 
 def analyze_users(df_users):
-    print("analyze")
+    print(f"First user activity time: {df_users['TIME'].min()}")
+    print(f"Last user activity time: {df_users['TIME'].max()}")
+
+    users_without_link = 0
+    users_without_position = 0
+    users_deadend = 0
+
+    users_arrived = 0
+
+    for index, user in df_users.iterrows():
+        if user["LINK"] == '':
+            users_without_link = users_without_link + 1
+        if user["POSITION"] == '':
+            users_without_position = users_without_position + 1
+        if user["STATE"] == "DEADEND":
+            users_deadend = users_deadend + 1
+        if user["STATE"] == "ARRIVED":
+            users_arrived = users_arrived + 1
+
+    print(f"Number of users without link: {users_without_link}")
+    print(f"Number of users without position: {users_without_position}")
+    print(f"Number of users in deadend state: {users_deadend}")
+
+    print(f"Number of users arrived to destination: {users_arrived}")
+
 
 
 def extract_file(file):
-    df_users = pd.read_csv(file, sep=';')
+    df = pd.read_csv(file, sep=';', keep_default_na=False)
 
-    return df_users
+    return df
 
 
 def _path_file_type(path):
