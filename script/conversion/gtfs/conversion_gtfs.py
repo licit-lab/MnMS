@@ -8,7 +8,7 @@ import numpy as np
 
 from gtfs_functions import Feed
 from unidecode import unidecode
-from coordinates import gps_to_lambert93
+from coordinates import gps_to_lambert93, gps_to_utm
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
 from mnms.vehicles.veh_type import Tram, Metro, Bus
 from mnms.generation.zones import generate_one_zone
@@ -21,10 +21,10 @@ from mnms.io.graph import load_graph, save_graph
 ### Parameters ###
 ##################
 
-gtfs_path = "lyon_tcl.zip" # gtfs zip folder
-mnms_json_filepath = "lyon_roads.json" # mlgraph with the road network only
+gtfs_path = "athens_gtfs.zip" # gtfs zip folder
+mnms_json_filepath = "athens_mlgraph_car.json" # mlgraph with the road network only
 
-mlgraph_dump_file = "lyon_mnms_gtfs.json"
+mlgraph_dump_file = "athens_mnms_gtfs.json"
 
 # Default speeds
 traditional_vehs_default_speed = 13.8 # m/s
@@ -38,6 +38,8 @@ tram_default_speed = 18 # m/s
 
 _norm = np.linalg.norm
 
+# choose here your final coordinates system (ex: Lyon/Symuvia = Lambert 93, International/Other = UTM)
+_convert_coords = gps_to_utm
 
 def cleanString(string):
 
@@ -188,11 +190,12 @@ for line, line_type in zip(pt_lines, pt_lines_types):
     for ind, stop in line.iterrows():
         lat = float(stop["stop_lat_y"])
         lon = float(stop["stop_lon_y"])
-        x_lam, y_lam = gps_to_lambert93(lat, lon)
+
+        x_coord, y_coord = _convert_coords(lat, lon)
 
         node_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(stop['stop_name_y'])
-        pt_nodes[node_id] = [x_lam, y_lam]
-        roads.register_node(node_id, [x_lam, y_lam])
+        pt_nodes[node_id] = [x_coord, y_coord]
+        roads.register_node(node_id, [x_coord, y_coord])
 
         if ind > 0:
             onode_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(line.loc[ind-1, 'stop_name_y'])
