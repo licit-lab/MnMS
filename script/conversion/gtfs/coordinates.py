@@ -1,4 +1,4 @@
-from pyproj import Proj, Transformer, transform
+from pyproj import Transformer
 
 
 def gps_to_lambert93(lat, lon):
@@ -12,14 +12,17 @@ def gps_to_lambert93(lat, lon):
 
 
 def gps_to_utm(lat, lon):
-    # Determine the UTM zone based on the longitude
-    utm_zone = int((lon + 180) // 6) + 1
-    # Define the UTM projection for the correct zone, assuming the Northern Hemisphere
-    utm_proj = Proj(proj='utm', zone=utm_zone, ellps='WGS84', south=False)
-    # Define WGS84 (standard GPS) projection
-    wgs84 = Proj('epsg:4326')
+    # Determine UTM zone for the longitude
+    utm_zone = int((lon + 180) / 6) + 1
+    # Define hemisphere (Northern for lat > 0, Southern for lat < 0)
+    hemisphere = 'north' if lat >= 0 else 'south'
 
-    # Transform coordinates from WGS84 to UTM
-    x, y = transform(wgs84, utm_proj, lon, lat)
+    # Create a transformer for WGS84 to UTM based on the calculated zone and hemisphere
+    transformer = Transformer.from_crs("epsg:4326",
+                                       f"epsg:326{utm_zone}" if hemisphere == 'north' else f"epsg:327{utm_zone}",
+                                       always_xy=True)
+
+    # Perform the transformation
+    x, y = transformer.transform(lon, lat)
 
     return x, y
