@@ -114,7 +114,7 @@ class UserFlow(object):
                         user.update_achieved_path(next_node)
                         user.current_node = next_node
                         self.set_user_position(user)
-                        user.notify(arrival_time.time)
+                        user.notify(arrival_time)
                         if next_node == upath[-1]:
                             # User arrived at last node of her planned path
                             user.finish_trip(arrival_time)
@@ -205,7 +205,7 @@ class UserFlow(object):
         return None
 
     def step(self, dt: Dt, new_users: List[User]):
-        """Method correponding to one step of the user flow module.
+        """Method corresponding to one step of the user flow module.
 
         Args:
             -dt: time step duration (usually corresponds to one flow time step duration)
