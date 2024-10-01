@@ -3,6 +3,7 @@ from time import time
 import csv
 import traceback
 import random
+import jsonpickle
 from typing import List, Optional
 
 import numpy as np
@@ -307,7 +308,8 @@ class Supervisor(object):
             pass
         return users_step, remaining_new_users
 
-    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor: int, update_graph_threshold: float = 0., seed: int=None):
+    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor: int, update_graph_threshold: float = 0., seed: int=None,
+            snapshot: bool=False, snapshot_folder: str = ''):
         """Launch a full simulation.
 
         Args:
@@ -317,6 +319,7 @@ class Supervisor(object):
             -affectation_factor: the number of simulation flow time step representing one affectation time step
             -update_graph_threshold: threshold on the speed variation below which costs on the graph links are not updated
             -seed: seed of the simulation
+            -snapshot: indicates whether a snapshot is taken at the end of the simulation
         """
         log.info(f'Start run from {tstart} to {tend}')
 
@@ -401,6 +404,12 @@ class Supervisor(object):
             log.info('-'*50)
             affectation_step += 1
 
+        if snapshot:
+            frozen = jsonpickle.encode(self)
+            if len(snapshot_folder): snapshot_folder=snapshot_folder+'/'
+            with open(snapshot_folder+"snapshot.json", "w") as outfile:
+                outfile.write(frozen)
+
         ### Finalize simulation
         if self._user_flow._write:
             self._user_flow.write_result()
@@ -416,3 +425,12 @@ class Supervisor(object):
                     error=traceback.format_exc())
 
         return data
+
+def load_snaphshot(snapshot_file: str ):
+
+    with open(snapshot_file, 'r') as file:
+        frozen = file.read()
+
+    supervisor = jsonpickle.decode(frozen)
+
+    return supervisor
