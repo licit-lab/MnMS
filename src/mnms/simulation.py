@@ -4,6 +4,7 @@ import csv
 import traceback
 import random
 import jsonpickle
+import json
 from typing import List, Optional
 
 import numpy as np
@@ -21,6 +22,7 @@ from mnms.log import create_logger, attach_log_file, LOGLEVEL
 from mnms.tools.progress import ProgressBar
 from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Vehicle
+from hipop.graph import OrientedGraph, graph_to_dict, dict_to_graph, dict_to_node, dict_to_link
 
 log = create_logger(__name__)
 
@@ -405,10 +407,7 @@ class Supervisor(object):
             affectation_step += 1
 
         if snapshot:
-            frozen = jsonpickle.encode(self)
-            if len(snapshot_folder): snapshot_folder=snapshot_folder+'/'
-            with open(snapshot_folder+"snapshot.json", "w") as outfile:
-                outfile.write(frozen)
+            self.take_snapshot(snapshot_folder)
 
         ### Finalize simulation
         if self._user_flow._write:
@@ -426,11 +425,40 @@ class Supervisor(object):
 
         return data
 
+    def take_snapshot(self, snapshot_folder:str):
+
+        graph_dic = graph_to_dict(self._mlgraph.graph)
+
+        frozen=dict()
+        frozen['hipop_graph'] = json.dumps(graph_dic)
+        frozen['supervisor'] = jsonpickle.encode(self)
+
+        if len(snapshot_folder): snapshot_folder = snapshot_folder + '/'
+
+        with open(snapshot_folder + "snapshot.json", "w") as outfile:
+            outfile.write(json.dumps(frozen))
+
 def load_snaphshot(snapshot_file: str ):
 
     with open(snapshot_file, 'r') as file:
         frozen = file.read()
 
-    supervisor = jsonpickle.decode(frozen)
+    frozen_dict = json.loads(frozen)
+    supervisor = jsonpickle.decode(frozen_dict['supervisor'])
+
+    graph_dict = json.loads(frozen_dict['hipop_graph'])
+    supervisor._mlgraph.graph = dict_to_graph(graph_dict)
+
+    for layer in supervisor._mlgraph.layers:
+
+        layer_graph = OrientedGraph()
+        nodes = [n for n in graph_dict['NODES'] if not ['LABEL'] == 'CAR']
+        for node in nodes:
+            dict_to_node(layer_graph, node)
+        links = [l for l in graph_dict['LINKS'] if l['LABEL'] == 'CAR']
+        for link in links:
+            dict_to_link(layer_graph, link)
+
+        supervisor._mlgraph.layers[layer].graph = layer_graph
 
     return supervisor

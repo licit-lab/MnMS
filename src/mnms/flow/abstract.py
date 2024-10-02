@@ -8,6 +8,7 @@ from mnms.time import Time, Dt
 from mnms.graph.layers import MultiLayerGraph
 
 class AbstractReservoir(ABC):
+
     def __init__(self, zone: Zone, modes: List[str]):
         """
         Abstract Reservoir class defining the interface for a MFD reservoir
@@ -22,7 +23,7 @@ class AbstractReservoir(ABC):
         self.dict_accumulations = defaultdict(lambda: 0)
         self.dict_speeds = defaultdict(lambda: 0.)
 
-        self.ghost_accumulation: Callable[[Time], Dict[str, float]] = lambda x: {}
+        #self.ghost_accumulation: Callable[[Time], Dict[str, float]] = lambda x: {}
 
         self.trip_lengths = {}
 
@@ -52,6 +53,7 @@ class AbstractReservoir(ABC):
         pass
 
     def set_ghost_accumulation(self, f_acc: Callable[[Time], Dict[str, float]]):
+
         self.ghost_accumulation = f_acc
 
     def add_trip_length(self, l, mode):
