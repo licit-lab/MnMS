@@ -23,7 +23,7 @@ class AbstractReservoir(ABC):
         self.dict_accumulations = defaultdict(lambda: 0)
         self.dict_speeds = defaultdict(lambda: 0.)
 
-        #self.ghost_accumulation: Callable[[Time], Dict[str, float]] = lambda x: {}
+        self.ghost_accumulation: Callable[[Time], Dict[str, float]] = lambda x: {}
 
         self.trip_lengths = {}
 
@@ -90,6 +90,20 @@ class AbstractMFDFlowMotor(ABC):
         else:
             self._write = True
             self._outfile = open(outfile, "w")
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+
+        if self._write == True:
+            if '_csvhandler' in state:
+                del state['_csvhandler']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+        if self._write == True:
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
 
     def set_graph(self, mlgraph: MultiLayerGraph):

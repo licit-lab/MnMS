@@ -76,6 +76,19 @@ class AbstractLayer(CostFunctionLayer):
                 if observer is not None:
                     s.attach_vehicle_observer(observer)
 
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+        if 'graph' in state:
+            del state['graph']
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self.graph = OrientedGraph()
+
     def add_mobility_service(self, service: AbstractMobilityService):
         service.layer = self
         service.fleet = FleetManager(self._veh_type, service.id, service.is_personal())
@@ -255,6 +268,19 @@ class MultiLayerGraph(object):
             self.add_origin_destination_layer(odlayer)
             if connection_distance is not None:
                 self.connect_origindestination_layers(connection_distance)
+
+    def __getstate__(self):
+        # On retire l'attribut 'b' de la sérialisation
+        state = self.__dict__.copy()
+        if 'graph' in state:
+            del state['graph']
+        return state
+
+    def __setstate__(self, state):
+        # On restaure l'état sans 'b'
+        self.__dict__.update(state)
+        # On pourrait éventuellement recréer ou initier 'b' ici
+        self.graph = OrientedGraph()
 
     def add_transit_links(self, transit_links):
         gnodes = self.graph.nodes

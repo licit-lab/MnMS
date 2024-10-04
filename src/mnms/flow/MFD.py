@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple, Union
 from typing import Callable, Dict
 
 import numpy as np
+import csv
 
 from hipop.graph import Link
 
@@ -76,6 +77,28 @@ class MFDFlowMotor(AbstractMFDFlowMotor):
 
         self._layer_link_length_mapping: Dict[str, LinkInfo] = dict()
         self._section_to_reservoir: Dict[str, Union[str, None]] = dict()
+
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+
+        if '_csvhandler' in state:
+            del state['_csvhandler']
+        if '_layer_link_length_mapping' in state:
+            del state['_layer_link_length_mapping']
+        if 'graph_nodes' in state:
+            del state['graph_nodes']
+
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+        self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'VEHICLE_TYPE', 'SPEED', 'ACCUMULATION', 'TRIP_LENGTHS'])
+
+        self._layer_link_length_mapping: Dict[str, LinkInfo] = dict()
 
     def _reset_mapping(self):
         graph = self._graph.graph

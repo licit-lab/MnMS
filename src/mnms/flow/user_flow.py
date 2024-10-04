@@ -42,6 +42,25 @@ class UserFlow(object):
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
             self._csvhandler.writerow(['ID', 'TRAVELED_NODES', 'TRAVELED_LINKS', 'TRAVELED_SERVICES'])
 
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+
+        if self._write == True:
+            if '_csvhandler' in state:
+                del state['_csvhandler']
+        if '_gnodes' in state:
+            del state['_gnodes']
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        if self._write == True:
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+            self._csvhandler.writerow(['ID', 'TRAVELED_NODES', 'TRAVELED_LINKS', 'TRAVELED_SERVICES'])
+
     def set_graph(self, mlgraph:MultiLayerGraph):
         """Method to associate a multi layer graph to a UserFlow object and sets
         the walking speed in the TransitLayer of this graph.

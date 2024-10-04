@@ -119,6 +119,24 @@ class AbstractDecisionModel(ABC):
             # path list of mob services, bool specifying if path has been chosen or not
             self._csvhandler.writerow(['ID', 'EVENT', 'TIME', 'COST', 'PATH', 'LENGTH', 'SERVICES', 'CHOSEN'])
 
+    def __getstate__(self):
+        # On retire l'attribut 'b' de la sérialisation
+        state = self.__dict__.copy()
+
+        if self._write == True:
+            if '_csvhandler' in state:
+                del state['_csvhandler']
+
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        if self._write == True:
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+            self._csvhandler.writerow(['ID', 'EVENT', 'TIME', 'COST', 'PATH', 'LENGTH', 'SERVICES', 'CHOSEN'])
+
     def update_k_shortest_paths_finding_parameters(self, max_diff_cost: float, max_dist_in_common: float, cost_multiplier_to_find_k_paths: float, max_retry_to_find_k_paths: int):
         self._max_diff_cost = max_diff_cost
         self._max_dist_in_common = max_dist_in_common

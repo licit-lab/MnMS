@@ -4,7 +4,9 @@ import csv
 import traceback
 import random
 import jsonpickle
+import dill as pickle
 import json
+import dill.detect
 from typing import List, Optional
 
 import numpy as np
@@ -78,6 +80,24 @@ class Supervisor(object):
 
         if logfile is not None:
             attach_log_file(logfile, loglevel)
+
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+
+        if self._write == True:
+            if '_csvhandler' in state:
+                del state['_csvhandler']
+
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        if self._write == True:
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+            self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'MOBILITY_SERVICE', 'COSTS'])
 
     def set_random_seed(self, seed: int):
         """Method that sets the seed for all modules that can be stochastic.
@@ -435,18 +455,28 @@ class Supervisor(object):
 
         if len(snapshot_folder): snapshot_folder = snapshot_folder + '/'
 
-        with open(snapshot_folder + "snapshot.json", "w") as outfile:
+        with open(snapshot_folder + "snapshot.graph", "w") as outfile:
             outfile.write(json.dumps(frozen))
 
-def load_snaphshot(snapshot_file: str ):
+        file = open(snapshot_folder + "snapshot.mnms", 'wb')
+    #pickle.dump(self, file)
+        #marshal.dump(self,file)
 
-    with open(snapshot_file, 'r') as file:
+        with dill.detect.trace():
+            pickle.dump(self, file)
+
+def load_snaphshot(snapshot_prefix: str ):
+
+    supervisor_file = open(snapshot_prefix + '.mnms', 'rb')
+    supervisor = pickle.load(supervisor_file)
+
+    with open(snapshot_prefix + '.graph', 'r') as file:
         frozen = file.read()
 
     frozen_dict = json.loads(frozen)
-    supervisor = jsonpickle.decode(frozen_dict['supervisor'])
 
     graph_dict = json.loads(frozen_dict['hipop_graph'])
+
     supervisor._mlgraph.graph = dict_to_graph(graph_dict)
 
     for layer in supervisor._mlgraph.layers:
