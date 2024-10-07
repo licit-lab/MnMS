@@ -157,6 +157,21 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         self.gnodes = None
 
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+
+        if 'gnodes' in state:
+            del state['gnodes']
+
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self.gnodes = None
+
     @cached_property
     def lines(self):
         return self.layer.lines

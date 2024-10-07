@@ -120,14 +120,8 @@ class CSVDemandManager(AbstractDemandManager):
         Delimiter for the CSV file
     """
 
-    def __init__(self, csvfile: Union[Pathl, str], delimiter=';', user_parameters: Callable[[User], Dict] = lambda x: {}):
-        super(CSVDemandManager, self).__init__(user_parameters)
-        self._filename = csvfile
-        self._delimiter = delimiter
-        self._file = open(self._filename, 'r')
-        self._reader = csv.reader(self._file, delimiter=self._delimiter, quotechar='|')
-        self._demand_type = None
-        self._optional_columns = None
+    def init_demand_reader(self, csvfile: Union[Pathl, str]):
+
         mandatory_columns = ['ID', 'DEPARTURE', 'ORIGIN', 'DESTINATION']
         time_format_1 = "%H:%M:%S"
         time_format_2 = "%H:%M:%S.%f"
@@ -177,6 +171,34 @@ class CSVDemandManager(AbstractDemandManager):
                 raise CSVDemandParseError(csvfile)
 
         self._current_user = self.construct_user(first_line)
+
+    def __init__(self, csvfile: Union[Pathl, str], delimiter=';', user_parameters: Callable[[User], Dict] = lambda x: {}):
+        super(CSVDemandManager, self).__init__(user_parameters)
+        self._filename = csvfile
+        self._delimiter = delimiter
+        self._file = open(self._filename, 'r')
+        self._reader = csv.reader(self._file, delimiter=self._delimiter, quotechar='|')
+        self._demand_type = None
+        self._optional_columns = None
+
+        self._current_user= None
+
+        self.init_demand_reader(csvfile)
+
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+
+        if '_reader' in state:
+            del state['_reader']
+
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+        self._reader = csv.reader(self._file, delimiter=self._delimiter, quotechar='|')
+        self.init_demand_reader(self._filename)
 
     def get_next_departures(self, tstart: Time, tend: Time) -> List[User]:
         departure = list()

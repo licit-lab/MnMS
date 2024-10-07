@@ -68,6 +68,8 @@ class Supervisor(object):
         self._flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)
 
+        self._outfilename = outfile
+
         self.tcurrent: Optional[Time] = None
 
         if outfile is None:
@@ -86,6 +88,8 @@ class Supervisor(object):
         state = self.__dict__.copy()
 
         if self._write == True:
+            if '_outfile' in state:
+                del state['_outfile']
             if '_csvhandler' in state:
                 del state['_csvhandler']
 
@@ -96,6 +100,7 @@ class Supervisor(object):
         self.__dict__.update(state)
 
         if self._write == True:
+            self._outfile = open(self._outfilename, "w")
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
             self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'MOBILITY_SERVICE', 'COSTS'])
 
@@ -447,11 +452,17 @@ class Supervisor(object):
 
     def take_snapshot(self, snapshot_folder:str):
 
+        class SetEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, set):
+                    return list(obj)
+                return json.JSONEncoder.default(self, obj)
+
         graph_dic = graph_to_dict(self._mlgraph.graph)
 
         frozen=dict()
-        frozen['hipop_graph'] = json.dumps(graph_dic)
-        frozen['supervisor'] = jsonpickle.encode(self)
+        frozen['hipop_graph'] = json.dumps(graph_dic, cls=SetEncoder)
+        #frozen['supervisor'] = jsonpickle.encode(self)
 
         if len(snapshot_folder): snapshot_folder = snapshot_folder + '/'
 
@@ -466,6 +477,16 @@ class Supervisor(object):
             pickle.dump(self, file)
 
 def load_snaphshot(snapshot_prefix: str ):
+    class JSONDCoder(json.JSONDecoder):
+        def __init__(self):
+            json.JSONDecoder.__init__(self, object_hook=JSONDCoder.from_dict)
+        @staticmethod
+        def from_dict(d):
+            if "EXCLUDE_MOVEMENTS" in d:
+                if bool(d["EXCLUDE_MOVEMENTS"]):
+                    for v in d["EXCLUDE_MOVEMENTS"]:
+                        d["EXCLUDE_MOVEMENTS"][v] = set(d["EXCLUDE_MOVEMENTS"][v])
+            return d
 
     supervisor_file = open(snapshot_prefix + '.mnms', 'rb')
     supervisor = pickle.load(supervisor_file)
@@ -475,7 +496,7 @@ def load_snaphshot(snapshot_prefix: str ):
 
     frozen_dict = json.loads(frozen)
 
-    graph_dict = json.loads(frozen_dict['hipop_graph'])
+    graph_dict = json.loads(frozen_dict['hipop_graph'],cls=JSONDCoder)
 
     supervisor._mlgraph.graph = dict_to_graph(graph_dict)
 
