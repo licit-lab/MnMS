@@ -503,10 +503,11 @@ def load_snaphshot(snapshot_prefix: str ):
     for layer in supervisor._mlgraph.layers:
 
         layer_graph = OrientedGraph()
-        nodes = [n for n in graph_dict['NODES'] if not ['LABEL'] == 'CAR']
+        nodes = [n for n in graph_dict['NODES'] if n['LABEL'] == layer]
         for node in nodes:
             dict_to_node(layer_graph, node)
-        links = [l for l in graph_dict['LINKS'] if l['LABEL'] == 'CAR']
+
+        links = [l for l in graph_dict['LINKS'] if l['LABEL'] == layer]
         for link in links:
             dict_to_link(layer_graph, link)
 
