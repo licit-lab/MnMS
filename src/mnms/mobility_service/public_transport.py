@@ -511,6 +511,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
                 if self._observer is not None:
                     new_veh.attach(self._observer)
+                    new_veh.notify(self._tcurrent)
 
             self.clean_arrived_vehicles(lid)
 
