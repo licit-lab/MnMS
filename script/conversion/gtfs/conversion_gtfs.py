@@ -9,6 +9,7 @@ import numpy as np
 from gtfs_functions import Feed
 from unidecode import unidecode
 from coordinates import gps_to_lambert93, gps_to_utm
+from hipop.shortest_path import dijkstra
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
 from mnms.vehicles.veh_type import Tram, Metro, Bus
 from mnms.generation.zones import generate_one_zone
@@ -21,10 +22,10 @@ from mnms.io.graph import load_graph, save_graph
 ### Parameters ###
 ##################
 
-gtfs_path = "athens_gtfs.zip" # gtfs zip folder
-mnms_json_filepath = "athens_mlgraph_car.json" # mlgraph with the road network only
+gtfs_path = "lyon_tcl.zip" # gtfs zip folder
+mnms_json_filepath = "lyon_roads.json" # mlgraph with the road network only
 
-mlgraph_dump_file = "athens_mnms_gtfs.json"
+mlgraph_dump_file = "lyon_mnms_gtfs.json"
 
 # Default speeds
 traditional_vehs_default_speed = 13.8 # m/s
@@ -161,6 +162,145 @@ def generate_public_transportation_lines(stop_times_, layer, list_lines, prefix_
             pass
 
 
+def generate_map_matching_pt_lines(roads, stop_times_, layer, list_lines, prefix_line_name):
+    """Function that generates a map matching public transportation lines on a layer with a certain frequency.
+
+    Args:
+    - layer: the layer on which the lines should be created
+    - list_lines: list the lines to create, one line is represented by a dataframe with LINE_ID, STOP_NAME, and STOP_CODE as columns
+    - freq: frequency to apply on the lines created, shoud be a Dt type object
+    - operation_start_time: time at which the timetables should start, str
+    - operation_end_time: time at which the timetables should end, str
+    - prefix_line_name: str corresponding to the prefix to add to the line id to name the line
+
+    Returns:
+    None
+    """
+
+    roads_nodes = roads.get("NODES")
+    roads_sections = roads.get("SECTIONS")
+
+    for line in list_lines:
+        if not line.empty:
+            line_id = line.iloc[0]['route_short_name']
+            line_name = prefix_line_name + line_id
+
+            stops = [line_name + '_' + cleanString(stp) for stp in list(line["stop_name_y"])]
+            sections = [[line_name + f'_{ind}_{ind+1}', line_name + f'_{ind+1}_{ind+2}'] for ind in list(line.index)[:-2]] + [[line_name + f'_{line.index[-2]}_{line.index[-1]}']]
+
+            first_stop_id = line.iloc[0]['stop_id']
+
+            departure_times = stop_times_[stop_times_["stop_id"] == first_stop_id]
+            departure_list = list(departure_times["departure_time"])
+
+            time_list = [secondsToMnMsTime(departure) for departure in departure_list]
+            sorted_time_list = [secondsToMnMsTime(departure) for departure in sorted(departure_list)]
+
+            timetable = TimeTable(time_list)
+            sorted_timetable = TimeTable(sorted_time_list)
+
+            mean_freq_unsorted = timetable.get_freq()
+            mean_freq_sorted = sorted_timetable.get_freq()
+
+            final_freq = (mean_freq_unsorted + mean_freq_sorted) / 2
+
+            final_timetable = sorted_timetable.normalize_table_freq(final_freq)
+            layer.create_line(line_name, stops, sections, final_timetable)
+
+        else:
+            pass
+
+
+def register_pt_lines(pt_lines, pt_lines_types, pt_nodes):
+    for line, line_type in zip(pt_lines, pt_lines_types):
+        for ind, stop in line.iterrows():
+            lat = float(stop["stop_lat_y"])
+            lon = float(stop["stop_lon_y"])
+
+            x_coord, y_coord = _convert_coords(lat, lon)
+
+            node_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(stop['stop_name_y'])
+            pt_nodes[node_id] = [x_coord, y_coord]
+            roads.register_node(node_id, [x_coord, y_coord])
+
+            if ind > 0:
+                onode_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(
+                    line.loc[ind - 1, 'stop_name_y'])
+                dnode_id = node_id
+                section_id = line_type + '_' + stop['route_short_name'] + '_' + str(ind - 1) + '_' + str(ind)
+                section_length = _norm(np.array(pt_nodes[onode_id]) - np.array(pt_nodes[dnode_id]))
+                roads.register_section(section_id, onode_id, dnode_id, section_length)
+                roads.register_stop(onode_id, section_id, 0.)
+
+            if ind == max(line.index):
+                roads.register_stop(dnode_id, section_id, 1.)
+
+
+def distance(pt_1, pt_2):
+    pt_1 = np.array((pt_1[0], pt_1[1]))
+    pt_2 = np.array((pt_2[0], pt_2[1]))
+    return _norm(pt_1-pt_2)
+
+
+def closest_node(node, nodes):
+    id_node = ""
+    min_dist = 9999999
+
+    for id, road_node in nodes.items():
+        id_road_node = road_node["id"]
+        x = float(road_node["position"][0])
+        y = float(road_node["position"][1])
+
+        dist = distance(node, [x, y])
+        if dist <= min_dist:
+            min_dist = dist
+            id_node = id_road_node
+
+    return id_node
+
+
+def register_map_match_pt_lines(pt_lines, pt_lines_types, pt_nodes):
+
+    roads_nodes = roads.get("NODES")
+    roads_sections = roads.get("SECTIONS")
+
+    for line, line_type in zip(pt_lines, pt_lines_types):
+        for ind, stop in line.iterrows():
+            lat = float(stop["stop_lat_y"])
+            lon = float(stop["stop_lon_y"])
+
+            x_coord, y_coord = _convert_coords(lat, lon)
+
+            node_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(stop['stop_name_y'])
+            pt_nodes[node_id] = [x_coord, y_coord]
+            roads.register_node(node_id, [x_coord, y_coord])
+
+            if ind > 0:
+                onode_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(line.loc[ind - 1, 'stop_name_y'])
+                o_lat = float(line.loc[ind - 1, 'stop_lat_y'])
+                o_lon = float(line.loc[ind - 1, 'stop_lon_y'])
+                o_x_coord, o_y_coord = _convert_coords(o_lat, o_lon)
+
+                dnode_id = node_id
+
+                # find closest road node to origin stop
+                id_closest_origin_node = closest_node([o_x_coord, o_y_coord], roads_nodes)
+
+                # find closest road node to destination stop
+                id_closest_destination_node = closest_node([x_coord, y_coord], roads_nodes)
+
+                # find shortest road path to next stop
+                shortest_path, cost = dijkstra(mnms_graph, id_closest_origin_node, id_closest_destination_node)
+
+                # section_id to find
+                section_id = ""
+
+                roads.register_stop(onode_id, section_id, 0.)
+
+            if ind == max(line.index):
+                roads.register_stop(dnode_id, section_id, 1.)
+
+
 #################
 ### Script ###
 #################
@@ -177,39 +317,31 @@ list_tram_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, f
 list_metro_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, feed_trips, 1)
 list_bus_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, feed_trips, 3)
 
+
 ### Get the MLGraph without TCs
 mnms_graph = load_graph(mnms_json_filepath)
 roads = mnms_graph.roads
 
+
 ### Add the nodes, sections, and stops related to each PT line to the roadDescriptor
-pt_lines = list_tram_lines + list_metro_lines + list_bus_lines
-pt_lines_types = ['TRAM'] * len(list_tram_lines) + ['METRO'] * len(list_metro_lines) + ['BUS'] * len(list_bus_lines)
+pt_lines = list_tram_lines + list_metro_lines
+pt_lines_types = ['TRAM'] * len(list_tram_lines) + ['METRO'] * len(list_metro_lines)
 pt_nodes = {}
 
-for line, line_type in zip(pt_lines, pt_lines_types):
-    for ind, stop in line.iterrows():
-        lat = float(stop["stop_lat_y"])
-        lon = float(stop["stop_lon_y"])
+register_pt_lines(pt_lines, pt_lines_types, pt_nodes)
 
-        x_coord, y_coord = _convert_coords(lat, lon)
 
-        node_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(stop['stop_name_y'])
-        pt_nodes[node_id] = [x_coord, y_coord]
-        roads.register_node(node_id, [x_coord, y_coord])
+### Add the nodes ands stops related to each map matched PT line to the roadDescriptor
+map_match_pt_lines = list_bus_lines
+map_match_pt_lines_types = ['BUS'] * len(list_bus_lines)
+map_match_pt_nodes = {}
 
-        if ind > 0:
-            onode_id = line_type + '_' + stop['route_short_name'] + '_' + cleanString(line.loc[ind-1, 'stop_name_y'])
-            dnode_id = node_id
-            section_id = line_type + '_' + stop['route_short_name'] + '_' + str(ind-1) + '_' + str(ind)
-            section_length = _norm(np.array(pt_nodes[onode_id]) - np.array(pt_nodes[dnode_id]))
-            roads.register_section(section_id, onode_id, dnode_id, section_length)
-            roads.register_stop(onode_id, section_id, 0.)
+register_map_match_pt_lines(map_match_pt_lines, map_match_pt_lines_types, map_match_pt_nodes)
 
-        if ind == max(line.index):
-            roads.register_stop(dnode_id, section_id, 1.)
 
 ### Overwrite the roads zoning with a new zoning including all sections
 roads.add_zone(generate_one_zone("RES", roads))
+
 
 ### Create the PT layers, mob services and lines
 
@@ -229,10 +361,12 @@ generate_public_transportation_lines(feed_stop_times, metro_layer, list_metro_li
 bus_service = PublicTransportMobilityService('BUS')
 bus_layer = PublicTransportLayer(roads, 'BUSLayer', Bus, traditional_vehs_default_speed,
         services=[bus_service])
-generate_public_transportation_lines(feed_stop_times, bus_layer, list_bus_lines, 'BUS_')
+generate_map_matching_pt_lines(roads, feed_stop_times, bus_layer, list_bus_lines, 'BUS_')
+
 
 ### Create the MLGraph with PT
 mlgraph = MultiLayerGraph([tram_layer, metro_layer, bus_layer], None, None)
+
 
 ### Save the graph
 save_graph(mlgraph, mlgraph_dump_file)
