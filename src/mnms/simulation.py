@@ -473,8 +473,8 @@ class Supervisor(object):
     #pickle.dump(self, file)
         #marshal.dump(self,file)
 
-        with dill.detect.trace():
-            pickle.dump(self, file)
+        #with dill.detect.trace():
+        pickle.dump(self, file)
 
 def load_snaphshot(snapshot_prefix: str ):
     class JSONDCoder(json.JSONDecoder):

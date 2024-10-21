@@ -1,7 +1,7 @@
 from mnms.simulation import Supervisor
 from mnms.demand import CSVDemandManager
 from mnms.flow.MFD import Reservoir, MFDFlowMotor
-from mnms.log import attach_log_file, LOGLEVEL, set_mnms_logger_level
+from mnms.log import attach_log_file, LOGLEVEL, set_mnms_logger_level, set_all_mnms_logger_level
 from mnms.time import Time, Dt
 from mnms.io.graph import load_graph, load_odlayer
 from mnms.travel_decision.logit import LogitDecisionModel
@@ -12,8 +12,8 @@ from mnms.mobility_service.public_transport import PublicTransportMobilityServic
 indir = "INPUTS"
 outdir = "OUTPUTS"
 
-# set_all_mnms_logger_level(LOGLEVEL.WARNING)
-set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
+set_all_mnms_logger_level(LOGLEVEL.INFO)
+#set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation","mnms.mobility_service.public_transport"])
 attach_log_file(outdir+'/simulation.log')
 
 def calculate_V_MFD(acc):
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     for k, res in mmgraph.roads.zones.items():
         flow_motor.add_reservoir(Reservoir(res, ["CAR","BUS","TRAM","METRO"], calculate_V_MFD))
 
-    travel_decision = LogitDecisionModel(mmgraph, outfile=outdir+"/path.csv")
+    travel_decision = LogitDecisionModel(mmgraph, outfile=outdir+"/path.csv", n_shortest_path=1)
 
     supervisor = Supervisor(graph=mmgraph,
                             flow_motor=flow_motor,

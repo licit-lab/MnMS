@@ -289,20 +289,12 @@ class Vehicle(TimeDependentSubject):
         else:
             self.activity: VehicleActivity = self.default_activity()
 
-    def __reduce__(self):
-        """
-        Customize the pickling process by ensuring class attributes are also pickled.
-        """
-        # return a tuple of (constructor, args, state)
-        state = self.__dict__.copy()  # Copy instance attributes
-        state['_counter'] = Vehicle._counter  # Add class attribute explicitly
-        return (self.__class__, (
-            self._current_node,
-            self._capacity,
-            self.mobility_service,
-            self._is_personal,
-            self.activities,
-            self._global_id), state)
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+        state['_counter'] = Vehicle._counter
+
+        return state
 
     def __setstate__(self, state):
         """

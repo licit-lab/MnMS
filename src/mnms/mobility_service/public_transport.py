@@ -177,7 +177,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         return self.layer.lines
 
     def clean_arrived_vehicles(self, lid: str):
-        """Recursive method that deletes the vehciles which arrived at the final
+        """Recursive method that deletes the vehicles which arrived at the final
         stop of their line.
 
         Args:
@@ -185,7 +185,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         """
         if len(self.vehicles[lid]) > 0:
             first_veh = self.vehicles[lid][-1]
-            if first_veh.activity_type is VehicleActivityStop:
+            if first_veh.activity_type is ActivityType.STOP:
                 log.info(f"Deleting arrived {self.id} vehicle {first_veh}")
                 self.vehicles[lid].pop()
                 self.fleet.delete_vehicle(first_veh.id)
