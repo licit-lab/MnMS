@@ -72,6 +72,8 @@ class Supervisor(object):
 
         self.tcurrent: Optional[Time] = None
 
+        self.from_snapshot = False
+
         if outfile is None:
             self._write = False
         else:
@@ -164,7 +166,8 @@ class Supervisor(object):
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
 
-        self._mlgraph.initialize_costs(self._user_flow._walk_speed)
+        if not self.from_snapshot:
+            self._mlgraph.initialize_costs(self._user_flow._walk_speed)
 
         self._flow_motor.set_time(tstart)
         self._flow_motor.initialize()
@@ -351,11 +354,18 @@ class Supervisor(object):
         log.info(f'Start run from {tstart} to {tend}')
 
         ### Initializations
+
         self.set_random_seed(seed)
         self.initialize(tstart)
+
         affectation_step = 0
         flow_step = 0
         principal_dt = flow_dt * affectation_factor
+
+        if self.from_snapshot and self.tcurrent != tstart:
+            log.error(f'The time stamp of the snapshot ({self.tcurrent}) is different from the start of the simulation ({tstart}), simulation is not possible.')
+            return
+
         self.tcurrent = tstart
         progress = ProgressBar(ceil((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor)))
 
@@ -512,5 +522,7 @@ def load_snaphshot(snapshot_prefix: str ):
             dict_to_link(layer_graph, link)
 
         supervisor._mlgraph.layers[layer].graph = layer_graph
+
+    supervisor.from_snapshot = True
 
     return supervisor

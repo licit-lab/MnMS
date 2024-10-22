@@ -42761,7 +42761,7 @@
    "ID": "CARLayer",
    "TYPE": "mnms.graph.layers.CarLayer",
    "VEH_TYPE": "mnms.vehicles.veh_type.Car",
-   "DEFAULT_SPEED": 2,
+   "DEFAULT_SPEED": 13.8,
    "SERVICES": [],
    "NODES": [
     {

@@ -651,15 +651,20 @@ class SimpleLayer(AbstractLayer):
 class CarLayer(SimpleLayer):
     def __init__(self,
                  roads: RoadDescriptor,
+                 _id: str = "CAR",
+                 veh_type: Type[Vehicle] = Car,
                  default_speed: float = 13.8,
                  services: Optional[List[AbstractMobilityService]] = None,
                  observer: Optional = None,
-                 _id: str = "CAR"):
-        super(CarLayer, self).__init__(roads, _id, Car, default_speed, services, observer)
+                 ):
+        super(CarLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
 
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescriptor):
+
         new_obj = cls(roads,
+                      data['ID'],
+                      load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
 
         node_ref = data["MAP_ROADDB"]["NODES"]

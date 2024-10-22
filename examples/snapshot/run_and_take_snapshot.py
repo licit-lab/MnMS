@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     personal_car = PersonalMobilityService()
     personal_car.attach_vehicle_observer(veh_observer)
-    mmgraph.layers["CAR"].add_mobility_service(personal_car)
+    mmgraph.layers["CARLayer"].add_mobility_service(personal_car)
 
     bus_service = PublicTransportMobilityService("BUS_MS")
     bus_service.attach_vehicle_observer(veh_observer)
@@ -77,4 +77,4 @@ if __name__ == '__main__':
                             decision_model=travel_decision,
                             outfile=outdir + "/travel_time_link.csv")
 
-    supervisor.run(Time('06:30:00'), Time('07:00:00'), Dt(minutes=1), 10, snapshot=True, snapshot_folder=outdir)
+    supervisor.run(Time('06:30:00'), Time('07:30:00'), Dt(minutes=1), 10, snapshot=True, snapshot_folder=outdir)
