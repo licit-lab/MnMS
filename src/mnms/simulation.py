@@ -3,6 +3,10 @@ from time import time
 import csv
 import traceback
 import random
+import jsonpickle
+import dill as pickle
+import json
+import dill.detect
 from typing import List, Optional
 
 import numpy as np
@@ -20,6 +24,7 @@ from mnms.log import create_logger, attach_log_file, LOGLEVEL
 from mnms.tools.progress import ProgressBar
 from mnms.vehicles.manager import VehicleManager
 from mnms.vehicles.veh_type import Vehicle
+from hipop.graph import OrientedGraph, graph_to_dict, dict_to_graph, dict_to_node, dict_to_link
 
 log = create_logger(__name__)
 
@@ -63,7 +68,11 @@ class Supervisor(object):
         self._flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)
 
+        self._outfilename = outfile
+
         self.tcurrent: Optional[Time] = None
+
+        self.from_snapshot = False
 
         if outfile is None:
             self._write = False
@@ -75,6 +84,27 @@ class Supervisor(object):
 
         if logfile is not None:
             attach_log_file(logfile, loglevel)
+
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+
+        if self._write == True:
+            if '_outfile' in state:
+                del state['_outfile']
+            if '_csvhandler' in state:
+                del state['_csvhandler']
+
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        if self._write == True:
+            self._outfile = open(self._outfilename, "w")
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+            self._csvhandler.writerow(['AFFECTATION_STEP', 'TIME', 'ID', 'MOBILITY_SERVICE', 'COSTS'])
 
     def set_random_seed(self, seed: int):
         """Method that sets the seed for all modules that can be stochastic.
@@ -136,7 +166,8 @@ class Supervisor(object):
             for service in layer.mobility_services.values():
                 service.set_time(tstart)
 
-        self._mlgraph.initialize_costs(self._user_flow._walk_speed)
+        if not self.from_snapshot:
+            self._mlgraph.initialize_costs(self._user_flow._walk_speed)
 
         self._flow_motor.set_time(tstart)
         self._flow_motor.initialize()
@@ -307,7 +338,8 @@ class Supervisor(object):
             pass
         return users_step, remaining_new_users
 
-    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor: int, update_graph_threshold: float = 0., seed: int=None):
+    def run(self, tstart: Time, tend: Time, flow_dt: Dt, affectation_factor: int, update_graph_threshold: float = 0., seed: int=None,
+            snapshot: bool=False, snapshot_folder: str = ''):
         """Launch a full simulation.
 
         Args:
@@ -317,15 +349,23 @@ class Supervisor(object):
             -affectation_factor: the number of simulation flow time step representing one affectation time step
             -update_graph_threshold: threshold on the speed variation below which costs on the graph links are not updated
             -seed: seed of the simulation
+            -snapshot: indicates whether a snapshot is taken at the end of the simulation
         """
         log.info(f'Start run from {tstart} to {tend}')
 
         ### Initializations
+
         self.set_random_seed(seed)
         self.initialize(tstart)
+
         affectation_step = 0
         flow_step = 0
         principal_dt = flow_dt * affectation_factor
+
+        if self.from_snapshot and self.tcurrent != tstart:
+            log.error(f'The time stamp of the snapshot ({self.tcurrent}) is different from the start of the simulation ({tstart}), simulation is not possible.')
+            return
+
         self.tcurrent = tstart
         progress = ProgressBar(ceil((tend-tstart).to_seconds()/(flow_dt.to_seconds()*affectation_factor)))
 
@@ -401,6 +441,9 @@ class Supervisor(object):
             log.info('-'*50)
             affectation_step += 1
 
+        if snapshot:
+            self.take_snapshot(snapshot_folder)
+
         ### Finalize simulation
         if self._user_flow._write:
             self._user_flow.write_result()
@@ -416,3 +459,70 @@ class Supervisor(object):
                     error=traceback.format_exc())
 
         return data
+
+    def take_snapshot(self, snapshot_folder:str):
+
+        class SetEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, set):
+                    return list(obj)
+                return json.JSONEncoder.default(self, obj)
+
+        graph_dic = graph_to_dict(self._mlgraph.graph)
+
+        frozen=dict()
+        frozen['hipop_graph'] = json.dumps(graph_dic, cls=SetEncoder)
+        #frozen['supervisor'] = jsonpickle.encode(self)
+
+        if len(snapshot_folder): snapshot_folder = snapshot_folder + '/'
+
+        with open(snapshot_folder + "snapshot.graph", "w") as outfile:
+            outfile.write(json.dumps(frozen))
+
+        file = open(snapshot_folder + "snapshot.mnms", 'wb')
+    #pickle.dump(self, file)
+        #marshal.dump(self,file)
+
+        #with dill.detect.trace():
+        pickle.dump(self, file)
+
+def load_snaphshot(snapshot_prefix: str ):
+    class JSONDCoder(json.JSONDecoder):
+        def __init__(self):
+            json.JSONDecoder.__init__(self, object_hook=JSONDCoder.from_dict)
+        @staticmethod
+        def from_dict(d):
+            if "EXCLUDE_MOVEMENTS" in d:
+                if bool(d["EXCLUDE_MOVEMENTS"]):
+                    for v in d["EXCLUDE_MOVEMENTS"]:
+                        d["EXCLUDE_MOVEMENTS"][v] = set(d["EXCLUDE_MOVEMENTS"][v])
+            return d
+
+    supervisor_file = open(snapshot_prefix + '.mnms', 'rb')
+    supervisor = pickle.load(supervisor_file)
+
+    with open(snapshot_prefix + '.graph', 'r') as file:
+        frozen = file.read()
+
+    frozen_dict = json.loads(frozen)
+
+    graph_dict = json.loads(frozen_dict['hipop_graph'],cls=JSONDCoder)
+
+    supervisor._mlgraph.graph = dict_to_graph(graph_dict)
+
+    for layer in supervisor._mlgraph.layers:
+
+        layer_graph = OrientedGraph()
+        nodes = [n for n in graph_dict['NODES'] if n['LABEL'] == layer]
+        for node in nodes:
+            dict_to_node(layer_graph, node)
+
+        links = [l for l in graph_dict['LINKS'] if l['LABEL'] == layer]
+        for link in links:
+            dict_to_link(layer_graph, link)
+
+        supervisor._mlgraph.layers[layer].graph = layer_graph
+
+    supervisor.from_snapshot = True
+
+    return supervisor

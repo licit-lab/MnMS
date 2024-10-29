@@ -115,6 +115,20 @@ class CongestedMFDFlowMotor(MFDFlowMotor):
         if outfile is not None:
             self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'VEHICLE_TYPE', 'SPEED', 'ACCUMULATION', 'TRIP_LENGTHS', 'IN_QUEUE'])
 
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+
+        if '_csvhandler' in state:
+            del state['_csvhandler']
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self._csvhandler.writerow(['AFFECTATION_STEP', 'FLOW_STEP', 'TIME', 'RESERVOIR', 'VEHICLE_TYPE', 'SPEED', 'ACCUMULATION', 'TRIP_LENGTHS', 'IN_QUEUE'])
+
     def step(self, dt: Dt):
 
         log.info(f'CongestedMFD step {self._tcurrent}')

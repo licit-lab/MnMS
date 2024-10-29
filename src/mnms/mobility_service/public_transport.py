@@ -157,12 +157,27 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
         self.gnodes = None
 
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+
+        if 'gnodes' in state:
+            del state['gnodes']
+
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self.gnodes = None
+
     @cached_property
     def lines(self):
         return self.layer.lines
 
     def clean_arrived_vehicles(self, lid: str):
-        """Recursive method that deletes the vehciles which arrived at the final
+        """Recursive method that deletes the vehicles which arrived at the final
         stop of their line.
 
         Args:
@@ -170,7 +185,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         """
         if len(self.vehicles[lid]) > 0:
             first_veh = self.vehicles[lid][-1]
-            if first_veh.activity_type is VehicleActivityStop:
+            if first_veh.activity_type is ActivityType.STOP:
                 log.info(f"Deleting arrived {self.id} vehicle {first_veh}")
                 self.vehicles[lid].pop()
                 self.fleet.delete_vehicle(first_veh.id)
@@ -356,6 +371,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
             -veh: vehicle that will pick-up and drop-off the user
             -line_nodes: list of nodes the vehicle should follow
         """
+
         log.info(f"User {user.id} matched with vehicle {veh.id} of mobility service {self.id}")
         user.set_state_waiting_vehicle(veh)
 
@@ -374,6 +390,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
         else:
             activities_including_curr = [a for a in veh.activities]
         ind_pu = -1
+        ind_do = -1
         for ind, activity in enumerate(activities_including_curr):
             activity_node = activity.node
             activity_node_ind = line_nodes.index(activity_node)
@@ -381,7 +398,13 @@ class PublicTransportMobilityService(AbstractMobilityService):
                 ind_pu = ind
             if do_node_ind <= activity_node_ind:
                 ind_do = ind
-                break # if we found dropoff we necessarily have found pickup before
+                break # if we found drop-off we necessarily have found pickup before
+
+        if ind_pu == -1:
+            ind_pu = len(activities_including_curr)-1
+
+        if ind_do == -1:
+            ind_do = len(activities_including_curr)-1
 
         # Insert the activities corresponding to pickup and serving in vehicles' activities
         _insert_in_activity(user.current_node, ind_pu, drop_node, ind_do, user, veh)
@@ -496,6 +519,7 @@ class PublicTransportMobilityService(AbstractMobilityService):
 
                 if self._observer is not None:
                     new_veh.attach(self._observer)
+                    new_veh.notify(self._tcurrent)
 
             self.clean_arrived_vehicles(lid)
 
@@ -531,7 +555,12 @@ class PublicTransportMobilityService(AbstractMobilityService):
             -estimated_pickup_time: estimated pickup time in seconds
         """
         _, chosen_line = self.find_line(pu_node)
-        estimated_pickup_time = chosen_line['table'].get_freq() / 2
+        freq = chosen_line['table'].get_freq()
+        if freq is not None:
+            estimated_pickup_time = freq / 2
+        else:
+            estimated_pickup_time = 24*3600  # could be improved in the case of a single departure time
+
         return estimated_pickup_time
 
 

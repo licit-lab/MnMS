@@ -76,6 +76,19 @@ class AbstractLayer(CostFunctionLayer):
                 if observer is not None:
                     s.attach_vehicle_observer(observer)
 
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+        if 'graph' in state:
+            del state['graph']
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self.graph = OrientedGraph()
+
     def add_mobility_service(self, service: AbstractMobilityService):
         service.layer = self
         service.fleet = FleetManager(self._veh_type, service.id, service.is_personal())
@@ -255,6 +268,19 @@ class MultiLayerGraph(object):
             self.add_origin_destination_layer(odlayer)
             if connection_distance is not None:
                 self.connect_origindestination_layers(connection_distance)
+
+    def __getstate__(self):
+        # On retire l'attribut 'b' de la sérialisation
+        state = self.__dict__.copy()
+        if 'graph' in state:
+            del state['graph']
+        return state
+
+    def __setstate__(self, state):
+        # On restaure l'état sans 'b'
+        self.__dict__.update(state)
+        # On pourrait éventuellement recréer ou initier 'b' ici
+        self.graph = OrientedGraph()
 
     def add_transit_links(self, transit_links):
         gnodes = self.graph.nodes
@@ -625,15 +651,20 @@ class SimpleLayer(AbstractLayer):
 class CarLayer(SimpleLayer):
     def __init__(self,
                  roads: RoadDescriptor,
+                 _id: str = "CAR",
+                 veh_type: Type[Vehicle] = Car,
                  default_speed: float = 13.8,
                  services: Optional[List[AbstractMobilityService]] = None,
                  observer: Optional = None,
-                 _id: str = "CAR"):
-        super(CarLayer, self).__init__(roads, _id, Car, default_speed, services, observer)
+                 ):
+        super(CarLayer, self).__init__(roads, _id, veh_type, default_speed, services, observer)
 
     @classmethod
     def __load__(cls, data: Dict, roads: RoadDescriptor):
+
         new_obj = cls(roads,
+                      data['ID'],
+                      load_class_by_module_name(data['VEH_TYPE']),
                       data['DEFAULT_SPEED'])
 
         node_ref = data["MAP_ROADDB"]["NODES"]

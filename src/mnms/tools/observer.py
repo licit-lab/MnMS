@@ -100,6 +100,20 @@ class CSVUserObserver(TimeDependentObserver):
         self._csvhandler.writerow(self._header)
         self._prec = prec
 
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+        if '_csvhandler' in state:
+            del state['_csvhandler']
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
+        self._csvhandler.writerow(self._header)
+
     def finish(self):
         self._file.close()
 
@@ -131,6 +145,20 @@ class CSVVehicleObserver(TimeDependentObserver):
         self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
         self._csvhandler.writerow(self._header)
         self._prec = prec
+
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+        if '_csvhandler' in state:
+            del state['_csvhandler']
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
+        self._csvhandler.writerow(self._header)
 
 
     def finish(self):
