@@ -252,9 +252,9 @@ def closest_node(node, nodes):
     min_dist = 9999999
 
     for id, road_node in nodes.items():
-        id_road_node = road_node["id"]
-        x = float(road_node["position"][0])
-        y = float(road_node["position"][1])
+        id_road_node = road_node.id
+        x = float(road_node.position[0])
+        y = float(road_node.position[1])
 
         dist = distance(node, [x, y])
         if dist <= min_dist:
@@ -266,11 +266,8 @@ def closest_node(node, nodes):
 
 def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
 
-    roads_nodes = roads.nodes.values()
-    roads_sections = roads.sections.values()
-
-    #map_layer_services = {lid: list(layer.mobility_services.keys())[0] for lid, layer in mnms_graph.layers.items()}
-    map_layer_services["TRANSIT"] = "WALK"
+    roads_nodes = roads.nodes
+    roads_sections = roads.sections
 
     # empty lines map matching sections list dict (key: line_id, value: list of list of sections between 2 stops)
     lines_mm_sections_dict = {}
@@ -316,15 +313,16 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
                                                id_closest_origin_node,
                                                id_closest_destination_node,
                                                'length',
-                                               map_layer_services)
+                                               {"TRANSIT": "WALK"},
+                                               {"TRANSIT"})
 
                 first_node = shortest_path[0]
                 second_node = shortest_path[1]
 
                 # section to find
                 for id, road_section in roads_sections.items():
-                    if road_section["upstream"] == first_node and road_section["downstream"] == second_node:
-                        section_id = road_section["id"]
+                    if road_section.upstream == first_node and road_section.downstream == second_node:
+                        section_id = road_section.id
                 # if section not found
                 if section_id == "":
                     print(f"Section not found for node : {onode_id}")
@@ -339,8 +337,8 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
 
                     if i > 0:
                         for id, road_section in roads_sections.items():
-                            if road_section["upstream"] == shortest_path[i-1] and road_section["downstream"] == shortest_path[i]:
-                                section_path_id = road_section["id"]
+                            if road_section.upstream == shortest_path[i-1] and road_section.downstream == shortest_path[i]:
+                                section_path_id = road_section.id
                                 sections_path.append(section_path_id)
                         if section_path_id == "":
                             print(f"Section not found for nodes : {shortest_path[i-1]} and {shortest_path[i]}")
