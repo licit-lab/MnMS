@@ -162,7 +162,7 @@ def generate_public_transportation_lines(stop_times_, layer, list_lines, prefix_
             pass
 
 
-def generate_map_matching_pt_lines(stop_times_, layer, list_lines, prefix_line_name):
+def generate_map_matching_pt_lines(stop_times_, layer, list_lines, map_match_sections, prefix_line_name):
     """Function that generates a map matching public transportation lines on a layer with a certain frequency.
 
     Args:
@@ -183,6 +183,8 @@ def generate_map_matching_pt_lines(stop_times_, layer, list_lines, prefix_line_n
             line_id = prefix_line_name + line_name
 
             stops = [line_id + '_' + cleanString(stp) for stp in list(line["stop_name_y"])]
+
+            sections = map_match_sections[line_id]
             #sections = [[line_id + f'_{ind}_{ind+1}', line_id + f'_{ind+1}_{ind+2}'] for ind in list(line.index)[:-2]] + [[line_id + f'_{line.index[-2]}_{line.index[-1]}']]
 
             first_stop_id = line.iloc[0]['stop_id']
@@ -264,10 +266,10 @@ def closest_node(node, nodes):
 
 def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
 
-    roads_nodes = roads.get("NODES")
-    roads_sections = roads.get("SECTIONS")
+    roads_nodes = roads.nodes.values()
+    roads_sections = roads.sections.values()
 
-    map_layer_services = {lid: list(layer.mobility_services.keys())[0] for lid, layer in mnms_graph.layers.items()}
+    #map_layer_services = {lid: list(layer.mobility_services.keys())[0] for lid, layer in mnms_graph.layers.items()}
     map_layer_services["TRANSIT"] = "WALK"
 
     # empty lines map matching sections list dict (key: line_id, value: list of list of sections between 2 stops)
@@ -413,7 +415,7 @@ generate_public_transportation_lines(feed_stop_times, metro_layer, list_metro_li
 bus_service = PublicTransportMobilityService('BUS')
 bus_layer = PublicTransportLayer(roads, 'BUSLayer', Bus, traditional_vehs_default_speed,
         services=[bus_service])
-generate_map_matching_pt_lines(feed_stop_times, bus_layer, list_bus_lines, 'BUS_')
+generate_map_matching_pt_lines(feed_stop_times, bus_layer, list_bus_lines, bus_lines_map_match_sections, 'BUS_')
 
 
 ### Create the MLGraph with PT
