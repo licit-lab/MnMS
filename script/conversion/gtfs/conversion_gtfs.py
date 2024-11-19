@@ -266,7 +266,8 @@ def closest_node(node, nodes):
 
 def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
 
-    roads_nodes = roads.nodes
+    #roads_nodes = roads.nodes
+    roads_nodes = mnms_graph.graph.nodes
     roads_sections = roads.sections
 
     # empty lines map matching sections list dict (key: line_id, value: list of list of sections between 2 stops)
@@ -308,13 +309,17 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
                 # find closest road node to destination stop
                 id_closest_destination_node = closest_node([x_coord, y_coord], roads_nodes)
 
+                map_layer_services = {"CAR": "CAR", "TRANSIT": "WALK"}
+                available_labels = {"CAR", "TRANSIT"}
+
                 # find shortest road path to next stop
-                shortest_path, cost = dijkstra(mnms_graph,
+                shortest_path, cost = dijkstra(mnms_graph.graph,
                                                id_closest_origin_node,
                                                id_closest_destination_node,
                                                'length',
-                                               {"TRANSIT": "WALK"},
-                                               {"TRANSIT"})
+                                               map_layer_services,
+                                               available_labels
+                                               )
 
                 first_node = shortest_path[0]
                 second_node = shortest_path[1]
