@@ -248,20 +248,20 @@ def distance(pt_1, pt_2):
 
 
 def closest_node(node, nodes):
-    id_node = ""
-    min_dist = 9999999
+    closest_id = None
+    min_dist = float('inf')
 
     for id, road_node in nodes.items():
-        id_road_node = road_node.id
+
         x = float(road_node.position[0])
         y = float(road_node.position[1])
 
         dist = distance(node, [x, y])
-        if dist <= min_dist:
+        if min_dist > dist > 0:
             min_dist = dist
-            id_node = id_road_node
+            closest_id = road_node.id
 
-    return id_node
+    return closest_id
 
 
 def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
@@ -277,7 +277,11 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
 
     for line, line_type in zip(pt_lines, pt_lines_types):
 
-        line_name = line.iloc[0]['route_short_name']
+        try:
+            line_name = line.iloc[0]['route_short_name']
+        except IndexError:
+            print(f"No line name found for line : {line}")
+            line_name = "LineNameError"
         line_id = prefix_line_name + line_name
 
         sections_paths_list = []
@@ -321,40 +325,48 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
                                                available_labels
                                                )
 
-                first_node = shortest_path[0]
-                second_node = shortest_path[1]
+                if not shortest_path:
+                    print(f"No shortest path found for : {id_closest_origin_node} and {id_closest_destination_node}")
 
-                # section to find
-                for id, road_section in roads_sections.items():
-                    if road_section.upstream == first_node and road_section.downstream == second_node:
-                        section_id = road_section.id
-                # if section not found
-                if section_id == "":
-                    print(f"Section not found for node : {onode_id}")
+                else:
+                    first_node = shortest_path[0]
+                    second_node = shortest_path[1]
 
-                roads.register_stop(onode_id, section_id, 0.)
+                    # section to find
+                    for id, road_section in roads_sections.items():
+                        if road_section.upstream == first_node and road_section.downstream == second_node:
+                            section_id = road_section.id
+                    # if section not found
+                    if section_id == "":
+                        print(f"Section not found for origin node : {onode_id}")
 
-                # build sections path
-                n = len(shortest_path)
-                for i in range(n):
+                    roads.register_stop(onode_id, section_id, 0.)
 
-                    section_path_id = ""
+                    # build sections path
+                    n = len(shortest_path)
+                    for i in range(n):
 
-                    if i > 0:
-                        for id, road_section in roads_sections.items():
-                            if road_section.upstream == shortest_path[i-1] and road_section.downstream == shortest_path[i]:
-                                section_path_id = road_section.id
-                                sections_path.append(section_path_id)
-                        if section_path_id == "":
-                            print(f"Section not found for nodes : {shortest_path[i-1]} and {shortest_path[i]}")
+                        section_path_id = ""
 
-                    if i == n-1:
-                        sections_path.append(section_path_id)
+                        if i > 0:
+                            for id, road_section in roads_sections.items():
+                                if road_section.upstream == shortest_path[i-1] and road_section.downstream == shortest_path[i]:
+                                    section_path_id = road_section.id
+                                    sections_path.append(section_path_id)
+                            if section_path_id == "":
+                                print(f"Section not found for nodes : {shortest_path[i-1]} and {shortest_path[i]}")
 
-                sections_paths_list.append(sections_path)
+                        if i == n-1:
+                            sections_path.append(section_path_id)
+
+                    sections_paths_list.append(sections_path)
 
             if ind == max(line.index):
-                roads.register_stop(dnode_id, section_id, 1.)
+                # if section not found
+                if section_id == "":
+                    print(f"Section not found for destination node : {dnode_id}")
+                else:
+                    roads.register_stop(dnode_id, section_id, 1.)
 
         lines_mm_sections_dict[line_id] = sections_paths_list
 
