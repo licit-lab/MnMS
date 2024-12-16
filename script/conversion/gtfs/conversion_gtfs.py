@@ -11,7 +11,7 @@ from unidecode import unidecode
 from coordinates import gps_to_lambert93, gps_to_utm
 from hipop.shortest_path import dijkstra
 from mnms.graph.layers import PublicTransportLayer, MultiLayerGraph
-from mnms.vehicles.veh_type import Tram, Metro, Bus
+from mnms.vehicles.veh_type import Tram, Metro, Bus, Funicular
 from mnms.generation.zones import generate_one_zone
 from mnms.mobility_service.public_transport import PublicTransportMobilityService
 from mnms.time import TimeTable, Time
@@ -22,15 +22,16 @@ from mnms.io.graph import load_graph, save_graph
 ### Parameters ###
 ##################
 
-gtfs_path = "lyon_tcl.zip" # gtfs zip folder
+gtfs_path = "lyon_tcl_gtfs.zip" # gtfs zip folder
 mnms_json_filepath = "lyon_roads.json" # mlgraph with the road network only
 
-mlgraph_dump_file = "lyon_mnms_gtfs.json"
+mlgraph_dump_file = "lyon_mnms_gtfs_bus_tram_metro_funi.json"
 
 # Default speeds
 traditional_vehs_default_speed = 13.8 # m/s
 metro_default_speed = 15 # m/s
 tram_default_speed = 18 # m/s
+funicular_default_speed = 5 # m/s
 
 
 #################
@@ -384,11 +385,11 @@ feed_stops = feed.stops
 feed_stop_times = feed.stop_times
 feed_trips = feed.trips
 
-# Tram = 0, Subway = 1, Bus = 3
+# Tram = 0, Subway = 1, Bus = 3, Funicular = 7
 list_tram_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, feed_trips, 0)
 list_metro_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, feed_trips, 1)
 list_bus_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, feed_trips, 3)
-
+list_funicular_lines = extract_gtfs_stops(feed_routes, feed_stops, feed_stop_times, feed_trips, 7)
 
 ### Get the MLGraph without TCs
 mnms_graph = load_graph(mnms_json_filepath)
@@ -396,16 +397,16 @@ roads = mnms_graph.roads
 
 
 ### Add the nodes, sections, and stops related to each PT line to the roadDescriptor
-pt_lines = list_tram_lines + list_metro_lines
-pt_lines_types = ['TRAM'] * len(list_tram_lines) + ['METRO'] * len(list_metro_lines)
+pt_lines = list_tram_lines + list_metro_lines + list_bus_lines + list_funicular_lines
+pt_lines_types = ['TRAM'] * len(list_tram_lines) + ['METRO'] * len(list_metro_lines) + ['BUS'] * len(list_bus_lines) + ['FUNI'] * len(list_funicular_lines)
 
 register_pt_lines(pt_lines, pt_lines_types)
 
 
 ### Add the nodes ands stops related to each map matched PT line to the roadDescriptor
-map_match_bus_line_type = ['BUS'] * len(list_bus_lines)
+# map_match_bus_line_type = ['BUS'] * len(list_bus_lines)
 
-bus_lines_map_match_sections = register_map_match_pt_lines(list_bus_lines, map_match_bus_line_type, 'BUS_')
+# bus_lines_map_match_sections = register_map_match_pt_lines(list_bus_lines, map_match_bus_line_type, 'BUS_')
 
 
 ### Overwrite the roads zoning with a new zoning including all sections
@@ -430,11 +431,16 @@ generate_public_transportation_lines(feed_stop_times, metro_layer, list_metro_li
 bus_service = PublicTransportMobilityService('BUS')
 bus_layer = PublicTransportLayer(roads, 'BUSLayer', Bus, traditional_vehs_default_speed,
         services=[bus_service])
-generate_map_matching_pt_lines(feed_stop_times, bus_layer, list_bus_lines, bus_lines_map_match_sections, 'BUS_')
+generate_public_transportation_lines(feed_stop_times, bus_layer, list_bus_lines, 'BUS_')
+
+# Funicular
+funicular_service = PublicTransportMobilityService('FUNI')
+funicular_layer = PublicTransportLayer(roads, 'FUNIlayer', Funicular, funicular_default_speed, services=[funicular_service])
+generate_public_transportation_lines(feed_stop_times, funicular_layer, list_funicular_lines, 'FUNI_')
 
 
 ### Create the MLGraph with PT
-mlgraph = MultiLayerGraph([tram_layer, metro_layer, bus_layer], None, None)
+mlgraph = MultiLayerGraph([tram_layer, metro_layer, bus_layer, funicular_layer], None, None)
 
 
 ### Save the graph
