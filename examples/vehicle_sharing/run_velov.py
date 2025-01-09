@@ -9,7 +9,9 @@ import pandas as pd
 # MnMS
 from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 from mnms.mobility_service.vehicle_sharing import VehicleSharingMobilityService
-from mnms.generation.layers import generate_bbox_origin_destination_layer
+from mnms.generation.layers import generate_layer_from_roads, generate_bbox_origin_destination_layer
+from mnms.graph.layers import SharedVehicleLayer, MultiLayerGraph
+from mnms.vehicles.veh_type import Bike
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
 from mnms.simulation import Supervisor
@@ -75,30 +77,23 @@ mlgraph = load_graph(mlgraph_file)
 
 # OD layer
 odlayer = generate_bbox_origin_destination_layer(mlgraph.roads, 100, 100)
+mlgraph.odlayer = odlayer
 mlgraph.add_origin_destination_layer(odlayer)
 
-# Connect od layer and velov layer
-if not os.path.exists(f"transit_link_{NX}_{NY}_{500}_grid.json"):
-    mlgraph.connect_origindestination_layers(500, 1000)
-    save_transit_link_odlayer(mlgraph, f"transit_link_{NX}_{NY}_{500}_grid.json")
-else:
-    load_transit_links(mlgraph, f"transit_link_{NX}_{NY}_{500}_grid.json")
-
-mlgraph.connect_origindestination_layers(1e2)
-
-#### Decision model ####
-decision_model = DummyDecisionModel(mlgraph, outfile="paths.csv")
-
 # Vehicle sharing mobility service
-velov_service = VehicleSharingMobilityService("velov", b_freefloating, velov_dt_matching)
-velov_service.attach_vehicle_observer(CSVVehicleObserver("velov_vehs.csv"))
-mlgraph.layers["velov_layer"].add_mobility_service(velov_service)
+# velov_service = VehicleSharingMobilityService("velov", b_freefloating, velov_dt_matching)
+# velov_service.attach_vehicle_observer(CSVVehicleObserver("velov_vehs.csv"))
+
+# velov_layer = generate_layer_from_roads(mlgraph.roads, "velov_layer", SharedVehicleLayer, Bike, velov_default_speed, [velov_service])
+
+# Multilayer graph
+# mlgraph.layers["velov_layer"].add_mobility_service(velov_service)
+# mlgraph = MultiLayerGraph([velov_layer], odlayer)
 
 # Velov Data
 dtype = {'idstation': str}
 df_velov = pd.read_csv(lyon_velov_csv_file, sep=';', dtype=dtype)
 df_velov = df_velov[["idstation", "nom", "nbbornettes", "lon", "lat"]]
-
 
 # Register nodes
 for index, velov_station in df_velov.iterrows():
@@ -112,6 +107,16 @@ for index, velov_station in df_velov.iterrows():
     capacity_station = velov_station["nbbornettes"]
 
     mlgraph.layers['velov_layer'].mobility_services['velov'].create_station(id_station, node_station, capacity=capacity_station, nb_initial_veh=5)
+
+# Connect od layer and velov layer
+if not os.path.exists(f"transit_link_{NX}_{NY}_{500}_grid.json"):
+    mlgraph.connect_origindestination_layers(500, 1000)
+    save_transit_link_odlayer(mlgraph, f"transit_link_{NX}_{NY}_{500}_grid.json")
+else:
+    load_transit_links(mlgraph, f"transit_link_{NX}_{NY}_{500}_grid.json")
+
+#### Decision model ####
+decision_model = DummyDecisionModel(mlgraph, outfile="paths.csv")
 
 #### Flow motor ####
 flow_motor = MFDFlowMotor(outfile="flow.csv")
