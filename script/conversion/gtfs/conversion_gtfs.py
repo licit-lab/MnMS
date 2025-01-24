@@ -3,7 +3,7 @@
 ###############
 ### Imports ###
 ###############
-
+import networkx.exception
 import numpy as np
 import math
 import networkx as nx
@@ -42,7 +42,7 @@ funicular_default_speed = 5 # m/s
 _norm = np.linalg.norm
 
 # choose here your final coordinates system (ex: Lyon/Symuvia = Lambert 93, International/Other = UTM)
-_convert_coords = gps_to_utm
+_convert_coords = gps_to_lambert93
 
 def cleanString(string):
 
@@ -253,6 +253,7 @@ def closest_node(graph, x, y):
     Returns:
     - The ID of the closest node.
     """
+
     closest_node = None
     min_distance = float("inf")
 
@@ -274,11 +275,10 @@ def closest_node(graph, x, y):
 
     return closest_node
 
-
 def generate_nx_graph(nodes, sections):
 
     # Create a directed graph
-    nxgraph = nx.DiGraph()
+    nxgraph = nx.MultiDiGraph()
 
     # Add nodes to the graph
     for id, node in nodes.items():
@@ -354,12 +354,15 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
                     # find closest road node to destination stop
                     id_closest_destination_node = closest_node(nxgraph, x_coord, y_coord)
 
-                    shortest_path = nx.shortest_path(nxgraph,
-                                                     source=id_closest_origin_node,
-                                                     target=id_closest_destination_node,
-                                                     weight="length")
+                    try:
+                        shortest_path = nx.shortest_path(nxgraph,
+                                                         source=id_closest_origin_node,
+                                                         target=id_closest_destination_node,
+                                                         weight="length")
+                    except networkx.exception.NetworkXNoPath:
+                        shortest_path = []
 
-                    shortest_path_edges = list(zip(shortest_path[:-1], shortest_path[1:]))
+                    # shortest_path_edges = list(zip(shortest_path[:-1], shortest_path[1:]))
 
                     n = len(shortest_path)
 
