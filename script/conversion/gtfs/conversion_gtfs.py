@@ -26,7 +26,7 @@ from mnms.io.graph import load_graph, save_graph
 gtfs_path = "lyon_tcl.zip" # gtfs zip folder
 mnms_json_filepath = "lyon_roads.json" # mlgraph with the road network only
 
-mlgraph_dump_file = "lyon_mnms_gtfs_bus_tram_metro_funi.json"
+mlgraph_dump_file = "lyon_mnms_gtfs_bus_tram_metro.json"
 
 # Default speeds
 traditional_vehs_default_speed = 13.8 # m/s
@@ -417,6 +417,13 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
                         print(f"Section not found for destination node : {dnode_id}")
                     else:
                         roads.register_stop(dnode_id, section_id, 1.)
+
+            # connect sections_pathss
+            for i, sections_path in enumerate(sections_paths_list):
+                # for each sections_paths without last one
+                if i < len(sections_paths_list) - 1:
+                    # add the first section of the next sections_path
+                    sections_path.append(sections_paths_list[i+1][0])
 
             lines_mm_sections_dict[line_id] = sections_paths_list
 
