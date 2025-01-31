@@ -34,6 +34,8 @@ metro_default_speed = 15 # m/s
 tram_default_speed = 18 # m/s
 funicular_default_speed = 5 # m/s
 
+# Map match max distance
+mapmatch_dist = 50
 
 #################
 ### Functions ###
@@ -273,7 +275,7 @@ def closest_node(graph, x, y):
             closest_node = id
             min_distance = distance
 
-    return closest_node
+    return closest_node, min_distance
 
 def generate_nx_graph(nodes, sections):
 
@@ -339,6 +341,8 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
 
                 dnode_id = node_id
                 section_id = ""
+                shortest_path = []
+                n = 0 # length of shortest_path
 
                 sections_path = []
 
@@ -349,31 +353,35 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
                     o_x_coord, o_y_coord = _convert_coords(o_lat, o_lon)
 
                     # find closest road node to origin stop
-                    id_closest_origin_node = closest_node(nxgraph, o_x_coord, o_y_coord)
+                    id_closest_origin_node, dist_o = closest_node(nxgraph, o_x_coord, o_y_coord)
 
                     # find closest road node to destination stop
-                    id_closest_destination_node = closest_node(nxgraph, x_coord, y_coord)
+                    id_closest_destination_node, dist_d = closest_node(nxgraph, x_coord, y_coord)
 
-                    try:
-                        shortest_path = nx.shortest_path(nxgraph,
-                                                         source=id_closest_origin_node,
-                                                         target=id_closest_destination_node,
-                                                         weight="length")
-                    except networkx.exception.NetworkXNoPath:
-                        shortest_path = []
+                    # radius 50 meters for closest node to stop
+                    if dist_o < mapmatch_dist and dist_d < mapmatch_dist:
+                        try:
+                            shortest_path = nx.shortest_path(nxgraph,
+                                                             source=id_closest_origin_node,
+                                                             target=id_closest_destination_node,
+                                                             weight="length")
+                        except networkx.exception.NetworkXNoPath:
+                            shortest_path = []
 
-                    # shortest_path_edges = list(zip(shortest_path[:-1], shortest_path[1:]))
+                        # shortest_path_edges = list(zip(shortest_path[:-1], shortest_path[1:]))
+                        n = len(shortest_path)
 
-                    n = len(shortest_path)
-
-                    # empty shortest path (at least two)
-                    if n < 2:
+                        # empty shortest path (at least two)
+                        if n < 2:
+                            first_node = onode_id
+                            second_node = node_id
+                        else:
+                            first_node = shortest_path[0]
+                            second_node = shortest_path[1]
+                    else:
+                        n = 0
                         first_node = onode_id
                         second_node = node_id
-
-                    else:
-                        first_node = shortest_path[0]
-                        second_node = shortest_path[1]
 
                     # section to find
                     for id, road_section in roads_sections.items():
@@ -487,6 +495,7 @@ generate_public_transportation_lines(feed_stop_times, metro_layer, list_metro_li
 bus_service = PublicTransportMobilityService('BUS')
 bus_layer = PublicTransportLayer(roads, 'BUSLayer', Bus, traditional_vehs_default_speed,
         services=[bus_service])
+# generate_public_transportation_lines(feed_stop_times, bus_layer, list_bus_lines, 'BUS_')
 generate_map_matching_pt_lines(feed_stop_times, bus_layer, list_bus_lines, bus_lines_map_match_sections, 'BUS_')
 
 # Funicular
