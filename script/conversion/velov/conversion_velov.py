@@ -3,6 +3,7 @@
 ###############
 ## Casuals
 import pandas as pd
+import math
 
 # MnMS
 from mnms.mobility_service.vehicle_sharing import VehicleSharingMobilityService
@@ -30,6 +31,36 @@ def cleanString(string):
     clean_str = unidecode(str(''.join(i for i in string if i.isalnum())))
 
     return clean_str
+
+
+def closest_node(nodes, x, y):
+    """
+    Finds the closest node to the given x, y coordinates in the graph.
+
+    Parameters:
+    - graph: The networkx graph.
+    - x, y: The coordinates of the target point.
+
+    Returns:
+    - The ID of the closest node.
+    """
+
+    closest_node = None
+    min_distance = float("inf")
+
+    for id, node in nodes.items():
+        # Extract the position of the current node
+        node_x, node_y = node.position
+
+        # Calculate the Euclidean distance
+        distance = math.sqrt((node_x - x) ** 2 + (node_y - y) ** 2)
+
+        # Update the closest node if a smaller distance is found
+        if distance < min_distance:
+            closest_node = id
+            min_distance = distance
+
+    return closest_node, min_distance
 
 
 ##################
@@ -63,19 +94,6 @@ df_velov = pd.read_csv(lyon_velov_csv_file, sep=';', dtype=dtype)
 df_velov = df_velov[["idstation", "nom", "nbbornettes", "lon", "lat"]]
 
 
-# Register nodes
-for index, velov_station in df_velov.iterrows():
-    node_station_name = "VLV_" + cleanString(velov_station["nom"])
-
-    lat = float(velov_station["lat"].replace(',', '.'))
-    lon = float(velov_station["lon"].replace(',', '.'))
-    x_coord, y_coord = gps_to_lambert93(lat, lon)
-
-    roads.register_node(node_station_name, [x_coord, y_coord])
-
-    df_velov.at[index, "nom"] = node_station_name
-
-
 # Vehicle sharing mobility service
 velov = VehicleSharingMobilityService("velov", b_freefloating, velov_dt_matching)
 velov_layer = generate_layer_from_roads(roads, 'velov_layer', SharedVehicleLayer,
@@ -88,8 +106,13 @@ mlgraph = MultiLayerGraph([velov_layer], None, None)
 
 # Add stations
 for index, velov_station in df_velov.iterrows():
-    id_station = "S" + velov_station["idstation"]
-    node_station = velov_station["nom"]
+    id_station = "VLV_" + cleanString(velov_station["nom"])
+
+    lat = float(velov_station["lat"].replace(',', '.'))
+    lon = float(velov_station["lon"].replace(',', '.'))
+    x_coord, y_coord = gps_to_lambert93(lat, lon)
+
+    node_station, dist = closest_node(mlgraph.roads.nodes, x_coord, y_coord)
     capacity_station = velov_station["nbbornettes"]
 
     mlgraph.layers['velov_layer'].mobility_services['velov'].create_station(id_station, node_station, capacity=capacity_station, nb_initial_veh=5)
