@@ -42,6 +42,11 @@ affectation_factor = 10
 
 #########################
 ### Scenario creation ###
+# a line road network where a car layer extends on the left and a bus line extends on the right
+# one reservoir with constant speeds for cars and buses and covering the whole network
+# a personal car mobility service runs on the car layer and a public transportation service runs on another layer
+# an origin-destination layer matching with the roads nodes
+# only one user who should travel from the left to the right by taking her car, then the bus line
 #########################
 
 #### RoadDescriptor ####
