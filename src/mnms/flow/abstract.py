@@ -8,6 +8,7 @@ from mnms.time import Time, Dt
 from mnms.graph.layers import MultiLayerGraph
 
 class AbstractReservoir(ABC):
+
     def __init__(self, zone: Zone, modes: List[str]):
         """
         Abstract Reservoir class defining the interface for a MFD reservoir
@@ -52,6 +53,7 @@ class AbstractReservoir(ABC):
         pass
 
     def set_ghost_accumulation(self, f_acc: Callable[[Time], Dict[str, float]]):
+
         self.ghost_accumulation = f_acc
 
     def add_trip_length(self, l, mode):
@@ -88,6 +90,20 @@ class AbstractMFDFlowMotor(ABC):
         else:
             self._write = True
             self._outfile = open(outfile, "w")
+            self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+
+        if self._write == True:
+            if '_csvhandler' in state:
+                del state['_csvhandler']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+        if self._write == True:
             self._csvhandler = csv.writer(self._outfile, delimiter=';', quotechar='|')
 
     def set_graph(self, mlgraph: MultiLayerGraph):

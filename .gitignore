@@ -157,12 +157,4 @@ script/conversion/symuflow/Lyon_symuviainput_1.json
 script/validation/res.txt
 log.txt
 log.txt
-examples/snapshot/OUTPUTS 1 heure/monolink.json
-examples/snapshot/OUTPUTS 1 heure/snapshot.graph
-examples/snapshot/OUTPUTS 1 heure/snapshot.mnms
-examples/snapshot/OUTPUTS copie 2/monolink.json
-examples/snapshot/OUTPUTS copie 2/snapshot.graph
-examples/snapshot/OUTPUTS copie 2/snapshot.mnms
-examples/snapshot/OUTPUTS/monolink.json
-examples/snapshot/OUTPUTS/snapshot.graph
-examples/snapshot/OUTPUTS/snapshot.mnms
+

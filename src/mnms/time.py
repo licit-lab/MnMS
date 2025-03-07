@@ -215,7 +215,7 @@ class Time(object):
 
     @property
     def time(self):
-        return f"{str(self._hours) if self._hours >= 10 else '0' + str(self._hours)}:{str(self._minutes) if self._minutes >= 10 else '0' + str(self._minutes)}:{str(round(self._seconds, 2)) if self._seconds >= 10 else '0' + str(round(self._seconds, 2))}"
+        return f"{str(self._hours) if self._hours >= 10 else '0' + str(self._hours)}:{str(self._minutes) if self._minutes >= 10 else '0' + str(self._minutes)}:{str(round(self._seconds, 2)) if round(self._seconds,2) >= 10 else '0' + str(round(self._seconds, 2))}"
 
     def add_time(self, dt: Dt):
         new_seconds = self._seconds + Decimal(dt._seconds)
@@ -223,7 +223,7 @@ class Time(object):
         new_seconds = new_seconds%60
         hours = self._hours + Decimal(dt._hours) + Decimal(new_minutes//60)
         new_minutes = new_minutes%60
-        new_seconds = new_seconds%60
+
         assert hours <= 24
 
         new_time = Time("")

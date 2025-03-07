@@ -100,11 +100,25 @@ class CSVUserObserver(TimeDependentObserver):
         self._csvhandler.writerow(self._header)
         self._prec = prec
 
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+        if '_csvhandler' in state:
+            del state['_csvhandler']
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
+        self._csvhandler.writerow(self._header)
+
     def finish(self):
         self._file.close()
 
-    def update(self, subject: 'User', time: Time):
-        row = [str(time),
+    def update(self, subject: 'User', t: Time):
+        row = [t.time,
                subject.id,
                f"{subject.current_link[0]} {subject.current_link[1]}" if subject.current_link is not None else None,
                f"{subject.position[0]:.{self._prec}f} {subject.position[1]:.{self._prec}f}" if subject.position is not None else None,
@@ -132,12 +146,26 @@ class CSVVehicleObserver(TimeDependentObserver):
         self._csvhandler.writerow(self._header)
         self._prec = prec
 
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+        if '_csvhandler' in state:
+            del state['_csvhandler']
+        return state
+
+    def __setstate__(self, state):
+
+        self.__dict__.update(state)
+
+        self._csvhandler = csv.writer(self._file, delimiter=';', quotechar='|')
+        self._csvhandler.writerow(self._header)
+
 
     def finish(self):
         self._file.close()
 
-    def update(self, subject: 'Vehicle', time:Time):
-        row = [str(time),
+    def update(self, subject: 'Vehicle', t:Time):
+        row = [t.time,
                subject.id,
                subject.type,
                f"{subject.current_link[0]} {subject.current_link[1]}" if subject.current_link is not None else None,
