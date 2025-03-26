@@ -29,7 +29,7 @@ def calculate_V_MFD(acc):
     return {"CAR": V}
 
 if __name__ == '__main__':
-    mmgraph = load_graph(indir + "/network-Lyon63V.json")
+    mmgraph = load_graph(indir + "/network-Lyon63V_CarOnly.json")
 
     odlayer = load_odlayer(indir + "/odlayer-Lyon63V.json")
     mmgraph.add_origin_destination_layer(odlayer)
