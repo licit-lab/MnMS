@@ -171,16 +171,52 @@ def analyze_roads(roads):
     final_sections = identify_final_sections(list(deadends))
 
     print(f"Number of Dead-ends: {len(deadends)}")
-    print(list(deadends))
+    #print(list(deadends))
 
     print(f"Number of Springs: {len(springs)}")
-    print(list(springs))
+    #print(list(springs))
 
     print(f"Number of Isolate nodes: {len(isolates)}")
-    print(list(isolates))
+    #print(list(isolates))
 
     print((f"Number of Final sections: {len(final_sections)}"))
-    print(final_sections)
+    #print(final_sections)
+
+
+def analyze_bus(layers):
+    for layer in layers:
+
+        if layer["ID"] == "BUSLayer":
+            lines = layer["LINES"]
+            bus_line_count = len(lines)
+            fullymapmatch_bus_line_count = 0
+
+            print(f"Number of Bus lines: {bus_line_count}")
+
+            for line in lines:
+                id_bus_line = line["ID"]
+                lsections = line["SECTIONS"]
+                lsections_count = len(lsections)
+                mapmatch_lsections_count = 0
+
+                print(f"Number of sections lists for line {id_bus_line}: {lsections_count}")
+
+                isfullymapmatch = True
+                for lsection in lsections:
+                    ismapmatch = True
+                    for section in lsection:
+                        if str(section).startswith("BUS"):
+                            ismapmatch = False
+                            isfullymapmatch = False
+                    if ismapmatch:
+                        mapmatch_lsections_count = mapmatch_lsections_count + 1
+
+                print(f"Bus line {id_bus_line} mapmatching rate: {mapmatch_lsections_count / lsections_count}")
+
+                if isfullymapmatch:
+                    fullymapmatch_bus_line_count = fullymapmatch_bus_line_count + 1
+
+            print(f"Number of Bus lines fully map matched: {fullymapmatch_bus_line_count}")
 
 
 def visualize_nodes(roads):
@@ -321,10 +357,11 @@ if __name__ == "__main__":
         valid = validate_roads(roads)
 
     if valid:
-        analyze_roads(roads)
+        # analyze_roads(roads)
+        analyze_bus(layers)
 
         centralities = compute_centralities(roads)
-        print(f"Node with maximum centrality degree : {max(centralities, key=centralities.get)} = {max(centralities.values())}")
+        # print(f"Node with maximum centrality degree : {max(centralities, key=centralities.get)} = {max(centralities.values())}")
 
         if args.visualize:
             visualize_nodes(roads)
