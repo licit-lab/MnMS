@@ -60,6 +60,109 @@ def secondsToMnMsTime(seconds):
     return mnms_time
 
 
+def generate_nx_graph(nodes, sections):
+
+    # Create a directed graph
+    nxgraph = nx.MultiDiGraph()
+
+    # Add nodes to the graph
+    for id, node in nodes.items():
+        node_id = node.id
+        x = float(node.position[0])
+        y = float(node.position[1])
+        nxgraph.add_node(node_id, position=(x, y))
+
+    # Add edges to the graph
+    for id, section in sections.items():
+        edge_id = section.id
+        upnode = section.upstream
+        downnode = section.downstream
+        length = section.length
+        nxgraph.add_edge(upnode, downnode, id=edge_id, length=length)
+
+    return nxgraph
+
+
+def closest_node(graph, x, y):
+    """
+    Finds the closest node to the given x, y coordinates in the graph.
+
+    Parameters:
+    - graph: The networkx graph.
+    - x, y: The coordinates of the target point.
+
+    Returns:
+    - The ID of the closest node.
+    """
+
+    cl_node = None
+    min_distance = float("inf")
+
+    for id, node in graph.nodes(data=True):
+        # Skip nodes without 'position' attribute
+        if "position" not in node:
+            continue
+
+        # Extract the position of the current node
+        node_x, node_y = node["position"]
+
+        # Calculate the Euclidean distance
+        distance = math.sqrt((node_x - x) ** 2 + (node_y - y) ** 2)
+
+        # Update the closest node if a smaller distance is found
+        if distance < min_distance:
+            cl_node = id
+            min_distance = distance
+
+    return cl_node, min_distance
+
+
+def closest_edge(graph, x, y):
+    """
+    Finds the closest edge to point (x, y) and returns:
+    - edge (u, v)
+    - t in [0, 1] representing the relative position along the edge
+    - distance from point to edge
+    """
+    min_distance = float("inf")
+    cl_edge = None
+    cl_t = None
+
+    for u, v in graph.edges():
+        u_pos = graph.nodes[u].get("position")
+        v_pos = graph.nodes[v].get("position")
+
+        if u_pos is None or v_pos is None:
+            continue
+
+        x1, y1 = u_pos
+        x2, y2 = v_pos
+        dx = x2 - x1
+        dy = y2 - y1
+
+        # Handle degenerate case (u and v at same position)
+        if dx == 0 and dy == 0:
+            dist = math.hypot(x - x1, y - y1)
+            t = 0
+        else:
+            # Compute projection of point onto line segment as t in [0, 1]
+            t = ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)
+            t = max(0, min(1, t))  # Clamp to segment
+
+            # Compute projected point
+            proj_x = x1 + t * dx
+            proj_y = y1 + t * dy
+
+            dist = math.hypot(x - proj_x, y - proj_y)
+
+        if dist < min_distance:
+            min_distance = dist
+            cl_edge = (u, v)
+            cl_t = t
+
+    return cl_edge, cl_t, min_distance
+
+
 def getLongestTripStops(route_merged_data):
 
     # Select the longest trip in route
@@ -93,6 +196,14 @@ def extract_gtfs_stops(routes_, stops_, stop_times_, trips_, route_type):
         route_type_ = route["route_type"]
         route_id = route["route_id"]
         route_short_name = cleanString(route["route_short_name"])
+
+        # Athens special
+        if route_short_name == "304" \
+                or route_short_name == "305" \
+                or route_short_name == "316" \
+                or route_short_name == "322" \
+                or route_short_name == "323":
+            continue
 
         if route_type_ == route_type:
             ftrips = trips_.loc[trips_["route_id"] == route_id]
@@ -244,62 +355,6 @@ def register_pt_lines(pt_lines, pt_lines_types):
                 roads.register_stop(dnode_id, section_id, 1.)
 
 
-def closest_node(graph, x, y):
-    """
-    Finds the closest node to the given x, y coordinates in the graph.
-
-    Parameters:
-    - graph: The networkx graph.
-    - x, y: The coordinates of the target point.
-
-    Returns:
-    - The ID of the closest node.
-    """
-
-    closest_node = None
-    min_distance = float("inf")
-
-    for id, node in graph.nodes(data=True):
-        # Skip nodes without 'position' attribute
-        if "position" not in node:
-            continue
-
-        # Extract the position of the current node
-        node_x, node_y = node["position"]
-
-        # Calculate the Euclidean distance
-        distance = math.sqrt((node_x - x) ** 2 + (node_y - y) ** 2)
-
-        # Update the closest node if a smaller distance is found
-        if distance < min_distance:
-            closest_node = id
-            min_distance = distance
-
-    return closest_node, min_distance
-
-def generate_nx_graph(nodes, sections):
-
-    # Create a directed graph
-    nxgraph = nx.MultiDiGraph()
-
-    # Add nodes to the graph
-    for id, node in nodes.items():
-        node_id = node.id
-        x = float(node.position[0])
-        y = float(node.position[1])
-        nxgraph.add_node(node_id, position=(x, y))
-
-    # Add edges to the graph
-    for id, section in sections.items():
-        edge_id = section.id
-        upnode = section.upstream
-        downnode = section.downstream
-        length = section.length
-        nxgraph.add_edge(upnode, downnode, id=edge_id, length=length)
-
-    return nxgraph
-
-
 def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
 
     #roads_nodes = roads.nodes
@@ -353,10 +408,14 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
                     o_x_coord, o_y_coord = _convert_coords(o_lat, o_lon)
 
                     # find closest road node to origin stop
-                    id_closest_origin_node, dist_o = closest_node(nxgraph, o_x_coord, o_y_coord)
+                    # id_closest_origin_node, dist_o = closest_node(nxgraph, o_x_coord, o_y_coord)
+                    closest_origin_edge, t_o, dist_o = closest_edge(nxgraph, o_x_coord, o_y_coord)
+                    id_closest_origin_node = closest_origin_edge[0]
 
                     # find closest road node to destination stop
-                    id_closest_destination_node, dist_d = closest_node(nxgraph, x_coord, y_coord)
+                    # id_closest_destination_node, dist_d = closest_node(nxgraph, x_coord, y_coord)
+                    closest_destination_edge, t_d, dist_d = closest_edge(nxgraph, x_coord, y_coord)
+                    id_closest_destination_node = closest_destination_edge[1]
 
                     # radius 50 meters for closest node to stop
                     if dist_o < mapmatch_dist and dist_d < mapmatch_dist:
@@ -394,7 +453,7 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
                         section_length = _norm(np.array(pt_nodes[onode_id]) - np.array(pt_nodes[dnode_id]))
                         roads.register_section(section_id, onode_id, dnode_id, section_length)
 
-                    roads.register_stop(onode_id, section_id, 0.)
+                    roads.register_stop(onode_id, section_id, t_o)
 
                     section_path_id = ""
 
@@ -424,7 +483,7 @@ def register_map_match_pt_lines(pt_lines, pt_lines_types, prefix_line_name):
                     if section_id == "":
                         print(f"Section not found for destination node : {dnode_id}")
                     else:
-                        roads.register_stop(dnode_id, section_id, 1.)
+                        roads.register_stop(dnode_id, section_id, t_d)
 
             # connect sections_pathss
             for i, sections_path in enumerate(sections_paths_list):
