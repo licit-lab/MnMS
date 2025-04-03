@@ -186,6 +186,40 @@ def getLongestTripStops(route_merged_data):
     return distinct_stops
 
 
+def gps_inside_box(sections, lat, lon):
+    x, y = _convert_coords(lat, lon)
+
+    nodes = []
+    for sec in sections:
+        section = roads.sections[sec]
+        nodes.append(roads.nodes[section.upstream].position)
+        nodes.append(roads.nodes[section.downstream].position)
+
+    nodes = np.array(nodes)
+
+    min_x, min_y = np.min(nodes, axis=0)
+    max_x, max_y = np.max(nodes, axis=0)
+
+    return min_x <= x <= max_x and min_y <= y <= max_y
+
+
+def filter_line(sections, list_pt_lines):
+    # Filter line to remove stops that are not in box of road nodes network
+    filtered_pt_lines = []
+
+    for line in list_pt_lines:
+        line = line.loc[
+            [gps_inside_box(sections, float(stop["stop_lat_y"]), float(stop["stop_lon_y"])) for _, stop in
+             line.iterrows()]
+        ].reset_index(drop=True)
+
+        # Line should have at least two stops
+        if len(line.index) > 1:
+            filtered_pt_lines.append(line)
+
+    return filtered_pt_lines
+
+
 def extract_gtfs_stops(routes_, stops_, stop_times_, trips_, route_type):
 
     # Init the list of lines
@@ -197,13 +231,13 @@ def extract_gtfs_stops(routes_, stops_, stop_times_, trips_, route_type):
         route_id = route["route_id"]
         route_short_name = cleanString(route["route_short_name"])
 
-        # Athens special
-        if route_short_name == "304" \
-                or route_short_name == "305" \
-                or route_short_name == "316" \
-                or route_short_name == "322" \
-                or route_short_name == "323":
-            continue
+        # TODO: Uncomment for Athens special
+        # if route_short_name == "304" \
+        #         or route_short_name == "305" \
+        #         or route_short_name == "316" \
+        #         or route_short_name == "322" \
+        #         or route_short_name == "323":
+        #     continue
 
         if route_type_ == route_type:
             ftrips = trips_.loc[trips_["route_id"] == route_id]
@@ -520,16 +554,17 @@ roads = mnms_graph.roads
 
 
 ### Add the nodes, sections, and stops related to each PT line to the roadDescriptor
-pt_lines = list_tram_lines + list_metro_lines + list_bus_lines
+pt_lines = list_tram_lines + list_metro_lines
 pt_lines_types = ['TRAM'] * len(list_tram_lines) + ['METRO'] * len(list_metro_lines)
 
 register_pt_lines(pt_lines, pt_lines_types)
 
 
 ### Add the nodes ands stops related to each map matched PT line to the roadDescriptor
-map_match_bus_line_type = ['BUS'] * len(list_bus_lines)
+filtered_bus_lines = filter_line(roads.sections, list_bus_lines)
+map_match_bus_line_type = ['BUS'] * len(filtered_bus_lines)
 
-bus_lines_map_match_sections = register_map_match_pt_lines(list_bus_lines, map_match_bus_line_type, 'BUS_')
+bus_lines_map_match_sections = register_map_match_pt_lines(filtered_bus_lines, map_match_bus_line_type, 'BUS_')
 
 
 ### Overwrite the roads zoning with a new zoning including all sections
@@ -555,7 +590,7 @@ bus_service = PublicTransportMobilityService('BUS')
 bus_layer = PublicTransportLayer(roads, 'BUSLayer', Bus, traditional_vehs_default_speed,
         services=[bus_service])
 # generate_public_transportation_lines(feed_stop_times, bus_layer, list_bus_lines, 'BUS_')
-generate_map_matching_pt_lines(feed_stop_times, bus_layer, list_bus_lines, bus_lines_map_match_sections, 'BUS_')
+generate_map_matching_pt_lines(feed_stop_times, bus_layer, filtered_bus_lines, bus_lines_map_match_sections, 'BUS_')
 
 # Funicular
 # funicular_service = PublicTransportMobilityService('FUNI')
