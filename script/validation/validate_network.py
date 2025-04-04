@@ -189,7 +189,10 @@ def analyze_bus(layers):
         if layer["ID"] == "BUSLayer":
             lines = layer["LINES"]
             bus_line_count = len(lines)
-            fullymapmatch_bus_line_count = 0
+            mapmatched_bus_list = []
+            mapmatch_bus_line_count = 0
+            mapmatching_rate = 0.0
+            sum_mapmatching_rate = 0.0
 
             print(f"Number of Bus lines: {bus_line_count}")
 
@@ -211,18 +214,27 @@ def analyze_bus(layers):
                     if ismapmatch:
                         mapmatch_lsections_count = mapmatch_lsections_count + 1
 
-                print(f"Bus line {id_bus_line} mapmatching rate: {mapmatch_lsections_count / lsections_count}")
+                mapmatching_rate = mapmatch_lsections_count / lsections_count
+                print(f"Bus line {id_bus_line} mapmatching rate: {mapmatching_rate}")
+                sum_mapmatching_rate = sum_mapmatching_rate + mapmatching_rate
 
                 if isfullymapmatch:
-                    fullymapmatch_bus_line_count = fullymapmatch_bus_line_count + 1
+                    mapmatch_bus_line_count = mapmatch_bus_line_count + 1
 
-            print(f"Number of Bus lines fully map matched: {fullymapmatch_bus_line_count}")
+                # TODO: value of minimum mapmatching rate to be defined
+                if mapmatching_rate > 0.5:
+                    mapmatched_bus_list.append(id_bus_line)
+
+            print(f"Number of Bus lines fully map matched: {mapmatch_bus_line_count}")
+            print(f"List of mapmatched bus lines (at least 50%): {mapmatched_bus_list}")
+            print(f"Number of Bus lines map matched: {len(mapmatched_bus_list)}")
+            print(f"Average Bus mapmatching rate: {sum_mapmatching_rate / bus_line_count}")
 
 
 def visualize_nodes(roads):
     nodes = roads.get("NODES")
 
-    fig_nodes = plt.figure("Nodes", figsize=(20,12))
+    fig_nodes = plt.figure("Nodes", figsize=(20, 12))
     fig_nodes.suptitle("Nodes")
     for id, node in nodes.items():
         x = float(node["position"][0])
@@ -233,7 +245,7 @@ def visualize_nodes(roads):
 def visualize_stops(roads):
     stops = roads.get("STOPS")
 
-    fig_stops = plt.figure("Stops", figsize=(20,12))
+    fig_stops = plt.figure("Stops", figsize=(20, 12))
     fig_stops.suptitle("Stops")
     for id, stop in stops.items():
         x = float(stop["absolute_position"][0])
@@ -245,7 +257,7 @@ def visualize_sections(roads):
     nodes = roads.get("NODES")
     sections = roads.get("SECTIONS")
 
-    fig_sections = plt.figure("Sections", figsize=(20,12))
+    fig_sections = plt.figure("Sections", figsize=(20, 12))
     fig_sections.suptitle("Sections")
     for id, section in sections.items():
         upnode = section["upstream"]
@@ -291,7 +303,7 @@ def visualize_centralities(roads, centralities, max_degree):
         yvalues.append(float(node["position"][1]))
         dvalues.append(float(degree))
 
-    fig_centralities = plt.figure("Centralities", figsize=(20,12))
+    fig_centralities = plt.figure("Centralities", figsize=(20, 12))
     fig_centralities.suptitle("Centralities")
     plt.scatter(x=xvalues, y=yvalues, c=dvalues, cmap="YlOrRd", vmin=0, vmax=max_degree, s=1)
 
@@ -360,14 +372,14 @@ if __name__ == "__main__":
         # analyze_roads(roads)
         analyze_bus(layers)
 
-        centralities = compute_centralities(roads)
+        # centralities = compute_centralities(roads)
         # print(f"Node with maximum centrality degree : {max(centralities, key=centralities.get)} = {max(centralities.values())}")
 
         if args.visualize:
             visualize_nodes(roads)
             visualize_stops(roads)
             visualize_sections(roads)
-            visualize_centralities(roads, centralities, max(centralities.values()))
+            # visualize_centralities(roads, centralities, max(centralities.values()))
             visualize_zones(roads)
             visualize_pt_lines(roads, layers)
             plt.show()
