@@ -1,12 +1,14 @@
 [project]
-name = "MnMS" # TODO switch to lower case?
+name = "MnMS"
 version = "1.0.1"
 description = "Agent-based Multimodal Urban Moblity Simulator resulting from the ERC MAGnUM project"
 readme = "README.md"
 requires-python = ">= 3.10"
 license = "LGPL-3.0-only"
 license-files = ["LICENSE"]
-# TODO authors/maintainers
+maintainers = [
+    { name = "Cécile Becarie", email = "cecile.becarie@univ-eiffel.fr" },
+]
 keywords = [
     "traffic",
     "urban-mobility",
@@ -26,12 +28,12 @@ classifiers = [
 ]
 dependencies = [
     "dill >= 0.4",
+    "HiPOP >= 1.1",
     "jsonpickle >= 4.1",
     "matplotlib >= 3.10",
     "numpy >= 2.2",
     "pandas >= 2.3",
     "scipy >= 1.15",
-    "scisoftdev-tmp-HiPOP >= 1.0", # TODO swich the final package when available
     "seaborn >= 0.13",
     "shapely >= 2.1",
 ]
