@@ -1,7 +1,9 @@
 [pytest]
 addopts = [
     "--verbose",
-    "-W error", # Report Python warnings as errors.
+    "-W error",          # Report Python warnings as errors
+    "--cov",             # Enable coverage analysis
+    "--cov-report=html", # Generate coverage report at the end
 ]
 testpaths = [
     "tests",

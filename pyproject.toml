@@ -45,6 +45,7 @@ Issues = "https://github.com/EMob-Lab/MnMS/issues"
 [dependency-groups]
 test = [ # Dependencies needed for test tasks.
     "pytest >= 9.1",
+    "pytest-cov >= 7.1",
 ]
 dev = [ # All dependencies needed for development tasks.
     { include-group = "test" },

@@ -1,6 +1,6 @@
 [html]
-title = mnms's coverage
-directory = build/htmlcov
+title = MnMS' coverage
+directory = coverage_report
 
 [run]
 source = mnms
@@ -13,4 +13,3 @@ exclude_lines =
     raise NotImplemented
     raise NotImplementedError
     __main__
-
