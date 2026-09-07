@@ -1,161 +1,38 @@
-# Byte-compiled / optimized / DLL files
+# Keep the following list of files/directories to exclude from version control as small as possible.
+# Only patterns relevant for the current project should appear in this list.
+
+# Python bytecode directories
 __pycache__/
-*.py[cod]
-*$py.class
 
-# C extensions
-*.so
+# Temporary/cache directories and files created by miscellaneous development tools
+/.pytest_cache/
+/.coverage
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+# FIXME Running the tests result to a log file generated in the root directory.
+# It would be better to isolate these logs in a dedicated directory,
+# and also to avoid that each test overwrites the same log file.
+/log.txt
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
+# Directory for test coverage reports
+/coverage_report/
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# Output directories for Python distribution files (wheels & source distributions)
+/dist/
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
+# Python virtual environments (usual names), expected only in the root directory
+/env/
+/venv/
+/.env/
+/.venv/
+/env[_\-]*/
+/venv[_\-]*/
+/.env[_\-]*/
+/.venv[_\-]*/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-
-#doc
-doc/_build/
-doc/_dvlpt/
-
-#pycharm
-.idea/
-
-#OSX
+# MacOS files
 .DS_Store
 
-doc/tutorials/results/*
-docs/reference/*
-*.csv
-docs/Untitled.ipynb
-examples/vehicle_sharing/mlgraph.json
-examples/vehicle_sharing/mlgraph.json
-examples/on_demand_car/demand.csv
-examples/on_demand_car/graph.json
-examples/vehicle_sharing/free_floating_example.json
-Untitled.ipynb
-examples/vehicle_sharing/free_floating_example.json
-examples/vehicle_sharing/free_floating_example.json
-examples/vehicle_sharing/free_floating_example.json
-examples/vehicle_sharing/free_floating_example.json
-script/conversion/symuflow/Lyon_symuviainput_1.json
-script/validation/res.txt
-log.txt
-log.txt
-
-examples/snapshot/OUTPUTS/snapshot.graph
+# IDE files
+.vscode
+.idea
+.ipynb_checkpoints
