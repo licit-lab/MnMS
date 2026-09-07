@@ -43,6 +43,13 @@ Repository = "https://github.com/EMob-Lab/MnMS"
 Issues = "https://github.com/EMob-Lab/MnMS/issues"
 
 [dependency-groups]
+doc = [ # Dependencies needed to generate the documenation.
+    "mkdocs >= 1.6",
+    "mkdocs-gen-files >= 0.6",
+    "mkdocs-jupyter >= 0.26",
+    "mkdocstrings >= 1.0",
+    "mkdocstrings-python >= 2.0",
+]
 test = [ # Dependencies needed for test tasks.
     "pytest >= 9.1",
     "pytest-cov >= 7.1",

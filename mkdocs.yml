@@ -1,14 +1,14 @@
 site_name: MnMS
 site_url: ""
 use_directory_urls: false
-site_description: 'MnMS ''s documentation'
+site_description: 'MnMS'' documentation'
 nav:
-    - Home: index.md
-    - Installation: installation.md
-    - Tutorial:
-        - Quick start: QuickStartTutorial.ipynb
-    - Code Reference:
-        - mnms: reference/SUMMARY.md
+  - Home: index.md
+  - Installation: installation.md
+  - Tutorial:
+      - Quick start: QuickStartTutorial.ipynb
+  - Code Reference:
+      - mnms: reference/SUMMARY.md
 
 theme:
   name: material
@@ -24,11 +24,10 @@ plugins:
   - search
   - gen-files:
       scripts:
-      - docs/gen_ref_pages.py  #
+        - docs/gen_ref_pages.py
   - mkdocstrings:
       watch:
-      - src/mnms  #
+        - src/mnms
   - mkdocs-jupyter:
       include: ["*.ipynb"]
-#      execute: true
-      include_source: True
+      include_source: true
