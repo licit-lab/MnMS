@@ -1,7 +1,7 @@
 [project]
 name = "MnMS"
 version = "1.0.1"
-description = "Agent-based Multimodal Urban Moblity Simulator resulting from the ERC MAGnUM project"
+description = "Agent-based Multimodal Urban Moblity Simulator resulting from the ERC MAGnUM project" #TODO remove
 readme = "README.md"
 requires-python = ">= 3.10"
 license = "LGPL-3.0-only"
