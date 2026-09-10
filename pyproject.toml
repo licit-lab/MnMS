@@ -1,0 +1,68 @@
+[project]
+name = "MnMS"
+version = "1.0.1"
+description = "Agent-based Multimodal Urban Moblity Simulator resulting from the ERC MAGnUM project"
+readme = "README.md"
+requires-python = ">= 3.10"
+license = "LGPL-3.0-only"
+license-files = ["LICENSE"]
+maintainers = [
+    { name = "Cécile Becarie", email = "cecile.becarie@univ-eiffel.fr" },
+]
+keywords = [
+    "traffic",
+    "urban-mobility",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10", # Oldest supported version (must be kept consistent with `ci.yaml`).
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14", # Most recent supported version (must be kept consistent with `ci.yaml`).
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "dill >= 0.4",
+    "HiPOP ~= 1.1", # Stick to this major version number, as subsequent HiPOP versions may introduce breaking changes.
+    "jsonpickle >= 4.1",
+    "matplotlib >= 3.10",
+    "numpy >= 2.2",
+    "pandas >= 2.3",
+    "scipy >= 1.15",
+    "seaborn >= 0.13",
+    "shapely >= 2.1",
+]
+
+[project.urls]
+Repository = "https://github.com/EMob-Lab/MnMS"
+Issues = "https://github.com/EMob-Lab/MnMS/issues"
+
+[dependency-groups]
+doc = [ # Dependencies needed to generate the documenation.
+    "mkdocs >= 1.6",
+    "mkdocs-gen-files >= 0.6",
+    "mkdocs-jupyter >= 0.26",
+    "mkdocstrings >= 1.0",
+    "mkdocstrings-python >= 2.0",
+]
+test = [ # Dependencies needed for test tasks.
+    "pytest >= 9.1",
+    "pytest-cov >= 7.1",
+]
+dev = [ # All dependencies needed for development tasks.
+    { include-group = "test" },
+]
+distrib = [ # Dependencies needed to build distribution files (wheels & source distributions).
+    "build >= 1.6",
+]
+
+[build-system]
+requires = [
+    "hatchling >= 1.32",
+]
+build-backend = "hatchling.build"

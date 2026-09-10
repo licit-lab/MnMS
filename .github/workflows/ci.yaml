@@ -1,0 +1,66 @@
+name: Continuous integration checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Manual trigger
+    inputs:
+      os:
+        description: 'Runner image'
+        type: choice
+        default: ubuntu-latest
+        options: # See https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+          - ubuntu-latest  # Arch: x64
+          - windows-latest # Arch: x64
+          - macos-latest   # Arch: arm64
+
+jobs:
+
+  build-and-test:
+    name: Build & test (py ${{ matrix.python-version }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          # The runner image is always 'ubuntu-latest', except if the workflow has been triggered manually
+          # and the user has selected a different runner image.
+          - ${{ inputs.os || 'ubuntu-latest' }}
+        python-version:
+          - '3.10' # Oldest supported version (must be kept consistent with the classifiers in `pyproject.toml`).
+          - '3.14' # Most recent supported version (must be kept consistent with the classifiers in `pyproject.toml`).
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build & install
+        run: pip install --group dev .
+
+      - name: Run tests
+        run: pytest
+
+  # This final job acts as a gate to ensure all the previous jobs have succeeded.
+  # It is provided to be registered as a status check for pull requests.
+  ci-passed:
+    name: CI checks all OK
+    runs-on: ubuntu-slim
+    if: always()
+    needs:
+      - build-and-test
+
+    steps:
+      - name: Ensure all CI jobs passed
+        run: |
+          for result in ${{ join(needs.*.result, ' ') }}; do
+            if [[ "$result" != "success" ]]; then
+              echo "At least one CI job did not succeed."
+              exit 1
+            fi
+          done
+          echo "All CI jobs succeeded."
