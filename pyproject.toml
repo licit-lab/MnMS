@@ -28,7 +28,7 @@ classifiers = [
 ]
 dependencies = [
     "dill >= 0.4",
-    "HiPOP >= 1.1",
+    "HiPOP ~= 1.1", # Stick to this major version number, as subsequent HiPOP versions may introduce breaking changes.
     "jsonpickle >= 4.1",
     "matplotlib >= 3.10",
     "numpy >= 2.2",
