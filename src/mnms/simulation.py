@@ -63,7 +63,7 @@ class Supervisor(object):
             self._user_flow: UserFlow = UserFlow()
         else:
             self._user_flow = user_flow
-            
+
         self.add_graph(graph)
         self._flow_motor.set_graph(graph)
         self._user_flow.set_graph(graph)

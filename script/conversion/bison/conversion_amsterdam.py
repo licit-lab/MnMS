@@ -152,7 +152,7 @@ def calculate_line_length(line):
     return line_length
 
 def convert_amsterdam_to_mnms():
-    
+
     amsterdam_graph = load_graph(amsterdam_json_filepath)
 
     ## TRAM

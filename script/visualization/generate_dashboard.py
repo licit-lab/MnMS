@@ -597,4 +597,3 @@ if __name__ == "__main__":
     max_centrality = max(centralities.values())
 
     run_dash_app(roads, layers, springs, deadends, isolates, centralities, max_centrality)
-

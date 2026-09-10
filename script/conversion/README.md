@@ -7,7 +7,7 @@ This repository contains Python scripts for converting various network format to
 ## Bison conversion
 
 This README part on Bison conversion will only cover the bison/conversion_amsterdam_improved.py script.
-This script converts BISON (Netherlands) Public Transport (PT) data in XML and CSV format into a MnMS-compatible multilayer JSON graph.  
+This script converts BISON (Netherlands) Public Transport (PT) data in XML and CSV format into a MnMS-compatible multilayer JSON graph.
 It extracts bus, tram, and metro lines, processes stops, generates PT layers, and saves the resulting graph.
 
 ### Features
@@ -48,9 +48,9 @@ The script defines several constants in the header:
 Builds stop sequences, splits them into two directions, and outputs a list of DataFrames with stops.
   - Args: xml_dir: Directory containing XML definitions of lines.
   - Returns: list of DataFrames (LINE_ID, STOP_NAME, STOP_CODE).
-  
 
-- `generate_public_transportation_lines(layer, list_lines, freq, operation_start_time, operation_end_time, prefix_line_name)`– Generates 
+
+- `generate_public_transportation_lines(layer, list_lines, freq, operation_start_time, operation_end_time, prefix_line_name)`– Generates
 PT lines on a given MnMS PublicTransportLayer.
   - Args:
     - layer: Target PT layer (Bus, Tram, Metro).
@@ -84,7 +84,7 @@ pip install lxml
 
 ### Usage example
 
-````bash 
+````bash
 python conversion_gtfs.py base_mnms_graph.json amsterdam_graph.json
 ````
 
@@ -102,7 +102,7 @@ As a reminder, only the bison/conversion_amsterdam_improved.py script is describ
 
 - Amsterdam BISON dataset need to have the following structure:
 
-````bash 
+````bash
 KV1_GVB_2609_2/
 ├── Csv/POINT.csv        # Coordinates of stops
 └── Xml/
@@ -187,7 +187,7 @@ pip install gtfs_functions
 
 ### Usage example
 
-````bash 
+````bash
 python conversion_gtfs.py lyon_gtfs.zip lyon_roads.json lyon_gtfs.json
 ````
 
@@ -232,7 +232,7 @@ pip install networkx
 
 ### Usage example
 
-````bash 
+````bash
 python conversion_nx.py mnms_network.json output/networkx_graph.json
 ````
 
@@ -279,7 +279,7 @@ It allows researchers and developers to generate MnMS road networks directly fro
 
 ### Script structure
 
-- `convert_osm_to_mnms(osm_query, output_file, zone_dict=None, car_only=False, mono_res=None)` – Main function to convert 
+- `convert_osm_to_mnms(osm_query, output_file, zone_dict=None, car_only=False, mono_res=None)` – Main function to convert
 an OSM place query into an MnMS-compatible JSON multilayer graph :
   - Loads road network from OSM.
   - Converts WGS coordinates to UTM.
@@ -298,7 +298,7 @@ pip install osmnx
 
 ### Usage example
 
-````bash 
+````bash
 python conversion_osm.py "Lyon, France" mnms_lyon_osm.json --mono_res ZONE_1
 ````
 
@@ -309,15 +309,15 @@ python conversion_osm.py "Lyon, France" mnms_lyon_osm.json --mono_res ZONE_1
 
 ### Notes
 
-The format used for OSM query in example is `City, Country`, OSM queries can be more specific, 
+The format used for OSM query in example is `City, Country`, OSM queries can be more specific,
 please look for OpenStreetMap documentation for custom queries.
 
 ---
 
 ## Symuflow conversion
 
-This script converts a SymuFlow XML input file into a MnMS-compatible multilayer JSON graph.  
-It extracts road sections, junctions, stops, and optionally public transport lines, 
+This script converts a SymuFlow XML input file into a MnMS-compatible multilayer JSON graph.
+It extracts road sections, junctions, stops, and optionally public transport lines,
 then builds a MultiLayerGraph including CAR and PT (Public Transport) layers.
 
 ### Features
@@ -344,7 +344,7 @@ Main function performing the conversion:
  - Registers zones (single bounding box or multiple from file).
  - Registers stops along sections.
  - Builds:
-   - CarLayer with nodes, links, and junction movements. 
+   - CarLayer with nodes, links, and junction movements.
    - PublicTransportLayer(s) for Bus/Tram/Metro if car_only is False.
  - Generates PT lines with timetables (frequencies or explicit schedules).
  - Assembles layers into a MultiLayerGraph.

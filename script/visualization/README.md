@@ -36,7 +36,7 @@ pip install pyproj
 
 #### Usage example
 
-````bash 
+````bash
 python generate_html_map.py ./mnms_lyon_network.json EPSG:2154
 ````
 ---
@@ -88,7 +88,7 @@ pip install pyvis
 
 # MNMS animation
 
-## mnms_outputs_animation 
+## mnms_outputs_animation
 
 This Python script animates the simulated vehicles and users and generates an MP4 video
 
