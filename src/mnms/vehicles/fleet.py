@@ -38,4 +38,3 @@ class FleetManager(object):
 
     def vehicle_type(self):
         return self._constructor.__name__ if self._constructor is not None else None
-

@@ -1,0 +1,7 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: mixed-line-ending      # Do not mix CRLF line endings (Windows style) and LF line endings (Unix style).
+      - id: trailing-whitespace    # No trailing whitespace.
+      - id: end-of-file-fixer      # Ensure files end in a newline (and only a newline).

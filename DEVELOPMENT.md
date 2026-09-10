@@ -42,6 +42,22 @@ Configuration of the build is in `pyproject.toml`.
 
 ## Common tasks
 
+### Set up pre-commit hook
+
+A homogeneous style across contributors and editors keeps diffs minimal and free of unrelated noise.
+To that end, [pre-commit](https://pre-commit.com/) checks that files use consistent
+line endings, have no trailing whitespace, and end with a single newline
+(detailed configuration in `.pre-commit-config.yaml`).
+
+Run this once in each cloned repository to install the check as a git hook:
+```shell
+pre-commit install
+```
+The hook then runs automatically on `git commit` against the staged files.
+When a staged file breaks one of the rules, the hook rewrites it in place
+and aborts the commit; review the fix, re-stage the file, and commit again.
+
+
 ### Run the test suite
 
 ```shell

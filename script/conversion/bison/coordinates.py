@@ -163,4 +163,3 @@ def rd_to_utm(x, y):
 # for x, y in coord_wgs:
 #     print(wgs_to_utm(x, y))
 # rd_to_utm(121687, 487484)
-

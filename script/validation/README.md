@@ -7,7 +7,7 @@ This repository contains Python scripts for validating MnMS input files.
 ## Demand file
 
 This Python script validate a demand input CSV file for MnMS.
-The script validates the structure and contents of the demand file, analyzes demand data, 
+The script validates the structure and contents of the demand file, analyzes demand data,
 and optionally produces visualizations of origins, destinations, and demand dynamics.
 
 ### Features
@@ -39,28 +39,28 @@ and optionally produces visualizations of origins, destinations, and demand dyna
 ### Script structure
 
 - **Validation functions**
-  - `validate_demand_lines(file)` – Ensures no empty rows in CSV.  
-  - `validate_demand_columns(df_users)` – Checks required columns.  
-  - `validate_user_id(user)` – Confirms presence/type of user ID.  
-  - `validate_user_departure_time(user)` – Validates departure time format.  
-  - `validate_user_origin(user)` / `validate_user_destination(user)` – Validate coordinates.  
-  - `validate_user_journey(user, radius)` – Ensures meaningful journey.  
-  - `validate_user_mobility_services(user)` – Checks for blank mobility services.  
-  - `check_user_id_duplicates(df_users)` – Finds duplicate user IDs.  
+  - `validate_demand_lines(file)` – Ensures no empty rows in CSV.
+  - `validate_demand_columns(df_users)` – Checks required columns.
+  - `validate_user_id(user)` – Confirms presence/type of user ID.
+  - `validate_user_departure_time(user)` – Validates departure time format.
+  - `validate_user_origin(user)` / `validate_user_destination(user)` – Validate coordinates.
+  - `validate_user_journey(user, radius)` – Ensures meaningful journey.
+  - `validate_user_mobility_services(user)` – Checks for blank mobility services.
+  - `check_user_id_duplicates(df_users)` – Finds duplicate user IDs.
 
 
 - **Analysis functions**
-  - `count_ms_occurences(df_users)` – Frequency of mobility services.  
-  - `analyze_demand(df_users)` – Prints demand statistics.  
+  - `count_ms_occurences(df_users)` – Frequency of mobility services.
+  - `analyze_demand(df_users)` – Prints demand statistics.
 
 
 - **Visualization functions**
-  - `scatter_density(fig, x, y, title)` – Density plot helper.  
+  - `scatter_density(fig, x, y, title)` – Density plot helper.
   - `visualize_demand(df_users)` – Plots origin density, destination density, and demand dynamics.
 
 ### Usage example
 
-````bash 
+````bash
 python validate_demand.py demand.csv --radius 10 --visualization True
 ````
 
@@ -97,7 +97,7 @@ Mandatory mobility services and occurences: {'Bus': 2, 'Metro': 2}
 ## Network file
 
 This Python script validates an MnMS network input JSON file.
-The script provides statistics, connectivity analysis, 
+The script provides statistics, connectivity analysis,
 and optional visualizations of the road network and public transport layers.
 
 ### Features
@@ -157,7 +157,7 @@ and optional visualizations of the road network and public transport layers.
   - `analyze_bus(layers)` – Analyzes bus lines in the `LAYERS` tag:
     - Counts bus lines
     - Computes mapmatching rate
-    - Identifies fully or partially map-matched lines 
+    - Identifies fully or partially map-matched lines
 
 
 - **Visualization functions**
@@ -170,7 +170,7 @@ and optional visualizations of the road network and public transport layers.
 
 ### Usage example
 
-````bash 
+````bash
 python validate_network.py mnms_network.json --visualization True
 ````
 
@@ -190,12 +190,12 @@ The script will produce as an output:
 ### Notes
 
 The `LAYERS` validation is a placeholder for now.
-Some advanced analyses (e.g., centrality visualization) are implemented but commented out. 
+Some advanced analyses (e.g., centrality visualization) are implemented but commented out.
 You can enable them as needed.
 
 Ensure your JSON file follows MnMS schema conventions with these top-level tags:
 
-````json 
+````json
 {
   "ROADS": {
     "NODES": { ... },
