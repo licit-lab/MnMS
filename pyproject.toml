@@ -50,11 +50,15 @@ doc = [ # Dependencies needed to generate the documenation.
     "mkdocstrings >= 1.0",
     "mkdocstrings-python >= 2.0",
 ]
+lint = [ # Dependencies needed for linting / static analysis.
+    "pre-commit >= 4.6",
+]
 test = [ # Dependencies needed for test tasks.
     "pytest >= 9.1",
     "pytest-cov >= 7.1",
 ]
 dev = [ # All dependencies needed for development tasks.
+    { include-group = "lint" },
     { include-group = "test" },
 ]
 distrib = [ # Dependencies needed to build distribution files (wheels & source distributions).

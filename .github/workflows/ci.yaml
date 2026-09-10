@@ -17,6 +17,24 @@ on:
 
 jobs:
 
+  lint:
+    name: Linting & static analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x' # The exact Python version is not important for linting and static analysis.
+
+      - name: Build & install
+        run: pip install --group dev .
+
+      - name: Check file formatting (with pre-commit)
+        run: pre-commit run --all-files
+
   build-and-test:
     name: Build & test (py ${{ matrix.python-version }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -52,6 +70,7 @@ jobs:
     runs-on: ubuntu-slim
     if: always()
     needs:
+      - lint
       - build-and-test
 
     steps:
