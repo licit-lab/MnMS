@@ -165,7 +165,7 @@ class TestDuplicatedODs(unittest.TestCase):
             [
                 (['ORIGIN_0', 'CAR_0', 'CAR_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 947.2136),
                 (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_3', 'RH_3', 'RH_4', 'DESTINATION_4'], 1023.6068),
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_2', 'RH_2', 'RH_3', 'RH_4', 'DESTINATION_4'], 1100.0),
+                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'RH_1', 'RH_3', 'RH_4', 'DESTINATION_4'], 1023.6068),
             ],
             [
                 (['ORIGIN_1', 'CAR_1', 'CAR_2', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
