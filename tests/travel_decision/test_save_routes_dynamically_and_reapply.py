@@ -205,7 +205,7 @@ class TestSaveRoutesAndReapply(unittest.TestCase):
 
         dfp_dep3 = dfp_dep[dfp_dep['ID'] == 'U3']
         self.assertEqual(len(dfp_dep3), 6)
-        self.assertEqual(dfp_dep3[dfp_dep3['CHOSEN'] == 1]['PATH'].iloc[0], 'ORIGIN_0 CAR_0 CAR_1 CAR_3 RH_3 RH_4 DESTINATION_4')
+        self.assertEqual(dfp_dep3[dfp_dep3['CHOSEN'] == 1]['PATH'].iloc[0], 'ORIGIN_0 CAR_0 CAR_1 RH_1 RH_3 RH_4 DESTINATION_4')
         self.assertEqual(dfp_dep3['COST'].iloc[0], 255.901700)
 
         dfp_dep4 = dfp_dep[dfp_dep['ID'] == 'U4']

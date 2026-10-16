@@ -4,6 +4,8 @@ import time
 
 from hipop.shortest_path import floyd_warshall, parallel_dijkstra, parallel_dijkstra_single_source
 
+from mnms.tools.legacy_path import convert_to_legacy_path_with_cost
+
 
 def compute_all_shortest_paths_naive(graph, chosen_mservice, layer_name, outfile):
     """Fonction that pre-computes the shortest paths for each pair of nodes of the
@@ -33,10 +35,12 @@ def compute_all_shortest_paths_naive(graph, chosen_mservice, layer_name, outfile
     # Build a dict of shortest paths
     sps = {}
     for i,(o,d) in enumerate(all_ods):
+        legacy_path_with_cost = convert_to_legacy_path_with_cost(paths[i])
+        output_item = legacy_path_with_cost[0][0] # TODO OrientedGraphPath The output item is the ID of the first node?? Looks weird, possibly a broken code.
         if o in sps:
-            sps[o][d] = paths[i][0][0]
+            sps[o][d] = output_item
         else:
-            sps[o] = {d: paths[i][0][0]}
+            sps[o] = {d: output_item}
 
     # Dump dict into json
     with open(outfile, 'w') as f:

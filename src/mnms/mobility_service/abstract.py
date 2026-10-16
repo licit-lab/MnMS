@@ -12,6 +12,7 @@ from mnms.mobility_service.interfaces import Depot
 from mnms.time import Dt, Time
 from mnms.tools.cost import create_service_costs
 from mnms.tools.geometry import get_bounding_box, voronoi_zones
+from mnms.tools.legacy_path import convert_to_legacy_path
 from mnms.vehicles.fleet import FleetManager
 from mnms.vehicles.veh_type import ActivityType, Vehicle, VehicleActivity, VehicleActivityStop
 
@@ -332,19 +333,20 @@ class AbstractMobilityService(ABC):
                 next_a_modified_path_cost_name = 'travel_time' if type(next_a).__name__ in ['VehicleActivityPickup', 'VehicleActivityRepositioning'] else cost
                 veh_layer = mlgraph.mapping_layer_services[self.id]
                 try:
-                    next_a_modified_path, cost_val = dijkstra(mlgraph.graph,
+                    path_with_cost = dijkstra(mlgraph.graph,
                                 veh.current_link[1],
                                 next_a.node,
                                 next_a_modified_path_cost_name, {veh_layer.id: self.id}, {veh_layer.id})
                 except ValueError as ex:
                     log.error(f'HiPOP.Error: {ex}')
                     sys.exit(-1)
-                assert cost_val != float('inf'), \
+                assert path_with_cost is not None, \
                         f'Path not found between {veh.current_link[1]} '\
                         f'and {next_a.node} on layer {veh_layer.id}'
+                next_a_modified_path = path_with_cost[0]
                 # Effectively update next activity path
                 built_next_a_modified_path = [((veh.current_link[0],veh.current_link[1]),veh._remaining_link_length)]
-                built_next_a_modified_path += self.construct_veh_path(next_a_modified_path)
+                built_next_a_modified_path += self.construct_veh_path(convert_to_legacy_path(next_a_modified_path)) # TODO OrientedGraphPath keep further?
                 next_a.modify_path(built_next_a_modified_path)
         else:
             # The activity to remove is not ongoing
@@ -364,16 +366,17 @@ class AbstractMobilityService(ABC):
                     next_a_modified_path_cost_name = 'travel_time' if type(next_a).__name__ in ['VehicleActivityPickup', 'VehicleActivityRepositioning'] else cost
                     veh_layer = mlgraph.mapping_layer_services[self.id]
                     try:
-                        next_a_modified_path, cost_val = dijkstra(mlgraph.graph,
+                        path_with_cost = dijkstra(mlgraph.graph,
                                     prev_a_dnode,
                                     next_a_dnode,
                                     next_a_modified_path_cost_name, {veh_layer.id: self.id}, {veh_layer.id})
                     except ValueError as ex:
                         log.error(f'HiPOP.Error: {ex}')
                         sys.exit(-1)
-                    assert cost_val != float('inf'), \
+                    assert path_with_cost is not None, \
                             f'Path not found between {prev_a_dnode} '\
                             f'and {next_a_dnode} on layer {veh_layer.id}'
+                    next_a_modified_path = convert_to_legacy_path(path_with_cost[0]) # TODO OrientedGraphPath keep further?
                 # Effectively update next activity path
                 built_next_a_modified_path = self.construct_veh_path(next_a_modified_path)
                 if check_remaining_link_length and built_next_a_modified_path[0][0] == veh._current_link:
@@ -495,19 +498,20 @@ class AbstractMobilityService(ABC):
                             type(all_activities[user_serving_act_ind+1]).__name__ in ['VehicleActivityPickup', 'VehicleActivityRepositioning'] else cost
                         veh_layer = mlgraph.mapping_layer_services[self.id]
                         try:
-                            next_act_modified_path, cost_val = dijkstra(mlgraph.graph,
+                            path_with_cost = dijkstra(mlgraph.graph,
                                 all_activities[user_serving_act_ind].path[-1][0][1],
                                 all_activities[user_serving_act_ind+1].node,
                                 next_act_modified_path_cost_name, {veh_layer.id: self.id}, {veh_layer.id})
                         except ValueError as ex:
                             log.error(f'HiPOP.Error: {ex}')
                             sys.exit(-1)
-                        assert cost_val != float('inf'), \
+                        assert path_with_cost is not None, \
                             f'Path not found between {all_activities[user_serving_act_ind].path[-1][0][1]} '\
                             f'and {all_activities[user_serving_act_ind+1].node} on layer {veh_layer.id}'
+                        next_act_modified_path = convert_to_legacy_path(path_with_cost[0]) # TODO OrientedGraphPath keep further?
                     else:
                         # The new path for user serving activity leads to the end node of next activity, next activity path is then empty
-                        next_act_modified_path, cost_val = [], 0
+                        next_act_modified_path = []
                     # Effectively update next activity path
                     built_next_act_modified_path = self.construct_veh_path(next_act_modified_path)
                     veh.activities[user_serving_act_ind].modify_path(built_next_act_modified_path)

@@ -2,6 +2,7 @@ import pathlib
 import tempfile
 import unittest
 
+from hipop.graph import OrientedGraphPath
 from hipop.shortest_path import parallel_dijkstra, parallel_k_intermodal_shortest_path, parallel_k_shortest_path
 
 from mnms.generation.layers import generate_layer_from_roads, generate_matching_origin_destination_layer
@@ -52,6 +53,22 @@ class TestDuplicatedODs(unittest.TestCase):
 
         self.mlgraph = mlgraph
 
+    @staticmethod
+    def _extractLinkIdsFromKSPResult(
+            hipop_paths: list[list[tuple[OrientedGraphPath, float]]]) -> list[list[tuple[list[str], float]]]:
+        return [
+            [(hipop_path.link_ids(), cost) for hipop_path, cost in current_hipop_paths]
+            for current_hipop_paths in hipop_paths
+        ]
+
+    @staticmethod
+    def _extractLinkIdsFromSingleSPResult(
+            hipop_paths: list[tuple[OrientedGraphPath, float] | None]) -> list[tuple[list[str], float] | None]:
+        return [
+            None if hipop_path is None else (hipop_path[0].link_ids(), hipop_path[1])
+            for hipop_path in hipop_paths
+        ]
+
     def tearDown(self):
         """Concludes and closes the test.
         """
@@ -68,7 +85,7 @@ class TestDuplicatedODs(unittest.TestCase):
         available_layers = [{'CAR', 'TRANSIT'}] * 5 + [{'RH', 'TRANSIT'}] * 5
         nb_paths = [1, 2, 1, 2, 3, 1, 2, 3, 1, 2]
         decision_model = DummyDecisionModel(self.mlgraph)
-        paths = parallel_k_shortest_path(self.mlgraph.graph,
+        hipop_paths = parallel_k_shortest_path(self.mlgraph.graph,
                                      origins,
                                      destinations,
                                      'length',
@@ -80,44 +97,45 @@ class TestDuplicatedODs(unittest.TestCase):
                                      decision_model._max_retry_to_find_k_paths,
                                      nb_paths,
                                      decision_model._thread_number)
+        paths = TestDuplicatedODs._extractLinkIdsFromKSPResult(hipop_paths)
         awaited_paths = [
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_2', 'CAR_4', 'DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_2', 'CAR_2_4', 'CAR_4_DESTINATION_4'], 947.2136),
             ],
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_2', 'CAR_4', 'DESTINATION_4'], 947.2136),
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_3', 'CAR_4', 'DESTINATION_4'], 1023.6068),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_2', 'CAR_2_4', 'CAR_4_DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_3', 'CAR_3_4', 'CAR_4_DESTINATION_4'], 1023.6068),
             ],
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_2', 'CAR_4', 'DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_2', 'CAR_2_4', 'CAR_4_DESTINATION_4'], 947.2136),
             ],
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_2', 'CAR_4', 'DESTINATION_4'], 947.2136),
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_3', 'CAR_4', 'DESTINATION_4'], 1023.6068),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_2', 'CAR_2_4', 'CAR_4_DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_3', 'CAR_3_4', 'CAR_4_DESTINATION_4'], 1023.6068),
             ],
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_2', 'CAR_4', 'DESTINATION_4'], 947.2136),
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_3', 'CAR_4', 'DESTINATION_4'], 1023.6068),
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_2', 'CAR_3', 'CAR_4', 'DESTINATION_4'], 1100.0),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_2', 'CAR_2_4', 'CAR_4_DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_3', 'CAR_3_4', 'CAR_4_DESTINATION_4'], 1023.6068),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_2', 'CAR_2_3', 'CAR_3_4', 'CAR_4_DESTINATION_4'], 1100.0),
             ],
             [
-                (['ORIGIN_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
             ],
             [
-                (['ORIGIN_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
-                (['ORIGIN_1', 'RH_1', 'RH_3', 'RH_4', 'DESTINATION_4'], 623.6068),
+                (['ORIGIN_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_RH_1', 'RH_1_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 623.6068),
             ],
             [
-                (['ORIGIN_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
-                (['ORIGIN_1', 'RH_1', 'RH_3', 'RH_4', 'DESTINATION_4'], 623.6068),
-                (['ORIGIN_1', 'RH_1', 'RH_2', 'RH_3', 'RH_4', 'DESTINATION_4'], 700.0),
+                (['ORIGIN_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_RH_1', 'RH_1_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 623.6068),
+                (['ORIGIN_1_RH_1', 'RH_1_2', 'RH_2_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 700.0),
             ],
             [
-                (['ORIGIN_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
             ],
             [
-                (['ORIGIN_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
-                (['ORIGIN_1', 'RH_1', 'RH_3', 'RH_4', 'DESTINATION_4'], 623.6068),
+                (['ORIGIN_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_RH_1', 'RH_1_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 623.6068),
             ],
         ]
         self.assertEqual(awaited_paths,paths)
@@ -134,7 +152,7 @@ class TestDuplicatedODs(unittest.TestCase):
         nb_paths = [1, 2, 1, 2, 3, 1, 2, 3, 1, 2]
         intermodality = ({'CAR'},{'RH'})
         decision_model = DummyDecisionModel(self.mlgraph)
-        paths = parallel_k_intermodal_shortest_path(self.mlgraph.graph,
+        hipop_paths = parallel_k_intermodal_shortest_path(self.mlgraph.graph,
                                                     origins,
                                                     destinations,
                                                     chosen_mservices,
@@ -147,44 +165,45 @@ class TestDuplicatedODs(unittest.TestCase):
                                                     decision_model._max_retry_to_find_k_paths,
                                                     nb_paths,
                                                     available_layers)
+        paths = TestDuplicatedODs._extractLinkIdsFromKSPResult(hipop_paths)
         awaited_paths = [
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
             ],
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 947.2136),
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_3', 'RH_3', 'RH_4', 'DESTINATION_4'], 1023.6068),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
             ],
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
             ],
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 947.2136),
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_3', 'RH_3', 'RH_4', 'DESTINATION_4'], 1023.6068),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
             ],
             [
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'RH_1', 'RH_2', 'RH_4', 'DESTINATION_4'], 947.2136),
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'CAR_3', 'RH_3', 'RH_4', 'DESTINATION_4'], 1023.6068),
-                (['ORIGIN_0', 'CAR_0', 'CAR_1', 'RH_1', 'RH_3', 'RH_4', 'DESTINATION_4'], 1023.6068),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_3', 'TRANSIT_CAR_3_RH_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
             ],
             [
-                (['ORIGIN_1', 'CAR_1', 'CAR_2', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_CAR_1', 'CAR_1_2', 'TRANSIT_CAR_2_RH_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
             ],
             [
-                (['ORIGIN_1', 'CAR_1', 'CAR_2', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
-                (['ORIGIN_1', 'CAR_1', 'CAR_3', 'RH_3', 'RH_4', 'DESTINATION_4'], 623.6068),
+                (['ORIGIN_1_CAR_1', 'CAR_1_2', 'TRANSIT_CAR_2_RH_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_CAR_1', 'CAR_1_3', 'TRANSIT_CAR_3_RH_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 623.6068),
             ],
             [
-                (['ORIGIN_1', 'CAR_1', 'CAR_2', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
-                (['ORIGIN_1', 'CAR_1', 'CAR_3', 'RH_3', 'RH_4', 'DESTINATION_4'], 623.6068),
-                (['ORIGIN_1', 'CAR_1', 'CAR_2', 'RH_2', 'RH_3', 'RH_4', 'DESTINATION_4'], 700.0),
+                (['ORIGIN_1_CAR_1', 'CAR_1_2', 'TRANSIT_CAR_2_RH_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_CAR_1', 'CAR_1_3', 'TRANSIT_CAR_3_RH_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 623.6068),
+                (['ORIGIN_1_CAR_1', 'CAR_1_2', 'TRANSIT_CAR_2_RH_2', 'RH_2_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 700.0),
             ],
             [
-                (['ORIGIN_1', 'CAR_1', 'CAR_2', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_CAR_1', 'CAR_1_2', 'TRANSIT_CAR_2_RH_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
             ],
             [
-                (['ORIGIN_1', 'CAR_1', 'CAR_2', 'RH_2', 'RH_4', 'DESTINATION_4'], 547.2136),
-                (['ORIGIN_1', 'CAR_1', 'CAR_3', 'RH_3', 'RH_4', 'DESTINATION_4'], 623.6068),
+                (['ORIGIN_1_CAR_1', 'CAR_1_2', 'TRANSIT_CAR_2_RH_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
+                (['ORIGIN_1_CAR_1', 'CAR_1_3', 'TRANSIT_CAR_3_RH_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 623.6068),
             ],
         ]
         self.assertEqual(awaited_paths, paths)
@@ -197,12 +216,13 @@ class TestDuplicatedODs(unittest.TestCase):
         origins = ['RH_0'] * 5 + ['RH_1'] * 5
         destinations = ['RH_4']*10
         decision_model = DummyDecisionModel(self.mlgraph)
-        paths = parallel_dijkstra(self.mlgraph.graph,
+        hipop_paths = parallel_dijkstra(self.mlgraph.graph,
                                 origins,
                                 destinations,
                                 [{'RH': 'UBER'}]*len(origins),
                                 'length',
                                 decision_model._thread_number,
                                 [{'RH'}]*len(origins))
-        awaited_paths = [(['RH_0', 'RH_1', 'RH_2', 'RH_4'], 947.2136)]*5 + [(['RH_1', 'RH_2', 'RH_4'], 547.2136)]*5
+        paths = TestDuplicatedODs._extractLinkIdsFromSingleSPResult(hipop_paths)
+        awaited_paths = [(['RH_0_1', 'RH_1_2', 'RH_2_4'], 947.2136)]*5 + [(['RH_1_2', 'RH_2_4'], 547.2136)]*5
         self.assertEqual(awaited_paths, paths)

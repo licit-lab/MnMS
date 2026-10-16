@@ -6,7 +6,7 @@ from queue import PriorityQueue
 from typing import Any
 
 import numpy as np
-from hipop.shortest_path import compute_path_length, dijkstra
+from hipop.shortest_path import dijkstra
 
 from mnms import create_logger
 from mnms.demand import User
@@ -15,6 +15,7 @@ from mnms.mobility_service.filters import InRadiusFilter
 from mnms.time import Dt, Time
 from mnms.tools.exceptions import PathNotFound
 from mnms.tools.geometry import get_bounding_box, polygon_area
+from mnms.tools.legacy_path import compute_path_length, convert_to_legacy_path
 from mnms.vehicles.veh_type import (
     ActivityType,
     Vehicle,
@@ -389,7 +390,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
                 add_current_node = True
         if prev_node != activity.node:
             try:
-                path, cost = dijkstra(self.graph,
+                path_with_cost = dijkstra(self.graph,
                                       prev_node,
                                       activity.node,
                                       'travel_time',
@@ -398,14 +399,14 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
             except ValueError as ex:
                 log.error(f'HiPOP.Error: {ex}')
                 sys.exit(-1)
-            if cost == float('inf'):
+            if path_with_cost is None:
                 raise PathNotFound(prev_node, activity.node)
+            path = convert_to_legacy_path(path_with_cost[0]) # TODO OrientedGraphPath keep further?
         else:
             if add_current_node:
                 path = [forced_next_node]
             else:
                 path = []
-            cost = 0
         if add_current_node:
             path = [start_node] + path
         activity.modify_path(self.construct_veh_path(path))
@@ -437,7 +438,7 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
             next_a = plan[index+1] if index+1 < len(plan) else None
         if next_a is not None:
             try:
-                path, cost = dijkstra(self.graph,
+                path_with_cost = dijkstra(self.graph,
                                       activity.node,
                                       next_a.node,
                                       'travel_time',
@@ -446,8 +447,9 @@ class OnDemandSharedMobilityService(AbstractOnDemandMobilityService):
             except ValueError as ex:
                 log.error(f'HiPOP.Error: {ex}')
                 sys.exit(-1)
-            if cost == float('inf'):
+            if path_with_cost is None:
                 raise PathNotFound(activity.node, next_a.node)
+            path = convert_to_legacy_path(path_with_cost[0]) # TODO OrientedGraphPath keep further?
             next_a.modify_path(self.construct_veh_path(path))
 
         return plan
