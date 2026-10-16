@@ -172,19 +172,19 @@ class TestDuplicatedODs(unittest.TestCase):
             ],
             [
                 (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
-                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_3', 'TRANSIT_CAR_3_RH_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
-            ],
-            [
-                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
-            ],
-            [
-                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
-                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_3', 'TRANSIT_CAR_3_RH_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
-            ],
-            [
-                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
-                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_3', 'TRANSIT_CAR_3_RH_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
                 (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
+            ],
+            [
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
+            ],
+            [
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
+            ],
+            [
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 947.2136),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'TRANSIT_CAR_1_RH_1', 'RH_1_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
+                (['ORIGIN_0_CAR_0', 'CAR_0_1', 'CAR_1_3', 'TRANSIT_CAR_3_RH_3', 'RH_3_4', 'RH_4_DESTINATION_4'], 1023.6068),
             ],
             [
                 (['ORIGIN_1_CAR_1', 'CAR_1_2', 'TRANSIT_CAR_2_RH_2', 'RH_2_4', 'RH_4_DESTINATION_4'], 547.2136),
