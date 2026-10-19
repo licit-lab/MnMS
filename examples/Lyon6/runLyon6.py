@@ -15,6 +15,7 @@ from mnms.travel_decision.logit import LogitDecisionModel
 
 param_file_path = "/param.json"
 #param_file_path = "/param_roadstypo.json"
+
 param_file = open(os.getcwd() + param_file_path, 'r')
 param_json = json.load(param_file)
 
@@ -36,15 +37,17 @@ indir = input_params['indir'] # name of input folder, ex: "INPUTS"
 network_file = input_params['network_file'] # path to json network file, ex: "/Lyon_symuviainput.json"
 network_file_with_roadstypo = input_params['network_file'][:-5]+'_roadstypo.json'
 demand_file = input_params['demand_file'] # path to csv demand file
-mfd_file = input_params['mfd_file'] # path to csv MFD file
+
 # outputs
 outdir = output_params['output_dir'] # name of output folder, ex: "OUTPUTS"
+os.makedirs(outdir, exist_ok=True)
 log_file = output_params['log_file'] # path to log file, ex: "/simulation.log"
 path_file = output_params['path_file'] # path to csv path file
 user_file = output_params['user_file'] # path to csv user file
 flow_file = output_params['flow_file'] # path to csv flow file
 travel_time_file = output_params['travel_time_file'] # path to csv travel time file
 vehicle_file = output_params['vehicle_file']
+
 # supervisor
 log_level = supervisor_params['log_level'] # log level, ex: "LOGLEVEL.WARNING"
 demand_type = supervisor_params['demand_type'] # demand type, "node" or "coordinate"
@@ -72,9 +75,6 @@ scale_factor_sp = travel_decision_params['scale_factor_sp']
 algorithm = travel_decision_params['algorithm'] # algorithm used for shortest path calculation, ex: "astar" or "djikstra"
 decision_model = travel_decision_params['decision_model'] # decision model used, ex: "LogitDecisionModel"
 available_mobility_services = travel_decision_params['available_mobility_services'] # list with available mobility services ex: ["WALK", "PersonalCar"]
-
-
-
 
 set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
 
@@ -104,6 +104,7 @@ def weighted_travel_time_transit(gnodes, layer, link, costs):
     return costs['WALK']['travel_time']
 
 if __name__ == '__main__':
+
     mmgraph = load_graph(indir+network_file)
     if mmgraph.layers["CAR"].map_links_classes == {}:
         mmgraph.layers["CAR"].add_links_classes(roads_typo)
