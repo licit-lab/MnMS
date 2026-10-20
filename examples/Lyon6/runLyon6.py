@@ -1,5 +1,7 @@
+import argparse
 import json
-import os
+from pathlib import Path
+from typing import Any
 
 from mnms.demand import CSVDemandManager
 from mnms.flow.MFD import MFDFlowMotor, Reservoir
@@ -13,135 +15,178 @@ from mnms.tools.observer import CSVUserObserver, CSVVehicleObserver
 from mnms.travel_decision.dummy import DummyDecisionModel
 from mnms.travel_decision.logit import LogitDecisionModel
 
-param_file_path = "/param.json"
-#param_file_path = "/param_roadstypo.json"
 
-param_file = open(os.getcwd() + param_file_path, 'r')
-param_json = json.load(param_file)
+class Lyon6Parameters:
+    """Load and provide access to a Lyon6 simulation configuration."""
 
-# Get Json parameters blocs
-input_params = param_json['INPUT'] # bloc with input parameters
-output_params = param_json['OUTPUT'] # bloc with output parameters
-supervisor_params = param_json['SUPERVISOR'] # bloc with supervisor parameters
-reservoirs_params = param_json['RESERVOIRS'] # bloc with reservoirs parameters
-travel_decision_params = param_json['TRAVEL_DECISION'] # bloc with travel decision parameters
-graph_params = param_json['GRAPH']
-cost_params = param_json['COSTS']
+    _SECTIONS = (
+        "INPUT",
+        "OUTPUT",
+        "SUPERVISOR",
+        "RESERVOIRS",
+        "GRAPH",
+        "COSTS",
+        "TRAVEL_DECISION",
+    )
 
-param_file.close()
+    def __init__(self, config_file: str | Path) -> None:
+        self.config_file = Path(config_file).expanduser().resolve()
+        with self.config_file.open(encoding="utf-8") as parameter_file:
+            config = json.load(parameter_file)
 
-# Get Json parameters
+        for section_name in self._SECTIONS:
+            section = config.get(section_name)
+            if not isinstance(section, (dict, list)):
+                raise ValueError(
+                    f"Missing or invalid '{section_name}' section in {self.config_file}"
+                )
+            setattr(self, section_name.lower(), section)
 
-# inputs
-indir = input_params['indir'] # name of input folder, ex: "INPUTS"
-network_file = input_params['network_file'] # path to json network file, ex: "/Lyon_symuviainput.json"
-network_file_with_roadstypo = input_params['network_file'][:-5]+'_roadstypo.json'
-demand_file = input_params['demand_file'] # path to csv demand file
+    def _resolve_path(self, base_directory: str, configured_path: str) -> Path:
+        path = Path(configured_path.lstrip("/\\"))
+        return (self.config_file.parent / base_directory / path).resolve()
 
-# outputs
-outdir = output_params['output_dir'] # name of output folder, ex: "OUTPUTS"
-os.makedirs(outdir, exist_ok=True)
-log_file = output_params['log_file'] # path to log file, ex: "/simulation.log"
-path_file = output_params['path_file'] # path to csv path file
-user_file = output_params['user_file'] # path to csv user file
-flow_file = output_params['flow_file'] # path to csv flow file
-travel_time_file = output_params['travel_time_file'] # path to csv travel time file
-vehicle_file = output_params['vehicle_file']
+    @property
+    def input_directory(self) -> Path:
+        return self._resolve_path("", self.input["indir"])
 
-# supervisor
-log_level = supervisor_params['log_level'] # log level, ex: "LOGLEVEL.WARNING"
-demand_type = supervisor_params['demand_type'] # demand type, "node" or "coordinate"
-start_time = supervisor_params['start_time'] # start time in the simulation, ex: "06:30:00"
-end_time = supervisor_params['end_time'] # end time in the simulation, ex: "14:00:00"
-flow_dt = supervisor_params['flow_dt'] # simulation step, ex: 1 (unit in unit_flow_dt parameter)
-unit_flow_dt = supervisor_params['unit_flow_dt'] # unit of the simulation step, ex: "minutes"
-affectation_factor = supervisor_params['affectation_factor'] # affectation/calculation factor, ex: 10, 10 means 10 * flow_dt so 10 minutes
+    @property
+    def output_directory(self) -> Path:
+        return self._resolve_path("", self.output["output_dir"])
 
-# graph
-roads_typo = graph_params['roads_typo'] # dict specifying the roads classification, if empty dict, no classification of roads
+    def input_path(self, configured_path: str) -> Path:
+        return self._resolve_path(self.input["indir"], configured_path)
 
-#cost
-roads_typo_cost_multipliers = cost_params['roads_typo_cost_multipliers'] # dict specifying the multiplier to apply to the cost on a link depending on its typology
-cost_name = cost_params['cost']
+    def output_path(self, configured_path: str) -> Path:
+        return self._resolve_path(self.output["output_dir"], configured_path)
 
-# reservoirs
+    @property
+    def network_file_with_roadstypo(self) -> Path:
+        network_path = self.input_path(self.input["network_file"])
+        return network_path.with_name(f"{network_path.stem}_roadstypo{network_path.suffix}")
 
-# travel_decision
-n_shortest_path = travel_decision_params['n_shortest_path'] # number of shortest path calculated
-radius_sp = travel_decision_params['radius_sp'] # first radius for node search in shortest path calculation
-radius_growth_sp = travel_decision_params['radius_growth_sp'] # radius step for node search in sp calculation
-walk_speed = travel_decision_params['walk_speed'] # walking speed, ex: 1.4 (meter per second?)
-scale_factor_sp = travel_decision_params['scale_factor_sp']
-algorithm = travel_decision_params['algorithm'] # algorithm used for shortest path calculation, ex: "astar" or "djikstra"
-decision_model = travel_decision_params['decision_model'] # decision model used, ex: "LogitDecisionModel"
-available_mobility_services = travel_decision_params['available_mobility_services'] # list with available mobility services ex: ["WALK", "PersonalCar"]
-
-set_mnms_logger_level(LOGLEVEL.INFO, ["mnms.simulation"])
-
-attach_log_file(outdir+log_file)
+    @property
+    def log_level(self) -> int:
+        configured_level = self.supervisor["log_level"].removeprefix("LOGLEVEL.")
+        try:
+            return getattr(LOGLEVEL, configured_level)
+        except AttributeError as error:
+            raise ValueError(f"Unknown log level: {self.supervisor['log_level']}") from error
 
 
-def calculate_V_MFD(acc):
-    V = 0  # data from fit dsty
-    N = acc["CAR"]
-    if N < 18000:
-        V = 11.5-N*6/18000
-    elif N < 55000:
-        V = 11.5-6 - (N-18000)*4.5/(55000-18000)
-    elif N < 80000:
-        V = 11.5-6-4.5-(N-55000)*1/(80000-55000)
-    V = max(V, 0.001)  # min speed to avoid gridlock
-    return {"CAR": V}
-
-def weighted_travel_time_car(gnodes, layer, link, costs, roads_typo_cost_multipliers=roads_typo_cost_multipliers):
-    links_classes = layer.map_links_classes
-    if link.id in links_classes and links_classes[link.id] in roads_typo_cost_multipliers:
-        return costs['PersonalVehicle']['travel_time'] * roads_typo_cost_multipliers[links_classes[link.id]]
+def calculate_V_MFD(acc: dict[str, float]) -> dict[str, float]:
+    accumulation = acc["CAR"]
+    if accumulation < 18_000:
+        speed = 11.5 - accumulation * 6 / 18_000
+    elif accumulation < 55_000:
+        speed = 11.5 - 6 - (accumulation - 18_000) * 4.5 / (55_000 - 18_000)
+    elif accumulation < 80_000:
+        speed = 11.5 - 6 - 4.5 - (accumulation - 55_000) / (80_000 - 55_000)
     else:
-        return costs['PersonalVehicle']['travel_time']
+        speed = 0
+    return {"CAR": max(speed, 0.001)}
 
-def weighted_travel_time_transit(gnodes, layer, link, costs):
-    return costs['WALK']['travel_time']
 
-if __name__ == '__main__':
+def make_weighted_travel_time_car(
+    roads_typo_cost_multipliers: dict[str, float],
+):
+    def weighted_travel_time_car(gnodes: Any, layer: Any, link: Any, costs: dict) -> float:
+        link_class = layer.map_links_classes.get(link.id)
+        travel_time = costs["PersonalVehicle"]["travel_time"]
+        multiplier = roads_typo_cost_multipliers.get(link_class)
+        return travel_time * multiplier if multiplier is not None else travel_time
 
-    mmgraph = load_graph(indir+network_file)
+    return weighted_travel_time_car
+
+
+def weighted_travel_time_transit(gnodes: Any, layer: Any, link: Any, costs: dict) -> float:
+    return costs["WALK"]["travel_time"]
+
+
+def run_simulation(parameters: Lyon6Parameters) -> None:
+
+    parameters.output_directory.mkdir(parents=True, exist_ok=True)
+    set_mnms_logger_level(parameters.log_level, ["mnms.simulation"])
+    attach_log_file(str(parameters.output_path(parameters.output["log_file"])))
+
+    network_path = parameters.input_path(parameters.input["network_file"])
+    mmgraph = load_graph(str(network_path))
     if mmgraph.layers["CAR"].map_links_classes == {}:
-        mmgraph.layers["CAR"].add_links_classes(roads_typo)
-        save_graph(mmgraph, indir+network_file_with_roadstypo)
+        mmgraph.layers["CAR"].add_links_classes(parameters.graph["roads_typo"])
+        save_graph(mmgraph, str(parameters.network_file_with_roadstypo))
 
     odlayer = generate_matching_origin_destination_layer(mmgraph.roads)
     mmgraph.add_origin_destination_layer(odlayer)
     mmgraph.connect_origindestination_layers(1e-3)
 
     personal_car = PersonalMobilityService()
-    personal_car.attach_vehicle_observer(CSVVehicleObserver(outdir+vehicle_file))
+    personal_car.attach_vehicle_observer(
+        CSVVehicleObserver(str(parameters.output_path(parameters.output["vehicle_file"])))
+    )
     mmgraph.layers["CAR"].add_mobility_service(personal_car)
 
-    mmgraph.add_cost_function('CAR', cost_name, weighted_travel_time_car, mobility_service='PersonalVehicle')
-    mmgraph.add_cost_function('TRANSIT', cost_name, weighted_travel_time_transit)
+    cost_name = parameters.costs["cost"]
+    mmgraph.add_cost_function(
+        "CAR",
+        cost_name,
+        make_weighted_travel_time_car(parameters.costs["roads_typo_cost_multipliers"]),
+        mobility_service="PersonalVehicle",
+    )
+    mmgraph.add_cost_function("TRANSIT", cost_name, weighted_travel_time_transit)
 
-    demand_file_name = indir + demand_file
-    demand = CSVDemandManager(demand_file_name)
-    demand.add_user_observer(CSVUserObserver(outdir+user_file), user_ids="all")
+    demand = CSVDemandManager(str(parameters.input_path(parameters.input["demand_file"])))
+    demand.add_user_observer(
+        CSVUserObserver(str(parameters.output_path(parameters.output["user_file"]))),
+        user_ids="all",
+    )
 
-    flow_motor = MFDFlowMotor(outfile=outdir + flow_file)
+    flow_motor = MFDFlowMotor(
+        outfile=str(parameters.output_path(parameters.output["flow_file"]))
+    )
     flow_motor.add_reservoir(Reservoir(mmgraph.roads.zones["RES"], ["CAR"], calculate_V_MFD))
 
-    if decision_model == 'LogitDecisionModel':
-        travel_decision = LogitDecisionModel(mmgraph, cost=cost_name, outfile=outdir+path_file, verbose_file=True)
-    elif decision_model == 'DummyDecisionModel':
-        travel_decision = DummyDecisionModel(mmgraph, cost=cost_name, outfile=outdir+path_file, verbose_file=True)
-    else:
-        raise ValueError(f'Unknown decision model {decision_model}')
-    def weighted_waiting_time(wt):
-        return wt
-    travel_decision.add_waiting_cost_function(cost_name, weighted_waiting_time)
+    decision_model = parameters.travel_decision["decision_model"]
+    decision_models = {
+        "LogitDecisionModel": LogitDecisionModel,
+        "DummyDecisionModel": DummyDecisionModel,
+    }
+    try:
+        decision_model_class = decision_models[decision_model]
+    except KeyError as error:
+        raise ValueError(f"Unknown decision model {decision_model}") from error
 
-    supervisor = Supervisor(graph=mmgraph,
-                            flow_motor=flow_motor,
-                            demand=demand,
-                            decision_model=travel_decision,
-                            outfile=outdir+travel_time_file)
+    travel_decision = decision_model_class(
+        mmgraph,
+        cost=cost_name,
+        outfile=str(parameters.output_path(parameters.output["path_file"])),
+        verbose_file=True,
+    )
+    travel_decision.add_waiting_cost_function(cost_name, lambda waiting_time: waiting_time)
 
-    supervisor.run(Time(start_time), Time(end_time), Dt(minutes=flow_dt), affectation_factor)
+    supervisor = Supervisor(
+        graph=mmgraph,
+        flow_motor=flow_motor,
+        demand=demand,
+        decision_model=travel_decision,
+        outfile=str(parameters.output_path(parameters.output["travel_time_file"])),
+    )
+    supervisor_params = parameters.supervisor
+    supervisor.run(
+        Time(supervisor_params["start_time"]),
+        Time(supervisor_params["end_time"]),
+        Dt(minutes=supervisor_params["flow_dt"]),
+        supervisor_params["affectation_factor"],
+    )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run the Lyon6 simulation.")
+    parser.add_argument(
+        "config_file",
+        nargs="?",
+        type=Path,
+        default=Path(__file__).with_name("param.json"),
+        help="path to the JSON parameter file (defaults to param.json)",
+    )
+    arguments = parser.parse_args()
+    run_simulation(Lyon6Parameters(arguments.config_file))
