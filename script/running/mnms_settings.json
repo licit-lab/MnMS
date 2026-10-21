@@ -1,0 +1,54 @@
+{
+    "GRAPH":{
+        "file": "../../examples/Lyon6/INPUTS/network_lyon6_V2.json",
+        "OD_LAYER":{
+            "file": "./odlayer_lyon63V.json",
+            "connection_distance":250 
+        },
+        "MOBILITY_SERVICES":[
+            {"layer":"CARLayer","mobility_service_type":"Personnal"},
+            {"layer":"BUSLayer","mobility_service_type":"PublicTransport"},
+            {"layer":"METROLayer","mobility_service_type":"PublicTransport"}
+        ],
+        "CONNECTION_INTRA_LAYER":[
+            {"layer":"BUSLayer","connection_distance":150},
+            {"layer":"METROLayer","connection_distance":150}
+        ],
+        "CONNECTION_INTER_LAYERS":[
+            {"layers":["BUSLayer","METROLayer"],"connection_distance":200}
+        ]
+    },
+    "DEMAND":{
+        "file": "./dem_lyon63V.json"
+    },
+    "FLOW_MOTOR":{"MFD":[
+            {"RESERVOIR":"Res1","MFD":[
+                {"layer":"CARLayer","acc_ranges":[
+                    {"min":0,"max":1500,"A":34,"B":-5},
+                    {"min":1501,"max":3000,"A":12,"B":-15},
+                    {"min":3000,"max":"inf","A":5,"B":-2} ]},            
+                {"layer":"METROLayer","acc_ranges":[
+                    {"min":0,"max":"inf","A":0,"B":1}]}
+                    ]},
+            {"RESERVOIR":"Res1","MFD":[
+                {"layer":"CARLayer","acc_ranges":[
+                    {"min":0,"max":1500,"A":34,"B":-5},
+                    {"min":1501,"max":3000,"A":12,"B":-15},
+                    {"min":3000,"max":"inf","A":5,"B":-2} ]},
+                    {"layer":"METROLayer","acc_ranges":[
+                        {"min":0,"max":"inf","A":0,"B":1}]}
+                    ]}]
+            },
+    "DECISION_MODEL":{
+        "model":"logit",
+        "nb_shortest_path":3  
+    },
+    "SCENARIO":{
+     "start": "07:00:00",
+     "end": "10:30:00",
+     "flow_timestep": 60,
+     "assignment_factor": 10,
+     "output_dir":"./OUTPUTS" ,
+     "logger_level":"INFO"
+    }
+}
