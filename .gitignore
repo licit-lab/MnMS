@@ -64,3 +64,10 @@ examples/Lyon6/OUTPUTS/roads_typo/simulation.log
 examples/Lyon6/OUTPUTS/roads_typo/travel_time_link.csv
 examples/Lyon6/OUTPUTS/roads_typo/user.csv
 examples/Lyon6/OUTPUTS/roads_typo/veh.csv
+script/running/OUTPUTS/flow.csv
+script/running/OUTPUTS/log.log
+script/running/OUTPUTS/path.csv
+script/running/OUTPUTS/travel_time.csv
+script/running/OUTPUTS/user.csv
+script/running/OUTPUTS/veh.csv
+script/running/mnms_settings_PV.json
