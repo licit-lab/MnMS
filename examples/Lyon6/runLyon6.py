@@ -37,7 +37,7 @@ class Lyon6Parameters:
         for section_name in self._SECTIONS:
             section = config.get(section_name)
             if not isinstance(section, (dict, list)):
-                raise ValueError(
+                raise ValueError(  # noqa: TRY004
                     f"Missing or invalid '{section_name}' section in {self.config_file}"
                 )
             setattr(self, section_name.lower(), section)
@@ -76,12 +76,12 @@ class Lyon6Parameters:
 
 def calculate_V_MFD(acc: dict[str, float]) -> dict[str, float]:
     accumulation = acc["CAR"]
-    if accumulation < 18_000:
-        speed = 11.5 - accumulation * 6 / 18_000
-    elif accumulation < 55_000:
-        speed = 11.5 - 6 - (accumulation - 18_000) * 4.5 / (55_000 - 18_000)
-    elif accumulation < 80_000:
-        speed = 11.5 - 6 - 4.5 - (accumulation - 55_000) / (80_000 - 55_000)
+    if accumulation < 18000:
+        speed = 11.5 - accumulation * 6 / 18000
+    elif accumulation < 55000:
+        speed = 11.5 - 6 - (accumulation - 18000) * 4.5 / (55000 - 18000)
+    elif accumulation < 80000:
+        speed = 11.5 - 6 - 4.5 - (accumulation - 55000) / (80000 - 55000)
     else:
         speed = 0
     return {"CAR": max(speed, 0.001)}
