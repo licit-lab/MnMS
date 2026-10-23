@@ -23,30 +23,26 @@
         "file": "../../examples/Lyon63V/INPUTS/demand-Lyon63V-coords.csv"
     },
     "FLOW_MOTOR":{"MFD":[
-            {"RESERVOIR":"Res1","MFD":[
-                {"layer":"CARLayer","acc_ranges":[
-                    {"min":0,"max":1500,"A":34,"B":-5},
-                    {"min":1501,"max":3000,"A":12,"B":-15},
-                    {"min":3000,"max":"inf","A":5,"B":-2} ]},            
-                {"layer":"METROLayer","acc_ranges":[
-                    {"min":0,"max":"inf","A":0,"B":1}]}
-                    ]},
-            {"RESERVOIR":"Res1","MFD":[
-                {"layer":"CARLayer","acc_ranges":[
-                    {"min":0,"max":1500,"A":34,"B":-5},
-                    {"min":1501,"max":3000,"A":12,"B":-15},
-                    {"min":3000,"max":"inf","A":5,"B":-2} ]},
-                    {"layer":"METROLayer","acc_ranges":[
-                        {"min":0,"max":"inf","A":0,"B":1}]}
-                    ]}]
-            },
+        {"reservoir_id":"RES","MFD_param":[
+        {"layer":"CARLayer","acc_ranges":[
+            {"min":0,"max":150,"slope":0,"intercept":12},
+            {"min":151,"max":300,"slope":0,"intercept":8},
+            {"min":301,"max":800,"slope":0,"intercept":4},
+            {"min":801,"max":"inf","slope":0,"intercept":1} ]},
+        {"layer":"BUSLayer","acc_ranges":[
+                        {"min":0,"max":"inf","slope":0,"intercept":8} ]},
+        {"layer":"TRAMLayer","acc_ranges":[
+                        {"min":0,"max":"inf","slope":0,"intercept":10} ]},
+        {"layer":"METROLayer","acc_ranges":[
+                        {"min":0,"max":"inf","slope":0,"intercept":15} ]}
+                        ]}]},
     "DECISION_MODEL":{
         "model":"logit",
         "nb_shortest_path":3  
     },
     "SCENARIO":{
      "start": "07:00:00",
-     "end": "10:30:00",
+     "end": "08:30:00",
      "flow_timestep": 60,
      "assignment_factor": 10,
      "output_dir":"./OUTPUTS" ,
