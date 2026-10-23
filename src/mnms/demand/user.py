@@ -680,7 +680,7 @@ class User(TimeDependentSubject):
             teleported = True
         elif dist > max_teleport_dist and dist > 0:
             log.error(f'User {self.id} tried to teleport from {self.current_node} to {dnode.id} for {dist} meters: it is prohibited ! ')
-            sys.exit(-1)
+            #sys.exit(-1)
 
         if teleported:
             self.current_node = dnode.id

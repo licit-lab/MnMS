@@ -1,9 +1,8 @@
 {
   "INPUT": {
     "indir": "./INPUTS",
-    "network_file": "/network_lyon6_V3-test.json",
-    "demand_file": "/demand_coords.csv",
-    "mfd_file": "/MFD_10_201802.csv"
+    "network_file": "/network_lyon6_V3.json",
+    "demand_file": "/demand_coords.csv"
   },
   "OUTPUT": {
     "output_dir": "./OUTPUTS/roads_typo/",

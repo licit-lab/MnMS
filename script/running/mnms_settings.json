@@ -1,0 +1,136 @@
+{
+    "GRAPH": {
+        "network_file": "../../examples/Lyon63V/INPUTS/network-Lyon63V.json",
+        "OD_LAYER": {
+            "file": "../../examples/Lyon63V/INPUTS/odlayer-Lyon63V.json",
+            "connection_distance": 250
+        },
+        "MOBILITY_SERVICES": [
+            {
+                "label": "MS_PV",
+                "layer": "CARLayer",
+                "mobility_service_type": "PersonalMobilityService"
+            },
+            {
+                "label": "MS_BUS",
+                "layer": "BUSLayer",
+                "mobility_service_type": "PublicTransportMobilityService"
+            },
+            {
+                "label": "MS_METRO",
+                "layer": "METROLayer",
+                "mobility_service_type": "PublicTransportMobilityService"
+            },
+            {
+                "label": "MS_TRAM",
+                "layer": "TRAMLayer",
+                "mobility_service_type": "PublicTransportMobilityService"
+            }
+        ],
+        "CONNECTION_INTRA_LAYER": [
+            {
+                "layer": "BUSLayer",
+                "connection_distance": 150
+            },
+            {
+                "layer": "METROLayer",
+                "connection_distance": 150
+            }
+        ],
+        "CONNECTION_INTER_LAYERS": [
+            {
+                "layers": [
+                    "BUSLayer",
+                    "METROLayer"
+                ],
+                "connection_distance": 200
+            }
+        ]
+    },
+    "DEMAND": {
+        "file": "../../examples/Lyon63V/INPUTS/demand-Lyon63V-coords.csv"
+    },
+    "FLOW_MOTOR": {
+        "MFD": [
+            {
+                "reservoir_id": "RES",
+                "MFD_param": [
+                    {
+                        "layer": "CARLayer",
+                        "acc_ranges": [
+                            {
+                                "min": 0,
+                                "max": 150,
+                                "slope": 0,
+                                "intercept": 12
+                            },
+                            {
+                                "min": 151,
+                                "max": 300,
+                                "slope": 0,
+                                "intercept": 8
+                            },
+                            {
+                                "min": 301,
+                                "max": 800,
+                                "slope": 0,
+                                "intercept": 4
+                            },
+                            {
+                                "min": 801,
+                                "max": "inf",
+                                "slope": 0,
+                                "intercept": 1
+                            }
+                        ]
+                    },
+                    {
+                        "layer": "BUSLayer",
+                        "acc_ranges": [
+                            {
+                                "min": 0,
+                                "max": "inf",
+                                "slope": 0,
+                                "intercept": 8
+                            }
+                        ]
+                    },
+                    {
+                        "layer": "TRAMLayer",
+                        "acc_ranges": [
+                            {
+                                "min": 0,
+                                "max": "inf",
+                                "slope": 0,
+                                "intercept": 10
+                            }
+                        ]
+                    },
+                    {
+                        "layer": "METROLayer",
+                        "acc_ranges": [
+                            {
+                                "min": 0,
+                                "max": "inf",
+                                "slope": 0,
+                                "intercept": 15
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "DECISION_MODEL": {
+        "model": "logit",
+        "nb_shortest_path": 3
+    },
+    "SCENARIO": {
+        "start": "07:00:00",
+        "end": "08:30:00",
+        "flow_timestep": 60,
+        "assignment_factor": 10,
+        "output_dir": "./OUTPUTS",
+        "logger_level": "INFO"
+    }
+}

@@ -13,7 +13,7 @@ PointList = list[Point]
 class Zone:
     id: str
     sections: set[str]
-    contour: PointList
+    contour: PointList | None
 
     def is_inside(self, points: list[Point]):
         return points_in_polygon(self.contour, points)

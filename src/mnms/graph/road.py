@@ -118,7 +118,7 @@ class RoadDescriptor:
 
         for z in data["ZONES"].values():
             if z["sections"]:
-                new_obj.add_zone(Zone(z["id"], set(z["sections"]), z["contour"]))
+                new_obj.add_zone(Zone(z["id"], set(z["sections"]), None))
             else:
                 new_obj.add_zone(construct_zone_from_contour(new_obj, z["id"], z["contour"]))
 
