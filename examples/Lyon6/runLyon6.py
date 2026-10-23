@@ -190,4 +190,3 @@ if __name__ == "__main__":
     )
     arguments = parser.parse_args()
     run_simulation(Lyon6Parameters(arguments.config_file))
-    
