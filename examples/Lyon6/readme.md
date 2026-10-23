@@ -1,7 +1,7 @@
 # 'LYON6' EXAMPLE
 
-This repository contains Lyon6 example, this is the simplest one based on a real network. 
-It extends on the 6th district of Lyon city, France. It has only one transportation layer for one personal vehicle mobility service. 
+This repository contains Lyon6 example, this is the simplest one based on a real network.
+It extends on the 6th district of Lyon city, France. It has only one transportation layer for one personal vehicle mobility service.
 
 
 <figure align="center">
@@ -9,11 +9,11 @@ It extends on the 6th district of Lyon city, France. It has only one transportat
   <figcaption>Lyon6 network</figcaption>
 </figure>
 
-The origin-destination layer matches this layer’s nodes. 
+The origin-destination layer matches this layer’s nodes.
 There is one reservoir including all links with a varying speed with accumulation.
-There are two versions of this scenario, one with an assumed links classification and another one without any classification. The classification recognizes primary and secondary roads as represented in figure below.
-To influence users paths based on this classification, the study case uses the cost functions to apply a certain multiplier to the travel time depending on the link class. The new cost considered to
-compute shortest paths is called weighted travel time. 
+There are two versions of this scenario, one with an assumed links classification and another one without any classification. The classification recognizes primary and secondary roads as represent[...]
+To influence users paths based on this classification, the study case uses the cost functions to apply a certain multiplier to the travel time depending on the link class. The new cost considered [...]
+compute shortest paths is called weighted travel time.
 
 ## Running the simulation
 

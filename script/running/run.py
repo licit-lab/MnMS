@@ -49,7 +49,7 @@ class MnMSParameters:
     # GRAPH
     @property
     def network_file(self) -> str:
-            return str(self._resolve_path("", self.graph["network_file"]))
+        return str(self._resolve_path("", self.graph["network_file"]))
 
     # OD_LAYER
     @property
@@ -62,7 +62,7 @@ class MnMSParameters:
 
     @property
     def mobility_services(self) -> list[dict]:
-        return self.graph.get("MOBILITY_SERVICES",[])
+        return self.graph.get("MOBILITY_SERVICES", [])
 
     @property
     def intra_layer_connections(self) -> list[dict]:
@@ -70,18 +70,18 @@ class MnMSParameters:
 
     @property
     def inter_layers_connections(self) -> list[dict]:
-            return self.graph.get("CONNECTION_INTER_LAYERS", [])
+        return self.graph.get("CONNECTION_INTER_LAYERS", [])
 
     # DEMAND
     @property
     def demand_file(self) -> str:
         return str(self._resolve_path("", self.demand["file"]))
-    
+
     # FLOW_MOTOR
     @property
     def MFD_parameters(self) -> list[dict[str, Any]]:
         return self.flow_motor.get("MFD", [])
-   
+
     # DECISION_MODEL
     @property
     def decision_model_type(self) -> str:
@@ -107,7 +107,7 @@ class MnMSParameters:
     @property
     def assignment_factor(self) -> int:
         return self.scenario.get("assignment_factor", 10)
-    
+
     @property
     def output_directory(self) -> Path:
         return self._resolve_path("", self.scenario["output_dir"])
@@ -122,6 +122,7 @@ class MnMSParameters:
             return getattr(LOGLEVEL, configured_level)
         except AttributeError as error:
             raise ValueError(f"Unknown log level: {self.supervisor['log_level']}") from error
+
 
 def calculate_speed_from_MFD(
     accumulations: dict[str, float],
@@ -182,6 +183,7 @@ def _mfd_parameters_by_mode(
         raise ValueError(f"No MFD configuration found for reservoir '{reservoir_id}'")
     return mfd_by_mode
 
+
 def run_simulation(parameters: MnMSParameters) -> None:
 
     parameters.output_directory.mkdir(parents=True, exist_ok=True)
@@ -203,7 +205,7 @@ def run_simulation(parameters: MnMSParameters) -> None:
     # Create the mobility services
     print("Creating mobility services...")
     for ms in parameters.mobility_services:
-        layer_name = ms["layer"]  
+        layer_name = ms["layer"]
         if layer_name not in mmgraph.layers:
             raise ValueError(f"Layer '{layer_name}' not found in the graph.")
         else:
@@ -236,7 +238,7 @@ def run_simulation(parameters: MnMSParameters) -> None:
 
     # Create the flow motor and add reservoirs
     print("Creating flow motor...")
-    flow_motor = MFDFlowMotor(outfile=str(parameters.output_path("flow.csv")))  
+    flow_motor = MFDFlowMotor(outfile=str(parameters.output_path("flow.csv")))
 
     for res in mmgraph.roads.zones.values():
         mfd_by_mode = _mfd_parameters_by_mode(
@@ -252,12 +254,13 @@ def run_simulation(parameters: MnMSParameters) -> None:
     elif parameters.decision_model_type == "dummy":
         decision_model_class = DummyDecisionModel
     else:
-        raise ValueError(f"Unknown decision model: {parameters.decision_model_type}")   
-    
+        raise ValueError(f"Unknown decision model: {parameters.decision_model_type}")
+
     decision_model = decision_model_class(
         mmgraph,
         outfile=str(parameters.output_path("path.csv")),
-        n_shortest_path=parameters.decision_model_nb_shortest_paths)     
+        n_shortest_path=parameters.decision_model_nb_shortest_paths,
+    )
 
     # Create the supervisor
     print("Creating supervisor...")
@@ -267,7 +270,7 @@ def run_simulation(parameters: MnMSParameters) -> None:
         demand=demand,
         decision_model=decision_model,
         outfile=str(parameters.output_path("travel_time.csv")),
-    )       
+    )
 
     # Run the simulation
     supervisor.run(
@@ -275,7 +278,7 @@ def run_simulation(parameters: MnMSParameters) -> None:
         parameters.end_time,
         parameters.flow_timestep,
         parameters.assignment_factor,
-    )   
+    )
 
 
 if __name__ == "__main__":
@@ -290,4 +293,3 @@ if __name__ == "__main__":
     run_simulation(MnMSParameters(arguments.config_file))
 
     print("Simulation completed successfully")
-    
